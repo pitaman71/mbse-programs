@@ -41,15 +41,15 @@ class Entity:
         self.target: Entity | None = None
 
     def qualified_name(self) -> str:
-        """The names of the entity and the named entities enclosing it, outermost first, such as 'geo::v1::Point'.
-        Unnamed entities are left out."""
+        """The names of the entity and the named entities enclosing it, outermost first, joined by its scope's
+        separator, such as 'geo::v1::Point' or 'shapes.Point.area'. Unnamed entities are left out."""
         parts: list[str] = []
         entity: Entity | None = self
         while entity is not None:
             if entity.name is not None:
                 parts.append(entity.name)
             entity = entity.parent.owner if entity.parent is not None else None
-        return "::".join(reversed(parts))
+        return (self.parent.separator if self.parent is not None else "::").join(reversed(parts))
 
     def resolved(self) -> Entity:
         """The entity itself, or for an alias the entity it names, followed through aliases of aliases."""
@@ -66,10 +66,13 @@ class Entity:
 class Scope:
     """A region of a program where names are declared: `kind` names it in its language ('namespace', 'class',
     'block', ...), `owner` is the entity whose members it holds (None for blocks and the global scope), `parent` the
-    enclosing scope, and `node` the syntax node that opens it."""
+    enclosing scope, and `node` the syntax node that opens it. Qualified names join names with `separator`: by default
+    the parent's, and '::' without a parent."""
 
-    def __init__(self, kind: str, owner: Entity | None, parent: Scope | None, node: Any = None):
+    def __init__(self, kind: str, owner: Entity | None, parent: Scope | None, node: Any = None,
+                 separator: str | None = None):
         self.kind, self.owner, self.parent, self.node = kind, owner, parent, node
+        self.separator = separator if separator is not None else parent.separator if parent is not None else "::"
         self.names: dict[str, list[Entity]] = {}
         self.transparent: list[Scope] = []
         self.using: list[Scope] = []
@@ -187,10 +190,10 @@ class Program:
 
     def lookup(self, name: str, at: Any = None) -> list[Entity]:
         """The entities a name written as text names, such as 'std::vector' or '::main', where `at` is (by default,
-        in the global scope)."""
+        in the global scope). Its parts are joined by the global scope's separator."""
         scope = self.scope_of(at) if at is not None else None
         scope = scope or self.root
-        parts = name.split("::")
+        parts = name.split(self.root.separator)
         if parts[0] == "":
             return scope.qualified(parts[1:], from_global=True)
         return scope.qualified(parts)

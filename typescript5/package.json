@@ -1,11 +1,12 @@
 {
   "name": "@mbse/programs",
   "version": "0.0.1",
-  "description": "Programs as language-neutral data: complete, serializable abstract syntax trees for C and C++, with their definitions, built for transpilers that never parse or print strings (TypeScript implementation)",
+  "description": "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++ and Python, with their definitions, built for transpilers that never parse or print strings (TypeScript implementation)",
   "keywords": [
     "ast",
     "abstract syntax tree",
     "c++",
+    "python",
     "c",
     "transpiler",
     "mbse",
@@ -20,6 +21,8 @@
     "./Framework/*": "./src/Framework/*.ts",
     "./Ccpp": "./src/Ccpp/index.ts",
     "./Ccpp/*": "./src/Ccpp/*.ts",
+    "./Python": "./src/Python/index.ts",
+    "./Python/*": "./src/Python/*.ts",
     "./Conformance/*": "./src/Conformance/*.ts"
   },
   "engines": {
@@ -41,6 +44,7 @@
   "dependencies": {
     "@mbse/schemas": "file:../submodules/mbse-schemas/typescript5",
     "tree-sitter-cpp": "0.23.4",
+    "tree-sitter-python": "0.25.0",
     "web-tree-sitter": "^0.27.0"
   }
 }

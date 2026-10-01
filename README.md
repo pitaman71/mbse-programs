@@ -6,8 +6,10 @@ every detail included, and record which standard has each construct. Standards p
 to an established parser, and print trees back into source text. Trees are [mbse-schemas](https://github.com/pitaman71/mbse-schemas)
 data, so they can be stored and sent as JSON or YAML.
 
-The first language is Ccpp, C and C++ as one tree language, with C++17 and C++20 parsed by
-[tree-sitter-cpp](https://github.com/tree-sitter/tree-sitter-cpp).
+The languages are Ccpp, C and C++ as one tree language, with C++17 and C++20 parsed by
+[tree-sitter-cpp](https://github.com/tree-sitter/tree-sitter-cpp), and Python, whose kinds follow Python's own `ast`
+module through Python 3.15, with Python 3.12 and 3.14 parsed by
+[tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python).
 
 ```python
 from mbse.Programs.Ccpp import Ccpp17, Ccpp20, Syntax as S
@@ -35,6 +37,22 @@ unit.items.push(new S.StaticAssertDeclaration({ keyword: "static_assert", condit
   left: new S.IntegerLiteral({ spelling: "1" }), operator: "<=>", right: new S.IntegerLiteral({ spelling: "2" }) }) }));
 Ccpp20.print(unit);
 Ccpp17.check(unit);
+```
+
+The same, for Python:
+
+```python
+from mbse.Programs.Framework.Syntax import walk
+from mbse.Programs.Python import Python314, Syntax as P
+
+module = Python314.parse("def twice(x):\n    return x * 2\n\nprint(twice(3))\n")
+for node in walk(module):
+    if isinstance(node, P.Identifier) and node.spelling == "twice":
+        node.spelling = "doubled"
+module.body.insert(0, P.Import(is_lazy=True, names=[P.Alias(name=P.DottedName(names=[P.Identifier(spelling="json")]))]))
+Python314.check(module)   # ['body[0]: Import.is_lazy needs Python 3.15']
+module.body[0].is_lazy = False
+Python314.print(module)   # 'import json\n\n\ndef doubled(x):\n    return x * 2\n\n\nprint(doubled(3))\n'
 ```
 
 It has two equivalent implementations, in Python and TypeScript, with the same API, the same messages, the same trees
@@ -70,7 +88,7 @@ npm test                       # type-check and run the test suites
 
 | Read | For |
 |---|---|
-| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, parsing and its gaps, printing, definitions, and open questions |
+| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp and Python, parsing and its gaps, printing, definitions, and open questions |
 | [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [`AGENTS.md`](AGENTS.md), [`llms.txt`](llms.txt) | Guidance for AI agents |
 | [`python3/tests/TestPlan.md`](python3/tests/TestPlan.md), [`typescript5/tests/TestPlan.md`](typescript5/tests/TestPlan.md) | The test suites |
@@ -81,16 +99,22 @@ npm test                       # type-check and run the test suites
 ```
 submodules/mbse-schemas/  the framework trees are serialized with
 docs/                     the design (PROGRAMS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
-python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Conformance) and tests
-typescript5/              TypeScript implementation: src (Framework, Ccpp, Conformance) and tests
+python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, Conformance) and tests
+typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, Conformance) and tests
 conformance/              the corpus's sources, and the files each implementation writes from them
 ```
 
 ## Status
 
 Built in both languages: the framework (trees, meta-schemas and builders, validation, standards, traversal and
-in-place rewriting, and definitions with lookup) and Ccpp: 171 kinds covering C++26 and C23, the standards C++17 and
-C++20 (and any year of C++ or C), parsing through tree-sitter-cpp 0.23.4, printing, and the definitions of a
-translation unit. Not built yet: the constructs tree-sitter-cpp 0.23 cannot parse
-([PROGRAMS.md, Parsing](docs/PROGRAMS.md#parsing)) are built and printed but not parsed; overloads and dependent names
-are not resolved; further languages (Verilog, Python, TypeScript) are planned.
+in-place rewriting, and definitions with lookup), and two languages:
+
+- Ccpp: 171 kinds covering C++26 and C23, the standards C++17 and C++20 (and any year of C++ or C), parsing through
+  tree-sitter-cpp 0.23.4, printing, and the definitions of a translation unit.
+- Python: 86 kinds following `ast` through Python 3.15, the versions 3.12 and 3.14 (and any other), parsing through
+  tree-sitter-python 0.25.0 with nine corrections of its grammar, printing, and the definitions of a module with
+  Python's scoping. Checked against CPython 3.14 on its standard library.
+
+Not built yet: the constructs the parsers cannot read ([PROGRAMS.md](docs/PROGRAMS.md#parsing),
+[Parsing Python](docs/PROGRAMS.md#parsing-python)) are built and printed but not parsed; overloads, dependent names
+and attributes are not resolved; further languages (Verilog, TypeScript) are planned.

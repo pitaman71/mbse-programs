@@ -39,8 +39,8 @@ __all__ = [
 CHILDREN = "Programs.Children"
 _NATIVES: dict[type, str] = {str: "str", bool: "bool", int: "int"}
 
-# Where a feature exists, by language family ('C++', 'C'): the year of the first standard that has it, or (first, last
-# exclusive) for a feature a later standard removed.
+# Where a feature exists, by language family ('C++', 'C', 'Python'): the version of the first standard that has it, or
+# (first, last exclusive) for a feature a later standard removed.
 Availability = Mapping[str, Union[int, tuple[int, int]]]
 
 
@@ -728,15 +728,19 @@ def _placed(kind: type[Node], field: Child, child: Any, where: str, problems: li
 
 
 class Standard:
-    """A standard of a language family, such as C++20 (`family` 'C++', `year` 2020): which kinds and features it
+    """A standard of a language family, such as C++20 (`family` 'C++', `version` 2020): which kinds and features it
     has, and how source text of it is parsed into trees and trees printed into it. Languages derive their standards
     from this class and implement `parse` and `print`."""
 
-    def __init__(self, language: Language, family: str, year: int):
-        self.language, self.family, self.year = language, family, year
+    def __init__(self, language: Language, family: str, version: int):
+        self.language, self.family, self.version = language, family, version
 
     def name(self) -> str:
-        return label(self.family, self.year)
+        return self.label(self.version)
+
+    def label(self, version: int) -> str:
+        """The name of the family's standard `version`; by default a year's, such as 'C++20'."""
+        return label(self.family, version)
 
     def __repr__(self) -> str:
         return f"<standard {self.name()}>"
@@ -752,10 +756,10 @@ class Standard:
             return f"is not {self.family}"
         span = availability[self.family]
         first, last = span if isinstance(span, tuple) else (span, None)
-        if self.year < first:
-            return f"needs {label(self.family, first)}"
-        if last is not None and self.year >= last:
-            return f"was removed in {label(self.family, last)}"
+        if self.version < first:
+            return f"needs {self.label(first)}"
+        if last is not None and self.version >= last:
+            return f"was removed in {self.label(last)}"
         return None
 
     def problems(self, node: Node) -> list[str]:

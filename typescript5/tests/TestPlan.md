@@ -1,7 +1,7 @@
 # Test plan — typescript5
 
-Scope: everything under `typescript5/src` (the framework, the Ccpp language, its standards, parser, printer and
-definitions) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
+Scope: everything under `typescript5/src` (the framework, and the Ccpp and Python languages with their standards,
+parsers, printers and definitions) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
 Python one mirror each other case for case, with the deliberate differences of `../../docs/EQUIVALENCE.md`.
 mbse-schemas is tested in mbse-schemas.
 
@@ -22,6 +22,10 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `03_Parse.ipynb` | PRS | 13 | as in Python, through web-tree-sitter; PRS-12's positions are converted from UTF-16 units |
 | `04_Print.ipynb` | PRT | 6 | as in Python |
 | `05_Definitions.ipynb` | DEF | 7 | as in Python |
-| `06_Conformance.ipynb` | CONF | 3 | as in Python, from this side |
+| `06_Python.ipynb` | PY | 4 | as in Python |
+| `07_PythonParse.ipynb` | PYPRS | 12 | as in Python, but for PYPRS-01's check against CPython, which TypeScript cannot run |
+| `08_PythonPrint.ipynb` | PYPRT | 6 | as in Python |
+| `09_PythonDefinitions.ipynb` | PYDEF | 7 | as in Python |
+| `10_Conformance.ipynb` | CONF | 3 | as in Python, from this side |
 
-Total: 44 cases, with the same IDs in the same order in both implementations.
+Total: 73 cases, with the same IDs in the same order in both implementations.

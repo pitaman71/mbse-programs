@@ -1,8 +1,8 @@
 """Writes this implementation's conformance files: `python -m mbse.Programs.Conformance.write [directory]`.
 
 For each source in `conformance/sources`, it writes the tree the source parses to, as a JSON snapshot
-(`<source>.json`), and the text that tree prints to (`<source>.cpp`); and it writes each language's grammar
-(`<language>.grammar.json`). Every implementation must write the same bytes. The default directory is
+(`<source>.json`), and the text that tree prints to (`<source>.cpp`, `<source>.py`); and it writes each language's
+grammar (`<language>.grammar.json`). Every implementation must write the same bytes. The default directory is
 `conformance/python3` at the repository root.
 """
 
@@ -12,21 +12,27 @@ import json
 import sys
 from pathlib import Path
 
-from mbse.Programs.Ccpp import Ccpp20, Syntax
+from mbse.Programs.Ccpp import Ccpp20
+from mbse.Programs.Ccpp import Syntax as CcppSyntax
+from mbse.Programs.Python import Python314
+from mbse.Programs.Python import Syntax as PythonSyntax
 from mbse.Schemas.Framework import JSON
 
 ROOT = Path(__file__).resolve().parents[4] / "conformance"
 DEFAULT = ROOT / "python3"
-STANDARDS = {".cpp": Ccpp20}
+# By a source's suffix: the standard that parses and prints it, and the kind of its tree.
+STANDARDS = {".cpp": (Ccpp20, CcppSyntax.TranslationUnit), ".py": (Python314, PythonSyntax.Module)}
+LANGUAGES = [CcppSyntax.LANGUAGE, PythonSyntax.LANGUAGE]
 
 
 def render(sources: Path = ROOT / "sources") -> dict[str, str]:
     """File name -> text, for every file this implementation writes."""
-    files = {"Ccpp.grammar.json": json.dumps(Syntax.LANGUAGE.grammar(), indent=1, ensure_ascii=False) + "\n"}
+    files = {f"{language.name()}.grammar.json": json.dumps(language.grammar(), indent=1, ensure_ascii=False) + "\n"
+             for language in LANGUAGES}
     for source in sorted(sources.iterdir()):
-        standard = STANDARDS[source.suffix]
+        standard, root = STANDARDS[source.suffix]
         unit = standard.parse(source.read_text(encoding="utf-8"))
-        files[f"{source.stem}.json"] = JSON.ToJSON.Reachable(Syntax.TranslationUnit.Schema, unit, indent=2) + "\n"
+        files[f"{source.stem}.json"] = JSON.ToJSON.Reachable(root.Schema, unit, indent=2) + "\n"
         files[f"{source.stem}{source.suffix}"] = standard.print(unit)
     return files
 

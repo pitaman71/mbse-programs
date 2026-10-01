@@ -10,17 +10,14 @@
  * line and column.
  */
 
-import { createRequire } from "node:module";
-
-import { Language as Grammar, type Node as TS, Parser as TSParser } from "web-tree-sitter";
+import type { Node as TS, Parser as TSParser } from "web-tree-sitter";
 
 import { ParseError } from "../Framework/Errors.js";
 import type { Node } from "../Framework/Syntax.js";
+import { parser } from "../Framework/_TreeSitter.js";
 import * as S from "./Syntax.js";
 
-await TSParser.init();
-const PARSER = new TSParser();
-PARSER.setLanguage(await Grammar.load(createRequire(import.meta.url).resolve("tree-sitter-cpp/tree-sitter-cpp.wasm")));
+const PARSER = await parser("tree-sitter-cpp/tree-sitter-cpp.wasm");
 
 const ALTERNATIVES: Record<string, string> = {
   and: "&&", or: "||", not: "!", compl: "~", bitand: "&", bitor: "|", xor: "^", and_eq: "&=", or_eq: "|=",

@@ -5,13 +5,14 @@
 
 | File | Holds |
 |---|---|
-| `Ccpp.grammar.json` | the Ccpp language as data: every kind, its category, fields, choices and availability |
+| `Ccpp.grammar.json`, `Python.grammar.json` | each language as data: every kind, its category, fields, choices and availability |
 | `<source>.json` | the tree a source parses to, as a reachable snapshot (indent 2) |
-| `<source>.cpp` | the text that tree prints to |
+| `<source>.cpp`, `<source>.py` | the text that tree prints to |
 
 | Source | Covers |
 |---|---|
 | `cpp20.cpp` | every C++20 construct tree-sitter-cpp parses, once or more: a global module fragment and module declarations, imports and exports, directives and comments, namespaces, classes, templates and concepts, every expression and statement kind, lambdas and coroutines |
+| `python314.py` | every kind of the Python language, parsed as Python 3.14: imports of every form, type aliases with type parameters and defaults, every literal and string form (f-strings with nested fields, self-documenting fields and format specs, t-strings), decorators, generic classes and functions with every kind of parameter, every operator, comprehensions, every statement, `except*` and unparenthesized `except` types, patterns of every kind, and comments |
 
 The CONF test suite in each implementation checks that its own files are current, that they are byte-identical to
 every other implementation's, and that every implementation's snapshots read back into valid trees that print the same

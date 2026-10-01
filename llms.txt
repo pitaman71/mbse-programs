@@ -1,13 +1,13 @@
 # mbse-programs
 
-> Programs as language-neutral data: complete abstract syntax trees, built on mbse-schemas, that a transpiler builds, reads and rewrites in memory without parsing or printing strings. Each language's kinds cover the union of its standards and record which standard has each construct; standards parse source text into trees through an established parser and print trees back. The first language is Ccpp (C and C++: kinds for C++26 and C23, with C++17 and C++20 parsed by tree-sitter-cpp). Equivalent Python (`mbse.Programs`) and TypeScript (`@mbse/programs`) implementations give the same trees and byte-identical JSON.
+> Programs as language-neutral data: complete abstract syntax trees, built on mbse-schemas, that a transpiler builds, reads and rewrites in memory without parsing or printing strings. Each language's kinds cover the union of its standards and record which standard has each construct; standards parse source text into trees through an established parser and print trees back. The languages are Ccpp (C and C++: kinds for C++26 and C23, with C++17 and C++20 parsed by tree-sitter-cpp) and Python (kinds following Python's `ast` through 3.15, with Python 3.12 and 3.14 parsed by tree-sitter-python, checked against CPython). Equivalent Python (`mbse.Programs`) and TypeScript (`@mbse/programs`) implementations give the same trees and byte-identical JSON.
 
 Trees are plain mutable objects with typed fields; every kind has an mbse-schemas meta-schema, so trees serialize as JSON or YAML. `Definitions` gives the entities a program declares and resolves names from where they are written.
 
 ## Using it
 
 - [README](https://github.com/pitaman71/mbse-programs/blob/main/README.md): a complete example in each language
-- [PROGRAMS.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md): trees, standards, Ccpp, parsing and its known gaps, printing, definitions, transpiling, and open questions
+- [PROGRAMS.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md): trees, standards, Ccpp and Python, parsing and its known gaps, printing, definitions, transpiling, and open questions
 
 ## Optional
 

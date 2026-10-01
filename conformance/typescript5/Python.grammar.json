@@ -1,0 +1,2469 @@
+{
+ "language": "Python",
+ "base": {
+  "Python": 300
+ },
+ "categories": [
+  {
+   "name": "Statement",
+   "base": "Node"
+  },
+  {
+   "name": "Expression",
+   "base": "Node"
+  },
+  {
+   "name": "Pattern",
+   "base": "Node"
+  },
+  {
+   "name": "TypeParameter",
+   "base": "Node"
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "Comment",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "trailing",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "Identifier",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "DottedName",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "names",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Name",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Constant",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ConcatenatedString",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "values",
+     "type": [
+      "Constant",
+      "JoinedStr",
+      "TemplateStr"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "StringText",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "FormatSpec",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "values",
+     "type": [
+      "StringText",
+      "FormattedValue"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "FormattedValue",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {
+    "debug": {
+     "true": {
+      "Python": 308
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "debug",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "conversion",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "s",
+      "r",
+      "a"
+     ]
+    },
+    {
+     "name": "format_spec",
+     "type": [
+      "FormatSpec"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Interpolation",
+   "category": "Node",
+   "since": {
+    "Python": 314
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "debug",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "conversion",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "s",
+      "r",
+      "a"
+     ]
+    },
+    {
+     "name": "format_spec",
+     "type": [
+      "FormatSpec"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JoinedStr",
+   "category": "Expression",
+   "since": {
+    "Python": 306
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "prefix",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "quote",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "'",
+      "\"",
+      "'''",
+      "\"\"\""
+     ]
+    },
+    {
+     "name": "values",
+     "type": [
+      "StringText",
+      "FormattedValue"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TemplateStr",
+   "category": "Expression",
+   "since": {
+    "Python": 314
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "prefix",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "quote",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "'",
+      "\"",
+      "'''",
+      "\"\"\""
+     ]
+    },
+    {
+     "name": "values",
+     "type": [
+      "StringText",
+      "Interpolation"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Parenthesized",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Tuple",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elts",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "List",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elts",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Set",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elts",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DictItem",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Dict",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "items",
+     "type": [
+      "DictItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Comprehension",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {
+    "is_async": {
+     "true": {
+      "Python": 306
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "is_async",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "iter",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ifs",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ListComp",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elt",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "generators",
+     "type": [
+      "Comprehension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "SetComp",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elt",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "generators",
+     "type": [
+      "Comprehension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DictComp",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "generators",
+     "type": [
+      "Comprehension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "GeneratorExp",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elt",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "generators",
+     "type": [
+      "Comprehension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Yield",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "YieldFrom",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Attribute",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "attr",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Subscript",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "slice",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Slice",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "lower",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "upper",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "step",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Keyword",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "arg",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Call",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "func",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "args",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "keywords",
+     "type": [
+      "Keyword"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Starred",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Await",
+   "category": "Expression",
+   "since": {
+    "Python": 305
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UnaryOp",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "op",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "not",
+      "-",
+      "+",
+      "~"
+     ]
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinOp",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "op": {
+     "@": {
+      "Python": 305
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "op",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "+",
+      "-",
+      "*",
+      "@",
+      "/",
+      "//",
+      "%",
+      "**",
+      "<<",
+      ">>",
+      "|",
+      "^",
+      "&"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Comparison",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "op",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "==",
+      "!=",
+      "<",
+      "<=",
+      ">",
+      ">=",
+      "is",
+      "is not",
+      "in",
+      "not in"
+     ]
+    },
+    {
+     "name": "comparator",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Compare",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "comparisons",
+     "type": [
+      "Comparison"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "BoolOp",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "op",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "and",
+      "or"
+     ]
+    },
+    {
+     "name": "values",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "NamedExpr",
+   "category": "Expression",
+   "since": {
+    "Python": 308
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "target",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IfExp",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "orelse",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Arg",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "arg",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "annotation",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "default_value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Arguments",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {
+    "posonlyargs": {
+     "true": {
+      "Python": 308
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "posonlyargs",
+     "type": [
+      "Arg"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "args",
+     "type": [
+      "Arg"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "vararg",
+     "type": [
+      "Arg"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "kwonlyargs",
+     "type": [
+      "Arg"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "kwarg",
+     "type": [
+      "Arg"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Lambda",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "args",
+     "type": [
+      "Arguments"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Expr",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Assign",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "targets",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AugAssign",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "op": {
+     "@": {
+      "Python": 305
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "op",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "+",
+      "-",
+      "*",
+      "@",
+      "/",
+      "//",
+      "%",
+      "**",
+      "<<",
+      ">>",
+      "|",
+      "^",
+      "&"
+     ]
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AnnAssign",
+   "category": "Statement",
+   "since": {
+    "Python": 306
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "annotation",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Assert",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "msg",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Pass",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "Delete",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "targets",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Return",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Raise",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "exc",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "cause",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Break",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "Continue",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "Alias",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "DottedName"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "asname",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Import",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "is_lazy": {
+     "true": {
+      "Python": 315
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "is_lazy",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "names",
+     "type": [
+      "Alias"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ImportFrom",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "is_lazy": {
+     "true": {
+      "Python": 315
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "is_lazy",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "level",
+     "type": "int",
+     "optional": true
+    },
+    {
+     "name": "module",
+     "type": [
+      "DottedName"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "names",
+     "type": [
+      "Alias"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Global",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "names",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Nonlocal",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "names",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TypeAlias",
+   "category": "Statement",
+   "since": {
+    "Python": 312
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "type_params",
+     "type": [
+      "TypeParameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "If",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "orelse",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "While",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "orelse",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "For",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "iter",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "orelse",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AsyncFor",
+   "category": "Statement",
+   "since": {
+    "Python": 305
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "iter",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "orelse",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ExceptHandler",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Try",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "handlers",
+     "type": [
+      "ExceptHandler"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "orelse",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "finalbody",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TryStar",
+   "category": "Statement",
+   "since": {
+    "Python": 311
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "handlers",
+     "type": [
+      "ExceptHandler"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "orelse",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "finalbody",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "WithItem",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "context_expr",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional_vars",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "With",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "items",
+     "type": [
+      "WithItem"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AsyncWith",
+   "category": "Statement",
+   "since": {
+    "Python": 305
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "items",
+     "type": [
+      "WithItem"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "MatchCase",
+   "category": "Node",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "pattern",
+     "type": [
+      "Pattern"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "guard",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Match",
+   "category": "Statement",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "subject",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "cases",
+     "type": [
+      "MatchCase"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "FunctionDef",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "type_params": {
+     "true": {
+      "Python": 312
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorator_list",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "type_params",
+     "type": [
+      "TypeParameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "args",
+     "type": [
+      "Arguments"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "returns",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AsyncFunctionDef",
+   "category": "Statement",
+   "since": {
+    "Python": 305
+   },
+   "extension": false,
+   "features": {
+    "type_params": {
+     "true": {
+      "Python": 312
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorator_list",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "type_params",
+     "type": [
+      "TypeParameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "args",
+     "type": [
+      "Arguments"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "returns",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ClassDef",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "type_params": {
+     "true": {
+      "Python": 312
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorator_list",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "type_params",
+     "type": [
+      "TypeParameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "bases",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "keywords",
+     "type": [
+      "Keyword"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "MatchValue",
+   "category": "Pattern",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MatchSingleton",
+   "category": "Pattern",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "None",
+      "True",
+      "False"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "MatchSequence",
+   "category": "Pattern",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "delimiters",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "[]",
+      "()"
+     ]
+    },
+    {
+     "name": "patterns",
+     "type": [
+      "Pattern"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "MatchMapping",
+   "category": "Pattern",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "keys",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "patterns",
+     "type": [
+      "Pattern"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "rest",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MatchClass",
+   "category": "Pattern",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "cls",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "patterns",
+     "type": [
+      "Pattern"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "kwd_attrs",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "kwd_patterns",
+     "type": [
+      "Pattern"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "MatchStar",
+   "category": "Pattern",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MatchAs",
+   "category": "Pattern",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "pattern",
+     "type": [
+      "Pattern"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MatchOr",
+   "category": "Pattern",
+   "since": {
+    "Python": 310
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "patterns",
+     "type": [
+      "Pattern"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TypeVar",
+   "category": "TypeParameter",
+   "since": {
+    "Python": 312
+   },
+   "extension": false,
+   "features": {
+    "default_value": {
+     "true": {
+      "Python": 313
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "bound",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "default_value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParamSpec",
+   "category": "TypeParameter",
+   "since": {
+    "Python": 312
+   },
+   "extension": false,
+   "features": {
+    "default_value": {
+     "true": {
+      "Python": 313
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "default_value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TypeVarTuple",
+   "category": "TypeParameter",
+   "since": {
+    "Python": 312
+   },
+   "extension": false,
+   "features": {
+    "default_value": {
+     "true": {
+      "Python": 313
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "default_value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Module",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  }
+ ]
+}

@@ -3,8 +3,8 @@
 mbse-programs represents programs as complete abstract syntax trees: plain in-memory objects that a transpiler builds,
 reads and rewrites directly, never through source text. Each language is a set of node kinds that covers the union of
 its most recent standards, so that every construct any of them has is a tree, and each kind and feature records which
-standards have it. Standards (C++17, C++20, ...) are the only place where text is involved: they parse source text into
-trees, delegating to an established parser, and print trees back into source text.
+standards have it. Standards (C++20, Python 3.14, ...) are the only place where text is involved: they parse source text
+into trees, delegating to an established parser, and print trees back into source text.
 
 The trees are mbse-schemas data: every kind has a meta-schema and a builder, so trees are stored, sent and read back
 as JSON or YAML, byte-identical between the Python and TypeScript implementations.
@@ -20,8 +20,12 @@ as JSON or YAML, byte-identical between the Python and TypeScript implementation
 | `<Language>.Definitions` | semantically, as the standard's scopes | `define(unit)`, which builds a `Program` from a tree, and `referents` |
 | `<Language>.<Standard>` | | `STANDARD`, `parse`, `print` and `check` for one standard |
 
-The one language so far is Ccpp, C and C++ as one tree language, with the standards `Ccpp17` and `Ccpp20` (and
-`CcppStandard(year, family)` for any other year of C++ or C).
+The languages so far:
+
+| Language | Kinds | Standards | Parser |
+|---|---|---|---|
+| Ccpp: C and C++ as one tree language | 171, covering C++26 and C23 | `Ccpp17`, `Ccpp20`, and `CcppStandard(year, family)` for any year of C++ or C | tree-sitter-cpp 0.23.4 |
+| Python | 86, covering Python 3.0 to 3.15 | `Python312`, `Python314`, and `PythonStandard(major, minor)` for any version | tree-sitter-python 0.25.0 |
 
 ## Trees
 
@@ -44,8 +48,10 @@ The one language so far is Ccpp, C and C++ as one tree language, with the standa
 
 ## Standards
 
-Each kind records where it exists, as `SINCE`: by family (`C++`, `C`), the year of the first standard that has it, or
-a range for a kind a later standard removed. Kinds without `SINCE` exist since the language's base (C++98, C89), and
+Each kind records where it exists, as `SINCE`: by family (`C++`, `C`, `Python`), the version of the first standard that
+has it, or a range for a kind a later standard removed. A version is a number that orders a family's standards: the
+year for C and C++, `100 * major + minor` for Python (3.12 is 312), and a standard's `label(version)` names it ("C++20",
+"Python 3.12"). Kinds without `SINCE` exist since the language's base (C++98, C89, Python 3.0), and
 kinds marked `EXTENSION` (GNU and Microsoft extensions that real code depends on) are accepted by every standard.
 Features that depend on a field's value (`<=>` in a `BinaryExpression`, several indices in a `SubscriptExpression`)
 are recorded as `FEATURES`, or by a kind's own `features()` where they depend on several fields.
@@ -142,6 +148,85 @@ It does not evaluate preprocessing conditions (every branch's declarations are d
 resolve names that depend on types (members after `.` and `->` are left unresolved), tell specializations from their
 primary template, or declare what a friend declaration declares.
 
+## Python
+
+The kinds follow Python's own abstract syntax, the `ast` module, through Python 3.15: the same kinds and field names,
+capitalized where `ast`'s are lowercase (`Arg`, `Keyword`, `Alias`, `WithItem`, `MatchCase`, `Comprehension`), with
+fields in source order. A Python programmer who knows `ast` knows the tree; where it departs from `ast`, it is to keep
+what `ast` drops:
+
+- Names are `Identifier` nodes wherever `ast` has a string, and a module's dotted name is a `DottedName`.
+- `Constant.spelling` is the literal as written (`0x_FF`, `rb'\d'`, a triple-quoted string). f-strings and t-strings
+  keep their prefix and quotes, the text between replacement fields as written, and each field's own text (`{x = }`),
+  which a self-documenting field writes into the string and a t-string records as the expression.
+- `Parenthesized` keeps parentheses written in the source, and `ConcatenatedString` adjacent string literals.
+- `Comment` statements keep comments where statements are listed, `trailing` when they end a statement's or a clause
+  header's line.
+- Lists hold no empty places: a dict's `**mapping` is a `DictItem` without a key, a parameter's default is on its `Arg`
+  (`default_value`), a comparison is a `Compare` of `Comparison`s, and `from m import *` imports an `Alias` without a
+  name.
+- Not represented: the expression context (`ctx`), which follows from where an expression is, `AnnAssign.simple`,
+  type comments, and Python 2's syntax.
+
+Kinds and features record the version that introduced them, from `async` (3.5) and f-strings (3.6) to the walrus (3.8),
+`match` (3.10), `except*` (3.11), type parameters (3.12) and their defaults (3.13), t-strings and unparenthesized
+`except` types (3.14), and lazy imports and unpacking comprehensions (3.15).
+
+### Parsing Python
+
+The versions parse with [tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python) 0.25.0. Its grammar
+differs from Python's in places, which the converter corrects:
+
+| tree-sitter-python reads | as | Python reads it as |
+|---|---|---|
+| `a ^ b & c` | `(a ^ b) & c` | `a ^ (b & c)`: `&` binds tighter than `^` |
+| `await x ** 2` | `await (x ** 2)` | `(await x) ** 2` |
+| `x := a if b else c` | `(x := a) if b else c` | `x := (a if b else c)` |
+| `A \| B \| C` in an annotation | `A \| (B \| C)` | `(A \| B) \| C` |
+| `case C(k=p as n)` | `(k=p) as n` | `k=(p as n)` |
+| `f'{x:=10}'` | an assignment expression | `x` formatted with the spec `=10` |
+| `type(t).name = v` | a type alias named `(t).name` | an assignment |
+| `print >> f, x` | Python 2's print statement | a tuple of `print >> f` and `x`, which is Python 3 too |
+| `fr'\\'` | the backslashes as part of the closing quote | text |
+
+It cannot parse three constructs of Python 3.13 and later. When the text does not parse, a pre-pass rewrites them,
+keeping every other character in place: it moves `lazy` after the `import` or `from` it qualifies, removes the `**` of a
+dict comprehension that unpacks (`{**d for d in ds}`), and removes type parameters' defaults, which are parsed on their
+own; the converter puts them back. What it still cannot parse raises `ParseError`:
+
+- `*(expression)` in a subscript (`a[*(b)]`);
+- a line indented less than the block it continues, inside brackets;
+- Python 2's statements (`print x`, `exec code`, `<>`) and tuple parameters.
+
+Errors are located where tree-sitter-python's error recovery starts, which is often the beginning of the statement.
+
+Parsing normalizes what the tree does not keep: layout and blank lines, `;`-separated statements, backslash
+continuations, parentheses around `with` items and imported names, group patterns (`case (a)`), the parentheses a call
+shares with its only argument, a generator (`f((x for x in y))`), and comments inside expressions. Keyword arguments
+before `*args` print after them, as `ast` orders them, which is the order Python evaluates them in.
+
+Checked against CPython 3.14: of the 1,865 files of its standard library that CPython parses, 1,863 parse, print, and
+read back in CPython to the same `ast` (the other two hold the first two gaps above), and so do all 1,730 files of the
+packages installed with this one; printing what was printed gives the same text; and the Python and TypeScript
+implementations write byte-identical snapshots and printed text for every file.
+
+### Printing Python
+
+The printer writes four spaces per level, one statement per line, `elif` for an `orelse` that is one `If`, and, as
+PEP 8 does, two blank lines around top-level definitions and one around nested ones, keeping comments that lead a
+definition with it. Parentheses are added by the precedence of Python's grammar, which also decides where an assignment
+expression, a `yield`, a lambda or a tuple must be parenthesized. A replacement field prints its `text` while that
+still spells its value (comparing code, without comments or whitespace outside strings), and its value otherwise, so
+that a transpiler that renames a variable inside an f-string sees the new name printed.
+
+### Python definitions
+
+`Python.Definitions.define(module)` follows Python's execution model: scopes are 'module', 'class', 'function',
+'lambda', 'comprehension' and 'type parameters' (annotation scopes); a name bound anywhere in a scope is local to it
+unless `global` or `nonlocal` says otherwise; lookup goes outward past class bodies. There is one entity per name per
+scope, with every binding as a declaration, in source order. Qualified names join with `.` (`Shape.area`), through a
+scope's `separator`. Attributes, keyword arguments, imported modules' members and builtins are not resolved.
+
 ## Transpiling
 
 A transpiler reads a tree with `walk` or a `Visitor`, finds where a node is with `Parents` (its parent, field, index
@@ -160,7 +245,11 @@ tells which standard the result needs. Nothing in this path parses or prints a s
   kind, which would weigh on every transpiler.
 - **Preprocessing.** Directives are kept where items are listed, and macros are entities, but code is not expanded;
   directives elsewhere (inside an expression) are not parsed.
-- **More languages.** Verilog, Python and TypeScript are planned as further languages over the same framework.
+- **A parser that covers Python 3.13 and later.** tree-sitter-python 0.25 needs a pre-pass and nine corrections. CPython's
+  own parser is exact but exists only in Python, and both implementations must read the same trees; a later
+  tree-sitter-python, or a PEG grammar run in both, would close the gap.
+- **Precise error positions.** tree-sitter reports where its error recovery starts, not where the text went wrong.
+- **More languages.** Verilog and TypeScript are planned as further languages over the same framework.
 
 ## Resolved
 
@@ -175,3 +264,9 @@ tells which standard the result needs. Nothing in this path parses or prints a s
 - Printing writes one fixed layout, not the source's own: trees do not record whitespace.
 - Positions in errors are counted in code points.
 - Definitions find entities by name: overloads are separate entities by signature, but are not chosen between.
+- Python's kinds are `ast`'s, with the additions above; its versions are numbered `100 * major + minor`, and standards
+  name versions through `label`.
+- Python parses with tree-sitter-python 0.25.0, pinned in both implementations, whose grammar the converter corrects.
+  CPython's `ast` is not used to parse, since TypeScript cannot run it; the Python suite checks the conformance source
+  against it.
+- web-tree-sitter is initialized once for every language: initializing it again breaks the parsers made before.

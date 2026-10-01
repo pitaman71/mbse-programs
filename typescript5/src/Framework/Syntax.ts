@@ -41,8 +41,8 @@ function isNative(token: NativeToken, value: unknown): boolean {
   return typeof value === (token === String ? "string" : token === Boolean ? "boolean" : "bigint");
 }
 
-/** Where a feature exists, by language family ('C++', 'C'): the year of the first standard that has it, or [first,
- * last exclusive] for a feature a later standard removed. */
+/** Where a feature exists, by language family ('C++', 'C', 'Python'): the version of the first standard that has it,
+ * or [first, last exclusive] for a feature a later standard removed. */
 export type Availability = Readonly<Record<string, number | readonly [number, number]>>;
 
 /** A kind's features: for each field, the values that make a feature of it (a choice, or `true`), each with where it
@@ -880,14 +880,19 @@ function uses(value: unknown, key: string | true): boolean {
   return typeof value === "string" && value === key;
 }
 
-/** A standard of a language family, such as C++20 (`family` 'C++', `year` 2020): which kinds and features it has,
+/** A standard of a language family, such as C++20 (`family` 'C++', `version` 2020): which kinds and features it has,
  * and how source text of it is parsed into trees and trees printed into it. Languages derive their standards from
  * this class and implement `parse` and `print`. */
 export class Standard {
-  constructor(readonly language: Language, readonly family: string, readonly year: number) {}
+  constructor(readonly language: Language, readonly family: string, readonly version: number) {}
 
   name(): string {
-    return label(this.family, this.year);
+    return this.label(this.version);
+  }
+
+  /** The name of the family's standard `version`; by default a year's, such as 'C++20'. */
+  label(version: number): string {
+    return label(this.family, version);
   }
 
   toString(): string {
@@ -904,8 +909,8 @@ export class Standard {
     const span = availability[this.family];
     if (span === undefined) return `is not ${this.family}`;
     const [first, last] = typeof span === "number" ? [span, null] : span;
-    if (this.year < first) return `needs ${label(this.family, first)}`;
-    if (last !== null && this.year >= last) return `was removed in ${label(this.family, last)}`;
+    if (this.version < first) return `needs ${this.label(first)}`;
+    if (last !== null && this.version >= last) return `was removed in ${this.label(last)}`;
     return null;
   }
 

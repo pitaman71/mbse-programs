@@ -6,7 +6,8 @@
  * https://github.com/pitaman71/mbse-programs.
  *
  * The framework is `@mbse/programs/Framework`, and the languages are modules beside it: `@mbse/programs/Ccpp` for C
- * and C++. */
+ * and C++, and `@mbse/programs/Python` for Python. */
 
 export * as Ccpp from "./Ccpp/index.js";
 export * as Framework from "./Framework/index.js";
+export * as Python from "./Python/index.js";

@@ -32,14 +32,14 @@ export class Entity {
 
   constructor(readonly kind: string, readonly name: string | null, readonly parent: Scope | null) {}
 
-  /** The names of the entity and the named entities enclosing it, outermost first, such as 'geo::v1::Point'. Unnamed
-   * entities are left out. */
+  /** The names of the entity and the named entities enclosing it, outermost first, joined by its scope's separator,
+   * such as 'geo::v1::Point' or 'shapes.Point.area'. Unnamed entities are left out. */
   qualified_name(): string {
     const parts: string[] = [];
     for (let entity: Entity | null = this; entity !== null; entity = entity.parent?.owner ?? null) {
       if (entity.name !== null) parts.push(entity.name);
     }
-    return parts.reverse().join("::");
+    return parts.reverse().join(this.parent?.separator ?? "::");
   }
 
   /** The entity itself, or for an alias the entity it names, followed through aliases of aliases. */
@@ -60,15 +60,20 @@ export class Entity {
 
 /** A region of a program where names are declared: `kind` names it in its language ('namespace', 'class', 'block',
  * ...), `owner` is the entity whose members it holds (null for blocks and the global scope), `parent` the enclosing
- * scope, and `node` the syntax node that opens it. */
+ * scope, and `node` the syntax node that opens it. Qualified names join names with `separator`: by default the
+ * parent's, and '::' without a parent. */
 export class Scope {
   readonly names = new Map<string, Entity[]>();
   readonly transparent: Scope[] = [];
   readonly using: Scope[] = [];
   readonly bases: Scope[] = [];
 
+  readonly separator: string;
+
   constructor(readonly kind: string, readonly owner: Entity | null, readonly parent: Scope | null,
-    readonly node: unknown = null) {}
+    readonly node: unknown = null, separator: string | null = null) {
+    this.separator = separator ?? parent?.separator ?? "::";
+  }
 
   /** Makes `entity` found by `name` (by default its own) in this scope. */
   declare(entity: Entity, name: string | null = null): Entity {
@@ -187,10 +192,10 @@ export class Program {
   }
 
   /** The entities a name written as text names, such as 'std::vector' or '::main', where `at` is (by default, in the
-   * global scope). */
+   * global scope). Its parts are joined by the global scope's separator. */
   lookup(name: string, at: unknown = null): Entity[] {
     const scope = (at !== null ? this.scope_of(at) : null) ?? this.root;
-    const parts = name.split("::");
+    const parts = name.split(this.root.separator);
     if (parts[0] === "") return scope.qualified(parts.slice(1), true);
     return scope.qualified(parts);
   }
