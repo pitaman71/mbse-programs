@@ -4,8 +4,10 @@ mbse-programs represents programs as complete abstract syntax trees, built on
 [mbse-schemas](https://github.com/pitaman71/mbse-schemas): plain in-memory objects that a transpiler builds, reads and
 rewrites without parsing or printing strings, each language covering the union of its standards, and standards that
 parse and print source text by delegating to an established parser. The languages are Ccpp (C and C++, with C++17 and
-C++20, parsed by tree-sitter-cpp) and Python (kinds following `ast`, with Python 3.12 and 3.14, parsed by
-tree-sitter-python). Two equivalent implementations exist: `python3/` and `typescript5/`.
+C++20, parsed by tree-sitter-cpp), Python (kinds following `ast`, with Python 3.12 and 3.14, parsed by
+tree-sitter-python) and TypeScript (TypeScript and JavaScript, kinds following typescript-estree, with TypeScript 5.0
+and 5.9 and ES2020 and ES2025, with JSX or without, parsed by tree-sitter-typescript). Two equivalent implementations
+exist: `python3/` and `typescript5/`.
 
 ## Start here
 
@@ -32,10 +34,13 @@ tree-sitter-python). Two equivalent implementations exist: `python3/` and `types
   reads it. A new kind records where it exists (`SINCE`, `FEATURES`, or `EXTENSION`), and the printer prints it.
 - **Transpilers never touch text.** Everything a transpiler needs is on the tree, in `Framework.Syntax`'s traversals or
   in `Definitions`; only standards parse and print.
-- **The parsers are pinned.** tree-sitter-cpp 0.23.4 and tree-sitter-python 0.25.0, in both implementations (the
-  Python wheels and the npm packages' wasm), so their trees are the same. Upgrading one is a change to both, and to the
-  gaps and corrections in `docs/PROGRAMS.md`. A Python construct that tree-sitter-python reads unlike CPython is
-  corrected in the converter, and checked against CPython's `ast` (PYPRS-01 does it for the conformance source).
+- **The parsers are pinned.** tree-sitter-cpp 0.23.4, tree-sitter-python 0.25.0 and tree-sitter-typescript 0.23.2, in
+  both implementations (the Python wheels and the npm packages' wasm), so their trees are the same; both pass tree-sitter
+  UTF-16, so its error recovery is the same too. Upgrading one is a change to both, and to the gaps and corrections in
+  `docs/PROGRAMS.md`. A Python construct that tree-sitter-python reads unlike CPython is corrected in the converter, and
+  checked against CPython's `ast` (PYPRS-01 does it for the conformance source); a TypeScript construct that
+  tree-sitter-typescript reads unlike TypeScript is corrected likewise, and checked against typescript-estree, which
+  the TypeScript suite runs (TSPRS-01). typescript-estree, an npm package, is the oracle for a TypeScript tree.
 - **Behavior is decided in `docs/PROGRAMS.md`.** Record new decisions under Resolved, and put what stays undecided
   under Open questions.
 

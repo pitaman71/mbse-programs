@@ -1,0 +1,5328 @@
+{
+ "language": "TypeScript",
+ "base": {
+  "ECMAScript": 2015,
+  "TypeScript": 100
+ },
+ "categories": [
+  {
+   "name": "Statement",
+   "base": "Node"
+  },
+  {
+   "name": "Expression",
+   "base": "Node"
+  },
+  {
+   "name": "Pattern",
+   "base": "Node"
+  },
+  {
+   "name": "ClassElement",
+   "base": "Node"
+  },
+  {
+   "name": "TypeElement",
+   "base": "Node"
+  },
+  {
+   "name": "TypeNode",
+   "base": "Node"
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "Comment",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "block",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "trailing",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "Program",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "hashbang",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Identifier",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "optional": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "name",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PrivateIdentifier",
+   "category": "Expression",
+   "since": {
+    "ECMAScript": 2022,
+    "TypeScript": 308
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "Literal",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "raw",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "TemplateElement",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "raw",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "tail",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "TemplateLiteral",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "quasis",
+     "type": [
+      "TemplateElement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "expressions",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TaggedTemplateExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "tag",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "quasi",
+     "type": [
+      "TemplateLiteral"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ThisExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "Super",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "ParenthesizedExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression",
+      "Pattern"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Elision",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "SpreadElement",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "argument",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ArrayExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elements",
+     "type": [
+      "Expression",
+      "SpreadElement",
+      "Elision"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Property",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {
+    "optional": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "propertyKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "init",
+      "get",
+      "set"
+     ]
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "method",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "shorthand",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression",
+      "Pattern",
+      "TSEmptyBodyFunctionExpression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ObjectExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "properties",
+     "type": [
+      "Property",
+      "SpreadElement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "FunctionExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "isAsync",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "generator",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "BlockStatement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ArrowFunctionExpression",
+   "category": "Expression",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "isAsync",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "BlockStatement",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ClassExpression",
+   "category": "Expression",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 106
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "superClass",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "superTypeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "implements",
+     "type": [
+      "TSClassImplements"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "ClassBody"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MetaProperty",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "meta",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "property",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MemberExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "object",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "property",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CallExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "callee",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "SpreadElement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ChainExpression",
+   "category": "Expression",
+   "since": {
+    "ECMAScript": 2020,
+    "TypeScript": 307
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NewExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "callee",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "SpreadElement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ImportExpression",
+   "category": "Expression",
+   "since": {
+    "ECMAScript": 2020,
+    "TypeScript": 204
+   },
+   "extension": false,
+   "features": {
+    "phase": {
+     "defer": {
+      "TypeScript": 509
+     }
+    },
+    "options": {
+     "true": {
+      "ECMAScript": 2025,
+      "TypeScript": 503
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "phase",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "defer"
+     ]
+    },
+    {
+     "name": "source",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "options",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UpdateExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "++",
+      "--"
+     ]
+    },
+    {
+     "name": "prefix",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "argument",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UnaryExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "-",
+      "+",
+      "!",
+      "~",
+      "typeof",
+      "void",
+      "delete"
+     ]
+    },
+    {
+     "name": "argument",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AwaitExpression",
+   "category": "Expression",
+   "since": {
+    "ECMAScript": 2017,
+    "TypeScript": 107
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "argument",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinaryExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "operator": {
+     "**": {
+      "ECMAScript": 2016,
+      "TypeScript": 107
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "==",
+      "!=",
+      "===",
+      "!==",
+      "<",
+      "<=",
+      ">",
+      ">=",
+      "<<",
+      ">>",
+      ">>>",
+      "+",
+      "-",
+      "*",
+      "/",
+      "%",
+      "**",
+      "|",
+      "^",
+      "&",
+      "in",
+      "instanceof"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "LogicalExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "operator": {
+     "??": {
+      "ECMAScript": 2020,
+      "TypeScript": 307
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "&&",
+      "||",
+      "??"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConditionalExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequent",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternate",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AssignmentExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "operator": {
+     "**=": {
+      "ECMAScript": 2016,
+      "TypeScript": 107
+     },
+     "&&=": {
+      "ECMAScript": 2021,
+      "TypeScript": 400
+     },
+     "||=": {
+      "ECMAScript": 2021,
+      "TypeScript": 400
+     },
+     "??=": {
+      "ECMAScript": 2021,
+      "TypeScript": 400
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Expression",
+      "Pattern"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "=",
+      "+=",
+      "-=",
+      "*=",
+      "/=",
+      "%=",
+      "**=",
+      "<<=",
+      ">>=",
+      ">>>=",
+      "&=",
+      "|=",
+      "^=",
+      "&&=",
+      "||=",
+      "??="
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SequenceExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expressions",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "YieldExpression",
+   "category": "Expression",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 106
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "delegate",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "argument",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSAsExpression",
+   "category": "Expression",
+   "since": {
+    "TypeScript": 106
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSSatisfiesExpression",
+   "category": "Expression",
+   "since": {
+    "TypeScript": 409
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeAssertion",
+   "category": "Expression",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSNonNullExpression",
+   "category": "Expression",
+   "since": {
+    "TypeScript": 200
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSInstantiationExpression",
+   "category": "Expression",
+   "since": {
+    "TypeScript": 407
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ArrayPattern",
+   "category": "Pattern",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {
+    "optional": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "elements",
+     "type": [
+      "Pattern",
+      "Expression",
+      "Elision"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ObjectPattern",
+   "category": "Pattern",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {
+    "optional": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "properties",
+     "type": [
+      "Property",
+      "RestElement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AssignmentPattern",
+   "category": "Pattern",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {
+    "optional": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "left",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RestElement",
+   "category": "Pattern",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {
+    "optional": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "argument",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "AssignmentPattern"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ExpressionStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BlockStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "EmptyStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "DebuggerStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "WithStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "object",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ReturnStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "argument",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "LabeledStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BreakStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ContinueStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IfStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequent",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternate",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SwitchCase",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "consequent",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "SwitchStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "discriminant",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "cases",
+     "type": [
+      "SwitchCase"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ThrowStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "argument",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CatchClause",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "param",
+     "type": [
+      "Identifier",
+      "Pattern"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "BlockStatement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TryStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "block",
+     "type": [
+      "BlockStatement"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "handler",
+     "type": [
+      "CatchClause"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "finalizer",
+     "type": [
+      "BlockStatement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "WhileStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DoWhileStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "init",
+     "type": [
+      "VariableDeclaration",
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "test",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "update",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForInStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "VariableDeclaration",
+      "Expression",
+      "Pattern"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForOfStatement",
+   "category": "Statement",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {
+    "isAwait": {
+     "true": {
+      "ECMAScript": 2018,
+      "TypeScript": 203
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "isAwait",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "left",
+     "type": [
+      "VariableDeclaration",
+      "Expression",
+      "Pattern"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "VariableDeclarator",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {
+    "definite": {
+     "true": {
+      "TypeScript": 207
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "id",
+     "type": [
+      "Identifier",
+      "Pattern"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "definite",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "init",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "VariableDeclaration",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "declarationKind": {
+     "let": {
+      "ECMAScript": 2015,
+      "TypeScript": 105
+     },
+     "const": {
+      "ECMAScript": 2015,
+      "TypeScript": 105
+     },
+     "using": {
+      "TypeScript": 502
+     },
+     "await using": {
+      "TypeScript": 502
+     }
+    },
+    "declare": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "declarationKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "var",
+      "let",
+      "const",
+      "using",
+      "await using"
+     ]
+    },
+    {
+     "name": "declarations",
+     "type": [
+      "VariableDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "FunctionDeclaration",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "isAsync": {
+     "true": {
+      "ECMAScript": 2017,
+      "TypeScript": 107
+     }
+    },
+    "generator": {
+     "true": {
+      "ECMAScript": 2015,
+      "TypeScript": 106
+     }
+    },
+    "typeParameters": {
+     "true": {
+      "TypeScript": 100
+     }
+    },
+    "returnType": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "isAsync",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "generator",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "BlockStatement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSDeclareFunction",
+   "category": "Statement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "isAsync",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "generator",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Decorator",
+   "category": "Node",
+   "since": {
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ClassBody",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "ClassElement",
+      "TSIndexSignature",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ClassDeclaration",
+   "category": "Statement",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {
+    "abstract": {
+     "true": {
+      "TypeScript": 106
+     }
+    },
+    "declare": {
+     "true": {
+      "TypeScript": 100
+     }
+    },
+    "implements": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "abstract",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "superClass",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "superTypeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "implements",
+     "type": [
+      "TSClassImplements"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "ClassBody"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "StaticBlock",
+   "category": "ClassElement",
+   "since": {
+    "ECMAScript": 2022,
+    "TypeScript": 404
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "MethodDefinition",
+   "category": "ClassElement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "override": {
+     "true": {
+      "TypeScript": 403
+     }
+    },
+    "accessibility": {
+     "true": {
+      "TypeScript": 100
+     }
+    },
+    "optional": {
+     "true": {
+      "TypeScript": 200
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "override",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "methodKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "constructor",
+      "method",
+      "get",
+      "set"
+     ]
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "FunctionExpression",
+      "TSEmptyBodyFunctionExpression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSAbstractMethodDefinition",
+   "category": "ClassElement",
+   "since": {
+    "TypeScript": 106
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "override",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "methodKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "constructor",
+      "method",
+      "get",
+      "set"
+     ]
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "FunctionExpression",
+      "TSEmptyBodyFunctionExpression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSEmptyBodyFunctionExpression",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "isAsync",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "generator",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PropertyDefinition",
+   "category": "ClassElement",
+   "since": {
+    "ECMAScript": 2022,
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {
+    "declare": {
+     "true": {
+      "TypeScript": 307
+     }
+    },
+    "accessibility": {
+     "true": {
+      "TypeScript": 100
+     }
+    },
+    "readonly": {
+     "true": {
+      "TypeScript": 200
+     }
+    },
+    "override": {
+     "true": {
+      "TypeScript": 403
+     }
+    },
+    "optional": {
+     "true": {
+      "TypeScript": 200
+     }
+    },
+    "definite": {
+     "true": {
+      "TypeScript": 207
+     }
+    },
+    "typeAnnotation": {
+     "true": {
+      "TypeScript": 100
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "override",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "readonly",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "definite",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSAbstractPropertyDefinition",
+   "category": "ClassElement",
+   "since": {
+    "TypeScript": 200
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "override",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "readonly",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "definite",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AccessorProperty",
+   "category": "ClassElement",
+   "since": {
+    "TypeScript": 409
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "override",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "readonly",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "definite",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSAbstractAccessorProperty",
+   "category": "ClassElement",
+   "since": {
+    "TypeScript": 409
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "override",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "readonly",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "definite",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSParameterProperty",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "decorators",
+     "type": [
+      "Decorator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "override",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "readonly",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "parameter",
+     "type": [
+      "Identifier",
+      "AssignmentPattern"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ImportAttribute",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "key",
+     "type": [
+      "Identifier",
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ImportSpecifier",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {
+    "importKind": {
+     "type": {
+      "TypeScript": 405
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "importKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "type",
+      "value"
+     ]
+    },
+    {
+     "name": "imported",
+     "type": [
+      "Identifier",
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "local",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ImportDefaultSpecifier",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "local",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ImportNamespaceSpecifier",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "local",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ImportDeclaration",
+   "category": "Statement",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {
+    "importKind": {
+     "type": {
+      "TypeScript": 308
+     }
+    },
+    "phase": {
+     "defer": {
+      "TypeScript": 509
+     }
+    },
+    "attributes": {
+     "true": {
+      "ECMAScript": 2025,
+      "TypeScript": 503
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "importKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "type",
+      "value"
+     ]
+    },
+    {
+     "name": "phase",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "defer"
+     ]
+    },
+    {
+     "name": "specifiers",
+     "type": [
+      "ImportDefaultSpecifier",
+      "ImportNamespaceSpecifier",
+      "ImportSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "source",
+     "type": [
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "ImportAttribute"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ExportSpecifier",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {
+    "exportKind": {
+     "type": {
+      "TypeScript": 405
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "exportKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "type",
+      "value"
+     ]
+    },
+    {
+     "name": "local",
+     "type": [
+      "Identifier",
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "exported",
+     "type": [
+      "Identifier",
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ExportNamedDeclaration",
+   "category": "Statement",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {
+    "exportKind": {
+     "type": {
+      "TypeScript": 308
+     }
+    },
+    "attributes": {
+     "true": {
+      "ECMAScript": 2025,
+      "TypeScript": 503
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "exportKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "type",
+      "value"
+     ]
+    },
+    {
+     "name": "declaration",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "specifiers",
+     "type": [
+      "ExportSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "source",
+     "type": [
+      "Literal"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "ImportAttribute"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ExportDefaultDeclaration",
+   "category": "Statement",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "declaration",
+     "type": [
+      "Statement",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ExportAllDeclaration",
+   "category": "Statement",
+   "since": {
+    "ECMAScript": 2015,
+    "TypeScript": 105
+   },
+   "extension": false,
+   "features": {
+    "exportKind": {
+     "type": {
+      "TypeScript": 500
+     }
+    },
+    "exported": {
+     "true": {
+      "ECMAScript": 2020,
+      "TypeScript": 308
+     }
+    },
+    "attributes": {
+     "true": {
+      "ECMAScript": 2025,
+      "TypeScript": 503
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "exportKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "type",
+      "value"
+     ]
+    },
+    {
+     "name": "exported",
+     "type": [
+      "Identifier",
+      "Literal"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "source",
+     "type": [
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "ImportAttribute"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSImportEqualsDeclaration",
+   "category": "Statement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "importKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "type",
+      "value"
+     ]
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "moduleReference",
+     "type": [
+      "Identifier",
+      "TSQualifiedName",
+      "TSExternalModuleReference"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSExternalModuleReference",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSExportAssignment",
+   "category": "Statement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSNamespaceExportDeclaration",
+   "category": "Statement",
+   "since": {
+    "TypeScript": 200
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeAnnotation",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeParameter",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {
+    "const": {
+     "true": {
+      "TypeScript": 500
+     }
+    },
+    "isIn": {
+     "true": {
+      "TypeScript": 407
+     }
+    },
+    "isOut": {
+     "true": {
+      "TypeScript": 407
+     }
+    },
+    "default": {
+     "true": {
+      "TypeScript": 203
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "const",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "isIn",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "isOut",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "constraint",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "default",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeParameterDeclaration",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "params",
+     "type": [
+      "TSTypeParameter"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeParameterInstantiation",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "params",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeAliasDeclaration",
+   "category": "Statement",
+   "since": {
+    "TypeScript": 104
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSInterfaceHeritage",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSClassImplements",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSInterfaceBody",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "TypeElement",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSInterfaceDeclaration",
+   "category": "Statement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "extends",
+     "type": [
+      "TSInterfaceHeritage"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "TSInterfaceBody"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSEnumMember",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "id",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSEnumBody",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "members",
+     "type": [
+      "TSEnumMember",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSEnumDeclaration",
+   "category": "Statement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {
+    "const": {
+     "true": {
+      "TypeScript": 104
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "const",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "TSEnumBody"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSModuleBlock",
+   "category": "Node",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSModuleDeclaration",
+   "category": "Statement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {
+    "moduleKind": {
+     "namespace": {
+      "TypeScript": 105
+     },
+     "global": {
+      "TypeScript": 108
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "declare",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "moduleKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "global",
+      "module",
+      "namespace"
+     ]
+    },
+    {
+     "name": "id",
+     "type": [
+      "Identifier",
+      "Literal",
+      "TSQualifiedName"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "TSModuleBlock"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSPropertySignature",
+   "category": "TypeElement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "readonly",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSMethodSignature",
+   "category": "TypeElement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {
+    "methodKind": {
+     "get": {
+      "TypeScript": 403
+     },
+     "set": {
+      "TypeScript": 403
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "readonly",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "methodKind",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "constructor",
+      "method",
+      "get",
+      "set"
+     ]
+    },
+    {
+     "name": "computed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "key",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSCallSignatureDeclaration",
+   "category": "TypeElement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSConstructSignatureDeclaration",
+   "category": "TypeElement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSIndexSignature",
+   "category": "TypeElement",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {
+    "static": {
+     "true": {
+      "TypeScript": 403
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "accessibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "private",
+      "protected",
+      "public"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "readonly",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSAnyKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSUnknownKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 300
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSNumberKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSBigIntKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 302
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSBooleanKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSStringKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSSymbolKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSObjectKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 202
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSNeverKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 200
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSVoidKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSUndefinedKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 200
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSNullKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 200
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSIntrinsicKeyword",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 401
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSThisType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 107
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "TSQualifiedName",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Identifier",
+      "ThisExpression",
+      "TSQualifiedName"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "right",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeReference",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeName",
+     "type": [
+      "Identifier",
+      "ThisExpression",
+      "TSQualifiedName"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSParenthesizedType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSLiteralType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 108
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "literal",
+     "type": [
+      "Literal",
+      "UnaryExpression",
+      "TemplateLiteral"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTemplateLiteralType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 401
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "quasis",
+     "type": [
+      "TemplateElement"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "types",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSArrayType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elementType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTupleType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "elementTypes",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSNamedTupleMember",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 400
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "elementType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSOptionalType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 300
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSRestType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 300
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSUnionType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 104
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "types",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSIntersectionType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 106
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "types",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSFunctionType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSConstructorType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {
+    "abstract": {
+     "true": {
+      "TypeScript": 402
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "abstract",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "typeParameters",
+     "type": [
+      "TSTypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "params",
+     "type": [
+      "Identifier",
+      "Pattern",
+      "TSParameterProperty"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "returnType",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeLiteral",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "members",
+     "type": [
+      "TypeElement",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TSMappedType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 201
+   },
+   "extension": false,
+   "features": {
+    "nameType": {
+     "true": {
+      "TypeScript": 401
+     }
+    },
+    "optional": {
+     "+?": {
+      "TypeScript": 208
+     },
+     "-?": {
+      "TypeScript": 208
+     }
+    },
+    "readonly": {
+     "+readonly": {
+      "TypeScript": 208
+     },
+     "-readonly": {
+      "TypeScript": 208
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "readonly",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "readonly",
+      "+readonly",
+      "-readonly"
+     ]
+    },
+    {
+     "name": "key",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "constraint",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "nameType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "optional",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "?",
+      "+?",
+      "-?"
+     ]
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSIndexedAccessType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 201
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "objectType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "indexType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeOperator",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 201
+   },
+   "extension": false,
+   "features": {
+    "operator": {
+     "readonly": {
+      "TypeScript": 304
+     },
+     "unique": {
+      "TypeScript": 207
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "keyof",
+      "readonly",
+      "unique"
+     ]
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypeQuery",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 100
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "exprName",
+     "type": [
+      "Identifier",
+      "ThisExpression",
+      "TSQualifiedName",
+      "TSImportType"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSImportType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 209
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "source",
+     "type": [
+      "Literal"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "options",
+     "type": [
+      "ObjectExpression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "qualifier",
+     "type": [
+      "Identifier",
+      "ThisExpression",
+      "TSQualifiedName"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSConditionalType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 208
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "checkType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "extendsType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "trueType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "falseType",
+     "type": [
+      "TypeNode"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSInferType",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 208
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typeParameter",
+     "type": [
+      "TSTypeParameter"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TSTypePredicate",
+   "category": "TypeNode",
+   "since": {
+    "TypeScript": 106
+   },
+   "extension": false,
+   "features": {
+    "asserts": {
+     "true": {
+      "TypeScript": 307
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "asserts",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "parameterName",
+     "type": [
+      "Identifier",
+      "TSThisType"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeAnnotation",
+     "type": [
+      "TSTypeAnnotation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXIdentifier",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXNamespacedName",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "namespace",
+     "type": [
+      "JSXIdentifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "JSXIdentifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXMemberExpression",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "object",
+     "type": [
+      "JSXIdentifier",
+      "JSXMemberExpression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "property",
+     "type": [
+      "JSXIdentifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXEmptyExpression",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "JSXExpressionContainer",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression",
+      "JSXEmptyExpression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXSpreadChild",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression",
+      "JSXEmptyExpression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXText",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "raw",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXAttribute",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "JSXIdentifier",
+      "JSXNamespacedName"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Literal",
+      "JSXExpressionContainer",
+      "JSXElement",
+      "JSXFragment"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXSpreadAttribute",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "argument",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXOpeningElement",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "JSXIdentifier",
+      "JSXMemberExpression",
+      "JSXNamespacedName"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typeArguments",
+     "type": [
+      "TSTypeParameterInstantiation"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "JSXAttribute",
+      "JSXSpreadAttribute"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "selfClosing",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXClosingElement",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "JSXIdentifier",
+      "JSXMemberExpression",
+      "JSXNamespacedName"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXElement",
+   "category": "Expression",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "openingElement",
+     "type": [
+      "JSXOpeningElement"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "children",
+     "type": [
+      "JSXText",
+      "JSXExpressionContainer",
+      "JSXSpreadChild",
+      "JSXElement",
+      "JSXFragment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "closingElement",
+     "type": [
+      "JSXClosingElement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "JSXOpeningFragment",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "JSXClosingFragment",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "JSXFragment",
+   "category": "Expression",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "openingFragment",
+     "type": [
+      "JSXOpeningFragment"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "children",
+     "type": [
+      "JSXText",
+      "JSXExpressionContainer",
+      "JSXSpreadChild",
+      "JSXElement",
+      "JSXFragment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "closingFragment",
+     "type": [
+      "JSXClosingFragment"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  }
+ ]
+}

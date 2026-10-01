@@ -26,6 +26,7 @@ The languages so far:
 |---|---|---|---|
 | Ccpp: C and C++ as one tree language | 171, covering C++26 and C23 | `Ccpp17`, `Ccpp20`, and `CcppStandard(year, family)` for any year of C++ or C | tree-sitter-cpp 0.23.4 |
 | Python | 86, covering Python 3.0 to 3.15 | `Python312`, `Python314`, and `PythonStandard(major, minor)` for any version | tree-sitter-python 0.25.0 |
+| TypeScript: TypeScript and JavaScript as one tree language, with JSX | 163, covering TypeScript 5.9 and ES2025 | `TypeScript50`, `TypeScript59`, `ECMAScript2020`, `ECMAScript2025`, each with a `JSX` variant, and `TypeScriptStandard(major, minor, jsx)` and `ECMAScriptStandard(year, jsx)` for any version or edition | tree-sitter-typescript 0.23.2 |
 
 ## Trees
 
@@ -48,11 +49,13 @@ The languages so far:
 
 ## Standards
 
-Each kind records where it exists, as `SINCE`: by family (`C++`, `C`, `Python`), the version of the first standard that
-has it, or a range for a kind a later standard removed. A version is a number that orders a family's standards: the
-year for C and C++, `100 * major + minor` for Python (3.12 is 312), and a standard's `label(version)` names it ("C++20",
-"Python 3.12"). Kinds without `SINCE` exist since the language's base (C++98, C89, Python 3.0), and
-kinds marked `EXTENSION` (GNU and Microsoft extensions that real code depends on) are accepted by every standard.
+Each kind records where it exists, as `SINCE`: by family (`C++`, `C`, `Python`, `ECMAScript`, `TypeScript`), the
+version of the first standard that has it, or a range for a kind a later standard removed. A version is a number that
+orders a family's standards: the year for C, C++ and ECMAScript, `100 * major + minor` for Python and TypeScript (3.12
+is 312, 5.9 is 509), and a standard's `label(version)` names it ("C++20", "Python 3.12", "ES2025", "TypeScript 5.9").
+Kinds without `SINCE` exist since the language's base (C++98, C89, Python 3.0, ES2015 and TypeScript 1.0), and kinds
+marked `EXTENSION` are outside every family: GNU and Microsoft extensions that real code depends on, which every
+standard accepts, and JSX, which the TypeScript language's standards accept when made with `jsx`.
 Features that depend on a field's value (`<=>` in a `BinaryExpression`, several indices in a `SubscriptExpression`)
 are recorded as `FEATURES`, or by a kind's own `features()` where they depend on several fields.
 
@@ -227,6 +230,98 @@ unless `global` or `nonlocal` says otherwise; lookup goes outward past class bod
 scope, with every binding as a declaration, in source order. Qualified names join with `.` (`Shape.area`), through a
 scope's `separator`. Attributes, keyword arguments, imported modules' members and builtins are not resolved.
 
+## TypeScript and JavaScript
+
+TypeScript and JavaScript are one tree language, as C and C++ are: JavaScript's standards are the editions of
+ECMAScript, which have none of TypeScript's own syntax. The kinds follow
+[typescript-estree](https://typescript-eslint.io/packages/typescript-estree/) (TSESTree), the ESTree of TypeScript that
+ESLint and its tools read: the same kinds, field names and fields, in source order. A programmer who knows TSESTree
+knows the tree; where it departs from TSESTree, it is to keep a name both implementations can use or what TSESTree
+drops:
+
+- Fields whose names are keywords of Python, or clash with the framework's tag `kind`, are renamed: `kind` is
+  `declarationKind`, `methodKind`, `propertyKind` or `moduleKind`, and `async`, `await`, `in` and `out` are `isAsync`,
+  `isAwait`, `isIn` and `isOut`.
+- `Literal.raw` is the literal as written (`0x_FF`, `1_000n`, `/a/v`), and a template's parts are their raw text.
+- `ParenthesizedExpression` and `TSParenthesizedType` keep parentheses written in the source.
+- `Comment` keeps comments where statements, class members, interface members, enum members and a switch's cases are
+  listed, and in object types; `Program.hashbang` keeps a first line `#!...`.
+- An array's hole is an `Elision`, so that lists hold no empty places.
+- Not represented: what follows from the rest (`directive`, `ArrowFunctionExpression.expression`, `sourceType`,
+  `TSModuleDeclaration.global`), what TSESTree keeps only for compatibility (`assertions`, `TSEnumDeclaration.members`,
+  `TSMappedType.typeParameter`, `TSImportType.argument`), and the modifier keywords (`TSAbstractKeyword`, ...).
+
+Kinds and features record where they exist in both families: the ECMAScript edition and the TypeScript version that
+introduced them, from `**` (ES2016, TypeScript 1.7) to optional chaining and `??` (ES2020, TypeScript 3.7), private
+names (ES2022, TypeScript 3.8) and import attributes (ES2025, TypeScript 5.3). Type syntax, enums, namespaces,
+decorators, parameter properties and the modifiers are TypeScript's alone, and so are the proposals TypeScript has ahead
+of an ECMAScript edition: decorators, `accessor`, `using` and `import defer`. An ECMAScript standard rejects them all.
+
+### Parsing TypeScript
+
+The standards parse with [tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript) 0.23.2: its
+`typescript` grammar, or its `tsx` grammar for a standard with JSX. In the `tsx` grammar `<T>x` is not a type assertion,
+and an arrow function's lone type parameter is written `<T,>`. The editions of ECMAScript parse with the same grammars,
+so that JavaScript's `a < b > (c)` reads as TypeScript reads it, a call with a type argument, as typescript-estree does.
+Its grammar differs from TypeScript's in places, which the converter corrects:
+
+| tree-sitter-typescript reads | as | TypeScript reads it as |
+|---|---|---|
+| `a ?? b as T` (and `\|\|`, `&&`, `\|`, `^`, `&` and equality; and `satisfies`) | `(a ?? b) as T` | `a ?? (b as T)` |
+| `a \|\| b && c as T < d` | `((a \|\| b && c) as T) < d` | `a \|\| (b && ((c as T) < d))` |
+| `x as A.B.C`, `x as A \| B.C.D` | `(x as A.B).C`, a member of the cast | a cast to `A.B.C`, to `A \| B.C.D` |
+| `a ?? b!` | `(a ?? b)!` | `a ?? (b!)` |
+| `readonly A[] \| B` | `readonly (A[] \| B)` | `(readonly A[]) \| B` |
+| `global { }` in a module | an error and a block | a global augmentation |
+| `declare module "m";` | a module and an empty statement | a module |
+| `m() {} // c` | the comment inside the method's body | a comment after the member |
+| `bigint` as a type | a type's name | the keyword type |
+
+It cannot parse a few constructs of TypeScript 4.7 and later. When the text does not parse, a pre-pass rewrites them,
+keeping every character's offset: it removes `accessor` before a member, `in` and `out` before a type parameter,
+`defer` in `import defer` and `type` in `export type *`; renames a member named `abstract` or `accessor` and the name
+`using` (`using + 1`); writes `for (using x of y)` as `for (const x of y)`; and replaces `import("m")` in a type, which
+it cannot qualify (`import("m").A<T>`), by a name as long, whose text is parsed again. The converter puts them back.
+What it still cannot parse, or reads differently without a way to tell:
+
+- an `as` or `satisfies` type followed by `<` (`x as T < y`), which reads as type arguments, and so is a syntax error;
+- `export ... from "m" with { ... }`: attributes on a re-export;
+- a mapped type without a value type (`{ [K in T] }`);
+- `keyof readonly T[]` in a mapped type, and an anonymous `export default function (...)` signature without a body;
+- `f<T>`x``, which it reads as comparisons, and `new a!.b()` and `new new a()()`, which it reads as `(new a)!.b()` and
+  `new ((new a)())`: the printer parenthesizes such callees, so that its output reads the same everywhere.
+
+Comments inside expressions, types other than object types, and before a switch's first case are dropped, as are
+comments after a block's `}` that does not end its statement (`if (a) {} // c else {}`).
+
+Checked against typescript-estree 8.71.0, the parser of typescript-eslint, on the 997 TypeScript files and 860
+JavaScript files of the packages installed with this one and its neighbors: 983 TypeScript files read as
+typescript-estree reads them (8 parse in neither, 6 hold the gaps above), and so do 846 JavaScript files (the other 14
+hold JSX in `.js` files, which only a JSX standard reads); printing each of them gives text that typescript-estree reads
+the same, with the source's parentheses or without them, printing what was printed gives the same text, and the Python
+and TypeScript implementations write byte-identical snapshots, positions, printed text and definitions for every file.
+The TypeScript suite checks the conformance sources against typescript-estree itself (TSPRS-01).
+
+### Printing TypeScript
+
+The printer writes four spaces per level, braces on the line that opens them, one statement or member per line, a
+semicolon after every statement that takes one, and object literals, object types and imports on one line. Parentheses
+are added by the precedence of the grammar, and also where `??` meets `||` or `&&`, where a statement would start
+with `{`, `function`, `class` or `let [`, where an arrow function's body is an object, where an `in` would end a `for`
+statement's initializer, and where `new`'s callee holds a call, a `new` or a non-null assertion. A tree that would give
+an `else` to the wrong `if` (`if (a) if (b) x; else y;` without braces) is invalid.
+
+### TypeScript definitions
+
+`TypeScript.Definitions.define(program)` follows ECMAScript's and TypeScript's scopes: `var` binds in the nearest
+function, static block, namespace or module, and everything else in its block; a class's and an interface's members are
+in their scope, which lookup never finds unqualified; type parameters, mapped types' keys and `infer` bindings have
+scopes of their own. Declarations of one name and kind in one scope merge into one entity, as TypeScript merges
+interfaces, namespaces, enums and overloads. A name has a meaning, a value, a type or a namespace, by where it is
+written: `space_of` tells which, and `referents` finds only the entities that have it, so that a variable and an
+interface named alike stay apart. `import a = b.c` has the entity `b.c` names as its `target`. Properties, imported
+modules' members and libraries' globals are not resolved.
+
 ## Transpiling
 
 A transpiler reads a tree with `walk` or a `Visitor`, finds where a node is with `Parents` (its parent, field, index
@@ -249,7 +344,12 @@ tells which standard the result needs. Nothing in this path parses or prints a s
   own parser is exact but exists only in Python, and both implementations must read the same trees; a later
   tree-sitter-python, or a PEG grammar run in both, would close the gap.
 - **Precise error positions.** tree-sitter reports where its error recovery starts, not where the text went wrong.
-- **More languages.** Verilog and TypeScript are planned as further languages over the same framework.
+- **A parser that covers TypeScript 5.9.** tree-sitter-typescript 0.23 needs a pre-pass and corrections, and still
+  lacks the constructs listed above. typescript-estree is exact but exists only in JavaScript; a later
+  tree-sitter-typescript would close the gap, and the converter is the only part that would change.
+- **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
+  expressions, as in the other languages.
+- **More languages.** Verilog is planned as a further language over the same framework.
 
 ## Resolved
 
@@ -270,3 +370,13 @@ tells which standard the result needs. Nothing in this path parses or prints a s
   CPython's `ast` is not used to parse, since TypeScript cannot run it; the Python suite checks the conformance source
   against it.
 - web-tree-sitter is initialized once for every language: initializing it again breaks the parsers made before.
+- tree-sitter reads UTF-16 in both implementations: Python passes it the text encoded as UTF-16LE, as web-tree-sitter
+  does, since its error recovery depends on the encoding. Errors are then located alike in both.
+- TypeScript and JavaScript are one language, whose kinds are TSESTree's with the renames and additions above, and
+  whose standards are the versions of TypeScript and the editions of ECMAScript, each with JSX or without. Proposals
+  TypeScript has before an ECMAScript edition does are TypeScript's.
+- TypeScript parses with tree-sitter-typescript 0.23.2, pinned in both implementations, whose grammar the converter
+  corrects. typescript-estree is not used to parse, since Python cannot run it; the TypeScript suite checks the
+  conformance sources against it.
+- TypeScript's definitions keep a name's meaning (value, type or namespace) where it is written, and look up only the
+  entities with that meaning.

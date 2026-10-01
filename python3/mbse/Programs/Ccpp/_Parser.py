@@ -44,25 +44,25 @@ def _op(token: str) -> str:
 
 
 class _Source:
-    """The text being parsed, as given and as tree-sitter parses it (`data`, which is `cleaned` in UTF-8), with
+    """The text being parsed, as given and as tree-sitter parses it (`data`, which is `cleaned` in UTF-16), with
     conversions from tree-sitter's byte offsets to character offsets, and from character offsets to lines and
     columns. The cleaned text has the same characters as the text, but for those the pre-pass replaced."""
 
     def __init__(self, text: str, cleaned: str | None = None):
         self.text = text
-        self.data = (text if cleaned is None else cleaned).encode("utf-8")
+        self.data = (text if cleaned is None else cleaned).encode("utf-16-le")
         self._chars: list[int] | None = None
-        if len(self.data) != len(text):
-            self._chars = [0] * (len(self.data) + 1)
+        if len(self.data) != 2 * len(text):  # a character beyond the Basic Multilingual Plane takes two units
+            self._chars = [0] * (len(self.data) // 2 + 1)
             at = 0
             for i, ch in enumerate(text):
-                for _ in range(len(ch.encode("utf-8"))):
+                for _ in range(len(ch.encode("utf-16-le")) // 2):
                     self._chars[at] = i
                     at += 1
             self._chars[at] = len(text)
 
     def offset(self, byte: int) -> int:
-        return byte if self._chars is None else self._chars[byte]
+        return byte // 2 if self._chars is None else self._chars[byte // 2]
 
     def error(self, message: str, offset: int) -> ParseError:
         line = self.text.count("\n", 0, offset) + 1
@@ -254,6 +254,7 @@ class _Converter:
     def __init__(self, source: _Source, premodules: _Premodules):
         self.source, self.pre = source, premodules
         self.positions: dict[int, int] = {}
+        self.placed: list[Any] = []  # the nodes placed, kept alive so that no other node takes their `id`
 
     # Helpers
 
@@ -261,7 +262,7 @@ class _Converter:
         return self.source.offset(ts.start_byte)
 
     def text(self, ts: _TS) -> str:
-        return self.source.data[ts.start_byte:ts.end_byte].decode("utf-8")
+        return self.source.data[ts.start_byte:ts.end_byte].decode("utf-16-le")
 
     def error(self, ts: _TS, message: str) -> ParseError:
         return self.source.error(message, self.at(ts))
@@ -270,7 +271,9 @@ class _Converter:
         return self.error(ts, f"unsupported syntax: {ts.type}")
 
     def made(self, ts: _TS, node: Any) -> Any:
-        self.positions.setdefault(id(node), self.at(ts))
+        if id(node) not in self.positions:
+            self.positions[id(node)] = self.at(ts)
+            self.placed.append(node)
         return node
 
     @staticmethod
@@ -320,6 +323,7 @@ class _Converter:
         items = self.items(ts.children, declarations=True)
         for offset, declaration in self.pre.declarations:
             self.positions[id(declaration)] = offset
+            self.placed.append(declaration)
         merged = sorted([(self.positions[id(i)], i) for i in items] + self.pre.declarations, key=lambda t: t[0])
         return self.made(ts, S.TranslationUnit(items=[i for _, i in merged]))
 
@@ -1600,7 +1604,7 @@ def parse(text: str) -> tuple[S.TranslationUnit, dict[int, int], _Source]:
     problems. Raises `ParseError` for text tree-sitter-cpp cannot parse."""
     cleaned, premodules = _premodules(text)
     source = _Source(text, cleaned)
-    tree = _PARSER.parse(source.data)
+    tree = _PARSER.parse(source.data, encoding="utf16le")
     converter = _Converter(source, premodules)
     unit = converter.unit(tree.root_node)
     return unit, converter.positions, source

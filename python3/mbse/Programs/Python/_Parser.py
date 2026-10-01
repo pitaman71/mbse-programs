@@ -40,25 +40,25 @@ _LEVELS = [("|",), ("^",), ("&",), ("<<", ">>"), ("+", "-"), ("*", "@", "/", "//
 
 
 class _Source:
-    """The text being parsed, as given and as tree-sitter parses it (`data`, which is `cleaned` in UTF-8), with
+    """The text being parsed, as given and as tree-sitter parses it (`data`, which is `cleaned` in UTF-16), with
     conversions from tree-sitter's byte offsets to character offsets, and from character offsets to lines and
     columns. The cleaned text has the same characters as the text, but for those the pre-pass rewrote."""
 
     def __init__(self, text: str, cleaned: str | None = None):
         self.text = text
-        self.data = (text if cleaned is None else cleaned).encode("utf-8")
+        self.data = (text if cleaned is None else cleaned).encode("utf-16-le")
         self._chars: list[int] | None = None
-        if len(self.data) != len(text):
-            self._chars = [0] * (len(self.data) + 1)
+        if len(self.data) != 2 * len(text):  # a character beyond the Basic Multilingual Plane takes two units
+            self._chars = [0] * (len(self.data) // 2 + 1)
             at = 0
             for i, ch in enumerate(text if cleaned is None else cleaned):
-                for _ in range(len(ch.encode("utf-8"))):
+                for _ in range(len(ch.encode("utf-16-le")) // 2):
                     self._chars[at] = i
                     at += 1
             self._chars[at] = len(text)
 
     def offset(self, byte: int) -> int:
-        return byte if self._chars is None else self._chars[byte]
+        return byte // 2 if self._chars is None else self._chars[byte // 2]
 
     def error(self, message: str, offset: int) -> ParseError:
         line = self.text.count("\n", 0, offset) + 1
@@ -170,6 +170,7 @@ class _Converter:
     def __init__(self, source: _Source, prepared: _Prepared, shift: int = 0, origin: _Source | None = None):
         self.source, self.pre, self.shift, self.origin = source, prepared, shift, origin or source
         self.positions: dict[int, int] = {}
+        self.placed: list[Any] = []  # the nodes placed, kept alive so that no other node takes their `id`
 
     # Helpers
 
@@ -177,11 +178,11 @@ class _Converter:
         return self.shift + self.source.offset(ts.start_byte)
 
     def text(self, ts: _TS) -> str:
-        return self.source.data[ts.start_byte:ts.end_byte].decode("utf-8")
+        return self.source.data[ts.start_byte:ts.end_byte].decode("utf-16-le")
 
     def between(self, start: int, end: int) -> str:
         """The text between two byte offsets."""
-        return self.source.data[start:end].decode("utf-8")
+        return self.source.data[start:end].decode("utf-16-le")
 
     def error(self, ts: _TS, message: str) -> ParseError:
         return self.origin.error(message, self.at(ts))
@@ -190,7 +191,9 @@ class _Converter:
         return self.error(ts, f"unsupported syntax: {ts.type}")
 
     def made(self, ts: _TS, node: Any) -> Any:
-        self.positions.setdefault(id(node), self.at(ts))
+        if id(node) not in self.positions:
+            self.positions[id(node)] = self.at(ts)
+            self.placed.append(node)
         return node
 
     @staticmethod
@@ -382,12 +385,13 @@ class _Converter:
         """An assignment to an expression that starts with the name `type`, as `type(t).name = value`, which
         tree-sitter-python reads as a type alias: it is parsed again with `Type` for `type`, which is then put back."""
         source = _Source("Type" + self.text(ts)[4:])
-        tree = _PARSER.parse(source.data)
+        tree = _PARSER.parse(source.data, encoding="utf16le")
         converter = _Converter(source, _Prepared(), self.at(ts), self.origin)
         converter.check(tree.root_node)
         statement = converter.statement(converter.named(tree.root_node)[0])
         next(n for n in walk(statement) if isinstance(n, S.Identifier)).spelling = "type"
         self.positions.update(converter.positions)
+        self.placed += converter.placed
         return statement
 
     def print_statement(self, ts: _TS) -> S.Expr:
@@ -595,12 +599,13 @@ class _Converter:
     def part(self, offset: int, text: str) -> S.Expression:
         """The expression `text`, at `offset` of the text, which the pre-pass removed."""
         source = _Source(f"({text})")
-        tree = _PARSER.parse(source.data)
+        tree = _PARSER.parse(source.data, encoding="utf16le")
         converter = _Converter(source, _Prepared(), offset - 1, self.origin)
         converter.check(tree.root_node)
         statement = converter.named(tree.root_node)[0]
         value = converter.expression(converter.named(converter.named(statement)[0])[0])
         self.positions.update(converter.positions)
+        self.placed += converter.placed
         return value
 
     # Annotations: tree-sitter-python's type grammar
@@ -676,7 +681,7 @@ class _Converter:
         fields = [c for c in self.named(ts) if c.type == "interpolation"]
         # the text ends at the closing quote: tree-sitter-python counts the backslashes before it in a raw string as
         # part of its end, as in `fr'\\'`
-        end = ts.end_byte - len(quote.encode())
+        end = ts.end_byte - 2 * len(quote)
         return kind(prefix=prefix, quote=quote, values=self.pieces(start.end_byte, end, fields, kind))
 
     def pieces(self, start: int, end: int, fields: list[_TS], kind: type) -> list[Any]:
@@ -693,7 +698,9 @@ class _Converter:
         return out
 
     def made_at(self, byte: int, node: Any) -> Any:
-        self.positions.setdefault(id(node), self.shift + self.source.offset(byte))
+        """A new node, placed at `byte`."""
+        self.positions[id(node)] = self.shift + self.source.offset(byte)
+        self.placed.append(node)
         return node
 
     def replacement(self, ts: _TS, kind: type) -> S.FormattedValue | S.Interpolation:
@@ -711,8 +718,8 @@ class _Converter:
             made.text = self.between(ts.children[0].end_byte, name.end_byte)
             made.value = self.name(name)
             colon = next(c for c in expression.children if c.type == ":=")
-            made.format_spec = self.made(colon, S.FormatSpec(values=[self.made_at(colon.start_byte + 1, S.StringText(
-                spelling=self.between(colon.start_byte + 1, closing.start_byte)))]))
+            made.format_spec = self.made(colon, S.FormatSpec(values=[self.made_at(colon.start_byte + 2, S.StringText(
+                spelling=self.between(colon.start_byte + 2, closing.start_byte)))]))
             return self.made(ts, made)
         made.text = self.between(ts.children[0].end_byte, end)
         made.value = self.expression(expression)
@@ -1082,12 +1089,12 @@ def parse(text: str) -> tuple[S.Module, dict[int, int], _Source]:
     """The tree of `text`, the offset where each of its nodes starts (by `id`), and the source, for locating
     problems. Raises `ParseError` for text tree-sitter-python cannot parse."""
     source = _Source(text)
-    tree = _PARSER.parse(source.data)
+    tree = _PARSER.parse(source.data, encoding="utf16le")
     prepared = _Prepared()
     if tree.root_node.has_error:
         cleaned, prepared = _prepare(text, tree.root_node, source)
         source = _Source(text, cleaned)
-        tree = _PARSER.parse(source.data)
+        tree = _PARSER.parse(source.data, encoding="utf16le")
     converter = _Converter(source, prepared)
     module = converter.module(tree.root_node)
     return module, converter.positions, source

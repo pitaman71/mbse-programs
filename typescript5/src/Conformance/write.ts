@@ -2,9 +2,9 @@
  * Writes this implementation's conformance files: `npm run conformance [directory]`.
  *
  * For each source in `conformance/sources`, it writes the tree the source parses to, as a JSON snapshot
- * (`<source>.json`), and the text that tree prints to (`<source>.cpp`, `<source>.py`); and it writes each language's
- * grammar (`<language>.grammar.json`). Every implementation must write the same bytes. The default directory is
- * `conformance/typescript5` at the repository root.
+ * (`<source>.json`), and the text that tree prints to (`<source>.cpp`, `<source>.py`, `<source>.ts`, `<source>.tsx`);
+ * and it writes each language's grammar (`<language>.grammar.json`). Every implementation must write the same bytes.
+ * The default directory is `conformance/typescript5` at the repository root.
  */
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -18,14 +18,17 @@ import * as CcppSyntax from "../Ccpp/Syntax.js";
 import type { Node, NodeClass } from "../Framework/Syntax.js";
 import * as Python314 from "../Python/Python314.js";
 import * as PythonSyntax from "../Python/Syntax.js";
+import * as TypeScriptSyntax from "../TypeScript/Syntax.js";
+import * as TypeScript59 from "../TypeScript/TypeScript59.js";
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../conformance");
 type Standard = { parse(text: string): Node; print(node: Node): string };
 /** By a source's suffix: the standard that parses and prints it, and the kind of its tree. */
 const STANDARDS: Record<string, [Standard, NodeClass]> = {
   ".cpp": [Ccpp20, CcppSyntax.TranslationUnit], ".py": [Python314, PythonSyntax.Module],
+  ".ts": [TypeScript59.STANDARD, TypeScriptSyntax.Program], ".tsx": [TypeScript59.JSX, TypeScriptSyntax.Program],
 };
-const LANGUAGES = [CcppSyntax.LANGUAGE, PythonSyntax.LANGUAGE];
+const LANGUAGES = [CcppSyntax.LANGUAGE, PythonSyntax.LANGUAGE, TypeScriptSyntax.LANGUAGE];
 
 /** File name -> text, for every file this implementation writes. */
 export function render(sources: string = join(ROOT, "sources")): Map<string, string> {

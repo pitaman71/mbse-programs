@@ -3,17 +3,18 @@
 `python3/` and `typescript5/` implement the same package, and follow mbse-schemas' rules for equivalence
 ([`EQUIVALENCE.md`](../submodules/mbse-schemas/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
-specific to this package: the framework, and the Ccpp and Python languages with their standards.
+specific to this package: the framework, and the Ccpp, Python and TypeScript languages with their standards.
 
 ## How it is checked
 
 | Check | Where |
 |---|---|
 | Every test case exists in both implementations, same ID, same order | `python3/tests/*.ipynb`, `typescript5/tests/*.ipynb` |
-| The kinds are the same: names, categories, fields, choices and availability | each language's grammar (`Ccpp.grammar.json`, `Python.grammar.json`), which CONF-02 compares byte for byte |
-| Parsing gives the same tree, and printing the same text | the snapshots and printed text of the corpus (`cpp20.cpp`, `python314.py`), compared by CONF-02 and read back by CONF-03 |
-| Errors report the same message, line and column | PRS-12, PRT-06, PYPRS-12 and PYPRT-06, the same in both suites |
+| The kinds are the same: names, categories, fields, choices and availability | each language's grammar (`Ccpp.grammar.json`, `Python.grammar.json`, `TypeScript.grammar.json`), which CONF-02 compares byte for byte |
+| Parsing gives the same tree, and printing the same text | the snapshots and printed text of the corpus (`cpp20.cpp`, `python314.py`, `typescript59.ts`, `typescript59-jsx.tsx`), compared by CONF-02 and read back by CONF-03 |
+| Errors report the same message, line and column | PRS-12, PRT-06, PYPRS-12, PYPRT-06, TSPRS-12 and TSPRT-06, the same in both suites |
 | Python trees mean what CPython reads | PYPRS-01, in the Python suite, reads the printed conformance source back with CPython's `ast` |
+| TypeScript trees are what typescript-estree reads | TSPRS-01, in the TypeScript suite, compares each conformance source's tree, and what typescript-estree reads of its print, with typescript-estree's own |
 | Full code coverage in both | the coverage gates below |
 
 Each language's `typescript5/src/<Language>/Syntax.ts` mirrors `python3/mbse/Programs/<Language>/Syntax.py` kind for
@@ -47,6 +48,9 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Options | `Language(name, kinds, base=...)` | `new Language(name, kinds, { base })` | no keyword arguments | SYN-03 |
 | The parser | tree-sitter's Python binding, with the tree-sitter-cpp and tree-sitter-python wheels | web-tree-sitter, with each grammar's wasm, loaded by a top-level `await` when a language's `_Parser` is first imported; `Framework/_TreeSitter` initializes web-tree-sitter once for all | web-tree-sitter needs no native build; the wasm is the same grammar, pinned to the same version | PRS-01, PYPRS-01 |
 | Checking Python trees against CPython | PYPRS-01 compares CPython's `ast` of the conformance source with that of its print | none | TypeScript cannot run CPython; CONF-02 makes TypeScript's tree Python's | PYPRS-01 |
+| Checking TypeScript trees against typescript-estree | none | TSPRS-01 compares the conformance sources' trees, and typescript-estree's reading of their print, with typescript-estree's | Python cannot run typescript-estree; CONF-02 makes Python's tree TypeScript's | TSPRS-01 |
+| Identifiers of TypeScript | `str.isidentifier()` with `$` read as `_` | a regular expression of Unicode's `XID_Start` and `XID_Continue`, with `$` read as `_` | as Python's identifiers | TS-02 |
 | Python identifiers | `str.isidentifier()` and `keyword.iskeyword()` | a regular expression of Unicode's `XID_Start` and `XID_Continue`, and Python's keywords | each runtime's own Unicode tables, which agree but for characters one runtime's Unicode version has and the other's lacks | PY-02 |
-| Positions | converted from tree-sitter's byte offsets to code points | converted from UTF-16 units to code points | each runtime's own string offsets | PRS-12 |
-| Import paths | `mbse.Programs.Framework`, `mbse.Programs.Ccpp` (`.Syntax`, `.Definitions`, `.Ccpp17`, `.Ccpp20`) and `mbse.Programs.Python` (`.Syntax`, `.Definitions`, `.Python312`, `.Python314`), in the shared `mbse` namespace package | `@mbse/programs/Framework`, `@mbse/programs/Ccpp` and `@mbse/programs/Python`, with the same modules as paths; `@mbse/schemas` is a `file:` dependency on the submodule | a module specifier is a path, not a dotted name | all |
+| Positions | the text is passed to tree-sitter as UTF-16LE, and its byte offsets converted to code points | converted from UTF-16 units to code points | each runtime's own string offsets; tree-sitter reads UTF-16 in both, since its error recovery depends on the encoding | PRS-12, TSPRS-12 |
+| Import paths | `mbse.Programs.Framework`, `mbse.Programs.Ccpp` (`.Syntax`, `.Definitions`, `.Ccpp17`, `.Ccpp20`), `mbse.Programs.Python` (`.Syntax`, `.Definitions`, `.Python312`, `.Python314`) and `mbse.Programs.TypeScript` (`.Syntax`, `.Definitions`, `.TypeScript50`, `.TypeScript59`, `.ECMAScript2020`, `.ECMAScript2025`), in the shared `mbse` namespace package | `@mbse/programs/Framework`, `@mbse/programs/Ccpp`, `@mbse/programs/Python` and `@mbse/programs/TypeScript`, with the same modules as paths; `@mbse/schemas` is a `file:` dependency on the submodule | a module specifier is a path, not a dotted name | all |
+| TypeScript's meanings | `MEANINGS` maps an entity's kind to a `frozenset` of meanings | `MEANINGS` maps it to a `ReadonlySet` | each language's idiom | TSDEF-04 |

@@ -7,9 +7,11 @@ to an established parser, and print trees back into source text. Trees are [mbse
 data, so they can be stored and sent as JSON or YAML.
 
 The languages are Ccpp, C and C++ as one tree language, with C++17 and C++20 parsed by
-[tree-sitter-cpp](https://github.com/tree-sitter/tree-sitter-cpp), and Python, whose kinds follow Python's own `ast`
+[tree-sitter-cpp](https://github.com/tree-sitter/tree-sitter-cpp); Python, whose kinds follow Python's own `ast`
 module through Python 3.15, with Python 3.12 and 3.14 parsed by
-[tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python).
+[tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python); and TypeScript, TypeScript and JavaScript as
+one tree language whose kinds follow typescript-estree, with TypeScript 5.0 and 5.9 and ES2020 and ES2025, each with
+JSX or without, parsed by [tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript).
 
 ```python
 from mbse.Programs.Ccpp import Ccpp17, Ccpp20, Syntax as S
@@ -55,6 +57,20 @@ module.body[0].is_lazy = False
 Python314.print(module)   # 'import json\n\n\ndef doubled(x):\n    return x * 2\n\n\nprint(doubled(3))\n'
 ```
 
+And for TypeScript, whose JavaScript is the editions of ECMAScript:
+
+```python
+from mbse.Programs.Framework.Syntax import walk
+from mbse.Programs.TypeScript import ECMAScript2025, TypeScript59, Syntax as T
+
+program = TypeScript59.parse("function twice(x: number) { return x * 2; }\nconst y = twice(3);\n")
+for node in walk(program):
+    if isinstance(node, T.Identifier) and node.name == "twice":
+        node.name = "doubled"
+TypeScript59.print(program)   # 'function doubled(x: number) {\n    return x * 2;\n}\nconst y = doubled(3);\n'
+ECMAScript2025.check(program)[0]   # 'body[0].params[0].typeAnnotation: TSTypeAnnotation is not ECMAScript'
+```
+
 It has two equivalent implementations, in Python and TypeScript, with the same API, the same messages, the same trees
 and byte-identical JSON. Python imports it from `mbse.Programs` (next to `mbse.Schemas`, in the shared `mbse` namespace
 package), TypeScript from `@mbse/programs` (next to `@mbse/schemas`).
@@ -88,7 +104,7 @@ npm test                       # type-check and run the test suites
 
 | Read | For |
 |---|---|
-| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp and Python, parsing and its gaps, printing, definitions, and open questions |
+| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, and open questions |
 | [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [`AGENTS.md`](AGENTS.md), [`llms.txt`](llms.txt) | Guidance for AI agents |
 | [`python3/tests/TestPlan.md`](python3/tests/TestPlan.md), [`typescript5/tests/TestPlan.md`](typescript5/tests/TestPlan.md) | The test suites |
@@ -99,22 +115,27 @@ npm test                       # type-check and run the test suites
 ```
 submodules/mbse-schemas/  the framework trees are serialized with
 docs/                     the design (PROGRAMS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
-python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, Conformance) and tests
-typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, Conformance) and tests
+python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, TypeScript, Conformance) and tests
+typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, TypeScript, Conformance) and tests
 conformance/              the corpus's sources, and the files each implementation writes from them
 ```
 
 ## Status
 
 Built in both languages: the framework (trees, meta-schemas and builders, validation, standards, traversal and
-in-place rewriting, and definitions with lookup), and two languages:
+in-place rewriting, and definitions with lookup), and three languages:
 
 - Ccpp: 171 kinds covering C++26 and C23, the standards C++17 and C++20 (and any year of C++ or C), parsing through
   tree-sitter-cpp 0.23.4, printing, and the definitions of a translation unit.
 - Python: 86 kinds following `ast` through Python 3.15, the versions 3.12 and 3.14 (and any other), parsing through
   tree-sitter-python 0.25.0 with nine corrections of its grammar, printing, and the definitions of a module with
   Python's scoping. Checked against CPython 3.14 on its standard library.
+- TypeScript: 163 kinds following typescript-estree through TypeScript 5.9 and ES2025, with JSX, the standards
+  TypeScript 5.0 and 5.9 and ES2020 and ES2025 (and any other version or edition), each with JSX or without, parsing
+  through tree-sitter-typescript 0.23.2 with corrections of its grammar, printing, and the definitions of a program,
+  which keep values, types and namespaces apart. Checked against typescript-estree on 1,857 files.
 
 Not built yet: the constructs the parsers cannot read ([PROGRAMS.md](docs/PROGRAMS.md#parsing),
-[Parsing Python](docs/PROGRAMS.md#parsing-python)) are built and printed but not parsed; overloads, dependent names
-and attributes are not resolved; further languages (Verilog, TypeScript) are planned.
+[Parsing Python](docs/PROGRAMS.md#parsing-python), [Parsing TypeScript](docs/PROGRAMS.md#parsing-typescript)) are
+built and printed but not parsed; overloads, dependent names, attributes and properties are not resolved; further
+languages (Verilog) are planned.

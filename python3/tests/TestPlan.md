@@ -1,6 +1,6 @@
 # Test plan — python3
 
-Scope: everything under `python3/mbse/Programs` (the framework, and the Ccpp and Python languages with their standards,
+Scope: everything under `python3/mbse/Programs` (the framework, and the Ccpp, Python and TypeScript languages with their standards,
 parsers, printers and definitions) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
 TypeScript one mirror each other case for case, with the deliberate differences of `../../docs/EQUIVALENCE.md`.
 mbse-schemas is tested in mbse-schemas.
@@ -26,6 +26,10 @@ uv run python -m mbse.Programs.Conformance.write   # regenerate ../conformance/p
 | `07_PythonParse.ipynb` | PYPRS | 12 | The conformance source parses, prints and parses back the same, and CPython's `ast` of its print is that of the source; literals' spellings; f-strings and t-strings; expressions, with the corrections of tree-sitter-python's precedence; assignment targets; simple and compound statements; definitions and type parameters; patterns; comments; the pre-pass for Python 3.13 and later; errors with line and column |
 | `08_PythonPrint.ipynb` | PYPRT | 6 | Precedence, and where a walrus, `yield`, lambda or tuple needs parentheses; every kind printed alone; layout, `elif`, blank lines and comments; f-string fields' text; pattern parentheses and open sequences; printing validates and checks the version |
 | `09_PythonDefinitions.ipynb` | PYDEF | 7 | One entity per name per scope, whatever binds it; lookup past class bodies, `global` and `nonlocal`; lambdas, comprehensions and assignment expressions; parameters, decorators, defaults and annotation scopes; pattern captures; what names refer to, and dotted lookup; every entity of the conformance source |
-| `10_Conformance.ipynb` | CONF | 3 | This implementation's corpus files are current, for both languages; every other implementation wrote the same bytes; every snapshot reads back into a valid tree that prints the same text |
+| `10_TypeScript.ipynb` | TS | 4 | The TypeScript language's kinds, categories and grammar, fields in source order; identifiers (Unicode and `$`); each kind's own checks, the dangling `else` included; where kinds and features exist, by ECMAScript edition and TypeScript version, and JSX in the standards made with it |
+| `11_TypeScriptParse.ipynb` | TSPRS | 12 | The conformance sources parse, print and parse back the same, and hold every kind; literals' spellings and templates; expressions, with the corrections of tree-sitter-typescript's grouping of `as`, `satisfies` and `!`; statements; functions, classes and their members; modules, imports and exports, namespaces and ambient declarations; types, with the corrections of `readonly`; JSX; comments; the pre-pass; JavaScript through the editions of ECMAScript; errors with line and column |
+| `12_TypeScriptPrint.ipynb` | TSPRT | 6 | Precedence of expressions; where an expression starts a statement, an arrow's body, a `for` or a default export; types' parentheses; every kind printed alone; layout and comments; printing validates and checks the standard, and JSX's `<T,>` |
+| `13_TypeScriptDefinitions.ipynb` | TSDEF | 7 | What declares and what merges; `var` and block scopes; class and interface members and parameter properties; meanings (value, type, namespace) and what names refer to; namespaces, ambient modules and `import a = b.c`; types' own scopes and JSX's components; every entity of the conformance source |
+| `14_Conformance.ipynb` | CONF | 3 | This implementation's corpus files are current, for every language; every other implementation wrote the same bytes; every snapshot reads back into a valid tree that prints the same text |
 
-Total: 73 cases, with the same IDs in the same order in both implementations.
+Total: 102 cases, with the same IDs in the same order in both implementations.

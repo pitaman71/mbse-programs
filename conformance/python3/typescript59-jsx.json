@@ -1,0 +1,1405 @@
+{
+  "root": "s0",
+  "objects": {
+    "s0": {
+      "kind": "Program",
+      "children": [
+        {
+          "child": {
+            "$ref": "s1",
+            "$schema": "Programs.TypeScript.Comment"
+          },
+          "field": "body",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s2",
+            "$schema": "Programs.TypeScript.ImportDeclaration"
+          },
+          "field": "body",
+          "index": 1
+        },
+        {
+          "child": {
+            "$ref": "s3",
+            "$schema": "Programs.TypeScript.VariableDeclaration"
+          },
+          "field": "body",
+          "index": 2
+        },
+        {
+          "child": {
+            "$ref": "s4",
+            "$schema": "Programs.TypeScript.VariableDeclaration"
+          },
+          "field": "body",
+          "index": 3
+        },
+        {
+          "child": {
+            "$ref": "s5",
+            "$schema": "Programs.TypeScript.FunctionDeclaration"
+          },
+          "field": "body",
+          "index": 4
+        },
+        {
+          "child": {
+            "$ref": "s6",
+            "$schema": "Programs.TypeScript.ExportDefaultDeclaration"
+          },
+          "field": "body",
+          "index": 5
+        }
+      ]
+    },
+    "s1": {
+      "kind": "Comment",
+      "text": " The conformance source for TypeScript 5.9 with JSX: JSX's kinds."
+    },
+    "s2": {
+      "kind": "ImportDeclaration",
+      "importKind": "value",
+      "children": [
+        {
+          "child": {
+            "$ref": "s7",
+            "$schema": "Programs.TypeScript.ImportNamespaceSpecifier"
+          },
+          "field": "specifiers",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s8",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "source"
+        }
+      ]
+    },
+    "s3": {
+      "kind": "VariableDeclaration",
+      "declarationKind": "const",
+      "children": [
+        {
+          "child": {
+            "$ref": "s9",
+            "$schema": "Programs.TypeScript.VariableDeclarator"
+          },
+          "field": "declarations",
+          "index": 0
+        }
+      ]
+    },
+    "s4": {
+      "kind": "VariableDeclaration",
+      "declarationKind": "const",
+      "children": [
+        {
+          "child": {
+            "$ref": "s10",
+            "$schema": "Programs.TypeScript.VariableDeclarator"
+          },
+          "field": "declarations",
+          "index": 0
+        }
+      ]
+    },
+    "s5": {
+      "kind": "FunctionDeclaration",
+      "children": [
+        {
+          "child": {
+            "$ref": "s11",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "id"
+        },
+        {
+          "child": {
+            "$ref": "s12",
+            "$schema": "Programs.TypeScript.TSTypeParameterDeclaration"
+          },
+          "field": "typeParameters"
+        },
+        {
+          "child": {
+            "$ref": "s13",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "params",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s14",
+            "$schema": "Programs.TypeScript.BlockStatement"
+          },
+          "field": "body"
+        }
+      ]
+    },
+    "s6": {
+      "kind": "ExportDefaultDeclaration",
+      "children": [
+        {
+          "child": {
+            "$ref": "s15",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "declaration"
+        }
+      ]
+    },
+    "s7": {
+      "kind": "ImportNamespaceSpecifier",
+      "children": [
+        {
+          "child": {
+            "$ref": "s16",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "local"
+        }
+      ]
+    },
+    "s8": {
+      "kind": "Literal",
+      "raw": "\"react\""
+    },
+    "s9": {
+      "kind": "VariableDeclarator",
+      "children": [
+        {
+          "child": {
+            "$ref": "s17",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "id"
+        },
+        {
+          "child": {
+            "$ref": "s18",
+            "$schema": "Programs.TypeScript.ArrowFunctionExpression"
+          },
+          "field": "init"
+        }
+      ]
+    },
+    "s10": {
+      "kind": "VariableDeclarator",
+      "children": [
+        {
+          "child": {
+            "$ref": "s19",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "id"
+        },
+        {
+          "child": {
+            "$ref": "s20",
+            "$schema": "Programs.TypeScript.ParenthesizedExpression"
+          },
+          "field": "init"
+        }
+      ]
+    },
+    "s11": {
+      "kind": "Identifier",
+      "name": "Component"
+    },
+    "s12": {
+      "kind": "TSTypeParameterDeclaration",
+      "children": [
+        {
+          "child": {
+            "$ref": "s21",
+            "$schema": "Programs.TypeScript.TSTypeParameter"
+          },
+          "field": "params",
+          "index": 0
+        }
+      ]
+    },
+    "s13": {
+      "kind": "Identifier",
+      "name": "props",
+      "children": [
+        {
+          "child": {
+            "$ref": "s22",
+            "$schema": "Programs.TypeScript.TSTypeAnnotation"
+          },
+          "field": "typeAnnotation"
+        }
+      ]
+    },
+    "s14": {
+      "kind": "BlockStatement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s23",
+            "$schema": "Programs.TypeScript.ReturnStatement"
+          },
+          "field": "body",
+          "index": 0
+        }
+      ]
+    },
+    "s15": {
+      "kind": "Identifier",
+      "name": "element"
+    },
+    "s16": {
+      "kind": "Identifier",
+      "name": "React"
+    },
+    "s17": {
+      "kind": "Identifier",
+      "name": "generic"
+    },
+    "s18": {
+      "kind": "ArrowFunctionExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s24",
+            "$schema": "Programs.TypeScript.TSTypeParameterDeclaration"
+          },
+          "field": "typeParameters"
+        },
+        {
+          "child": {
+            "$ref": "s25",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "params",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s26",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "body"
+        }
+      ]
+    },
+    "s19": {
+      "kind": "Identifier",
+      "name": "element"
+    },
+    "s20": {
+      "kind": "ParenthesizedExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s27",
+            "$schema": "Programs.TypeScript.JSXElement"
+          },
+          "field": "expression"
+        }
+      ]
+    },
+    "s21": {
+      "kind": "TSTypeParameter",
+      "children": [
+        {
+          "child": {
+            "$ref": "s28",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s22": {
+      "kind": "TSTypeAnnotation",
+      "children": [
+        {
+          "child": {
+            "$ref": "s29",
+            "$schema": "Programs.TypeScript.TSTypeLiteral"
+          },
+          "field": "typeAnnotation"
+        }
+      ]
+    },
+    "s23": {
+      "kind": "ReturnStatement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s30",
+            "$schema": "Programs.TypeScript.JSXElement"
+          },
+          "field": "argument"
+        }
+      ]
+    },
+    "s24": {
+      "kind": "TSTypeParameterDeclaration",
+      "children": [
+        {
+          "child": {
+            "$ref": "s31",
+            "$schema": "Programs.TypeScript.TSTypeParameter"
+          },
+          "field": "params",
+          "index": 0
+        }
+      ]
+    },
+    "s25": {
+      "kind": "Identifier",
+      "name": "value",
+      "children": [
+        {
+          "child": {
+            "$ref": "s32",
+            "$schema": "Programs.TypeScript.TSTypeAnnotation"
+          },
+          "field": "typeAnnotation"
+        }
+      ]
+    },
+    "s26": {
+      "kind": "Identifier",
+      "name": "value"
+    },
+    "s27": {
+      "kind": "JSXElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s33",
+            "$schema": "Programs.TypeScript.JSXOpeningElement"
+          },
+          "field": "openingElement"
+        },
+        {
+          "child": {
+            "$ref": "s34",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s35",
+            "$schema": "Programs.TypeScript.JSXExpressionContainer"
+          },
+          "field": "children",
+          "index": 1
+        },
+        {
+          "child": {
+            "$ref": "s36",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 2
+        },
+        {
+          "child": {
+            "$ref": "s37",
+            "$schema": "Programs.TypeScript.JSXExpressionContainer"
+          },
+          "field": "children",
+          "index": 3
+        },
+        {
+          "child": {
+            "$ref": "s38",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 4
+        },
+        {
+          "child": {
+            "$ref": "s39",
+            "$schema": "Programs.TypeScript.JSXSpreadChild"
+          },
+          "field": "children",
+          "index": 5
+        },
+        {
+          "child": {
+            "$ref": "s40",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 6
+        },
+        {
+          "child": {
+            "$ref": "s41",
+            "$schema": "Programs.TypeScript.JSXElement"
+          },
+          "field": "children",
+          "index": 7
+        },
+        {
+          "child": {
+            "$ref": "s42",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 8
+        },
+        {
+          "child": {
+            "$ref": "s43",
+            "$schema": "Programs.TypeScript.JSXElement"
+          },
+          "field": "children",
+          "index": 9
+        },
+        {
+          "child": {
+            "$ref": "s44",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 10
+        },
+        {
+          "child": {
+            "$ref": "s45",
+            "$schema": "Programs.TypeScript.JSXElement"
+          },
+          "field": "children",
+          "index": 11
+        },
+        {
+          "child": {
+            "$ref": "s46",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 12
+        },
+        {
+          "child": {
+            "$ref": "s47",
+            "$schema": "Programs.TypeScript.JSXClosingElement"
+          },
+          "field": "closingElement"
+        }
+      ]
+    },
+    "s28": {
+      "kind": "Identifier",
+      "name": "T"
+    },
+    "s29": {
+      "kind": "TSTypeLiteral",
+      "children": [
+        {
+          "child": {
+            "$ref": "s48",
+            "$schema": "Programs.TypeScript.TSPropertySignature"
+          },
+          "field": "members",
+          "index": 0
+        }
+      ]
+    },
+    "s30": {
+      "kind": "JSXElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s49",
+            "$schema": "Programs.TypeScript.JSXOpeningElement"
+          },
+          "field": "openingElement"
+        },
+        {
+          "child": {
+            "$ref": "s50",
+            "$schema": "Programs.TypeScript.JSXExpressionContainer"
+          },
+          "field": "children",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s51",
+            "$schema": "Programs.TypeScript.JSXClosingElement"
+          },
+          "field": "closingElement"
+        }
+      ]
+    },
+    "s31": {
+      "kind": "TSTypeParameter",
+      "children": [
+        {
+          "child": {
+            "$ref": "s52",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s32": {
+      "kind": "TSTypeAnnotation",
+      "children": [
+        {
+          "child": {
+            "$ref": "s53",
+            "$schema": "Programs.TypeScript.TSTypeReference"
+          },
+          "field": "typeAnnotation"
+        }
+      ]
+    },
+    "s33": {
+      "kind": "JSXOpeningElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s54",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        },
+        {
+          "child": {
+            "$ref": "s55",
+            "$schema": "Programs.TypeScript.JSXAttribute"
+          },
+          "field": "attributes",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s56",
+            "$schema": "Programs.TypeScript.JSXAttribute"
+          },
+          "field": "attributes",
+          "index": 1
+        },
+        {
+          "child": {
+            "$ref": "s57",
+            "$schema": "Programs.TypeScript.JSXSpreadAttribute"
+          },
+          "field": "attributes",
+          "index": 2
+        }
+      ]
+    },
+    "s34": {
+      "kind": "JSXText",
+      "raw": "\n        text &amp; more\n        "
+    },
+    "s35": {
+      "kind": "JSXExpressionContainer",
+      "children": [
+        {
+          "child": {
+            "$ref": "s58",
+            "$schema": "Programs.TypeScript.JSXEmptyExpression"
+          },
+          "field": "expression"
+        }
+      ]
+    },
+    "s36": {
+      "kind": "JSXText",
+      "raw": "\n        "
+    },
+    "s37": {
+      "kind": "JSXExpressionContainer",
+      "children": [
+        {
+          "child": {
+            "$ref": "s59",
+            "$schema": "Programs.TypeScript.CallExpression"
+          },
+          "field": "expression"
+        }
+      ]
+    },
+    "s38": {
+      "kind": "JSXText",
+      "raw": "\n        "
+    },
+    "s39": {
+      "kind": "JSXSpreadChild",
+      "children": [
+        {
+          "child": {
+            "$ref": "s60",
+            "$schema": "Programs.TypeScript.ArrayExpression"
+          },
+          "field": "expression"
+        }
+      ]
+    },
+    "s40": {
+      "kind": "JSXText",
+      "raw": "\n        "
+    },
+    "s41": {
+      "kind": "JSXElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s61",
+            "$schema": "Programs.TypeScript.JSXOpeningElement"
+          },
+          "field": "openingElement"
+        }
+      ]
+    },
+    "s42": {
+      "kind": "JSXText",
+      "raw": "\n        "
+    },
+    "s43": {
+      "kind": "JSXElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s62",
+            "$schema": "Programs.TypeScript.JSXOpeningElement"
+          },
+          "field": "openingElement"
+        },
+        {
+          "child": {
+            "$ref": "s63",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s64",
+            "$schema": "Programs.TypeScript.JSXFragment"
+          },
+          "field": "children",
+          "index": 1
+        },
+        {
+          "child": {
+            "$ref": "s65",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 2
+        },
+        {
+          "child": {
+            "$ref": "s66",
+            "$schema": "Programs.TypeScript.JSXClosingElement"
+          },
+          "field": "closingElement"
+        }
+      ]
+    },
+    "s44": {
+      "kind": "JSXText",
+      "raw": "\n        "
+    },
+    "s45": {
+      "kind": "JSXElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s67",
+            "$schema": "Programs.TypeScript.JSXOpeningElement"
+          },
+          "field": "openingElement"
+        }
+      ]
+    },
+    "s46": {
+      "kind": "JSXText",
+      "raw": "\n    "
+    },
+    "s47": {
+      "kind": "JSXClosingElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s68",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s48": {
+      "kind": "TSPropertySignature",
+      "children": [
+        {
+          "child": {
+            "$ref": "s69",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "key"
+        },
+        {
+          "child": {
+            "$ref": "s70",
+            "$schema": "Programs.TypeScript.TSTypeAnnotation"
+          },
+          "field": "typeAnnotation"
+        }
+      ]
+    },
+    "s49": {
+      "kind": "JSXOpeningElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s71",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s50": {
+      "kind": "JSXExpressionContainer",
+      "children": [
+        {
+          "child": {
+            "$ref": "s72",
+            "$schema": "Programs.TypeScript.ConditionalExpression"
+          },
+          "field": "expression"
+        }
+      ]
+    },
+    "s51": {
+      "kind": "JSXClosingElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s73",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s52": {
+      "kind": "Identifier",
+      "name": "T"
+    },
+    "s53": {
+      "kind": "TSTypeReference",
+      "children": [
+        {
+          "child": {
+            "$ref": "s74",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "typeName"
+        }
+      ]
+    },
+    "s54": {
+      "kind": "JSXIdentifier",
+      "name": "div"
+    },
+    "s55": {
+      "kind": "JSXAttribute",
+      "children": [
+        {
+          "child": {
+            "$ref": "s75",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        },
+        {
+          "child": {
+            "$ref": "s76",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "value"
+        }
+      ]
+    },
+    "s56": {
+      "kind": "JSXAttribute",
+      "children": [
+        {
+          "child": {
+            "$ref": "s77",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        },
+        {
+          "child": {
+            "$ref": "s78",
+            "$schema": "Programs.TypeScript.JSXExpressionContainer"
+          },
+          "field": "value"
+        }
+      ]
+    },
+    "s57": {
+      "kind": "JSXSpreadAttribute",
+      "children": [
+        {
+          "child": {
+            "$ref": "s79",
+            "$schema": "Programs.TypeScript.ObjectExpression"
+          },
+          "field": "argument"
+        }
+      ]
+    },
+    "s58": {
+      "kind": "JSXEmptyExpression"
+    },
+    "s59": {
+      "kind": "CallExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s80",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "callee"
+        },
+        {
+          "child": {
+            "$ref": "s81",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "arguments",
+          "index": 0
+        }
+      ]
+    },
+    "s60": {
+      "kind": "ArrayExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s82",
+            "$schema": "Programs.TypeScript.JSXElement"
+          },
+          "field": "elements",
+          "index": 0
+        }
+      ]
+    },
+    "s61": {
+      "kind": "JSXOpeningElement",
+      "selfClosing": true,
+      "children": [
+        {
+          "child": {
+            "$ref": "s83",
+            "$schema": "Programs.TypeScript.JSXNamespacedName"
+          },
+          "field": "name"
+        },
+        {
+          "child": {
+            "$ref": "s84",
+            "$schema": "Programs.TypeScript.JSXAttribute"
+          },
+          "field": "attributes",
+          "index": 0
+        }
+      ]
+    },
+    "s62": {
+      "kind": "JSXOpeningElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s85",
+            "$schema": "Programs.TypeScript.JSXMemberExpression"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s63": {
+      "kind": "JSXText",
+      "raw": "\n            "
+    },
+    "s64": {
+      "kind": "JSXFragment",
+      "children": [
+        {
+          "child": {
+            "$ref": "s86",
+            "$schema": "Programs.TypeScript.JSXOpeningFragment"
+          },
+          "field": "openingFragment"
+        },
+        {
+          "child": {
+            "$ref": "s87",
+            "$schema": "Programs.TypeScript.JSXText"
+          },
+          "field": "children",
+          "index": 0
+        },
+        {
+          "child": {
+            "$ref": "s88",
+            "$schema": "Programs.TypeScript.JSXClosingFragment"
+          },
+          "field": "closingFragment"
+        }
+      ]
+    },
+    "s65": {
+      "kind": "JSXText",
+      "raw": "\n        "
+    },
+    "s66": {
+      "kind": "JSXClosingElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s89",
+            "$schema": "Programs.TypeScript.JSXMemberExpression"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s67": {
+      "kind": "JSXOpeningElement",
+      "selfClosing": true,
+      "children": [
+        {
+          "child": {
+            "$ref": "s90",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        },
+        {
+          "child": {
+            "$ref": "s91",
+            "$schema": "Programs.TypeScript.TSTypeParameterInstantiation"
+          },
+          "field": "typeArguments"
+        },
+        {
+          "child": {
+            "$ref": "s92",
+            "$schema": "Programs.TypeScript.JSXAttribute"
+          },
+          "field": "attributes",
+          "index": 0
+        }
+      ]
+    },
+    "s68": {
+      "kind": "JSXIdentifier",
+      "name": "div"
+    },
+    "s69": {
+      "kind": "Identifier",
+      "name": "prop"
+    },
+    "s70": {
+      "kind": "TSTypeAnnotation",
+      "children": [
+        {
+          "child": {
+            "$ref": "s93",
+            "$schema": "Programs.TypeScript.TSBooleanKeyword"
+          },
+          "field": "typeAnnotation"
+        }
+      ]
+    },
+    "s71": {
+      "kind": "JSXIdentifier",
+      "name": "p"
+    },
+    "s72": {
+      "kind": "ConditionalExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s94",
+            "$schema": "Programs.TypeScript.MemberExpression"
+          },
+          "field": "test"
+        },
+        {
+          "child": {
+            "$ref": "s95",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "consequent"
+        },
+        {
+          "child": {
+            "$ref": "s96",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "alternate"
+        }
+      ]
+    },
+    "s73": {
+      "kind": "JSXIdentifier",
+      "name": "p"
+    },
+    "s74": {
+      "kind": "Identifier",
+      "name": "T"
+    },
+    "s75": {
+      "kind": "JSXIdentifier",
+      "name": "className"
+    },
+    "s76": {
+      "kind": "Literal",
+      "raw": "\"a\""
+    },
+    "s77": {
+      "kind": "JSXIdentifier",
+      "name": "data-id"
+    },
+    "s78": {
+      "kind": "JSXExpressionContainer",
+      "children": [
+        {
+          "child": {
+            "$ref": "s97",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "expression"
+        }
+      ]
+    },
+    "s79": {
+      "kind": "ObjectExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s98",
+            "$schema": "Programs.TypeScript.Property"
+          },
+          "field": "properties",
+          "index": 0
+        }
+      ]
+    },
+    "s80": {
+      "kind": "Identifier",
+      "name": "generic"
+    },
+    "s81": {
+      "kind": "Literal",
+      "raw": "\"child\""
+    },
+    "s82": {
+      "kind": "JSXElement",
+      "children": [
+        {
+          "child": {
+            "$ref": "s99",
+            "$schema": "Programs.TypeScript.JSXOpeningElement"
+          },
+          "field": "openingElement"
+        }
+      ]
+    },
+    "s83": {
+      "kind": "JSXNamespacedName",
+      "children": [
+        {
+          "child": {
+            "$ref": "s100",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "namespace"
+        },
+        {
+          "child": {
+            "$ref": "s101",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s84": {
+      "kind": "JSXAttribute",
+      "children": [
+        {
+          "child": {
+            "$ref": "s102",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        },
+        {
+          "child": {
+            "$ref": "s103",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "value"
+        }
+      ]
+    },
+    "s85": {
+      "kind": "JSXMemberExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s104",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "object"
+        },
+        {
+          "child": {
+            "$ref": "s105",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "property"
+        }
+      ]
+    },
+    "s86": {
+      "kind": "JSXOpeningFragment"
+    },
+    "s87": {
+      "kind": "JSXText",
+      "raw": "fragment"
+    },
+    "s88": {
+      "kind": "JSXClosingFragment"
+    },
+    "s89": {
+      "kind": "JSXMemberExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s106",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "object"
+        },
+        {
+          "child": {
+            "$ref": "s107",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "property"
+        }
+      ]
+    },
+    "s90": {
+      "kind": "JSXIdentifier",
+      "name": "Component"
+    },
+    "s91": {
+      "kind": "TSTypeParameterInstantiation",
+      "children": [
+        {
+          "child": {
+            "$ref": "s108",
+            "$schema": "Programs.TypeScript.TSStringKeyword"
+          },
+          "field": "params",
+          "index": 0
+        }
+      ]
+    },
+    "s92": {
+      "kind": "JSXAttribute",
+      "children": [
+        {
+          "child": {
+            "$ref": "s109",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        }
+      ]
+    },
+    "s93": {
+      "kind": "TSBooleanKeyword"
+    },
+    "s94": {
+      "kind": "MemberExpression",
+      "children": [
+        {
+          "child": {
+            "$ref": "s110",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "object"
+        },
+        {
+          "child": {
+            "$ref": "s111",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "property"
+        }
+      ]
+    },
+    "s95": {
+      "kind": "Literal",
+      "raw": "\"yes\""
+    },
+    "s96": {
+      "kind": "Literal",
+      "raw": "\"no\""
+    },
+    "s97": {
+      "kind": "Literal",
+      "raw": "1"
+    },
+    "s98": {
+      "kind": "Property",
+      "propertyKind": "init",
+      "children": [
+        {
+          "child": {
+            "$ref": "s112",
+            "$schema": "Programs.TypeScript.Identifier"
+          },
+          "field": "key"
+        },
+        {
+          "child": {
+            "$ref": "s113",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "value"
+        }
+      ]
+    },
+    "s99": {
+      "kind": "JSXOpeningElement",
+      "selfClosing": true,
+      "children": [
+        {
+          "child": {
+            "$ref": "s114",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        },
+        {
+          "child": {
+            "$ref": "s115",
+            "$schema": "Programs.TypeScript.JSXAttribute"
+          },
+          "field": "attributes",
+          "index": 0
+        }
+      ]
+    },
+    "s100": {
+      "kind": "JSXIdentifier",
+      "name": "svg"
+    },
+    "s101": {
+      "kind": "JSXIdentifier",
+      "name": "path"
+    },
+    "s102": {
+      "kind": "JSXIdentifier",
+      "name": "d"
+    },
+    "s103": {
+      "kind": "Literal",
+      "raw": "\"M0\""
+    },
+    "s104": {
+      "kind": "JSXIdentifier",
+      "name": "React"
+    },
+    "s105": {
+      "kind": "JSXIdentifier",
+      "name": "Fragment"
+    },
+    "s106": {
+      "kind": "JSXIdentifier",
+      "name": "React"
+    },
+    "s107": {
+      "kind": "JSXIdentifier",
+      "name": "Fragment"
+    },
+    "s108": {
+      "kind": "TSStringKeyword"
+    },
+    "s109": {
+      "kind": "JSXIdentifier",
+      "name": "prop"
+    },
+    "s110": {
+      "kind": "Identifier",
+      "name": "props"
+    },
+    "s111": {
+      "kind": "Identifier",
+      "name": "prop"
+    },
+    "s112": {
+      "kind": "Identifier",
+      "name": "hidden"
+    },
+    "s113": {
+      "kind": "Literal",
+      "raw": "true"
+    },
+    "s114": {
+      "kind": "JSXIdentifier",
+      "name": "span"
+    },
+    "s115": {
+      "kind": "JSXAttribute",
+      "children": [
+        {
+          "child": {
+            "$ref": "s116",
+            "$schema": "Programs.TypeScript.JSXIdentifier"
+          },
+          "field": "name"
+        },
+        {
+          "child": {
+            "$ref": "s117",
+            "$schema": "Programs.TypeScript.Literal"
+          },
+          "field": "value"
+        }
+      ]
+    },
+    "s116": {
+      "kind": "JSXIdentifier",
+      "name": "key"
+    },
+    "s117": {
+      "kind": "Literal",
+      "raw": "\"1\""
+    }
+  }
+}

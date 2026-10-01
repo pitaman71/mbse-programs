@@ -1,9 +1,9 @@
 """Writes this implementation's conformance files: `python -m mbse.Programs.Conformance.write [directory]`.
 
 For each source in `conformance/sources`, it writes the tree the source parses to, as a JSON snapshot
-(`<source>.json`), and the text that tree prints to (`<source>.cpp`, `<source>.py`); and it writes each language's
-grammar (`<language>.grammar.json`). Every implementation must write the same bytes. The default directory is
-`conformance/python3` at the repository root.
+(`<source>.json`), and the text that tree prints to (`<source>.cpp`, `<source>.py`, `<source>.ts`, `<source>.tsx`);
+and it writes each language's grammar (`<language>.grammar.json`). Every implementation must write the same bytes.
+The default directory is `conformance/python3` at the repository root.
 """
 
 from __future__ import annotations
@@ -16,13 +16,17 @@ from mbse.Programs.Ccpp import Ccpp20
 from mbse.Programs.Ccpp import Syntax as CcppSyntax
 from mbse.Programs.Python import Python314
 from mbse.Programs.Python import Syntax as PythonSyntax
+from mbse.Programs.TypeScript import Syntax as TypeScriptSyntax
+from mbse.Programs.TypeScript import TypeScript59
 from mbse.Schemas.Framework import JSON
 
 ROOT = Path(__file__).resolve().parents[4] / "conformance"
 DEFAULT = ROOT / "python3"
 # By a source's suffix: the standard that parses and prints it, and the kind of its tree.
-STANDARDS = {".cpp": (Ccpp20, CcppSyntax.TranslationUnit), ".py": (Python314, PythonSyntax.Module)}
-LANGUAGES = [CcppSyntax.LANGUAGE, PythonSyntax.LANGUAGE]
+STANDARDS = {".cpp": (Ccpp20, CcppSyntax.TranslationUnit), ".py": (Python314, PythonSyntax.Module),
+             ".ts": (TypeScript59.STANDARD, TypeScriptSyntax.Program),
+             ".tsx": (TypeScript59.JSX, TypeScriptSyntax.Program)}
+LANGUAGES = [CcppSyntax.LANGUAGE, PythonSyntax.LANGUAGE, TypeScriptSyntax.LANGUAGE]
 
 
 def render(sources: Path = ROOT / "sources") -> dict[str, str]:
