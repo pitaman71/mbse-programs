@@ -1,0 +1,5442 @@
+{
+ "language": "Ccpp",
+ "base": {
+  "C++": 1998,
+  "C": 1989
+ },
+ "categories": [
+  {
+   "name": "Name",
+   "base": "Node"
+  },
+  {
+   "name": "Expression",
+   "base": "Node"
+  },
+  {
+   "name": "Literal",
+   "base": "Expression"
+  },
+  {
+   "name": "Capture",
+   "base": "Node"
+  },
+  {
+   "name": "Requirement",
+   "base": "Node"
+  },
+  {
+   "name": "Designator",
+   "base": "Node"
+  },
+  {
+   "name": "Statement",
+   "base": "Node"
+  },
+  {
+   "name": "Declaration",
+   "base": "Node"
+  },
+  {
+   "name": "Specifier",
+   "base": "Node"
+  },
+  {
+   "name": "Declarator",
+   "base": "Node"
+  },
+  {
+   "name": "Parameter",
+   "base": "Node"
+  },
+  {
+   "name": "Initializer",
+   "base": "Node"
+  },
+  {
+   "name": "ExceptionSpecification",
+   "base": "Node"
+  },
+  {
+   "name": "ContractSpecifier",
+   "base": "Node"
+  },
+  {
+   "name": "AttributeSpecifier",
+   "base": "Node"
+  },
+  {
+   "name": "TemplateParameter",
+   "base": "Node"
+  },
+  {
+   "name": "Directive",
+   "base": "Node"
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "Comment",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "block",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "trailing",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "TranslationUnit",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "items",
+     "type": [
+      "Declaration",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Identifier",
+   "category": "Name",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "OperatorName",
+   "category": "Name",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "operator": {
+     "<=>": {
+      "C++": 2020
+     },
+     "co_await": {
+      "C++": 2020
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "new",
+      "delete",
+      "new[]",
+      "delete[]",
+      "co_await",
+      "()",
+      "[]",
+      "->",
+      "->*",
+      "~",
+      "!",
+      "+",
+      "-",
+      "*",
+      "/",
+      "%",
+      "^",
+      "&",
+      "|",
+      "=",
+      "+=",
+      "-=",
+      "*=",
+      "/=",
+      "%=",
+      "^=",
+      "&=",
+      "|=",
+      "==",
+      "!=",
+      "<",
+      ">",
+      "<=",
+      ">=",
+      "<=>",
+      "&&",
+      "||",
+      "<<",
+      ">>",
+      "<<=",
+      ">>=",
+      "++",
+      "--",
+      ","
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "ConversionName",
+   "category": "Name",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "LiteralOperatorName",
+   "category": "Name",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "suffix",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "DestructorName",
+   "category": "Name",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "Identifier",
+      "TemplateId",
+      "DecltypeSpecifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TemplateId",
+   "category": "Name",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "template_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier",
+      "OperatorName",
+      "LiteralOperatorName"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "QualifiedName",
+   "category": "Name",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "global_scope",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "qualifiers",
+     "type": [
+      "Identifier",
+      "TemplateId",
+      "DecltypeSpecifier",
+      "PackIndexingSpecifier",
+      "SpliceSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IntegerLiteral",
+   "category": "Literal",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "FloatingLiteral",
+   "category": "Literal",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "CharacterLiteral",
+   "category": "Literal",
+   "since": null,
+   "extension": false,
+   "features": {
+    "prefix": {
+     "u8": {
+      "C++": 2017,
+      "C": 2023
+     },
+     "u": {
+      "C++": 2011,
+      "C": 2011
+     },
+     "U": {
+      "C++": 2011,
+      "C": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "prefix",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "L",
+      "u8",
+      "u",
+      "U"
+     ]
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "StringLiteral",
+   "category": "Literal",
+   "since": null,
+   "extension": false,
+   "features": {
+    "prefix": {
+     "u8": {
+      "C++": 2011,
+      "C": 2011
+     },
+     "u": {
+      "C++": 2011,
+      "C": 2011
+     },
+     "U": {
+      "C++": 2011,
+      "C": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "prefix",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "L",
+      "u8",
+      "u",
+      "U"
+     ]
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "RawStringLiteral",
+   "category": "Literal",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "prefix",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "L",
+      "u8",
+      "u",
+      "U"
+     ]
+    },
+    {
+     "name": "delimiter",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "UserDefinedLiteral",
+   "category": "Literal",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "literal",
+     "type": [
+      "IntegerLiteral",
+      "FloatingLiteral",
+      "CharacterLiteral",
+      "StringLiteral",
+      "RawStringLiteral"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "suffix",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ConcatenatedString",
+   "category": "Literal",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "parts",
+     "type": [
+      "StringLiteral",
+      "RawStringLiteral",
+      "UserDefinedLiteral",
+      "IdExpression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "BooleanLiteral",
+   "category": "Literal",
+   "since": {
+    "C++": 1998,
+    "C": 2023
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "NullptrLiteral",
+   "category": "Literal",
+   "since": {
+    "C++": 2011,
+    "C": 2023
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "ThisExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "ParenthesizedExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IdExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "LambdaExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {
+    "template_parameters": {
+     "true": {
+      "C++": 2020
+     }
+    },
+    "attributes": {
+     "true": {
+      "C++": 2023
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "captures",
+     "type": [
+      "Capture"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "template_parameters",
+     "type": [
+      "TemplateParameter",
+      "Parameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "template_requires",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declarator",
+     "type": [
+      "LambdaDeclarator"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "CompoundStatement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "LambdaDeclarator",
+   "category": "Node",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {
+    "requires": {
+     "true": {
+      "C++": 2020
+     }
+    },
+    "contracts": {
+     "true": {
+      "C++": 2026
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "parameters",
+     "type": [
+      "Parameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "specifiers",
+     "type": [
+      "DeclSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "exception",
+     "type": [
+      "ExceptionSpecification"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "trailing_return",
+     "type": [
+      "TypeId"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "requires",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "contracts",
+     "type": [
+      "ContractSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DefaultCapture",
+   "category": "Capture",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "mode",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "=",
+      "&"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "SimpleCapture",
+   "category": "Capture",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "by_reference",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ThisCapture",
+   "category": "Capture",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {
+    "copy": {
+     "true": {
+      "C++": 2017
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "copy",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "InitCapture",
+   "category": "Capture",
+   "since": {
+    "C++": 2014
+   },
+   "extension": false,
+   "features": {
+    "pack": {
+     "true": {
+      "C++": 2020
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "by_reference",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "Initializer",
+      "InitializerList"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "FoldExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2017
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "+",
+      "-",
+      "*",
+      "/",
+      "%",
+      "^",
+      "&",
+      "|",
+      "<<",
+      ">>",
+      "+=",
+      "-=",
+      "*=",
+      "/=",
+      "%=",
+      "^=",
+      "&=",
+      "|=",
+      "<<=",
+      ">>=",
+      "=",
+      "==",
+      "!=",
+      "<",
+      ">",
+      "<=",
+      ">=",
+      "&&",
+      "||",
+      ",",
+      ".*",
+      "->*"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RequiresExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "parameters",
+     "type": [
+      "Parameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "requirements",
+     "type": [
+      "Requirement"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "SimpleRequirement",
+   "category": "Requirement",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TypeRequirement",
+   "category": "Requirement",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CompoundRequirement",
+   "category": "Requirement",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "noexcept",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "return_type",
+     "type": [
+      "Name"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NestedRequirement",
+   "category": "Requirement",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "constraint",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PackIndexingExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "pack",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "index",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ReflectExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Name",
+      "TypeId",
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SpliceExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "template_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "reflection",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "SubscriptExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "object",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "indices",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "CallExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "function",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "FunctionalCastExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "Specifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "ParenthesizedInitializer",
+      "InitializerList"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MemberExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "object",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      ".",
+      "->"
+     ]
+    },
+    {
+     "name": "template_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "member",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PostfixExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "++",
+      "--"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "NamedCastExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "static_cast",
+      "dynamic_cast",
+      "const_cast",
+      "reinterpret_cast"
+     ]
+    },
+    {
+     "name": "type",
+     "type": [
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TypeidExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UnaryExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "+",
+      "-",
+      "!",
+      "~",
+      "*",
+      "&",
+      "++",
+      "--"
+     ]
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AwaitExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SizeofExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SizeofPackExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "pack",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AlignofExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2011,
+    "C": 2011
+   },
+   "extension": false,
+   "features": {
+    "keyword": {
+     "alignof": {
+      "C++": 2011,
+      "C": 2023
+     },
+     "_Alignof": {
+      "C": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "alignof",
+      "_Alignof",
+      "__alignof__",
+      "__alignof",
+      "_alignof"
+     ]
+    },
+    {
+     "name": "operand",
+     "type": [
+      "TypeId",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NoexceptExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NewExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "global_scope",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "placement",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "parenthesized_type",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "type",
+     "type": [
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "ParenthesizedInitializer",
+      "InitializerList"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DeleteExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "global_scope",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "array",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CastExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinaryExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "operator": {
+     "<=>": {
+      "C++": 2020
+     },
+     ".*": {
+      "C++": 1998
+     },
+     "->*": {
+      "C++": 1998
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      ".*",
+      "->*",
+      "*",
+      "/",
+      "%",
+      "+",
+      "-",
+      "<<",
+      ">>",
+      "<=>",
+      "<",
+      ">",
+      "<=",
+      ">=",
+      "==",
+      "!=",
+      "&",
+      "^",
+      "|",
+      "&&",
+      "||",
+      ","
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConditionalExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequence",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AssignmentExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "=",
+      "*=",
+      "/=",
+      "%=",
+      "+=",
+      "-=",
+      ">>=",
+      "<<=",
+      "&=",
+      "^=",
+      "|="
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ThrowExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "YieldExpression",
+   "category": "Expression",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PackExpansion",
+   "category": "Expression",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "pattern",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "InitializerList",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "items",
+     "type": [
+      "Expression",
+      "DesignatedInitializer"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "trailing_comma",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "DesignatedInitializer",
+   "category": "Node",
+   "since": {
+    "C++": 2020,
+    "C": 1999
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "designators",
+     "type": [
+      "Designator"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "EqualInitializer",
+      "InitializerList"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "FieldDesignator",
+   "category": "Designator",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IndexDesignator",
+   "category": "Designator",
+   "since": {
+    "C": 1999
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "index",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "last",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CompoundLiteralExpression",
+   "category": "Expression",
+   "since": {
+    "C": 1999
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "InitializerList"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "GenericSelection",
+   "category": "Expression",
+   "since": {
+    "C": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "controlling",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "associations",
+     "type": [
+      "GenericAssociation"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "GenericAssociation",
+   "category": "Node",
+   "since": {
+    "C": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "TypeId"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "StatementExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "CompoundStatement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ExtensionExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DefinedExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "LabeledStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "statement",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CaseStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "last",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "statement",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DefaultStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "statement",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ExpressionStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CompoundStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "items",
+     "type": [
+      "Statement",
+      "Declaration",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "IfStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "constexpr": {
+     "true": {
+      "C++": 2017
+     }
+    },
+    "consteval": {
+     "true": {
+      "C++": 2023
+     }
+    },
+    "initializer": {
+     "true": {
+      "C++": 2017
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "constexpr",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "consteval",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "negated",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "consequence",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SwitchStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "initializer": {
+     "true": {
+      "C++": 2017
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "initializer",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression",
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "WhileStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression",
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DoStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "initializer",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "increment",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RangeForStatement",
+   "category": "Statement",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {
+    "initializer": {
+     "true": {
+      "C++": 2020
+     }
+    },
+    "template_keyword": {
+     "true": {
+      "C++": 2026
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "template_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "declaration",
+     "type": [
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "range",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement",
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BreakStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "ContinueStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "ReturnStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CoReturnStatement",
+   "category": "Statement",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "GotoStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TryStatement",
+   "category": "Statement",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "body",
+     "type": [
+      "CompoundStatement"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "handlers",
+     "type": [
+      "Handler"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Handler",
+   "category": "Node",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "parameter",
+     "type": [
+      "Parameter"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "CompoundStatement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AttributedStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "statement",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ContractAssertStatement",
+   "category": "Statement",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "predicate",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SimpleDeclaration",
+   "category": "Declaration",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "specifiers",
+     "type": [
+      "Specifier",
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declarators",
+     "type": [
+      "InitDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "InitDeclarator",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {
+    "requires": {
+     "true": {
+      "C++": 2020
+     }
+    },
+    "contracts": {
+     "true": {
+      "C++": 2026
+     }
+    },
+    "virt_specifiers": {
+     "true": {
+      "C++": 2011
+     }
+    },
+    "pure": {
+     "true": {
+      "C++": 1998
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "virt_specifiers",
+     "type": [
+      "VirtSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "pure",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "bitfield",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "Initializer",
+      "InitializerList"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "requires",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "contracts",
+     "type": [
+      "ContractSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "FunctionDefinition",
+   "category": "Declaration",
+   "since": null,
+   "extension": false,
+   "features": {
+    "requires": {
+     "true": {
+      "C++": 2020
+     }
+    },
+    "contracts": {
+     "true": {
+      "C++": 2026
+     }
+    },
+    "virt_specifiers": {
+     "true": {
+      "C++": 2011
+     }
+    },
+    "initializers": {
+     "true": {
+      "C++": 1998
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "specifiers",
+     "type": [
+      "Specifier",
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "virt_specifiers",
+     "type": [
+      "VirtSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "requires",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "contracts",
+     "type": [
+      "ContractSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "initializers",
+     "type": [
+      "MemberInitializer"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "CompoundStatement",
+      "TryStatement",
+      "DefaultedBody",
+      "DeletedBody"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DefaultedBody",
+   "category": "Node",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "DeletedBody",
+   "category": "Node",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {
+    "reason": {
+     "true": {
+      "C++": 2026
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "reason",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MemberInitializer",
+   "category": "Node",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "member",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "ParenthesizedInitializer",
+      "InitializerList"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "VirtSpecifier",
+   "category": "Node",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "override",
+      "final"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "DeclSpecifier",
+   "category": "Specifier",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "thread_local": {
+      "C++": 2011,
+      "C": 2023
+     },
+     "_Thread_local": {
+      "C": 2011
+     },
+     "mutable": {
+      "C++": 1998
+     },
+     "register": {
+      "C++": [
+       1998,
+       2017
+      ],
+      "C": 1989
+     },
+     "inline": {
+      "C++": 1998,
+      "C": 1999
+     },
+     "virtual": {
+      "C++": 1998
+     },
+     "_Noreturn": {
+      "C": 2011
+     },
+     "friend": {
+      "C++": 1998
+     },
+     "constexpr": {
+      "C++": 2011,
+      "C": 2023
+     },
+     "consteval": {
+      "C++": 2020
+     },
+     "constinit": {
+      "C++": 2020
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "static",
+      "extern",
+      "thread_local",
+      "_Thread_local",
+      "mutable",
+      "register",
+      "inline",
+      "virtual",
+      "_Noreturn",
+      "friend",
+      "typedef",
+      "constexpr",
+      "consteval",
+      "constinit",
+      "__inline",
+      "__inline__",
+      "__forceinline",
+      "__thread",
+      "__extension__",
+      "noreturn"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "ExplicitSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "condition": {
+     "true": {
+      "C++": 2020
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CvQualifier",
+   "category": "Specifier",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "restrict": {
+      "C": 1999
+     },
+     "_Atomic": {
+      "C": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "const",
+      "volatile",
+      "restrict",
+      "_Atomic",
+      "__restrict",
+      "__restrict__",
+      "_Nonnull"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "PrimitiveTypeSpecifier",
+   "category": "Specifier",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "char8_t": {
+      "C++": 2020
+     },
+     "char16_t": {
+      "C++": 2011
+     },
+     "char32_t": {
+      "C++": 2011
+     },
+     "wchar_t": {
+      "C++": 1998
+     },
+     "bool": {
+      "C++": 1998,
+      "C": 2023
+     },
+     "_Bool": {
+      "C": 1999
+     },
+     "_Complex": {
+      "C": 1999
+     },
+     "_Imaginary": {
+      "C": 1999
+     },
+     "_Decimal32": {
+      "C": 2023
+     },
+     "_Decimal64": {
+      "C": 2023
+     },
+     "_Decimal128": {
+      "C": 2023
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "void",
+      "char",
+      "char8_t",
+      "char16_t",
+      "char32_t",
+      "wchar_t",
+      "bool",
+      "_Bool",
+      "short",
+      "int",
+      "long",
+      "signed",
+      "unsigned",
+      "float",
+      "double",
+      "_Complex",
+      "_Imaginary",
+      "_Decimal32",
+      "_Decimal64",
+      "_Decimal128",
+      "_Float16",
+      "_Float32",
+      "_Float64",
+      "_Float128",
+      "_Float32x",
+      "_Float64x",
+      "_Float128x",
+      "__int128",
+      "__float128"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "NamedTypeSpecifier",
+   "category": "Specifier",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TypenameSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ClassSpecifier",
+   "category": "Specifier",
+   "since": null,
+   "extension": false,
+   "features": {
+    "final": {
+     "true": {
+      "C++": 2011
+     }
+    },
+    "bases": {
+     "true": {
+      "C++": 1998
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "key",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "class",
+      "struct",
+      "union"
+     ]
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "final",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "bases",
+     "type": [
+      "BaseSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "MemberList"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MemberList",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "items",
+     "type": [
+      "Declaration",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "EnumSpecifier",
+   "category": "Specifier",
+   "since": null,
+   "extension": false,
+   "features": {
+    "key": {
+     "enum class": {
+      "C++": 2011
+     },
+     "enum struct": {
+      "C++": 2011
+     }
+    },
+    "base": {
+     "true": {
+      "C++": 2011,
+      "C": 2023
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "key",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "enum",
+      "enum class",
+      "enum struct"
+     ]
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "base",
+     "type": [
+      "TypeId"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "EnumeratorList"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "EnumeratorList",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "enumerators",
+     "type": [
+      "Enumerator",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "trailing_comma",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "Enumerator",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DecltypeSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PlaceholderTypeSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C++": 2011,
+    "C": 2023
+   },
+   "extension": false,
+   "features": {
+    "decltype": {
+     "true": {
+      "C++": 2014
+     }
+    },
+    "constraint": {
+     "true": {
+      "C++": 2020
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "constraint",
+     "type": [
+      "Name"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "decltype",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "TypeofSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C": 2023
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "typeof",
+      "typeof_unqual",
+      "__typeof__",
+      "__typeof"
+     ]
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AtomicTypeSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BitIntSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C": 2023
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "width",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PackIndexingSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "pack",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "index",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SpliceSpecifier",
+   "category": "Specifier",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "typename_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "template_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "reflection",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "IdDeclarator",
+   "category": "Declarator",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "PackDeclarator",
+   "category": "Declarator",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PointerDeclarator",
+   "category": "Declarator",
+   "since": null,
+   "extension": false,
+   "features": {
+    "scope": {
+     "true": {
+      "C++": 1998
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "scope",
+     "type": [
+      "Name"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "qualifiers",
+     "type": [
+      "CvQualifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ReferenceDeclarator",
+   "category": "Declarator",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "rvalue": {
+     "true": {
+      "C++": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "rvalue",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ArrayDeclarator",
+   "category": "Declarator",
+   "since": null,
+   "extension": false,
+   "features": {
+    "static": {
+     "true": {
+      "C": 1999
+     }
+    },
+    "qualifiers": {
+     "true": {
+      "C": 1999
+     }
+    },
+    "star": {
+     "true": {
+      "C": 1999
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "qualifiers",
+     "type": [
+      "CvQualifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "size",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "star",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "FunctionDeclarator",
+   "category": "Declarator",
+   "since": null,
+   "extension": false,
+   "features": {
+    "qualifiers": {
+     "true": {
+      "C++": 1998
+     }
+    },
+    "ref_qualifier": {
+     "true": {
+      "C++": 2011
+     }
+    },
+    "trailing_return": {
+     "true": {
+      "C++": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "Parameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "qualifiers",
+     "type": [
+      "CvQualifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "ref_qualifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "&",
+      "&&"
+     ]
+    },
+    {
+     "name": "exception",
+     "type": [
+      "ExceptionSpecification"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "trailing_return",
+     "type": [
+      "TypeId"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParenthesizedDeclarator",
+   "category": "Declarator",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "StructuredBindingDeclarator",
+   "category": "Declarator",
+   "since": {
+    "C++": 2017
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "bindings",
+     "type": [
+      "IdDeclarator",
+      "PackDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TypeId",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "specifiers",
+     "type": [
+      "Specifier",
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParameterDeclaration",
+   "category": "Parameter",
+   "since": null,
+   "extension": false,
+   "features": {
+    "this_keyword": {
+     "true": {
+      "C++": 2023
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "this_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "specifiers",
+     "type": [
+      "Specifier",
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "declarator",
+     "type": [
+      "Declarator"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "default",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "EllipsisParameter",
+   "category": "Parameter",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "EqualInitializer",
+   "category": "Initializer",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParenthesizedInitializer",
+   "category": "Initializer",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "arguments",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "NoexceptSpecifier",
+   "category": "ExceptionSpecification",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ThrowSpecifier",
+   "category": "ExceptionSpecification",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "types",
+     "type": [
+      "TypeId",
+      "PackExpansion"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "PreconditionSpecifier",
+   "category": "ContractSpecifier",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "predicate",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PostconditionSpecifier",
+   "category": "ContractSpecifier",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "result",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "predicate",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NamespaceDefinition",
+   "category": "Declaration",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "inline": {
+     "true": {
+      "C++": 2011
+     }
+    },
+    "attributes": {
+     "true": {
+      "C++": 2017
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "inline",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "names",
+     "type": [
+      "NamespaceName"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "items",
+     "type": [
+      "Declaration",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "NamespaceName",
+   "category": "Node",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "inline",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NamespaceAliasDefinition",
+   "category": "Declaration",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "target",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UsingDirective",
+   "category": "Declaration",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UsingDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "declarators",
+     "type": [
+      "UsingDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "UsingDeclarator",
+   "category": "Node",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "pack": {
+     "true": {
+      "C++": 2017
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "typename_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "UsingEnumDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "type",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AliasDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 2011
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "type",
+     "type": [
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "StaticAssertDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 2011,
+    "C": 2011
+   },
+   "extension": false,
+   "features": {
+    "keyword": {
+     "static_assert": {
+      "C++": 2011,
+      "C": 2023
+     },
+     "_Static_assert": {
+      "C": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "static_assert",
+      "_Static_assert"
+     ]
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "message",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AttributeDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 2011,
+    "C": 2023
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "EmptyDeclaration",
+   "category": "Declaration",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "LinkageSpecification",
+   "category": "Declaration",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "language",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "braced",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Declaration",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AsmDeclaration",
+   "category": "Declaration",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "asm",
+      "__asm__",
+      "__asm"
+     ]
+    },
+    {
+     "name": "volatile",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "inline",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "goto",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "template",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "outputs",
+     "type": [
+      "AsmOperand"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "inputs",
+     "type": [
+      "AsmOperand"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "clobbers",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labels",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AsmOperand",
+   "category": "Node",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "constraint",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "StandardAttributeSpecifier",
+   "category": "AttributeSpecifier",
+   "since": {
+    "C++": 2011,
+    "C": 2023
+   },
+   "extension": false,
+   "features": {
+    "using_namespace": {
+     "true": {
+      "C++": 2017
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "using_namespace",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "Attribute",
+      "Annotation"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Attribute",
+   "category": "Node",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "namespace",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "name",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "Annotation",
+   "category": "Node",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "AlignasSpecifier",
+   "category": "AttributeSpecifier",
+   "since": {
+    "C++": 2011,
+    "C": 2011
+   },
+   "extension": false,
+   "features": {
+    "keyword": {
+     "alignas": {
+      "C++": 2011,
+      "C": 2023
+     },
+     "_Alignas": {
+      "C": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "alignas",
+      "_Alignas"
+     ]
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression",
+      "TypeId"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "GnuAttributeSpecifier",
+   "category": "AttributeSpecifier",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "__attribute__",
+      "__attribute"
+     ]
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "Attribute"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DeclspecSpecifier",
+   "category": "AttributeSpecifier",
+   "since": null,
+   "extension": true,
+   "features": {},
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "Attribute"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ModuleDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "export",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "partition",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "GlobalModuleFragment",
+   "category": "Declaration",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "PrivateModuleFragment",
+   "category": "Declaration",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": []
+  },
+  {
+   "kind": "ImportDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "export",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "partition",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "header",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "system",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ExportDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "braced",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Declaration",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AccessSpecifier",
+   "category": "Declaration",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "access",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "public",
+      "protected",
+      "private"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "BaseSpecifier",
+   "category": "Node",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "pack": {
+     "true": {
+      "C++": 2011
+     }
+    },
+    "attributes": {
+     "true": {
+      "C++": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "virtual",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "access",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "public",
+      "protected",
+      "private"
+     ]
+    },
+    {
+     "name": "type",
+     "type": [
+      "Name",
+      "DecltypeSpecifier",
+      "PackIndexingSpecifier",
+      "SpliceSpecifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "FriendTypeDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 2026
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "types",
+     "type": [
+      "TypeId",
+      "PackExpansion"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TemplateDeclaration",
+   "category": "Declaration",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "requires": {
+     "true": {
+      "C++": 2020
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "parameters",
+     "type": [
+      "TemplateParameter",
+      "Parameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "requires",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "declaration",
+     "type": [
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TypeParameter",
+   "category": "TemplateParameter",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "pack": {
+     "true": {
+      "C++": 2011
+     }
+    },
+    "constraint": {
+     "true": {
+      "C++": 2020
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "key",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "class",
+      "typename"
+     ]
+    },
+    {
+     "name": "constraint",
+     "type": [
+      "Name"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "default",
+     "type": [
+      "TypeId"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TemplateTemplateParameter",
+   "category": "TemplateParameter",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "pack": {
+     "true": {
+      "C++": 2011
+     }
+    },
+    "requires": {
+     "true": {
+      "C++": 2020
+     }
+    },
+    "key": {
+     "typename": {
+      "C++": 2017
+     },
+     "concept": {
+      "C++": 2026
+     },
+     "auto": {
+      "C++": 2026
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "parameters",
+     "type": [
+      "TemplateParameter",
+      "Parameter"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "requires",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "key",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "class",
+      "typename",
+      "concept",
+      "auto"
+     ]
+    },
+    {
+     "name": "pack",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "default",
+     "type": [
+      "Name"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConceptDefinition",
+   "category": "Declaration",
+   "since": {
+    "C++": 2020
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeSpecifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "constraint",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ExplicitInstantiation",
+   "category": "Declaration",
+   "since": {
+    "C++": 1998
+   },
+   "extension": false,
+   "features": {
+    "extern": {
+     "true": {
+      "C++": 2011
+     }
+    }
+   },
+   "fields": [
+    {
+     "name": "extern",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "declaration",
+     "type": [
+      "Declaration"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IncludeDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "directive",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "include",
+      "include_next",
+      "import"
+     ]
+    },
+    {
+     "name": "path",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "system",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "macro",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DefineDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "function_like",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "variadic",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "replacement",
+     "type": "str",
+     "optional": true
+    }
+   ]
+  },
+  {
+   "kind": "IfDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Node"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "ElifDirective",
+      "ElifdefDirective",
+      "ElseDirective"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IfdefDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "negated",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Node"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "ElifDirective",
+      "ElifdefDirective",
+      "ElseDirective"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ElifDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Node"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "ElifDirective",
+      "ElifdefDirective",
+      "ElseDirective"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ElifdefDirective",
+   "category": "Directive",
+   "since": {
+    "C++": 2023,
+    "C": 2023
+   },
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "negated",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Node"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "ElifDirective",
+      "ElifdefDirective",
+      "ElseDirective"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ElseDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "items",
+     "type": [
+      "Node"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "OtherDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "fields": [
+    {
+     "name": "directive",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": true
+    }
+   ]
+  }
+ ]
+}

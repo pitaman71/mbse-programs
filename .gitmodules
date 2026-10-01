@@ -1,0 +1,3 @@
+[submodule "submodules/mbse-schemas"]
+	path = submodules/mbse-schemas
+	url = git@github.com:pitaman71/mbse-schemas.git

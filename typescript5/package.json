@@ -1,0 +1,46 @@
+{
+  "name": "@mbse/programs",
+  "version": "0.0.1",
+  "description": "Programs as language-neutral data: complete, serializable abstract syntax trees for C and C++, with their definitions, built for transpilers that never parse or print strings (TypeScript implementation)",
+  "keywords": [
+    "ast",
+    "abstract syntax tree",
+    "c++",
+    "c",
+    "transpiler",
+    "mbse",
+    "tree-sitter",
+    "code generation"
+  ],
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./Framework": "./src/Framework/index.ts",
+    "./Framework/*": "./src/Framework/*.ts",
+    "./Ccpp": "./src/Ccpp/index.ts",
+    "./Ccpp/*": "./src/Ccpp/*.ts",
+    "./Conformance/*": "./src/Conformance/*.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "postinstall": "npm --prefix ../submodules/mbse-schemas/typescript5 install --no-audit --no-fund",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx tests/run-notebooks.ts --typecheck",
+    "conformance": "tsx src/Conformance/write.ts",
+    "coverage": "c8 --check-coverage --100 tsx tests/run-notebooks.ts --typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "c8": "^11.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@mbse/schemas": "file:../submodules/mbse-schemas/typescript5",
+    "tree-sitter-cpp": "0.23.4",
+    "web-tree-sitter": "^0.27.0"
+  }
+}

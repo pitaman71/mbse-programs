@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mbse-programs"
+version = "0.0.1"
+description = "Programs as language-neutral data: complete, serializable abstract syntax trees for C and C++, with their definitions, built for transpilers that never parse or print strings"
+keywords = ["ast", "abstract syntax tree", "c++", "c", "transpiler", "mbse", "tree-sitter", "code generation"]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["mbse-schemas", "tree-sitter>=0.25", "tree-sitter-cpp==0.23.4"]
+
+[project.optional-dependencies]
+yaml = ["mbse-schemas[yaml]"]
+
+[tool.setuptools.packages.find]
+include = ["mbse*"]
+namespaces = true
+
+[dependency-groups]
+dev = [
+    "coverage[toml]>=7.10",
+    "ipykernel>=7.3.0",
+    "nbformat>=5.11.1",
+    "nbmake>=1.5.5",
+    "pytest>=9.1.1",
+    "pyyaml>=6",
+]
+
+[tool.uv.sources]
+mbse-schemas = { path = "../submodules/mbse-schemas/python3", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--nbmake"
+
+[tool.coverage.run]
+source = ["mbse.Programs"]
+omit = ["*/mbse/Programs/Conformance/*"]
+branch = true
+parallel = true
+patch = ["subprocess"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 100
