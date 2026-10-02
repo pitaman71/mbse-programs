@@ -22,6 +22,10 @@ subset of TypeScript into Python. Two equivalent implementations exist: `python3
 
 ## Invariants when changing code
 
+- **Parallel work happens in workspaces.** Agents working at the same time each get a workspace from
+  `python3 scripts/siblings.py workspace <dir> --branch <name>` (with `--edit <sibling>` for a change that spans
+  repositories), and install there. A worktree of this repository alone, such as an agent's built-in worktree
+  isolation, breaks the relative paths to the siblings.
 - **The two implementations are equivalent.** Change both in the same commit, with the same names, the same error
   classes and byte-identical messages. Each language's `Syntax.ts` mirrors its `Syntax.py` kind for kind and property
   for property, in the same order. JSON output must be byte-identical: regenerate the corpora and let CONF-02 compare

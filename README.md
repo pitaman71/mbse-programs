@@ -96,6 +96,16 @@ A sibling it clones is checked out at its tag, in detached HEAD; to change it, s
 (`git -C ../mbse-schemas switch main`). `python3 scripts/siblings.py check` reports when it has moved past its
 pinned tag, which is expected while developing; see `scripts/siblings.py` for `check --strict` and `pin`.
 
+For parallel work (several agents, or several tasks at once), give each its own workspace: worktrees of this
+repository and of its siblings, side by side, so that each installs its own siblings and none sees another's
+half-finished changes. A worktree of this repository alone does not work, since its siblings would not be beside it.
+
+```sh
+python3 scripts/siblings.py workspace ../worktrees/a --branch a                     # this repository on a
+python3 scripts/siblings.py workspace ../worktrees/b --branch b --edit mbse-schemas # and mbse-schemas too
+python3 scripts/siblings.py remove ../worktrees/a                                   # once the work is merged
+```
+
 Python (3.11+, managed with [uv](https://docs.astral.sh/uv/)); mbse-schemas is installed from the sibling:
 
 ```sh

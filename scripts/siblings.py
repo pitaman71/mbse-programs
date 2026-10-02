@@ -15,6 +15,15 @@ is the tag `v<version>`.
                                                    --strict also requires each at its pinned tag, clean (for releases)
     python3 scripts/siblings.py clone              clones each missing sibling at its pinned tag (fresh clones, CI)
     python3 scripts/siblings.py pin                records each sibling's current version, here and in pyproject.toml
+    python3 scripts/siblings.py workspace DIR [--branch NAME] [--edit SIBLING ...]
+                                                   a workspace for parallel work: git worktrees of this repository and
+                                                   of its siblings, side by side in DIR, so that the relative paths to
+                                                   the siblings hold; this repository on the new branch NAME (detached
+                                                   without it), the siblings named by --edit on NAME too, and the others
+                                                   detached at their checkouts' commits
+    python3 scripts/siblings.py remove DIR [--force]
+                                                   removes a workspace's worktrees, refusing one with uncommitted
+                                                   changes unless --force; branches are kept
 
 Standard library only, so that it runs before anything is installed.
 """
@@ -127,10 +136,81 @@ def pin() -> int:
     return 0
 
 
+def worktree(source: Path, target: Path, branch: str | None) -> None:
+    """A worktree of `source` at `target`: on `branch` (made from the checkout's commit if new), or detached."""
+    if git(source, "status", "--porcelain", "--untracked-files=no"):
+        print(f"{source.name}: has uncommitted changes, which the worktree does not get")
+    if branch is None:
+        args = ["--detach", str(target), "HEAD"]
+    elif git(source, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"):
+        args = [str(target), branch]
+    else:
+        args = ["-b", branch, str(target), "HEAD"]
+    subprocess.run(["git", "-C", str(source), "worktree", "add", "--quiet", *args], check=True)
+    where = f"on {branch}" if branch else f"detached at {git(target, 'rev-parse', '--short', 'HEAD')}"
+    print(f"{target}: {where}")
+
+
+def workspace(directory: Path, branch: str | None, edit: list[str]) -> int:
+    siblings = json.loads(CONFIG.read_text())
+    unknown = [name for name in edit if name not in siblings]
+    if unknown or (edit and branch is None):
+        raise SystemExit(f"--edit takes siblings ({', '.join(siblings)}) and needs --branch; got {edit}")
+    missing = [name for name in siblings if not (ROOT.parent / name).is_dir()]
+    if missing:
+        raise SystemExit(f"missing siblings {missing}; run python3 scripts/siblings.py clone")
+    for name in [ROOT.name, *siblings]:
+        if (directory / name).exists():
+            raise SystemExit(f"{directory / name} already exists")
+    directory.mkdir(parents=True, exist_ok=True)
+    worktree(ROOT, directory / ROOT.name, branch)
+    for name in siblings:
+        worktree(ROOT.parent / name, directory / name, branch if name in edit else None)
+    print(f"next: cd {directory / ROOT.name}, then install: (cd python3 && uv sync --all-extras) and"
+          " (cd typescript5 && npm install)")
+    return 0
+
+
+def remove(directory: Path, force: bool) -> int:
+    trees = sorted(p for p in directory.iterdir() if (p / ".git").is_file()) if directory.is_dir() else []
+    if not trees:
+        raise SystemExit(f"{directory}: no worktrees here")
+    dirty = [t.name for t in trees if git(t, "status", "--porcelain")]
+    if dirty and not force:
+        raise SystemExit(f"uncommitted changes in {dirty}; commit them, or pass --force to discard them")
+    for tree in trees:
+        common = Path(git(tree, "rev-parse", "--path-format=absolute", "--git-common-dir"))
+        subprocess.run(["git", "-C", str(common.parent), "worktree", "remove", *(["--force"] if force else []),
+                        str(tree)], check=True)
+        print(f"{tree}: removed")
+    if not any(directory.iterdir()):
+        directory.rmdir()
+    return 0
+
+
+def option(name: str) -> list[str]:
+    """The values that follow `name` on the command line, up to the next option."""
+    args = sys.argv[2:]
+    if name not in args:
+        return []
+    values = []
+    for arg in args[args.index(name) + 1:]:
+        if arg.startswith("--"):
+            break
+        values.append(arg)
+    return values
+
+
 if __name__ == "__main__":
     command = sys.argv[1] if len(sys.argv) > 1 else "check"
     if command == "check":
         sys.exit(check("--strict" in sys.argv[2:]))
     if command in ("clone", "pin"):
         sys.exit(clone() if command == "clone" else pin())
+    if command in ("workspace", "remove") and len(sys.argv) > 2 and not sys.argv[2].startswith("--"):
+        directory = Path(sys.argv[2]).resolve()
+        if command == "remove":
+            sys.exit(remove(directory, "--force" in sys.argv[3:]))
+        branch = option("--branch")
+        sys.exit(workspace(directory, branch[0] if branch else None, option("--edit")))
     raise SystemExit(__doc__)
