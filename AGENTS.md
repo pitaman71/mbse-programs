@@ -18,7 +18,7 @@ subset of TypeScript into Python. Two equivalent implementations exist: `python3
 | Change the framework, a kind, the parser or the printer | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Change or add a transpiler | [docs/PROGRAMS.md, Transpiling](docs/PROGRAMS.md#transpiling), then the transpiler's module docstring |
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
-| Model the data trees are stored with | [mbse-schemas' AGENTS.md](submodules/mbse-schemas/AGENTS.md), in the submodule |
+| Model the data trees are stored with | [mbse-schemas' AGENTS.md](https://github.com/pitaman71/mbse-schemas/blob/main/AGENTS.md), in the sibling checkout |
 
 ## Invariants when changing code
 
@@ -52,7 +52,8 @@ subset of TypeScript into Python. Two equivalent implementations exist: `python3
 ## Commands
 
 ```sh
-git submodule update --init                  # mbse-schemas, which both implementations install from the submodule
+python3 scripts/siblings.py clone            # mbse-schemas, beside this repository, at its pinned tag
+python3 scripts/siblings.py check            # the siblings are present and compatible with siblings.json
 cd python3 && uv sync --all-extras           # Python: use uv, never pip
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
 uv run python -m mbse.Programs.Conformance.write
@@ -64,7 +65,7 @@ npm run conformance
 
 ## Related repositories
 
-- [mbse-schemas](https://github.com/pitaman71/mbse-schemas): the schemas trees are serialized with. It is a git
-  submodule here, at `submodules/mbse-schemas`.
+- [mbse-schemas](https://github.com/pitaman71/mbse-schemas): the schemas trees are serialized with. It is a
+  sibling checkout, `../mbse-schemas`, pinned by version in `siblings.json` (see `scripts/siblings.py`).
 - [mbse-expressions](https://github.com/pitaman71/mbse-expressions): expressions as data, the sibling this repository's
   conventions follow.

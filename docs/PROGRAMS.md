@@ -427,6 +427,11 @@ The first transpiler was written to test the framework, and found:
 
 ## Resolved
 
+- The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as
+  they are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by
+  the others, and pins the versions it was tested with in `siblings.json`: a sibling is compatible at the same minor
+  version below 1.0 and no older, `pyproject.toml` requires that range, and a release is the tag `v<version>`.
+  `scripts/siblings.py` checks the siblings, clones those missing at their pinned tags, and pins new versions.
 - The vocabulary is shared with mbse-schemas and mbse-expressions: a kind's named members are *properties* (attributes
   and children, declared in `PROPERTIES`), and a tree's elements are *syntax nodes* (`SyntaxNode`), never bare nodes.
   "Field" means only what the host language means by it: a class's field in TypeScript or C++, or an f-string's

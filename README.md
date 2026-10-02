@@ -82,13 +82,15 @@ package), TypeScript from `@mbse/programs` (next to `@mbse/schemas`).
 
 ## Getting started
 
-mbse-schemas is a git submodule, so clone with it:
+mbse-programs depends on [mbse-schemas](https://github.com/pitaman71/mbse-schemas), which lives beside it as a
+sibling checkout. Clone this repository, then the siblings at the versions it pins (`siblings.json`):
 
 ```sh
-git clone --recurse-submodules git@github.com:pitaman71/mbse-programs.git
+git clone git@github.com:pitaman71/mbse-programs.git
+python3 mbse-programs/scripts/siblings.py clone   # mbse-schemas, beside it, at its pinned tag
 ```
 
-Python (3.11+, managed with [uv](https://docs.astral.sh/uv/)); mbse-schemas is installed from the submodule:
+Python (3.11+, managed with [uv](https://docs.astral.sh/uv/)); mbse-schemas is installed from the sibling:
 
 ```sh
 cd python3
@@ -96,7 +98,8 @@ uv sync --all-extras
 uv run pytest
 ```
 
-TypeScript (Node 22 or later; with [nvm](https://github.com/nvm-sh/nvm), `nvm use` picks the version in `.nvmrc`):
+TypeScript (Node 22 or later; with [nvm](https://github.com/nvm-sh/nvm), `nvm use` picks the version in `.nvmrc`).
+`npm install` checks the siblings, links `@mbse/schemas` to the sibling checkout and installs its own dependencies:
 
 ```sh
 cd typescript5
@@ -118,7 +121,6 @@ npm test                       # type-check and run the test suites
 ## Repository layout
 
 ```
-submodules/mbse-schemas/  the framework trees are serialized with
 docs/                     the design (PROGRAMS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
 python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, TypeScript, Transpilers, Conformance) and tests
 typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, TypeScript, Transpilers, Conformance) and tests

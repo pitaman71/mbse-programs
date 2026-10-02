@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mbse-programs"
-version = "0.0.1"
+version = "0.1.0"
 description = "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++, Python, TypeScript and JavaScript, with their definitions, built for transpilers that never parse or print strings"
 keywords = ["ast", "abstract syntax tree", "c++", "c", "python", "typescript", "javascript", "transpiler", "mbse",
             "tree-sitter", "code generation"]
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mbse-schemas",
+    "mbse-schemas>=0.1.0,<0.2",
     "tree-sitter>=0.25",
     "tree-sitter-cpp==0.23.4",
     "tree-sitter-python==0.25.0",
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-yaml = ["mbse-schemas[yaml]"]
+yaml = ["mbse-schemas[yaml]>=0.1.0,<0.2"]
 
 [tool.setuptools.packages.find]
 include = ["mbse*"]
@@ -36,7 +36,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-mbse-schemas = { path = "../submodules/mbse-schemas/python3", editable = true }
+mbse-schemas = { path = "../../mbse-schemas/python3", editable = true }  # the sibling checkout: scripts/siblings.py
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
