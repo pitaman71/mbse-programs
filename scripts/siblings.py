@@ -26,6 +26,15 @@ sibling too. A release of a sibling is the tag `v<version>`.
                                                    the siblings hold; this repository on the new branch NAME (detached
                                                    without it), the siblings named by --edit on NAME too, and the others
                                                    detached at their checkouts' commits
+    python3 scripts/siblings.py land DIR [--push]
+                                                   lands a workspace's change: each worktree on a branch is
+                                                   fast-forwarded into its repository's checkout, siblings before their
+                                                   dependents; each new version is tagged v<version>; then the
+                                                   workspace is removed. It refuses, before changing anything, a
+                                                   worktree with changes, a checkout that is not clean on a branch, a
+                                                   branch that does not fast-forward it, or a pin of an edited sibling
+                                                   that is not that sibling's branch. --push also pushes each
+                                                   repository's branch and new tag; without it, the pushes are printed
     python3 scripts/siblings.py remove DIR [--force]
                                                    removes a workspace's worktrees, refusing one with uncommitted
                                                    changes unless --force; branches are kept
@@ -203,6 +212,92 @@ def remove(directory: Path, force: bool) -> int:
     return 0
 
 
+def checkout_of(tree: Path) -> Path:
+    """The repository checkout a worktree belongs to."""
+    return Path(git(tree, "rev-parse", "--path-format=absolute", "--git-common-dir")).parent
+
+
+def pins(tree: Path) -> dict[str, dict[str, str]]:
+    config = tree / "siblings.json"
+    return json.loads(config.read_text()) if config.is_file() else {}
+
+
+def dependency_order(trees: dict[str, Path]) -> list[str]:
+    """The workspace's repositories, each after the siblings it pins (by name; ties by name)."""
+    order: list[str] = []
+    visiting: set[str] = set()
+
+    def visit(name: str) -> None:
+        if name in order:
+            return
+        if name in visiting:
+            raise SystemExit(f"{name}: its siblings pin it in a cycle")
+        visiting.add(name)
+        for sibling in sorted(pins(trees[name])):
+            if sibling in trees:
+                visit(sibling)
+        visiting.discard(name)
+        order.append(name)
+
+    for name in sorted(trees):
+        visit(name)
+    return order
+
+
+def land(directory: Path, push: bool) -> int:
+    trees = {p.name: p for p in sorted(directory.iterdir()) if (p / ".git").is_file()} if directory.is_dir() else {}
+    if not trees:
+        raise SystemExit(f"{directory}: no worktrees here")
+    branches = {name: git(tree, "symbolic-ref", "--quiet", "--short", "HEAD") for name, tree in trees.items()}
+    landing = [name for name in dependency_order(trees) if branches[name]]
+    problems = [f"{name}: has uncommitted changes" for name, tree in trees.items()
+                if git(tree, "status", "--porcelain")]
+    if not landing:
+        problems.append("no worktree is on a branch: nothing to land")
+    targets: dict[str, tuple[Path, str]] = {}
+    for name in landing:
+        tree, checkout = trees[name], checkout_of(trees[name])
+        target = git(checkout, "symbolic-ref", "--quiet", "--short", "HEAD")
+        targets[name] = checkout, target
+        if not target:
+            problems.append(f"{name}: the checkout {checkout} is not on a branch")
+            continue
+        if git(checkout, "status", "--porcelain", "--untracked-files=no"):
+            problems.append(f"{name}: the checkout {checkout} has uncommitted changes")
+        head = git(tree, "rev-parse", "HEAD")
+        for base in (target, git(checkout, "rev-parse", "--abbrev-ref", "--quiet", f"{target}@{{upstream}}")):
+            ancestor = ["git", "-C", str(checkout), "merge-base", "--is-ancestor", base, head]
+            if base and subprocess.run(ancestor).returncode:
+                problems.append(f"{name}: {branches[name]} does not fast-forward {base}; merge {base} into it, retest"
+                                " and re-pin")
+        for sibling, entry in pins(tree).items():
+            if sibling in landing and entry.get("commit") != git(trees[sibling], "rev-parse", "HEAD"):
+                problems.append(f"{name}: pins {sibling} at {str(entry.get('commit'))[:7]}, not at its branch "
+                                f"{branches[sibling]}; run pin and commit")
+    if problems:
+        raise SystemExit("nothing landed:\n" + "\n".join(f"  {p}" for p in problems))
+    pushes = []
+    for name in landing:
+        checkout, target = targets[name]
+        subprocess.run(["git", "-C", str(checkout), "merge", "--quiet", "--ff-only", branches[name]], check=True)
+        tag, refs = f"v{version_of(trees[name])}", [target]
+        if git(checkout, "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"):
+            print(f"{name}: {target} at {git(checkout, 'rev-parse', '--short', 'HEAD')}; {tag} exists, so no release")
+        else:
+            subprocess.run(["git", "-C", str(checkout), "tag", "--annotate", tag, "--message", f"Release {tag[1:]}"],
+                           check=True)
+            refs.append(tag)
+            print(f"{name}: {target} at {git(checkout, 'rev-parse', '--short', 'HEAD')}, tagged {tag}")
+        pushes.append((name, checkout, refs))
+    for name, checkout, refs in pushes:  # siblings first, so that what a dependent pins is pushed before it
+        if push:
+            subprocess.run(["git", "-C", str(checkout), "push", "--quiet", "origin", *refs], check=True)
+            print(f"{name}: pushed {' '.join(refs)}")
+        else:
+            print(f"to push: git -C {checkout} push origin {' '.join(refs)}")
+    return remove(directory, False)
+
+
 def option(name: str) -> list[str]:
     """The values that follow `name` on the command line, up to the next option."""
     args = sys.argv[2:]
@@ -222,10 +317,12 @@ if __name__ == "__main__":
         sys.exit(check("--strict" in sys.argv[2:]))
     if command in ("clone", "pin"):
         sys.exit(clone() if command == "clone" else pin())
-    if command in ("workspace", "remove") and len(sys.argv) > 2 and not sys.argv[2].startswith("--"):
+    if command in ("workspace", "remove", "land") and len(sys.argv) > 2 and not sys.argv[2].startswith("--"):
         directory = Path(sys.argv[2]).resolve()
         if command == "remove":
             sys.exit(remove(directory, "--force" in sys.argv[3:]))
+        if command == "land":
+            sys.exit(land(directory, "--push" in sys.argv[3:]))
         branch = option("--branch")
         sys.exit(workspace(directory, branch[0] if branch else None, option("--edit")))
     raise SystemExit(__doc__)
