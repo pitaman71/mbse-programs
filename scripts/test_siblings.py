@@ -186,13 +186,17 @@ class Workspaces(unittest.TestCase):
         self.push_refused(f"middle: the checkout {self.repos / 'middle'} is not on a branch")
 
     def test_land_and_push_only_this_repository(self) -> None:
+        (self.repos / "lower" / "UNPUSHED").write_text("committed, not pushed")  # a detached sibling's checkout
+        run(self.repos / "lower", "add", "-A")
+        run(self.repos / "lower", "commit", "--quiet", "-m", "unpushed")
         alone = self.root / "worktrees" / "alone"
         self.call(siblings.workspace, alone, "alone", [])  # the siblings detached, so only upper lands
         (alone / "upper" / "NOTE").write_text("upper alone")
         run(alone / "upper", "add", "-A")
         run(alone / "upper", "commit", "--quiet", "-m", "alone")
         self.call(siblings.land, alone, True)
-        self.assertEqual([line for line in self.output.splitlines() if "pushed" in line], ["upper: pushed main"])
+        self.assertEqual([line for line in self.output.splitlines() if "pushed" in line],  # middle's pin, from setUp
+                         ["lower: pushed main", "middle: pushed main", "upper: pushed main"])
 
     def test_refuses_a_branch_that_does_not_fast_forward(self) -> None:
         self.changed()

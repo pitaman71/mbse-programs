@@ -34,7 +34,7 @@ sibling too. A release of a sibling is the tag `v<version>`.
                                                    changing anything, a worktree with changes, a checkout that is not
                                                    clean on a branch, a branch that does not fast-forward it, or a pin
                                                    of an edited sibling that is not that sibling's branch. --push then
-                                                   pushes, as push does
+                                                   pushes every repository in the workspace, as push does
     python3 scripts/siblings.py push               pushes this repository and its siblings, siblings first: each one's
                                                    branch, if it is ahead of the remote, and its version's tag, if the
                                                    remote lacks it. It refuses, before pushing anything, a checkout not
@@ -255,6 +255,7 @@ def land(directory: Path, push: bool) -> int:
         raise SystemExit(f"{directory}: no worktrees here")
     branches = {name: git(tree, "symbolic-ref", "--quiet", "--short", "HEAD") for name, tree in trees.items()}
     landing = [name for name in dependency_order(trees) if branches[name]]
+    checkouts = {name: checkout_of(tree) for name, tree in trees.items()}
     problems = [f"{name}: has uncommitted changes" for name, tree in trees.items()
                 if git(tree, "status", "--porcelain")]
     if not landing:
@@ -299,7 +300,7 @@ def land(directory: Path, push: bool) -> int:
     if not push:
         print("next: python3 scripts/siblings.py push")
         return 0
-    return publish({name: targets[name][0] for name in landing})
+    return publish(checkouts)  # the detached siblings too, whose commits the landed pins may name
 
 
 def publish(checkouts: dict[str, Path]) -> int:
