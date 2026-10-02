@@ -398,7 +398,6 @@ class Builder:
         if instance is not None and type(instance) is not self._kind:
             raise TypeError(f"expected {_article(self._kind.KIND)} to build from, got {_type_name(instance)}")
         self._source = instance
-        self._store: OfStore | None = None  # set by the store that made this builder, whose extents take what it makes
         self._values: dict[str, Any] = {}
         self._entries: list[_Entry] = []
         if instance is not None:
@@ -468,12 +467,12 @@ class Builder:
     def create(self) -> Any:
         if self._source is not None:
             raise ValueError("create() is only valid without a source instance; use clone() or update()")
-        return self._made(self._make())
+        return self._make()
 
     def clone(self) -> Any:
         if self._source is None:
             raise ValueError("clone() is only valid with a source instance")
-        return self._made(self._make())
+        return self._make()
 
     def update(self) -> Any:
         if self._source is None:
@@ -482,11 +481,6 @@ class Builder:
         for prop in self._kind.PROPERTIES:
             setattr(self._source, prop.name, getattr(made, prop.name))
         return self._source
-
-    def _made(self, node: Any) -> Any:
-        if self._store is not None:
-            self._store._extents.setdefault(self._kind.NAME, []).append(node)
-        return node
 
     def _make(self) -> Any:
         kind = self._kind
@@ -624,13 +618,12 @@ def _schema(kind: type[SyntaxNode]) -> Schemas.OfObject.Data:
 class OfStore(Stores.Catalog):
     """A store of a language's syntax nodes (see mbse-schemas' `Stores`): its meta-schemas by name, and a builder for each
     kind by the meta-schema's name or the kind's own (`store.builder('Programs.Ccpp.Identifier', instance)`,
-    `store.Identifier(instance)`), as `Plain.FromPlain` expects. The nodes the store's builders create or clone are in
-    its extents."""
+    `store.Identifier(instance)`), as `Plain.FromPlain` expects. A language has no singleton schemas, so its store holds
+    no data: the nodes its builders make are the program's, and its extents are empty."""
 
     def __init__(self, schemas: Mapping[str, Any], builders: Mapping[str, type]):
         super().__init__()
         self._factories: dict[str, type] = {}
-        self._extents: dict[str, list[Any]] = {}
         for name, schema in {**schemas, CHILDREN: Children}.items():
             self.register(name, schema)
         for name, builder in builders.items():
@@ -641,17 +634,11 @@ class OfStore(Stores.Catalog):
     def builder(self, name: str, instance: Any = None) -> Builder:
         if name not in self._factories:
             self.schema(name)  # raises for an unknown name or a relation
-        builder = self._factories[name](instance)
-        builder._store = self
-        return builder  # type: ignore[no-any-return]
+        return self._factories[name](instance)  # type: ignore[no-any-return]
 
     def member(self, instance: Any, name: str) -> Any:
         """The value a syntax node holds in its attribute `name`."""
         return getattr(instance, name)
-
-    def extent(self, name: str) -> tuple[Any, ...]:
-        self.schema(name)
-        return tuple(self._extents.get(name, ()))
 
 
 # --- Languages ---

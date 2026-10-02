@@ -568,23 +568,12 @@ export class Builder implements Visitors.OfObject {
     if (this.#source !== undefined) {
       throw new ValueError("create() is only valid without a source instance; use clone() or update()");
     }
-    return this.#made(this.#make());
+    return this.#make();
   }
 
   clone(): any {
     if (this.#source === undefined) throw new ValueError("clone() is only valid with a source instance");
-    return this.#made(this.#make());
-  }
-
-  /** Set by the store that made this builder, whose extents take what it makes. */
-  _store: OfStore | null = null;
-
-  #made(node: SyntaxNode): SyntaxNode {
-    if (this._store !== null) {
-      const name = this.#kindClass.NAME;
-      this._store._extents.set(name, [...(this._store._extents.get(name) ?? []), node]);
-    }
-    return node;
+    return this.#make();
   }
 
   update(): any {
@@ -781,11 +770,10 @@ function schemaOf(kind: SyntaxNodeClass): Schemas.OfObject.Data {
 
 /** A store of a language's syntax nodes (see mbse-schemas' `Stores`): its meta-schemas by name, and a builder for each
  * kind by the meta-schema's name or the kind's own (`store.builder("Programs.Ccpp.Identifier", instance)`,
- * `store.Identifier(instance)`), as `Plain.FromPlain` expects. The nodes the store's builders create or clone are in
- * its extents. */
+ * `store.Identifier(instance)`), as `Plain.FromPlain` expects. A language has no singleton schemas, so its store holds
+ * no data: the nodes its builders make are the program's, and its extents are empty. */
 export class OfStore extends Stores.Catalog implements Stores.Store {
   readonly _factories = new Map<string, typeof Builder>();
-  readonly _extents = new Map<string, Visitors.Visitable[]>();
   readonly [name: string]: unknown;
 
   constructor(schemas: ReadonlyMap<string, Schemas.OfObject.Data>, builders: ReadonlyMap<string, typeof Builder>) {
@@ -801,19 +789,12 @@ export class OfStore extends Stores.Catalog implements Stores.Store {
 
   builder(name: string, instance?: unknown): any {
     if (!this._factories.has(name)) this.schema(name); // throws for an unknown name or a relation
-    const builder = new (this._factories.get(name) as typeof Builder)(instance as SyntaxNode | undefined);
-    builder._store = this;
-    return builder;
+    return new (this._factories.get(name) as typeof Builder)(instance as SyntaxNode | undefined);
   }
 
   /** The value a syntax node holds in its attribute `name`. */
   member(instance: unknown, name: string): unknown {
     return (instance as Record<string, unknown>)[name];
-  }
-
-  extent(name: string): readonly Visitors.Visitable[] {
-    this.schema(name);
-    return [...(this._extents.get(name) ?? [])];
   }
 }
 
