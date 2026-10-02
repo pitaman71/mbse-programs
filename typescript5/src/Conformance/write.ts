@@ -18,7 +18,7 @@ import { JSON as SchemaJSON } from "@mbse/schemas/Framework";
 
 import * as Ccpp20 from "../Ccpp/Ccpp20.js";
 import * as CcppSyntax from "../Ccpp/Syntax.js";
-import type { Node, NodeClass } from "../Framework/Syntax.js";
+import type { SyntaxNode, SyntaxNodeClass } from "../Framework/Syntax.js";
 import * as Python314 from "../Python/Python314.js";
 import * as PythonSyntax from "../Python/Syntax.js";
 import { transpile } from "../Transpilers/TypeScriptToPython.js";
@@ -26,9 +26,9 @@ import * as TypeScriptSyntax from "../TypeScript/Syntax.js";
 import * as TypeScript59 from "../TypeScript/TypeScript59.js";
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../conformance");
-type Standard = { parse(text: string): Node; print(node: Node): string };
+type Standard = { parse(text: string): SyntaxNode; print(node: SyntaxNode): string };
 /** By a source's suffix: the standard that parses and prints it, and the kind of its tree. */
-const STANDARDS: Record<string, [Standard, NodeClass]> = {
+const STANDARDS: Record<string, [Standard, SyntaxNodeClass]> = {
   ".cpp": [Ccpp20, CcppSyntax.TranslationUnit], ".py": [Python314, PythonSyntax.Module],
   ".ts": [TypeScript59.STANDARD, TypeScriptSyntax.Program], ".tsx": [TypeScript59.JSX, TypeScriptSyntax.Program],
 };
@@ -40,7 +40,7 @@ export function render(sources: string = join(ROOT, "sources")): Map<string, str
     `${language.name()}.grammar.json`, JSON.stringify(language.grammar(), null, 1) + "\n"]));
   for (const name of readdirSync(sources).sort()) {
     const suffix = extname(name);
-    const [standard, root] = STANDARDS[suffix] as [Standard, NodeClass];
+    const [standard, root] = STANDARDS[suffix] as [Standard, SyntaxNodeClass];
     const unit = standard.parse(readFileSync(join(sources, name), "utf8"));
     const stem = name.slice(0, -suffix.length);
     files.set(`${stem}.json`, SchemaJSON.ToJSON.Reachable(root.Schema, unit, { indent: 2 }) + "\n");

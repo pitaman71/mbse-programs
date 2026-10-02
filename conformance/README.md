@@ -5,7 +5,7 @@
 
 | File | Holds |
 |---|---|
-| `Ccpp.grammar.json`, `Python.grammar.json`, `TypeScript.grammar.json` | each language as data: every kind, its category, fields, choices and availability |
+| `Ccpp.grammar.json`, `Python.grammar.json`, `TypeScript.grammar.json` | each language as data: every kind, its category, properties, choices and availability |
 | `<source>.json` | the tree a source parses to, as a reachable snapshot (indent 2) |
 | `<source>.cpp`, `<source>.py`, `<source>.ts`, `<source>.tsx` | the text that tree prints to |
 

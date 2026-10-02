@@ -2,10 +2,10 @@
  * Syntax: the abstract syntax of TypeScript and JavaScript, as one tree language.
  *
  * The kinds follow typescript-estree (TSESTree), the ESTree of TypeScript that ESLint and its tools read: the same
- * kinds with the same names and fields, in source order, but for fields whose names are keywords of Python or clash
- * with the framework's tag `kind`: `kind` is `declarationKind`, `methodKind`, `propertyKind` or `moduleKind`, and
- * `async`, `await`, `in` and `out` are `isAsync`, `isAwait`, `isIn` and `isOut`. Each kind and feature records where
- * it exists in two families (`SINCE`, `FEATURES`): ECMAScript, by edition year (ES2015 is 2015), and TypeScript, by
+ * kinds with the same names and properties, in source order, but for properties whose names are keywords of Python or
+ * clash with the framework's tag `kind`: `kind` is `declarationKind`, `methodKind`, `propertyKind` or `moduleKind`, and
+ * `async`, `await`, `in` and `out` are `isAsync`, `isAwait`, `isIn` and `isOut`. Each kind and feature records where it
+ * exists in two families (`SINCE`, `FEATURES`): ECMAScript, by edition year (ES2015 is 2015), and TypeScript, by
  * version (`100 * major + minor`: 5.9 is 509). Type syntax is TypeScript's alone; proposals that TypeScript implements
  * before an ECMAScript edition has them (decorators, `accessor`, `using`, `import defer`) are TypeScript's too. JSX is
  * an extension, outside every edition and version, which the standards made with `jsx` accept.
@@ -29,9 +29,10 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import {
-  article, type AttributeSpec, type Availability, type ChildSpec, choice, type Features, type Fields, flag, Language,
-  many, Node, one, optional, optionalChoice, optionalText, text,
+  article, type AttributeSpec, type Availability, type ChildSpec, choice, type Features, flag, Language, many, one,
+  optional, optionalChoice, optionalText, type Properties, SyntaxNode, text,
 } from "../Framework/Syntax.js";
+import type * as Self from "./Syntax.js";
 
 const { repr } = Repr;
 
@@ -48,9 +49,9 @@ export function ts(version: number): Availability {
   return { [TS]: version };
 }
 
-/** A problem if the list `field` of `node` is empty. */
-function needs(node: Node, field: string, what: string): string[] {
-  return (node.field(field) as unknown[]).length > 0 ? [] : [`${article(node.kind().KIND)} needs ${what}`];
+/** A problem if the list `prop` of `node` is empty. */
+function needs(node: SyntaxNode, prop: string, what: string): string[] {
+  return (node.get(prop) as unknown[]).length > 0 ? [] : [`${article(node.kind().KIND)} needs ${what}`];
 }
 
 /** A problem if `name` is not an identifier, `$` counting as a letter. */
@@ -101,22 +102,22 @@ export type Phase = (typeof PHASES)[number];
 // --- Categories ---
 
 /** A statement or a declaration, where statements are listed; also a comment there. */
-export abstract class Statement extends Node {}
+export abstract class Statement extends SyntaxNode {}
 
 /** An expression. */
-export abstract class Expression extends Node {}
+export abstract class Expression extends SyntaxNode {}
 
 /** A destructuring pattern: what an assignment, a declaration or a parameter binds. */
-export abstract class Pattern extends Node {}
+export abstract class Pattern extends SyntaxNode {}
 
 /** A type. */
-export abstract class TypeNode extends Node {}
+export abstract class TypeNode extends SyntaxNode {}
 
 /** A member of a class body. */
-export abstract class ClassElement extends Node {}
+export abstract class ClassElement extends SyntaxNode {}
 
 /** A member of an interface or an object type. */
-export abstract class TypeElement extends Node {}
+export abstract class TypeElement extends SyntaxNode {}
 
 // === Program, comments and names ===
 
@@ -125,7 +126,7 @@ const CommentSpec = {
   text: text(),
   trailing: flag(),
 };
-export interface Comment extends Fields<typeof CommentSpec> {}
+export interface Comment extends Properties<typeof CommentSpec> {}
 /**
  * `// text`, or with `block` `/* text *\/`. `text` excludes the delimiters. A `trailing` comment ends the line of
  * the item before it.
@@ -138,9 +139,9 @@ const ProgramSpec = {
   hashbang: optionalText(),
   body: many(() => [Statement]),
 };
-export interface Program extends Fields<typeof ProgramSpec> {}
+export interface Program extends Properties<typeof ProgramSpec> {}
 /** A source file: `hashbang`, the text of a first line `#!...` without the `#!`, then its statements. */
-export class Program extends Node {
+export class Program extends SyntaxNode {
   static override SPEC = ProgramSpec;
 }
 
@@ -150,7 +151,7 @@ const IdentifierSpec = {
   optional: flag(),
   typeAnnotation: optional(() => [TSTypeAnnotation]),
 };
-export interface Identifier extends Fields<typeof IdentifierSpec> {}
+export interface Identifier extends Properties<typeof IdentifierSpec> {}
 /**
  * A name: a variable's, a property's, a label's or a type's. As a parameter or a binding, it may carry decorators,
  * `?` and a type annotation.
@@ -166,7 +167,7 @@ export class Identifier extends Expression {
 const PrivateIdentifierSpec = {
   name: text(),
 };
-export interface PrivateIdentifier extends Fields<typeof PrivateIdentifierSpec> {}
+export interface PrivateIdentifier extends Properties<typeof PrivateIdentifierSpec> {}
 /** `#name`, a class's private member; `name` excludes the `#`. */
 export class PrivateIdentifier extends Expression {
   static override SPEC = PrivateIdentifierSpec;
@@ -181,7 +182,7 @@ export class PrivateIdentifier extends Expression {
 const LiteralSpec = {
   raw: text(),
 };
-export interface Literal extends Fields<typeof LiteralSpec> {}
+export interface Literal extends Properties<typeof LiteralSpec> {}
 /** A string, number, bigint, regular expression, boolean or `null` literal, as written. */
 export class Literal extends Expression {
   static override SPEC = LiteralSpec;
@@ -202,9 +203,9 @@ const TemplateElementSpec = {
   raw: text(),
   tail: flag(),
 };
-export interface TemplateElement extends Fields<typeof TemplateElementSpec> {}
+export interface TemplateElement extends Properties<typeof TemplateElementSpec> {}
 /** Text of a template literal between its substitutions, as written; `tail` for the last. */
-export class TemplateElement extends Node {
+export class TemplateElement extends SyntaxNode {
   static override SPEC = TemplateElementSpec;
 }
 
@@ -212,7 +213,7 @@ const TemplateLiteralSpec = {
   quasis: many(() => [TemplateElement]),
   expressions: many(() => [Expression]),
 };
-export interface TemplateLiteral extends Fields<typeof TemplateLiteralSpec> {}
+export interface TemplateLiteral extends Properties<typeof TemplateLiteralSpec> {}
 /** `` `quasi${expression}quasi` ``: the texts and the substitutions between them. */
 export class TemplateLiteral extends Expression {
   static override SPEC = TemplateLiteralSpec;
@@ -227,7 +228,7 @@ const TaggedTemplateExpressionSpec = {
   typeArguments: optional(() => [TSTypeParameterInstantiation]),
   quasi: one(() => [TemplateLiteral]),
 };
-export interface TaggedTemplateExpression extends Fields<typeof TaggedTemplateExpressionSpec> {}
+export interface TaggedTemplateExpression extends Properties<typeof TaggedTemplateExpressionSpec> {}
 /** `` tag<typeArguments>`...` ``. */
 export class TaggedTemplateExpression extends Expression {
   static override SPEC = TaggedTemplateExpressionSpec;
@@ -242,28 +243,28 @@ export class Super extends Expression {}
 const ParenthesizedExpressionSpec = {
   expression: one(() => [Expression, Pattern]),
 };
-export interface ParenthesizedExpression extends Fields<typeof ParenthesizedExpressionSpec> {}
+export interface ParenthesizedExpression extends Properties<typeof ParenthesizedExpressionSpec> {}
 /** `(expression)`: parentheses written in the source. */
 export class ParenthesizedExpression extends Expression {
   static override SPEC = ParenthesizedExpressionSpec;
 }
 
 /** A hole in an array, as in `[a, , b]`. */
-export class Elision extends Node {}
+export class Elision extends SyntaxNode {}
 
 const SpreadElementSpec = {
   argument: one(() => [Expression]),
 };
-export interface SpreadElement extends Fields<typeof SpreadElementSpec> {}
+export interface SpreadElement extends Properties<typeof SpreadElementSpec> {}
 /** `...argument` in an array, a call or an object. */
-export class SpreadElement extends Node {
+export class SpreadElement extends SyntaxNode {
   static override SPEC = SpreadElementSpec;
 }
 
 const ArrayExpressionSpec = {
   elements: many(() => [Expression, SpreadElement, Elision]),
 };
-export interface ArrayExpression extends Fields<typeof ArrayExpressionSpec> {}
+export interface ArrayExpression extends Properties<typeof ArrayExpressionSpec> {}
 /** `[elements]`. */
 export class ArrayExpression extends Expression {
   static override SPEC = ArrayExpressionSpec;
@@ -278,12 +279,12 @@ const PropertySpec = {
   shorthand: flag(),
   value: one(() => [Expression, Pattern, TSEmptyBodyFunctionExpression]),
 };
-export interface Property extends Fields<typeof PropertySpec> {}
+export interface Property extends Properties<typeof PropertySpec> {}
 /**
  * `key: value` in an object or an object pattern; a method (`method`), an accessor (`propertyKind` 'get' or
  * 'set'), or the shorthand `key` (`shorthand`).
  */
-export class Property extends Node {
+export class Property extends SyntaxNode {
   static override SPEC = PropertySpec;
   static override FEATURES: Features = { optional: [[true, ts(100)]] };
 }
@@ -291,7 +292,7 @@ export class Property extends Node {
 const ObjectExpressionSpec = {
   properties: many(() => [Property, SpreadElement]),
 };
-export interface ObjectExpression extends Fields<typeof ObjectExpressionSpec> {}
+export interface ObjectExpression extends Properties<typeof ObjectExpressionSpec> {}
 /** `{properties}`. */
 export class ObjectExpression extends Expression {
   static override SPEC = ObjectExpressionSpec;
@@ -306,7 +307,7 @@ const FunctionExpressionSpec = {
   returnType: optional(() => [TSTypeAnnotation]),
   body: one(() => [BlockStatement]),
 };
-export interface FunctionExpression extends Fields<typeof FunctionExpressionSpec> {}
+export interface FunctionExpression extends Properties<typeof FunctionExpressionSpec> {}
 /** `async function* id<typeParameters>(params): returnType { body }`. */
 export class FunctionExpression extends Expression {
   static override SPEC = FunctionExpressionSpec;
@@ -319,7 +320,7 @@ const ArrowFunctionExpressionSpec = {
   returnType: optional(() => [TSTypeAnnotation]),
   body: one(() => [BlockStatement, Expression]),
 };
-export interface ArrowFunctionExpression extends Fields<typeof ArrowFunctionExpressionSpec> {}
+export interface ArrowFunctionExpression extends Properties<typeof ArrowFunctionExpressionSpec> {}
 /** `async <typeParameters>(params): returnType => body`; a body that is an expression is its value. */
 export class ArrowFunctionExpression extends Expression {
   static override SPEC = ArrowFunctionExpressionSpec;
@@ -335,7 +336,7 @@ const ClassExpressionSpec = {
   implements: many(() => [TSClassImplements]),
   body: one(() => [ClassBody]),
 };
-export interface ClassExpression extends Fields<typeof ClassExpressionSpec> {}
+export interface ClassExpression extends Properties<typeof ClassExpressionSpec> {}
 /** `class id<typeParameters> extends superClass<superTypeArguments> implements ... { body }`, as an expression. */
 export class ClassExpression extends Expression {
   static override SPEC = ClassExpressionSpec;
@@ -346,7 +347,7 @@ const MetaPropertySpec = {
   meta: one(() => [Identifier]),
   property: one(() => [Identifier]),
 };
-export interface MetaProperty extends Fields<typeof MetaPropertySpec> {}
+export interface MetaProperty extends Properties<typeof MetaPropertySpec> {}
 /** `new.target` or `import.meta`. */
 export class MetaProperty extends Expression {
   static override SPEC = MetaPropertySpec;
@@ -364,7 +365,7 @@ const MemberExpressionSpec = {
   computed: flag(),
   property: one(() => [Expression]),
 };
-export interface MemberExpression extends Fields<typeof MemberExpressionSpec> {}
+export interface MemberExpression extends Properties<typeof MemberExpressionSpec> {}
 /** `object.property`, `object[property]` (`computed`), or with `optional` `object?.property`. */
 export class MemberExpression extends Expression {
   static override SPEC = MemberExpressionSpec;
@@ -379,7 +380,7 @@ const CallExpressionSpec = {
   typeArguments: optional(() => [TSTypeParameterInstantiation]),
   arguments: many(() => [Expression, SpreadElement]),
 };
-export interface CallExpression extends Fields<typeof CallExpressionSpec> {}
+export interface CallExpression extends Properties<typeof CallExpressionSpec> {}
 /** `callee<typeArguments>(arguments)`, or with `optional` `callee?.(arguments)`. */
 export class CallExpression extends Expression {
   static override SPEC = CallExpressionSpec;
@@ -391,7 +392,7 @@ export class CallExpression extends Expression {
 const ChainExpressionSpec = {
   expression: one(() => [Expression]),
 };
-export interface ChainExpression extends Fields<typeof ChainExpressionSpec> {}
+export interface ChainExpression extends Properties<typeof ChainExpressionSpec> {}
 /** An optional chain, `a?.b.c()`, whose members and calls short-circuit together. */
 export class ChainExpression extends Expression {
   static override SPEC = ChainExpressionSpec;
@@ -403,7 +404,7 @@ const NewExpressionSpec = {
   typeArguments: optional(() => [TSTypeParameterInstantiation]),
   arguments: many(() => [Expression, SpreadElement]),
 };
-export interface NewExpression extends Fields<typeof NewExpressionSpec> {}
+export interface NewExpression extends Properties<typeof NewExpressionSpec> {}
 /** `new callee<typeArguments>(arguments)`. */
 export class NewExpression extends Expression {
   static override SPEC = NewExpressionSpec;
@@ -414,7 +415,7 @@ const ImportExpressionSpec = {
   source: one(() => [Expression]),
   options: optional(() => [Expression]),
 };
-export interface ImportExpression extends Fields<typeof ImportExpressionSpec> {}
+export interface ImportExpression extends Properties<typeof ImportExpressionSpec> {}
 /** `import(source, options)`, or with `phase` `import.defer(source)`. */
 export class ImportExpression extends Expression {
   static override SPEC = ImportExpressionSpec;
@@ -427,7 +428,7 @@ const UpdateExpressionSpec = {
   prefix: flag(),
   argument: one(() => [Expression]),
 };
-export interface UpdateExpression extends Fields<typeof UpdateExpressionSpec> {}
+export interface UpdateExpression extends Properties<typeof UpdateExpressionSpec> {}
 /** `++argument` (`prefix`) or `argument--`. */
 export class UpdateExpression extends Expression {
   static override SPEC = UpdateExpressionSpec;
@@ -437,7 +438,7 @@ const UnaryExpressionSpec = {
   operator: choice(...UNARY_OPERATORS),
   argument: one(() => [Expression]),
 };
-export interface UnaryExpression extends Fields<typeof UnaryExpressionSpec> {}
+export interface UnaryExpression extends Properties<typeof UnaryExpressionSpec> {}
 /** `operator argument`: `-x`, `!x`, `typeof x`, `void x`, `delete x`. */
 export class UnaryExpression extends Expression {
   static override SPEC = UnaryExpressionSpec;
@@ -446,7 +447,7 @@ export class UnaryExpression extends Expression {
 const AwaitExpressionSpec = {
   argument: one(() => [Expression]),
 };
-export interface AwaitExpression extends Fields<typeof AwaitExpressionSpec> {}
+export interface AwaitExpression extends Properties<typeof AwaitExpressionSpec> {}
 /** `await argument`. */
 export class AwaitExpression extends Expression {
   static override SPEC = AwaitExpressionSpec;
@@ -458,7 +459,7 @@ const BinaryExpressionSpec = {
   operator: choice(...BINARY_OPERATORS),
   right: one(() => [Expression]),
 };
-export interface BinaryExpression extends Fields<typeof BinaryExpressionSpec> {}
+export interface BinaryExpression extends Properties<typeof BinaryExpressionSpec> {}
 /** `left operator right`; `left` is a `PrivateIdentifier` in `#x in object`. */
 export class BinaryExpression extends Expression {
   static override SPEC = BinaryExpressionSpec;
@@ -473,7 +474,7 @@ const LogicalExpressionSpec = {
   operator: choice(...LOGICAL_OPERATORS),
   right: one(() => [Expression]),
 };
-export interface LogicalExpression extends Fields<typeof LogicalExpressionSpec> {}
+export interface LogicalExpression extends Properties<typeof LogicalExpressionSpec> {}
 /** `left && right`, `left || right` or `left ?? right`. */
 export class LogicalExpression extends Expression {
   static override SPEC = LogicalExpressionSpec;
@@ -485,7 +486,7 @@ const ConditionalExpressionSpec = {
   consequent: one(() => [Expression]),
   alternate: one(() => [Expression]),
 };
-export interface ConditionalExpression extends Fields<typeof ConditionalExpressionSpec> {}
+export interface ConditionalExpression extends Properties<typeof ConditionalExpressionSpec> {}
 /** `test ? consequent : alternate`. */
 export class ConditionalExpression extends Expression {
   static override SPEC = ConditionalExpressionSpec;
@@ -496,7 +497,7 @@ const AssignmentExpressionSpec = {
   operator: choice(...ASSIGNMENT_OPERATORS),
   right: one(() => [Expression]),
 };
-export interface AssignmentExpression extends Fields<typeof AssignmentExpressionSpec> {}
+export interface AssignmentExpression extends Properties<typeof AssignmentExpressionSpec> {}
 /** `left operator right`. */
 export class AssignmentExpression extends Expression {
   static override SPEC = AssignmentExpressionSpec;
@@ -508,7 +509,7 @@ export class AssignmentExpression extends Expression {
 const SequenceExpressionSpec = {
   expressions: many(() => [Expression]),
 };
-export interface SequenceExpression extends Fields<typeof SequenceExpressionSpec> {}
+export interface SequenceExpression extends Properties<typeof SequenceExpressionSpec> {}
 /** `expression, expression`. */
 export class SequenceExpression extends Expression {
   static override SPEC = SequenceExpressionSpec;
@@ -521,7 +522,7 @@ const YieldExpressionSpec = {
   delegate: flag(),
   argument: optional(() => [Expression]),
 };
-export interface YieldExpression extends Fields<typeof YieldExpressionSpec> {}
+export interface YieldExpression extends Properties<typeof YieldExpressionSpec> {}
 /** `yield argument`, or with `delegate` `yield* argument`. */
 export class YieldExpression extends Expression {
   static override SPEC = YieldExpressionSpec;
@@ -534,7 +535,7 @@ const TSAsExpressionSpec = {
   expression: one(() => [Expression]),
   typeAnnotation: one(() => [TypeNode]),
 };
-export interface TSAsExpression extends Fields<typeof TSAsExpressionSpec> {}
+export interface TSAsExpression extends Properties<typeof TSAsExpressionSpec> {}
 /** `expression as typeAnnotation`. */
 export class TSAsExpression extends Expression {
   static override SPEC = TSAsExpressionSpec;
@@ -545,7 +546,7 @@ const TSSatisfiesExpressionSpec = {
   expression: one(() => [Expression]),
   typeAnnotation: one(() => [TypeNode]),
 };
-export interface TSSatisfiesExpression extends Fields<typeof TSSatisfiesExpressionSpec> {}
+export interface TSSatisfiesExpression extends Properties<typeof TSSatisfiesExpressionSpec> {}
 /** `expression satisfies typeAnnotation`. */
 export class TSSatisfiesExpression extends Expression {
   static override SPEC = TSSatisfiesExpressionSpec;
@@ -556,7 +557,7 @@ const TSTypeAssertionSpec = {
   typeAnnotation: one(() => [TypeNode]),
   expression: one(() => [Expression]),
 };
-export interface TSTypeAssertion extends Fields<typeof TSTypeAssertionSpec> {}
+export interface TSTypeAssertion extends Properties<typeof TSTypeAssertionSpec> {}
 /** `<typeAnnotation>expression`, which `.tsx` files do not have. */
 export class TSTypeAssertion extends Expression {
   static override SPEC = TSTypeAssertionSpec;
@@ -566,7 +567,7 @@ export class TSTypeAssertion extends Expression {
 const TSNonNullExpressionSpec = {
   expression: one(() => [Expression]),
 };
-export interface TSNonNullExpression extends Fields<typeof TSNonNullExpressionSpec> {}
+export interface TSNonNullExpression extends Properties<typeof TSNonNullExpressionSpec> {}
 /** `expression!`. */
 export class TSNonNullExpression extends Expression {
   static override SPEC = TSNonNullExpressionSpec;
@@ -577,7 +578,7 @@ const TSInstantiationExpressionSpec = {
   expression: one(() => [Expression]),
   typeArguments: one(() => [TSTypeParameterInstantiation]),
 };
-export interface TSInstantiationExpression extends Fields<typeof TSInstantiationExpressionSpec> {}
+export interface TSInstantiationExpression extends Properties<typeof TSInstantiationExpressionSpec> {}
 /** `expression<typeArguments>`, without a call. */
 export class TSInstantiationExpression extends Expression {
   static override SPEC = TSInstantiationExpressionSpec;
@@ -592,7 +593,7 @@ const ArrayPatternSpec = {
   optional: flag(),
   typeAnnotation: optional(() => [TSTypeAnnotation]),
 };
-export interface ArrayPattern extends Fields<typeof ArrayPatternSpec> {}
+export interface ArrayPattern extends Properties<typeof ArrayPatternSpec> {}
 /** `[elements]: typeAnnotation`, destructuring. */
 export class ArrayPattern extends Pattern {
   static override SPEC = ArrayPatternSpec;
@@ -606,7 +607,7 @@ const ObjectPatternSpec = {
   optional: flag(),
   typeAnnotation: optional(() => [TSTypeAnnotation]),
 };
-export interface ObjectPattern extends Fields<typeof ObjectPatternSpec> {}
+export interface ObjectPattern extends Properties<typeof ObjectPatternSpec> {}
 /** `{properties}: typeAnnotation`, destructuring. */
 export class ObjectPattern extends Pattern {
   static override SPEC = ObjectPatternSpec;
@@ -621,7 +622,7 @@ const AssignmentPatternSpec = {
   typeAnnotation: optional(() => [TSTypeAnnotation]),
   right: one(() => [Expression]),
 };
-export interface AssignmentPattern extends Fields<typeof AssignmentPatternSpec> {}
+export interface AssignmentPattern extends Properties<typeof AssignmentPatternSpec> {}
 /** `left = right`: a binding with a default. */
 export class AssignmentPattern extends Pattern {
   static override SPEC = AssignmentPatternSpec;
@@ -636,7 +637,7 @@ const RestElementSpec = {
   typeAnnotation: optional(() => [TSTypeAnnotation]),
   value: optional(() => [AssignmentPattern]),
 };
-export interface RestElement extends Fields<typeof RestElementSpec> {}
+export interface RestElement extends Properties<typeof RestElementSpec> {}
 /** `...argument: typeAnnotation`, the rest of an array, an object or a parameter list. */
 export class RestElement extends Pattern {
   static override SPEC = RestElementSpec;
@@ -649,7 +650,7 @@ export class RestElement extends Pattern {
 const ExpressionStatementSpec = {
   expression: one(() => [Expression]),
 };
-export interface ExpressionStatement extends Fields<typeof ExpressionStatementSpec> {}
+export interface ExpressionStatement extends Properties<typeof ExpressionStatementSpec> {}
 /** `expression;`; also a directive, `'use strict';`. */
 export class ExpressionStatement extends Statement {
   static override SPEC = ExpressionStatementSpec;
@@ -658,7 +659,7 @@ export class ExpressionStatement extends Statement {
 const BlockStatementSpec = {
   body: many(() => [Statement]),
 };
-export interface BlockStatement extends Fields<typeof BlockStatementSpec> {}
+export interface BlockStatement extends Properties<typeof BlockStatementSpec> {}
 /** `{ body }`. */
 export class BlockStatement extends Statement {
   static override SPEC = BlockStatementSpec;
@@ -674,7 +675,7 @@ const WithStatementSpec = {
   object: one(() => [Expression]),
   body: one(() => [Statement]),
 };
-export interface WithStatement extends Fields<typeof WithStatementSpec> {}
+export interface WithStatement extends Properties<typeof WithStatementSpec> {}
 /** `with (object) body`, which strict code does not have. */
 export class WithStatement extends Statement {
   static override SPEC = WithStatementSpec;
@@ -683,7 +684,7 @@ export class WithStatement extends Statement {
 const ReturnStatementSpec = {
   argument: optional(() => [Expression]),
 };
-export interface ReturnStatement extends Fields<typeof ReturnStatementSpec> {}
+export interface ReturnStatement extends Properties<typeof ReturnStatementSpec> {}
 /** `return argument;`. */
 export class ReturnStatement extends Statement {
   static override SPEC = ReturnStatementSpec;
@@ -693,7 +694,7 @@ const LabeledStatementSpec = {
   label: one(() => [Identifier]),
   body: one(() => [Statement]),
 };
-export interface LabeledStatement extends Fields<typeof LabeledStatementSpec> {}
+export interface LabeledStatement extends Properties<typeof LabeledStatementSpec> {}
 /** `label: body`. */
 export class LabeledStatement extends Statement {
   static override SPEC = LabeledStatementSpec;
@@ -702,7 +703,7 @@ export class LabeledStatement extends Statement {
 const BreakStatementSpec = {
   label: optional(() => [Identifier]),
 };
-export interface BreakStatement extends Fields<typeof BreakStatementSpec> {}
+export interface BreakStatement extends Properties<typeof BreakStatementSpec> {}
 /** `break label;`. */
 export class BreakStatement extends Statement {
   static override SPEC = BreakStatementSpec;
@@ -711,7 +712,7 @@ export class BreakStatement extends Statement {
 const ContinueStatementSpec = {
   label: optional(() => [Identifier]),
 };
-export interface ContinueStatement extends Fields<typeof ContinueStatementSpec> {}
+export interface ContinueStatement extends Properties<typeof ContinueStatementSpec> {}
 /** `continue label;`. */
 export class ContinueStatement extends Statement {
   static override SPEC = ContinueStatementSpec;
@@ -722,7 +723,7 @@ const IfStatementSpec = {
   consequent: one(() => [Statement]),
   alternate: optional(() => [Statement]),
 };
-export interface IfStatement extends Fields<typeof IfStatementSpec> {}
+export interface IfStatement extends Properties<typeof IfStatementSpec> {}
 /** `if (test) consequent else alternate`. */
 export class IfStatement extends Statement {
   static override SPEC = IfStatementSpec;
@@ -749,9 +750,9 @@ const SwitchCaseSpec = {
   test: optional(() => [Expression]),
   consequent: many(() => [Statement]),
 };
-export interface SwitchCase extends Fields<typeof SwitchCaseSpec> {}
+export interface SwitchCase extends Properties<typeof SwitchCaseSpec> {}
 /** `case test: consequent`, or `default: consequent` without `test`. */
-export class SwitchCase extends Node {
+export class SwitchCase extends SyntaxNode {
   static override SPEC = SwitchCaseSpec;
 }
 
@@ -759,7 +760,7 @@ const SwitchStatementSpec = {
   discriminant: one(() => [Expression]),
   cases: many(() => [SwitchCase]),
 };
-export interface SwitchStatement extends Fields<typeof SwitchStatementSpec> {}
+export interface SwitchStatement extends Properties<typeof SwitchStatementSpec> {}
 /** `switch (discriminant) { cases }`. */
 export class SwitchStatement extends Statement {
   static override SPEC = SwitchStatementSpec;
@@ -768,7 +769,7 @@ export class SwitchStatement extends Statement {
 const ThrowStatementSpec = {
   argument: one(() => [Expression]),
 };
-export interface ThrowStatement extends Fields<typeof ThrowStatementSpec> {}
+export interface ThrowStatement extends Properties<typeof ThrowStatementSpec> {}
 /** `throw argument;`. */
 export class ThrowStatement extends Statement {
   static override SPEC = ThrowStatementSpec;
@@ -778,9 +779,9 @@ const CatchClauseSpec = {
   param: optional(() => [Identifier, Pattern]),
   body: one(() => [BlockStatement]),
 };
-export interface CatchClause extends Fields<typeof CatchClauseSpec> {}
+export interface CatchClause extends Properties<typeof CatchClauseSpec> {}
 /** `catch (param) body`, or `catch body` without `param`. */
-export class CatchClause extends Node {
+export class CatchClause extends SyntaxNode {
   static override SPEC = CatchClauseSpec;
   override features(): [string, Availability][] {
     return this.param === null ? [["CatchClause without a param", es(2019, 205)]] : [];
@@ -792,7 +793,7 @@ const TryStatementSpec = {
   handler: optional(() => [CatchClause]),
   finalizer: optional(() => [BlockStatement]),
 };
-export interface TryStatement extends Fields<typeof TryStatementSpec> {}
+export interface TryStatement extends Properties<typeof TryStatementSpec> {}
 /** `try block catch... handler finally finalizer`. */
 export class TryStatement extends Statement {
   static override SPEC = TryStatementSpec;
@@ -805,7 +806,7 @@ const WhileStatementSpec = {
   test: one(() => [Expression]),
   body: one(() => [Statement]),
 };
-export interface WhileStatement extends Fields<typeof WhileStatementSpec> {}
+export interface WhileStatement extends Properties<typeof WhileStatementSpec> {}
 /** `while (test) body`. */
 export class WhileStatement extends Statement {
   static override SPEC = WhileStatementSpec;
@@ -815,7 +816,7 @@ const DoWhileStatementSpec = {
   body: one(() => [Statement]),
   test: one(() => [Expression]),
 };
-export interface DoWhileStatement extends Fields<typeof DoWhileStatementSpec> {}
+export interface DoWhileStatement extends Properties<typeof DoWhileStatementSpec> {}
 /** `do body while (test);`. */
 export class DoWhileStatement extends Statement {
   static override SPEC = DoWhileStatementSpec;
@@ -827,7 +828,7 @@ const ForStatementSpec = {
   update: optional(() => [Expression]),
   body: one(() => [Statement]),
 };
-export interface ForStatement extends Fields<typeof ForStatementSpec> {}
+export interface ForStatement extends Properties<typeof ForStatementSpec> {}
 /** `for (init; test; update) body`. */
 export class ForStatement extends Statement {
   static override SPEC = ForStatementSpec;
@@ -838,7 +839,7 @@ const ForInStatementSpec = {
   right: one(() => [Expression]),
   body: one(() => [Statement]),
 };
-export interface ForInStatement extends Fields<typeof ForInStatementSpec> {}
+export interface ForInStatement extends Properties<typeof ForInStatementSpec> {}
 /** `for (left in right) body`. */
 export class ForInStatement extends Statement {
   static override SPEC = ForInStatementSpec;
@@ -850,7 +851,7 @@ const ForOfStatementSpec = {
   right: one(() => [Expression]),
   body: one(() => [Statement]),
 };
-export interface ForOfStatement extends Fields<typeof ForOfStatementSpec> {}
+export interface ForOfStatement extends Properties<typeof ForOfStatementSpec> {}
 /** `for (left of right) body`, or with `isAwait` `for await (...)`. */
 export class ForOfStatement extends Statement {
   static override SPEC = ForOfStatementSpec;
@@ -863,9 +864,9 @@ const VariableDeclaratorSpec = {
   definite: flag(),
   init: optional(() => [Expression]),
 };
-export interface VariableDeclarator extends Fields<typeof VariableDeclaratorSpec> {}
+export interface VariableDeclarator extends Properties<typeof VariableDeclaratorSpec> {}
 /** `id: type = init`, or with `definite` `id!: type`. */
-export class VariableDeclarator extends Node {
+export class VariableDeclarator extends SyntaxNode {
   static override SPEC = VariableDeclaratorSpec;
   static override FEATURES: Features = { definite: [[true, ts(207)]] };
   override check(): string[] {
@@ -881,7 +882,7 @@ const VariableDeclarationSpec = {
   declarationKind: choice(...DECLARATION_KINDS),
   declarations: many(() => [VariableDeclarator]),
 };
-export interface VariableDeclaration extends Fields<typeof VariableDeclarationSpec> {}
+export interface VariableDeclaration extends Properties<typeof VariableDeclarationSpec> {}
 /** `declare kind declarations;`, `kind` being `var`, `let`, `const`, `using` or `await using`. */
 export class VariableDeclaration extends Statement {
   static override SPEC = VariableDeclarationSpec;
@@ -903,7 +904,7 @@ const FunctionDeclarationSpec = {
   returnType: optional(() => [TSTypeAnnotation]),
   body: one(() => [BlockStatement]),
 };
-export interface FunctionDeclaration extends Fields<typeof FunctionDeclarationSpec> {}
+export interface FunctionDeclaration extends Properties<typeof FunctionDeclarationSpec> {}
 /** `async function* id<typeParameters>(params): returnType { body }`. */
 export class FunctionDeclaration extends Statement {
   static override SPEC = FunctionDeclarationSpec;
@@ -924,7 +925,7 @@ const TSDeclareFunctionSpec = {
   params: many(() => [Identifier, Pattern, TSParameterProperty]),
   returnType: optional(() => [TSTypeAnnotation]),
 };
-export interface TSDeclareFunction extends Fields<typeof TSDeclareFunctionSpec> {}
+export interface TSDeclareFunction extends Properties<typeof TSDeclareFunctionSpec> {}
 /** `declare function id<typeParameters>(params): returnType;`, or an overload's signature, without a body. */
 export class TSDeclareFunction extends Statement {
   static override SPEC = TSDeclareFunctionSpec;
@@ -934,9 +935,9 @@ export class TSDeclareFunction extends Statement {
 const DecoratorSpec = {
   expression: one(() => [Expression]),
 };
-export interface Decorator extends Fields<typeof DecoratorSpec> {}
+export interface Decorator extends Properties<typeof DecoratorSpec> {}
 /** `@expression`. */
-export class Decorator extends Node {
+export class Decorator extends SyntaxNode {
   static override SPEC = DecoratorSpec;
   static override SINCE: Availability | null = ts(105);
 }
@@ -944,9 +945,9 @@ export class Decorator extends Node {
 const ClassBodySpec = {
   body: many(() => [ClassElement, TSIndexSignature, Comment]),
 };
-export interface ClassBody extends Fields<typeof ClassBodySpec> {}
+export interface ClassBody extends Properties<typeof ClassBodySpec> {}
 /** `{ body }`: a class's members. */
-export class ClassBody extends Node {
+export class ClassBody extends SyntaxNode {
   static override SPEC = ClassBodySpec;
 }
 
@@ -961,7 +962,7 @@ const ClassDeclarationSpec = {
   implements: many(() => [TSClassImplements]),
   body: one(() => [ClassBody]),
 };
-export interface ClassDeclaration extends Fields<typeof ClassDeclarationSpec> {}
+export interface ClassDeclaration extends Properties<typeof ClassDeclarationSpec> {}
 /**
  * `@decorators abstract class id<typeParameters> extends superClass<superTypeArguments> implements ... { body }`;
  * without `id`, the default export's.
@@ -979,7 +980,7 @@ export class ClassDeclaration extends Statement {
 const StaticBlockSpec = {
   body: many(() => [Statement]),
 };
-export interface StaticBlock extends Fields<typeof StaticBlockSpec> {}
+export interface StaticBlock extends Properties<typeof StaticBlockSpec> {}
 /** `static { body }`. */
 export class StaticBlock extends ClassElement {
   static override SPEC = StaticBlockSpec;
@@ -997,7 +998,7 @@ const MethodDefinitionSpec = {
   optional: flag(),
   value: one(() => [FunctionExpression, TSEmptyBodyFunctionExpression]),
 };
-export interface MethodDefinition extends Fields<typeof MethodDefinitionSpec> {}
+export interface MethodDefinition extends Properties<typeof MethodDefinitionSpec> {}
 /**
  * A class's method: `@decorators accessibility static override kind key?<...>(...) { ... }`; `methodKind` is
  * 'constructor', 'method', 'get' or 'set'.
@@ -1022,7 +1023,7 @@ const TSAbstractMethodDefinitionSpec = {
   optional: flag(),
   value: one(() => [FunctionExpression, TSEmptyBodyFunctionExpression]),
 };
-export interface TSAbstractMethodDefinition extends Fields<typeof TSAbstractMethodDefinitionSpec> {}
+export interface TSAbstractMethodDefinition extends Properties<typeof TSAbstractMethodDefinitionSpec> {}
 /** An `abstract` method, without a body. */
 export class TSAbstractMethodDefinition extends ClassElement {
   static override SPEC = TSAbstractMethodDefinitionSpec;
@@ -1036,9 +1037,9 @@ const TSEmptyBodyFunctionExpressionSpec = {
   params: many(() => [Identifier, Pattern, TSParameterProperty]),
   returnType: optional(() => [TSTypeAnnotation]),
 };
-export interface TSEmptyBodyFunctionExpression extends Fields<typeof TSEmptyBodyFunctionExpressionSpec> {}
+export interface TSEmptyBodyFunctionExpression extends Properties<typeof TSEmptyBodyFunctionExpressionSpec> {}
 /** The signature of a method without a body: an overload's, an abstract one's, or a declared class's. */
-export class TSEmptyBodyFunctionExpression extends Node {
+export class TSEmptyBodyFunctionExpression extends SyntaxNode {
   static override SPEC = TSEmptyBodyFunctionExpressionSpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1057,7 +1058,7 @@ const PropertyDefinitionSpec = {
   typeAnnotation: optional(() => [TSTypeAnnotation]),
   value: optional(() => [Expression]),
 };
-export interface PropertyDefinition extends Fields<typeof PropertyDefinitionSpec> {}
+export interface PropertyDefinition extends Properties<typeof PropertyDefinitionSpec> {}
 /** A class's field: `@decorators declare accessibility static override readonly key?!: type = value;`. */
 export class PropertyDefinition extends ClassElement {
   static override SPEC = PropertyDefinitionSpec;
@@ -1087,7 +1088,7 @@ const TSAbstractPropertyDefinitionSpec = {
   typeAnnotation: optional(() => [TSTypeAnnotation]),
   value: optional(() => [Expression]),
 };
-export interface TSAbstractPropertyDefinition extends Fields<typeof TSAbstractPropertyDefinitionSpec> {}
+export interface TSAbstractPropertyDefinition extends Properties<typeof TSAbstractPropertyDefinitionSpec> {}
 /** An `abstract` field, without a value. */
 export class TSAbstractPropertyDefinition extends ClassElement {
   static override SPEC = TSAbstractPropertyDefinitionSpec;
@@ -1108,7 +1109,7 @@ const AccessorPropertySpec = {
   typeAnnotation: optional(() => [TSTypeAnnotation]),
   value: optional(() => [Expression]),
 };
-export interface AccessorProperty extends Fields<typeof AccessorPropertySpec> {}
+export interface AccessorProperty extends Properties<typeof AccessorPropertySpec> {}
 /** `accessor key: type = value;`, a field with a getter and a setter. */
 export class AccessorProperty extends ClassElement {
   static override SPEC = AccessorPropertySpec;
@@ -1129,7 +1130,7 @@ const TSAbstractAccessorPropertySpec = {
   typeAnnotation: optional(() => [TSTypeAnnotation]),
   value: optional(() => [Expression]),
 };
-export interface TSAbstractAccessorProperty extends Fields<typeof TSAbstractAccessorPropertySpec> {}
+export interface TSAbstractAccessorProperty extends Properties<typeof TSAbstractAccessorPropertySpec> {}
 /** `abstract accessor key: type;`. */
 export class TSAbstractAccessorProperty extends ClassElement {
   static override SPEC = TSAbstractAccessorPropertySpec;
@@ -1144,9 +1145,9 @@ const TSParameterPropertySpec = {
   readonly: flag(),
   parameter: one(() => [Identifier, AssignmentPattern]),
 };
-export interface TSParameterProperty extends Fields<typeof TSParameterPropertySpec> {}
+export interface TSParameterProperty extends Properties<typeof TSParameterPropertySpec> {}
 /** A constructor's parameter that declares a field: `accessibility static override readonly parameter`. */
-export class TSParameterProperty extends Node {
+export class TSParameterProperty extends SyntaxNode {
   static override SPEC = TSParameterPropertySpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1157,9 +1158,9 @@ const ImportAttributeSpec = {
   key: one(() => [Identifier, Literal]),
   value: one(() => [Literal]),
 };
-export interface ImportAttribute extends Fields<typeof ImportAttributeSpec> {}
+export interface ImportAttribute extends Properties<typeof ImportAttributeSpec> {}
 /** `key: value` in `with { ... }`. */
-export class ImportAttribute extends Node {
+export class ImportAttribute extends SyntaxNode {
   static override SPEC = ImportAttributeSpec;
 }
 
@@ -1168,9 +1169,9 @@ const ImportSpecifierSpec = {
   imported: one(() => [Identifier, Literal]),
   local: one(() => [Identifier]),
 };
-export interface ImportSpecifier extends Fields<typeof ImportSpecifierSpec> {}
+export interface ImportSpecifier extends Properties<typeof ImportSpecifierSpec> {}
 /** `imported as local`, or with `importKind` 'type' `type imported as local`. */
-export class ImportSpecifier extends Node {
+export class ImportSpecifier extends SyntaxNode {
   static override SPEC = ImportSpecifierSpec;
   static override FEATURES: Features = { importKind: [["type", ts(405)]] };
 }
@@ -1178,18 +1179,18 @@ export class ImportSpecifier extends Node {
 const ImportDefaultSpecifierSpec = {
   local: one(() => [Identifier]),
 };
-export interface ImportDefaultSpecifier extends Fields<typeof ImportDefaultSpecifierSpec> {}
+export interface ImportDefaultSpecifier extends Properties<typeof ImportDefaultSpecifierSpec> {}
 /** `local`, the default export's binding. */
-export class ImportDefaultSpecifier extends Node {
+export class ImportDefaultSpecifier extends SyntaxNode {
   static override SPEC = ImportDefaultSpecifierSpec;
 }
 
 const ImportNamespaceSpecifierSpec = {
   local: one(() => [Identifier]),
 };
-export interface ImportNamespaceSpecifier extends Fields<typeof ImportNamespaceSpecifierSpec> {}
+export interface ImportNamespaceSpecifier extends Properties<typeof ImportNamespaceSpecifierSpec> {}
 /** `* as local`. */
-export class ImportNamespaceSpecifier extends Node {
+export class ImportNamespaceSpecifier extends SyntaxNode {
   static override SPEC = ImportNamespaceSpecifierSpec;
 }
 
@@ -1200,7 +1201,7 @@ const ImportDeclarationSpec = {
   source: one(() => [Literal]),
   attributes: many(() => [ImportAttribute]),
 };
-export interface ImportDeclaration extends Fields<typeof ImportDeclarationSpec> {}
+export interface ImportDeclaration extends Properties<typeof ImportDeclarationSpec> {}
 /** `import type defer specifiers from source with { attributes };`, or `import source;` without specifiers. */
 export class ImportDeclaration extends Statement {
   static override SPEC = ImportDeclarationSpec;
@@ -1217,9 +1218,9 @@ const ExportSpecifierSpec = {
   local: one(() => [Identifier, Literal]),
   exported: one(() => [Identifier, Literal]),
 };
-export interface ExportSpecifier extends Fields<typeof ExportSpecifierSpec> {}
+export interface ExportSpecifier extends Properties<typeof ExportSpecifierSpec> {}
 /** `local as exported`, or with `exportKind` 'type' `type local as exported`. */
-export class ExportSpecifier extends Node {
+export class ExportSpecifier extends SyntaxNode {
   static override SPEC = ExportSpecifierSpec;
   static override FEATURES: Features = { exportKind: [["type", ts(405)]] };
 }
@@ -1231,7 +1232,7 @@ const ExportNamedDeclarationSpec = {
   source: optional(() => [Literal]),
   attributes: many(() => [ImportAttribute]),
 };
-export interface ExportNamedDeclaration extends Fields<typeof ExportNamedDeclarationSpec> {}
+export interface ExportNamedDeclaration extends Properties<typeof ExportNamedDeclarationSpec> {}
 /** `export declaration`, or `export type { specifiers } from source with { attributes };`. */
 export class ExportNamedDeclaration extends Statement {
   static override SPEC = ExportNamedDeclarationSpec;
@@ -1242,7 +1243,7 @@ export class ExportNamedDeclaration extends Statement {
 const ExportDefaultDeclarationSpec = {
   declaration: one(() => [Statement, Expression]),
 };
-export interface ExportDefaultDeclaration extends Fields<typeof ExportDefaultDeclarationSpec> {}
+export interface ExportDefaultDeclaration extends Properties<typeof ExportDefaultDeclarationSpec> {}
 /** `export default declaration`. */
 export class ExportDefaultDeclaration extends Statement {
   static override SPEC = ExportDefaultDeclarationSpec;
@@ -1255,7 +1256,7 @@ const ExportAllDeclarationSpec = {
   source: one(() => [Literal]),
   attributes: many(() => [ImportAttribute]),
 };
-export interface ExportAllDeclaration extends Fields<typeof ExportAllDeclarationSpec> {}
+export interface ExportAllDeclaration extends Properties<typeof ExportAllDeclarationSpec> {}
 /** `export type * as exported from source with { attributes };`. */
 export class ExportAllDeclaration extends Statement {
   static override SPEC = ExportAllDeclarationSpec;
@@ -1272,7 +1273,7 @@ const TSImportEqualsDeclarationSpec = {
   id: one(() => [Identifier]),
   moduleReference: one(() => [Identifier, TSQualifiedName, TSExternalModuleReference]),
 };
-export interface TSImportEqualsDeclaration extends Fields<typeof TSImportEqualsDeclarationSpec> {}
+export interface TSImportEqualsDeclaration extends Properties<typeof TSImportEqualsDeclarationSpec> {}
 /** `import type id = moduleReference;`. */
 export class TSImportEqualsDeclaration extends Statement {
   static override SPEC = TSImportEqualsDeclarationSpec;
@@ -1282,9 +1283,9 @@ export class TSImportEqualsDeclaration extends Statement {
 const TSExternalModuleReferenceSpec = {
   expression: one(() => [Literal]),
 };
-export interface TSExternalModuleReference extends Fields<typeof TSExternalModuleReferenceSpec> {}
+export interface TSExternalModuleReference extends Properties<typeof TSExternalModuleReferenceSpec> {}
 /** `require(expression)`, in `import x = require('m')`. */
-export class TSExternalModuleReference extends Node {
+export class TSExternalModuleReference extends SyntaxNode {
   static override SPEC = TSExternalModuleReferenceSpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1292,7 +1293,7 @@ export class TSExternalModuleReference extends Node {
 const TSExportAssignmentSpec = {
   expression: one(() => [Expression]),
 };
-export interface TSExportAssignment extends Fields<typeof TSExportAssignmentSpec> {}
+export interface TSExportAssignment extends Properties<typeof TSExportAssignmentSpec> {}
 /** `export = expression;`. */
 export class TSExportAssignment extends Statement {
   static override SPEC = TSExportAssignmentSpec;
@@ -1302,7 +1303,7 @@ export class TSExportAssignment extends Statement {
 const TSNamespaceExportDeclarationSpec = {
   id: one(() => [Identifier]),
 };
-export interface TSNamespaceExportDeclaration extends Fields<typeof TSNamespaceExportDeclarationSpec> {}
+export interface TSNamespaceExportDeclaration extends Properties<typeof TSNamespaceExportDeclarationSpec> {}
 /** `export as namespace id;`. */
 export class TSNamespaceExportDeclaration extends Statement {
   static override SPEC = TSNamespaceExportDeclarationSpec;
@@ -1314,9 +1315,9 @@ export class TSNamespaceExportDeclaration extends Statement {
 const TSTypeAnnotationSpec = {
   typeAnnotation: one(() => [TypeNode]),
 };
-export interface TSTypeAnnotation extends Fields<typeof TSTypeAnnotationSpec> {}
+export interface TSTypeAnnotation extends Properties<typeof TSTypeAnnotationSpec> {}
 /** `: typeAnnotation`, after a binding, a parameter, a field or a signature. */
-export class TSTypeAnnotation extends Node {
+export class TSTypeAnnotation extends SyntaxNode {
   static override SPEC = TSTypeAnnotationSpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1329,9 +1330,9 @@ const TSTypeParameterSpec = {
   constraint: optional(() => [TypeNode]),
   default: optional(() => [TypeNode]),
 };
-export interface TSTypeParameter extends Fields<typeof TSTypeParameterSpec> {}
+export interface TSTypeParameter extends Properties<typeof TSTypeParameterSpec> {}
 /** `const in out name extends constraint = default`. */
-export class TSTypeParameter extends Node {
+export class TSTypeParameter extends SyntaxNode {
   static override SPEC = TSTypeParameterSpec;
   static override SINCE: Availability | null = ts(100);
   static override FEATURES: Features = {
@@ -1345,9 +1346,9 @@ export class TSTypeParameter extends Node {
 const TSTypeParameterDeclarationSpec = {
   params: many(() => [TSTypeParameter]),
 };
-export interface TSTypeParameterDeclaration extends Fields<typeof TSTypeParameterDeclarationSpec> {}
+export interface TSTypeParameterDeclaration extends Properties<typeof TSTypeParameterDeclarationSpec> {}
 /** `<params>`, a declaration's type parameters. */
-export class TSTypeParameterDeclaration extends Node {
+export class TSTypeParameterDeclaration extends SyntaxNode {
   static override SPEC = TSTypeParameterDeclarationSpec;
   static override SINCE: Availability | null = ts(100);
   override check(): string[] {
@@ -1358,9 +1359,9 @@ export class TSTypeParameterDeclaration extends Node {
 const TSTypeParameterInstantiationSpec = {
   params: many(() => [TypeNode]),
 };
-export interface TSTypeParameterInstantiation extends Fields<typeof TSTypeParameterInstantiationSpec> {}
+export interface TSTypeParameterInstantiation extends Properties<typeof TSTypeParameterInstantiationSpec> {}
 /** `<params>`, type arguments. */
-export class TSTypeParameterInstantiation extends Node {
+export class TSTypeParameterInstantiation extends SyntaxNode {
   static override SPEC = TSTypeParameterInstantiationSpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1371,7 +1372,7 @@ const TSTypeAliasDeclarationSpec = {
   typeParameters: optional(() => [TSTypeParameterDeclaration]),
   typeAnnotation: one(() => [TypeNode]),
 };
-export interface TSTypeAliasDeclaration extends Fields<typeof TSTypeAliasDeclarationSpec> {}
+export interface TSTypeAliasDeclaration extends Properties<typeof TSTypeAliasDeclarationSpec> {}
 /** `declare type id<typeParameters> = typeAnnotation;`. */
 export class TSTypeAliasDeclaration extends Statement {
   static override SPEC = TSTypeAliasDeclarationSpec;
@@ -1382,9 +1383,9 @@ const TSInterfaceHeritageSpec = {
   expression: one(() => [Expression]),
   typeArguments: optional(() => [TSTypeParameterInstantiation]),
 };
-export interface TSInterfaceHeritage extends Fields<typeof TSInterfaceHeritageSpec> {}
+export interface TSInterfaceHeritage extends Properties<typeof TSInterfaceHeritageSpec> {}
 /** `expression<typeArguments>`, which an interface extends. */
-export class TSInterfaceHeritage extends Node {
+export class TSInterfaceHeritage extends SyntaxNode {
   static override SPEC = TSInterfaceHeritageSpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1393,9 +1394,9 @@ const TSClassImplementsSpec = {
   expression: one(() => [Expression]),
   typeArguments: optional(() => [TSTypeParameterInstantiation]),
 };
-export interface TSClassImplements extends Fields<typeof TSClassImplementsSpec> {}
+export interface TSClassImplements extends Properties<typeof TSClassImplementsSpec> {}
 /** `expression<typeArguments>`, which a class implements. */
-export class TSClassImplements extends Node {
+export class TSClassImplements extends SyntaxNode {
   static override SPEC = TSClassImplementsSpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1403,9 +1404,9 @@ export class TSClassImplements extends Node {
 const TSInterfaceBodySpec = {
   body: many(() => [TypeElement, Comment]),
 };
-export interface TSInterfaceBody extends Fields<typeof TSInterfaceBodySpec> {}
+export interface TSInterfaceBody extends Properties<typeof TSInterfaceBodySpec> {}
 /** `{ body }`: an interface's members. */
-export class TSInterfaceBody extends Node {
+export class TSInterfaceBody extends SyntaxNode {
   static override SPEC = TSInterfaceBodySpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1417,7 +1418,7 @@ const TSInterfaceDeclarationSpec = {
   extends: many(() => [TSInterfaceHeritage]),
   body: one(() => [TSInterfaceBody]),
 };
-export interface TSInterfaceDeclaration extends Fields<typeof TSInterfaceDeclarationSpec> {}
+export interface TSInterfaceDeclaration extends Properties<typeof TSInterfaceDeclarationSpec> {}
 /** `declare interface id<typeParameters> extends ... { body }`. */
 export class TSInterfaceDeclaration extends Statement {
   static override SPEC = TSInterfaceDeclarationSpec;
@@ -1429,9 +1430,9 @@ const TSEnumMemberSpec = {
   id: one(() => [Expression]),
   initializer: optional(() => [Expression]),
 };
-export interface TSEnumMember extends Fields<typeof TSEnumMemberSpec> {}
+export interface TSEnumMember extends Properties<typeof TSEnumMemberSpec> {}
 /** `id = initializer`; `computed` for `[id]`. */
-export class TSEnumMember extends Node {
+export class TSEnumMember extends SyntaxNode {
   static override SPEC = TSEnumMemberSpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1439,9 +1440,9 @@ export class TSEnumMember extends Node {
 const TSEnumBodySpec = {
   members: many(() => [TSEnumMember, Comment]),
 };
-export interface TSEnumBody extends Fields<typeof TSEnumBodySpec> {}
+export interface TSEnumBody extends Properties<typeof TSEnumBodySpec> {}
 /** `{ members }`. */
-export class TSEnumBody extends Node {
+export class TSEnumBody extends SyntaxNode {
   static override SPEC = TSEnumBodySpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1452,7 +1453,7 @@ const TSEnumDeclarationSpec = {
   id: one(() => [Identifier]),
   body: one(() => [TSEnumBody]),
 };
-export interface TSEnumDeclaration extends Fields<typeof TSEnumDeclarationSpec> {}
+export interface TSEnumDeclaration extends Properties<typeof TSEnumDeclarationSpec> {}
 /** `declare const enum id { body }`. */
 export class TSEnumDeclaration extends Statement {
   static override SPEC = TSEnumDeclarationSpec;
@@ -1463,9 +1464,9 @@ export class TSEnumDeclaration extends Statement {
 const TSModuleBlockSpec = {
   body: many(() => [Statement]),
 };
-export interface TSModuleBlock extends Fields<typeof TSModuleBlockSpec> {}
+export interface TSModuleBlock extends Properties<typeof TSModuleBlockSpec> {}
 /** `{ body }`: a namespace's or module's statements. */
-export class TSModuleBlock extends Node {
+export class TSModuleBlock extends SyntaxNode {
   static override SPEC = TSModuleBlockSpec;
   static override SINCE: Availability | null = ts(100);
 }
@@ -1476,7 +1477,7 @@ const TSModuleDeclarationSpec = {
   id: one(() => [Identifier, Literal, TSQualifiedName]),
   body: optional(() => [TSModuleBlock]),
 };
-export interface TSModuleDeclaration extends Fields<typeof TSModuleDeclarationSpec> {}
+export interface TSModuleDeclaration extends Properties<typeof TSModuleDeclarationSpec> {}
 /**
  * `declare namespace id { body }`, `declare module 'id' { body }` or `declare global { body }`; `moduleKind` is
  * 'namespace', 'module' or 'global'. A declared module may have no body.
@@ -1498,7 +1499,7 @@ const TSPropertySignatureSpec = {
   optional: flag(),
   typeAnnotation: optional(() => [TSTypeAnnotation]),
 };
-export interface TSPropertySignature extends Fields<typeof TSPropertySignatureSpec> {}
+export interface TSPropertySignature extends Properties<typeof TSPropertySignatureSpec> {}
 /** `readonly key?: typeAnnotation;`, in an interface or an object type. */
 export class TSPropertySignature extends TypeElement {
   static override SPEC = TSPropertySignatureSpec;
@@ -1517,7 +1518,7 @@ const TSMethodSignatureSpec = {
   params: many(() => [Identifier, Pattern, TSParameterProperty]),
   returnType: optional(() => [TSTypeAnnotation]),
 };
-export interface TSMethodSignature extends Fields<typeof TSMethodSignatureSpec> {}
+export interface TSMethodSignature extends Properties<typeof TSMethodSignatureSpec> {}
 /** `get key?<typeParameters>(params): returnType;`; `methodKind` is 'method', 'get' or 'set'. */
 export class TSMethodSignature extends TypeElement {
   static override SPEC = TSMethodSignatureSpec;
@@ -1530,7 +1531,7 @@ const TSCallSignatureDeclarationSpec = {
   params: many(() => [Identifier, Pattern, TSParameterProperty]),
   returnType: optional(() => [TSTypeAnnotation]),
 };
-export interface TSCallSignatureDeclaration extends Fields<typeof TSCallSignatureDeclarationSpec> {}
+export interface TSCallSignatureDeclaration extends Properties<typeof TSCallSignatureDeclarationSpec> {}
 /** `<typeParameters>(params): returnType;`. */
 export class TSCallSignatureDeclaration extends TypeElement {
   static override SPEC = TSCallSignatureDeclarationSpec;
@@ -1542,7 +1543,7 @@ const TSConstructSignatureDeclarationSpec = {
   params: many(() => [Identifier, Pattern, TSParameterProperty]),
   returnType: optional(() => [TSTypeAnnotation]),
 };
-export interface TSConstructSignatureDeclaration extends Fields<typeof TSConstructSignatureDeclarationSpec> {}
+export interface TSConstructSignatureDeclaration extends Properties<typeof TSConstructSignatureDeclarationSpec> {}
 /** `new <typeParameters>(params): returnType;`. */
 export class TSConstructSignatureDeclaration extends TypeElement {
   static override SPEC = TSConstructSignatureDeclarationSpec;
@@ -1556,7 +1557,7 @@ const TSIndexSignatureSpec = {
   parameters: many(() => [Identifier, Pattern, TSParameterProperty]),
   typeAnnotation: optional(() => [TSTypeAnnotation]),
 };
-export interface TSIndexSignature extends Fields<typeof TSIndexSignatureSpec> {}
+export interface TSIndexSignature extends Properties<typeof TSIndexSignatureSpec> {}
 /** `static readonly [parameters]: typeAnnotation;`, in an interface, an object type or a class. */
 export class TSIndexSignature extends TypeElement {
   static override SPEC = TSIndexSignatureSpec;
@@ -1643,7 +1644,7 @@ const TSQualifiedNameSpec: {
   left: one(() => [Identifier, ThisExpression, TSQualifiedName]),
   right: one(() => [Identifier]),
 };
-export interface TSQualifiedName extends Fields<typeof TSQualifiedNameSpec> {}
+export interface TSQualifiedName extends Properties<typeof TSQualifiedNameSpec> {}
 /** `left.right`, a name in a namespace. */
 export class TSQualifiedName extends TypeNode {
   static override SPEC = TSQualifiedNameSpec;
@@ -1654,7 +1655,7 @@ const TSTypeReferenceSpec = {
   typeName: one(() => [Identifier, ThisExpression, TSQualifiedName]),
   typeArguments: optional(() => [TSTypeParameterInstantiation]),
 };
-export interface TSTypeReference extends Fields<typeof TSTypeReferenceSpec> {}
+export interface TSTypeReference extends Properties<typeof TSTypeReferenceSpec> {}
 /** `typeName<typeArguments>`. */
 export class TSTypeReference extends TypeNode {
   static override SPEC = TSTypeReferenceSpec;
@@ -1664,7 +1665,7 @@ export class TSTypeReference extends TypeNode {
 const TSParenthesizedTypeSpec = {
   typeAnnotation: one(() => [TypeNode]),
 };
-export interface TSParenthesizedType extends Fields<typeof TSParenthesizedTypeSpec> {}
+export interface TSParenthesizedType extends Properties<typeof TSParenthesizedTypeSpec> {}
 /** `(typeAnnotation)`: parentheses written in the source. */
 export class TSParenthesizedType extends TypeNode {
   static override SPEC = TSParenthesizedTypeSpec;
@@ -1674,7 +1675,7 @@ export class TSParenthesizedType extends TypeNode {
 const TSLiteralTypeSpec = {
   literal: one(() => [Literal, UnaryExpression, TemplateLiteral]),
 };
-export interface TSLiteralType extends Fields<typeof TSLiteralTypeSpec> {}
+export interface TSLiteralType extends Properties<typeof TSLiteralTypeSpec> {}
 /** A literal as a type: a string, number, bigint or boolean literal, a negated number, or a template literal. */
 export class TSLiteralType extends TypeNode {
   static override SPEC = TSLiteralTypeSpec;
@@ -1685,7 +1686,7 @@ const TSTemplateLiteralTypeSpec = {
   quasis: many(() => [TemplateElement]),
   types: many(() => [TypeNode]),
 };
-export interface TSTemplateLiteralType extends Fields<typeof TSTemplateLiteralTypeSpec> {}
+export interface TSTemplateLiteralType extends Properties<typeof TSTemplateLiteralTypeSpec> {}
 /** `` `quasi${type}quasi` ``, a template literal type. */
 export class TSTemplateLiteralType extends TypeNode {
   static override SPEC = TSTemplateLiteralTypeSpec;
@@ -1699,7 +1700,7 @@ export class TSTemplateLiteralType extends TypeNode {
 const TSArrayTypeSpec = {
   elementType: one(() => [TypeNode]),
 };
-export interface TSArrayType extends Fields<typeof TSArrayTypeSpec> {}
+export interface TSArrayType extends Properties<typeof TSArrayTypeSpec> {}
 /** `elementType[]`. */
 export class TSArrayType extends TypeNode {
   static override SPEC = TSArrayTypeSpec;
@@ -1709,7 +1710,7 @@ export class TSArrayType extends TypeNode {
 const TSTupleTypeSpec = {
   elementTypes: many(() => [TypeNode]),
 };
-export interface TSTupleType extends Fields<typeof TSTupleTypeSpec> {}
+export interface TSTupleType extends Properties<typeof TSTupleTypeSpec> {}
 /** `[elementTypes]`. */
 export class TSTupleType extends TypeNode {
   static override SPEC = TSTupleTypeSpec;
@@ -1721,7 +1722,7 @@ const TSNamedTupleMemberSpec = {
   optional: flag(),
   elementType: one(() => [TypeNode]),
 };
-export interface TSNamedTupleMember extends Fields<typeof TSNamedTupleMemberSpec> {}
+export interface TSNamedTupleMember extends Properties<typeof TSNamedTupleMemberSpec> {}
 /** `label?: elementType`, in a tuple. */
 export class TSNamedTupleMember extends TypeNode {
   static override SPEC = TSNamedTupleMemberSpec;
@@ -1731,7 +1732,7 @@ export class TSNamedTupleMember extends TypeNode {
 const TSOptionalTypeSpec = {
   typeAnnotation: one(() => [TypeNode]),
 };
-export interface TSOptionalType extends Fields<typeof TSOptionalTypeSpec> {}
+export interface TSOptionalType extends Properties<typeof TSOptionalTypeSpec> {}
 /** `typeAnnotation?`, in a tuple. */
 export class TSOptionalType extends TypeNode {
   static override SPEC = TSOptionalTypeSpec;
@@ -1741,7 +1742,7 @@ export class TSOptionalType extends TypeNode {
 const TSRestTypeSpec = {
   typeAnnotation: one(() => [TypeNode]),
 };
-export interface TSRestType extends Fields<typeof TSRestTypeSpec> {}
+export interface TSRestType extends Properties<typeof TSRestTypeSpec> {}
 /** `...typeAnnotation`, in a tuple. */
 export class TSRestType extends TypeNode {
   static override SPEC = TSRestTypeSpec;
@@ -1751,7 +1752,7 @@ export class TSRestType extends TypeNode {
 const TSUnionTypeSpec = {
   types: many(() => [TypeNode]),
 };
-export interface TSUnionType extends Fields<typeof TSUnionTypeSpec> {}
+export interface TSUnionType extends Properties<typeof TSUnionTypeSpec> {}
 /** `type | type`. */
 export class TSUnionType extends TypeNode {
   static override SPEC = TSUnionTypeSpec;
@@ -1764,7 +1765,7 @@ export class TSUnionType extends TypeNode {
 const TSIntersectionTypeSpec = {
   types: many(() => [TypeNode]),
 };
-export interface TSIntersectionType extends Fields<typeof TSIntersectionTypeSpec> {}
+export interface TSIntersectionType extends Properties<typeof TSIntersectionTypeSpec> {}
 /** `type & type`. */
 export class TSIntersectionType extends TypeNode {
   static override SPEC = TSIntersectionTypeSpec;
@@ -1779,7 +1780,7 @@ const TSFunctionTypeSpec = {
   params: many(() => [Identifier, Pattern, TSParameterProperty]),
   returnType: optional(() => [TSTypeAnnotation]),
 };
-export interface TSFunctionType extends Fields<typeof TSFunctionTypeSpec> {}
+export interface TSFunctionType extends Properties<typeof TSFunctionTypeSpec> {}
 /** `<typeParameters>(params) => returnType`. */
 export class TSFunctionType extends TypeNode {
   static override SPEC = TSFunctionTypeSpec;
@@ -1792,7 +1793,7 @@ const TSConstructorTypeSpec = {
   params: many(() => [Identifier, Pattern, TSParameterProperty]),
   returnType: optional(() => [TSTypeAnnotation]),
 };
-export interface TSConstructorType extends Fields<typeof TSConstructorTypeSpec> {}
+export interface TSConstructorType extends Properties<typeof TSConstructorTypeSpec> {}
 /** `abstract new <typeParameters>(params) => returnType`. */
 export class TSConstructorType extends TypeNode {
   static override SPEC = TSConstructorTypeSpec;
@@ -1803,7 +1804,7 @@ export class TSConstructorType extends TypeNode {
 const TSTypeLiteralSpec = {
   members: many(() => [TypeElement, Comment]),
 };
-export interface TSTypeLiteral extends Fields<typeof TSTypeLiteralSpec> {}
+export interface TSTypeLiteral extends Properties<typeof TSTypeLiteralSpec> {}
 /** `{ members }`, an object type. */
 export class TSTypeLiteral extends TypeNode {
   static override SPEC = TSTypeLiteralSpec;
@@ -1818,7 +1819,7 @@ const TSMappedTypeSpec = {
   optional: optionalChoice(...MAPPED_OPTIONALS),
   typeAnnotation: optional(() => [TypeNode]),
 };
-export interface TSMappedType extends Fields<typeof TSMappedTypeSpec> {}
+export interface TSMappedType extends Properties<typeof TSMappedTypeSpec> {}
 /** `{ readonly [key in constraint as nameType]?: typeAnnotation }`. */
 export class TSMappedType extends TypeNode {
   static override SPEC = TSMappedTypeSpec;
@@ -1834,7 +1835,7 @@ const TSIndexedAccessTypeSpec = {
   objectType: one(() => [TypeNode]),
   indexType: one(() => [TypeNode]),
 };
-export interface TSIndexedAccessType extends Fields<typeof TSIndexedAccessTypeSpec> {}
+export interface TSIndexedAccessType extends Properties<typeof TSIndexedAccessTypeSpec> {}
 /** `objectType[indexType]`. */
 export class TSIndexedAccessType extends TypeNode {
   static override SPEC = TSIndexedAccessTypeSpec;
@@ -1845,7 +1846,7 @@ const TSTypeOperatorSpec = {
   operator: choice(...TYPE_OPERATORS),
   typeAnnotation: optional(() => [TypeNode]),
 };
-export interface TSTypeOperator extends Fields<typeof TSTypeOperatorSpec> {}
+export interface TSTypeOperator extends Properties<typeof TSTypeOperatorSpec> {}
 /** `keyof typeAnnotation`, `readonly typeAnnotation` or `unique symbol`. */
 export class TSTypeOperator extends TypeNode {
   static override SPEC = TSTypeOperatorSpec;
@@ -1857,7 +1858,7 @@ const TSTypeQuerySpec = {
   exprName: one(() => [Identifier, ThisExpression, TSQualifiedName, TSImportType]),
   typeArguments: optional(() => [TSTypeParameterInstantiation]),
 };
-export interface TSTypeQuery extends Fields<typeof TSTypeQuerySpec> {}
+export interface TSTypeQuery extends Properties<typeof TSTypeQuerySpec> {}
 /** `typeof exprName<typeArguments>`. */
 export class TSTypeQuery extends TypeNode {
   static override SPEC = TSTypeQuerySpec;
@@ -1870,7 +1871,7 @@ const TSImportTypeSpec = {
   qualifier: optional(() => [Identifier, ThisExpression, TSQualifiedName]),
   typeArguments: optional(() => [TSTypeParameterInstantiation]),
 };
-export interface TSImportType extends Fields<typeof TSImportTypeSpec> {}
+export interface TSImportType extends Properties<typeof TSImportTypeSpec> {}
 /** `import(source, options).qualifier<typeArguments>`. */
 export class TSImportType extends TypeNode {
   static override SPEC = TSImportTypeSpec;
@@ -1883,7 +1884,7 @@ const TSConditionalTypeSpec = {
   trueType: one(() => [TypeNode]),
   falseType: one(() => [TypeNode]),
 };
-export interface TSConditionalType extends Fields<typeof TSConditionalTypeSpec> {}
+export interface TSConditionalType extends Properties<typeof TSConditionalTypeSpec> {}
 /** `checkType extends extendsType ? trueType : falseType`. */
 export class TSConditionalType extends TypeNode {
   static override SPEC = TSConditionalTypeSpec;
@@ -1893,7 +1894,7 @@ export class TSConditionalType extends TypeNode {
 const TSInferTypeSpec = {
   typeParameter: one(() => [TSTypeParameter]),
 };
-export interface TSInferType extends Fields<typeof TSInferTypeSpec> {}
+export interface TSInferType extends Properties<typeof TSInferTypeSpec> {}
 /** `infer typeParameter`, in a conditional type's `extends`. */
 export class TSInferType extends TypeNode {
   static override SPEC = TSInferTypeSpec;
@@ -1905,7 +1906,7 @@ const TSTypePredicateSpec = {
   parameterName: one(() => [Identifier, TSThisType]),
   typeAnnotation: optional(() => [TSTypeAnnotation]),
 };
-export interface TSTypePredicate extends Fields<typeof TSTypePredicateSpec> {}
+export interface TSTypePredicate extends Properties<typeof TSTypePredicateSpec> {}
 /** `asserts parameterName is typeAnnotation`, a function's return type. */
 export class TSTypePredicate extends TypeNode {
   static override SPEC = TSTypePredicateSpec;
@@ -1918,9 +1919,9 @@ export class TSTypePredicate extends TypeNode {
 const JSXIdentifierSpec = {
   name: text(),
 };
-export interface JSXIdentifier extends Fields<typeof JSXIdentifierSpec> {}
+export interface JSXIdentifier extends Properties<typeof JSXIdentifierSpec> {}
 /** A JSX name, which may hold `-`. */
-export class JSXIdentifier extends Node {
+export class JSXIdentifier extends SyntaxNode {
   static override SPEC = JSXIdentifierSpec;
   static override EXTENSION = true;
 }
@@ -1929,9 +1930,9 @@ const JSXNamespacedNameSpec = {
   namespace: one(() => [JSXIdentifier]),
   name: one(() => [JSXIdentifier]),
 };
-export interface JSXNamespacedName extends Fields<typeof JSXNamespacedNameSpec> {}
+export interface JSXNamespacedName extends Properties<typeof JSXNamespacedNameSpec> {}
 /** `namespace:name`. */
-export class JSXNamespacedName extends Node {
+export class JSXNamespacedName extends SyntaxNode {
   static override SPEC = JSXNamespacedNameSpec;
   static override EXTENSION = true;
 }
@@ -1943,24 +1944,24 @@ const JSXMemberExpressionSpec: {
   object: one(() => [JSXIdentifier, JSXMemberExpression]),
   property: one(() => [JSXIdentifier]),
 };
-export interface JSXMemberExpression extends Fields<typeof JSXMemberExpressionSpec> {}
+export interface JSXMemberExpression extends Properties<typeof JSXMemberExpressionSpec> {}
 /** `object.property`, a tag's name. */
-export class JSXMemberExpression extends Node {
+export class JSXMemberExpression extends SyntaxNode {
   static override SPEC = JSXMemberExpressionSpec;
   static override EXTENSION = true;
 }
 
 /** Nothing, in `{}` or `{/* comment *\/}`. */
-export class JSXEmptyExpression extends Node {
+export class JSXEmptyExpression extends SyntaxNode {
   static override EXTENSION = true;
 }
 
 const JSXExpressionContainerSpec = {
   expression: one(() => [Expression, JSXEmptyExpression]),
 };
-export interface JSXExpressionContainer extends Fields<typeof JSXExpressionContainerSpec> {}
+export interface JSXExpressionContainer extends Properties<typeof JSXExpressionContainerSpec> {}
 /** `{expression}`. */
-export class JSXExpressionContainer extends Node {
+export class JSXExpressionContainer extends SyntaxNode {
   static override SPEC = JSXExpressionContainerSpec;
   static override EXTENSION = true;
 }
@@ -1968,9 +1969,9 @@ export class JSXExpressionContainer extends Node {
 const JSXSpreadChildSpec = {
   expression: one(() => [Expression, JSXEmptyExpression]),
 };
-export interface JSXSpreadChild extends Fields<typeof JSXSpreadChildSpec> {}
+export interface JSXSpreadChild extends Properties<typeof JSXSpreadChildSpec> {}
 /** `{...expression}`, a child. */
-export class JSXSpreadChild extends Node {
+export class JSXSpreadChild extends SyntaxNode {
   static override SPEC = JSXSpreadChildSpec;
   static override EXTENSION = true;
 }
@@ -1978,9 +1979,9 @@ export class JSXSpreadChild extends Node {
 const JSXTextSpec = {
   raw: text(),
 };
-export interface JSXText extends Fields<typeof JSXTextSpec> {}
+export interface JSXText extends Properties<typeof JSXTextSpec> {}
 /** Text between tags, as written. */
-export class JSXText extends Node {
+export class JSXText extends SyntaxNode {
   static override SPEC = JSXTextSpec;
   static override EXTENSION = true;
 }
@@ -1992,9 +1993,9 @@ const JSXAttributeSpec: {
   name: one(() => [JSXIdentifier, JSXNamespacedName]),
   value: optional(() => [Literal, JSXExpressionContainer, JSXElement, JSXFragment]),
 };
-export interface JSXAttribute extends Fields<typeof JSXAttributeSpec> {}
+export interface JSXAttribute extends Properties<typeof JSXAttributeSpec> {}
 /** `name=value`, or `name` without a value. */
-export class JSXAttribute extends Node {
+export class JSXAttribute extends SyntaxNode {
   static override SPEC = JSXAttributeSpec;
   static override EXTENSION = true;
 }
@@ -2002,9 +2003,9 @@ export class JSXAttribute extends Node {
 const JSXSpreadAttributeSpec = {
   argument: one(() => [Expression]),
 };
-export interface JSXSpreadAttribute extends Fields<typeof JSXSpreadAttributeSpec> {}
+export interface JSXSpreadAttribute extends Properties<typeof JSXSpreadAttributeSpec> {}
 /** `{...argument}`, an attribute. */
-export class JSXSpreadAttribute extends Node {
+export class JSXSpreadAttribute extends SyntaxNode {
   static override SPEC = JSXSpreadAttributeSpec;
   static override EXTENSION = true;
 }
@@ -2020,9 +2021,9 @@ const JSXOpeningElementSpec: {
   attributes: many(() => [JSXAttribute, JSXSpreadAttribute]),
   selfClosing: flag(),
 };
-export interface JSXOpeningElement extends Fields<typeof JSXOpeningElementSpec> {}
+export interface JSXOpeningElement extends Properties<typeof JSXOpeningElementSpec> {}
 /** `<name<typeArguments> attributes>`, or with `selfClosing` `<name ... />`. */
-export class JSXOpeningElement extends Node {
+export class JSXOpeningElement extends SyntaxNode {
   static override SPEC = JSXOpeningElementSpec;
   static override EXTENSION = true;
 }
@@ -2030,9 +2031,9 @@ export class JSXOpeningElement extends Node {
 const JSXClosingElementSpec = {
   name: one(() => [JSXIdentifier, JSXMemberExpression, JSXNamespacedName]),
 };
-export interface JSXClosingElement extends Fields<typeof JSXClosingElementSpec> {}
+export interface JSXClosingElement extends Properties<typeof JSXClosingElementSpec> {}
 /** `</name>`. */
-export class JSXClosingElement extends Node {
+export class JSXClosingElement extends SyntaxNode {
   static override SPEC = JSXClosingElementSpec;
   static override EXTENSION = true;
 }
@@ -2046,7 +2047,7 @@ const JSXElementSpec: {
   children: many(() => [JSXText, JSXExpressionContainer, JSXSpreadChild, JSXElement, JSXFragment]),
   closingElement: optional(() => [JSXClosingElement]),
 };
-export interface JSXElement extends Fields<typeof JSXElementSpec> {}
+export interface JSXElement extends Properties<typeof JSXElementSpec> {}
 /** `<name ...>children</name>`. */
 export class JSXElement extends Expression {
   static override SPEC = JSXElementSpec;
@@ -2054,12 +2055,12 @@ export class JSXElement extends Expression {
 }
 
 /** `<>`. */
-export class JSXOpeningFragment extends Node {
+export class JSXOpeningFragment extends SyntaxNode {
   static override EXTENSION = true;
 }
 
 /** `</>`. */
-export class JSXClosingFragment extends Node {
+export class JSXClosingFragment extends SyntaxNode {
   static override EXTENSION = true;
 }
 
@@ -2072,7 +2073,7 @@ const JSXFragmentSpec: {
   children: many(() => [JSXText, JSXExpressionContainer, JSXSpreadChild, JSXElement, JSXFragment]),
   closingFragment: one(() => [JSXClosingFragment]),
 };
-export interface JSXFragment extends Fields<typeof JSXFragmentSpec> {}
+export interface JSXFragment extends Properties<typeof JSXFragmentSpec> {}
 /** `<>children</>`. */
 export class JSXFragment extends Expression {
   static override SPEC = JSXFragmentSpec;
@@ -2081,7 +2082,7 @@ export class JSXFragment extends Expression {
 
 // --- The language ---
 
-export const KINDS: readonly (typeof Node)[] = [
+export const KINDS: readonly (typeof SyntaxNode)[] = [
   Comment, Program, Identifier, PrivateIdentifier, Literal, TemplateElement, TemplateLiteral,
   TaggedTemplateExpression, ThisExpression, Super, ParenthesizedExpression, Elision, SpreadElement, ArrayExpression,
   Property, ObjectExpression, FunctionExpression, ArrowFunctionExpression, ClassExpression, MetaProperty,
@@ -2112,4 +2113,5 @@ export const KINDS: readonly (typeof Node)[] = [
   JSXOpeningFragment, JSXClosingFragment, JSXFragment,
 ];
 
-export const LANGUAGE = new Language("TypeScript", KINDS, { base: es(2015, 100) });
+/** The language, whose `Builders` are typed from this module's kinds. */
+export const LANGUAGE: Language<typeof Self> = new Language("TypeScript", KINDS, { base: es(2015, 100) });

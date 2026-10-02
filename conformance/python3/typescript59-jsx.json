@@ -9,7 +9,7 @@
             "$ref": "s1",
             "$schema": "Programs.TypeScript.Comment"
           },
-          "field": "body",
+          "property": "body",
           "index": 0
         },
         {
@@ -17,7 +17,7 @@
             "$ref": "s2",
             "$schema": "Programs.TypeScript.ImportDeclaration"
           },
-          "field": "body",
+          "property": "body",
           "index": 1
         },
         {
@@ -25,7 +25,7 @@
             "$ref": "s3",
             "$schema": "Programs.TypeScript.VariableDeclaration"
           },
-          "field": "body",
+          "property": "body",
           "index": 2
         },
         {
@@ -33,7 +33,7 @@
             "$ref": "s4",
             "$schema": "Programs.TypeScript.VariableDeclaration"
           },
-          "field": "body",
+          "property": "body",
           "index": 3
         },
         {
@@ -41,7 +41,7 @@
             "$ref": "s5",
             "$schema": "Programs.TypeScript.FunctionDeclaration"
           },
-          "field": "body",
+          "property": "body",
           "index": 4
         },
         {
@@ -49,7 +49,7 @@
             "$ref": "s6",
             "$schema": "Programs.TypeScript.ExportDefaultDeclaration"
           },
-          "field": "body",
+          "property": "body",
           "index": 5
         }
       ]
@@ -67,7 +67,7 @@
             "$ref": "s7",
             "$schema": "Programs.TypeScript.ImportNamespaceSpecifier"
           },
-          "field": "specifiers",
+          "property": "specifiers",
           "index": 0
         },
         {
@@ -75,7 +75,7 @@
             "$ref": "s8",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "source"
+          "property": "source"
         }
       ]
     },
@@ -88,7 +88,7 @@
             "$ref": "s9",
             "$schema": "Programs.TypeScript.VariableDeclarator"
           },
-          "field": "declarations",
+          "property": "declarations",
           "index": 0
         }
       ]
@@ -102,7 +102,7 @@
             "$ref": "s10",
             "$schema": "Programs.TypeScript.VariableDeclarator"
           },
-          "field": "declarations",
+          "property": "declarations",
           "index": 0
         }
       ]
@@ -115,21 +115,21 @@
             "$ref": "s11",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "id"
+          "property": "id"
         },
         {
           "child": {
             "$ref": "s12",
             "$schema": "Programs.TypeScript.TSTypeParameterDeclaration"
           },
-          "field": "typeParameters"
+          "property": "typeParameters"
         },
         {
           "child": {
             "$ref": "s13",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "params",
+          "property": "params",
           "index": 0
         },
         {
@@ -137,7 +137,7 @@
             "$ref": "s14",
             "$schema": "Programs.TypeScript.BlockStatement"
           },
-          "field": "body"
+          "property": "body"
         }
       ]
     },
@@ -149,7 +149,7 @@
             "$ref": "s15",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "declaration"
+          "property": "declaration"
         }
       ]
     },
@@ -161,7 +161,7 @@
             "$ref": "s16",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "local"
+          "property": "local"
         }
       ]
     },
@@ -177,14 +177,14 @@
             "$ref": "s17",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "id"
+          "property": "id"
         },
         {
           "child": {
             "$ref": "s18",
             "$schema": "Programs.TypeScript.ArrowFunctionExpression"
           },
-          "field": "init"
+          "property": "init"
         }
       ]
     },
@@ -196,14 +196,14 @@
             "$ref": "s19",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "id"
+          "property": "id"
         },
         {
           "child": {
             "$ref": "s20",
             "$schema": "Programs.TypeScript.ParenthesizedExpression"
           },
-          "field": "init"
+          "property": "init"
         }
       ]
     },
@@ -219,7 +219,7 @@
             "$ref": "s21",
             "$schema": "Programs.TypeScript.TSTypeParameter"
           },
-          "field": "params",
+          "property": "params",
           "index": 0
         }
       ]
@@ -233,7 +233,7 @@
             "$ref": "s22",
             "$schema": "Programs.TypeScript.TSTypeAnnotation"
           },
-          "field": "typeAnnotation"
+          "property": "typeAnnotation"
         }
       ]
     },
@@ -245,7 +245,7 @@
             "$ref": "s23",
             "$schema": "Programs.TypeScript.ReturnStatement"
           },
-          "field": "body",
+          "property": "body",
           "index": 0
         }
       ]
@@ -270,14 +270,14 @@
             "$ref": "s24",
             "$schema": "Programs.TypeScript.TSTypeParameterDeclaration"
           },
-          "field": "typeParameters"
+          "property": "typeParameters"
         },
         {
           "child": {
             "$ref": "s25",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "params",
+          "property": "params",
           "index": 0
         },
         {
@@ -285,7 +285,7 @@
             "$ref": "s26",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "body"
+          "property": "body"
         }
       ]
     },
@@ -301,7 +301,7 @@
             "$ref": "s27",
             "$schema": "Programs.TypeScript.JSXElement"
           },
-          "field": "expression"
+          "property": "expression"
         }
       ]
     },
@@ -313,7 +313,7 @@
             "$ref": "s28",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -325,7 +325,7 @@
             "$ref": "s29",
             "$schema": "Programs.TypeScript.TSTypeLiteral"
           },
-          "field": "typeAnnotation"
+          "property": "typeAnnotation"
         }
       ]
     },
@@ -337,7 +337,7 @@
             "$ref": "s30",
             "$schema": "Programs.TypeScript.JSXElement"
           },
-          "field": "argument"
+          "property": "argument"
         }
       ]
     },
@@ -349,7 +349,7 @@
             "$ref": "s31",
             "$schema": "Programs.TypeScript.TSTypeParameter"
           },
-          "field": "params",
+          "property": "params",
           "index": 0
         }
       ]
@@ -363,7 +363,7 @@
             "$ref": "s32",
             "$schema": "Programs.TypeScript.TSTypeAnnotation"
           },
-          "field": "typeAnnotation"
+          "property": "typeAnnotation"
         }
       ]
     },
@@ -379,14 +379,14 @@
             "$ref": "s33",
             "$schema": "Programs.TypeScript.JSXOpeningElement"
           },
-          "field": "openingElement"
+          "property": "openingElement"
         },
         {
           "child": {
             "$ref": "s34",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 0
         },
         {
@@ -394,7 +394,7 @@
             "$ref": "s35",
             "$schema": "Programs.TypeScript.JSXExpressionContainer"
           },
-          "field": "children",
+          "property": "children",
           "index": 1
         },
         {
@@ -402,7 +402,7 @@
             "$ref": "s36",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 2
         },
         {
@@ -410,7 +410,7 @@
             "$ref": "s37",
             "$schema": "Programs.TypeScript.JSXExpressionContainer"
           },
-          "field": "children",
+          "property": "children",
           "index": 3
         },
         {
@@ -418,7 +418,7 @@
             "$ref": "s38",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 4
         },
         {
@@ -426,7 +426,7 @@
             "$ref": "s39",
             "$schema": "Programs.TypeScript.JSXSpreadChild"
           },
-          "field": "children",
+          "property": "children",
           "index": 5
         },
         {
@@ -434,7 +434,7 @@
             "$ref": "s40",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 6
         },
         {
@@ -442,7 +442,7 @@
             "$ref": "s41",
             "$schema": "Programs.TypeScript.JSXElement"
           },
-          "field": "children",
+          "property": "children",
           "index": 7
         },
         {
@@ -450,7 +450,7 @@
             "$ref": "s42",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 8
         },
         {
@@ -458,7 +458,7 @@
             "$ref": "s43",
             "$schema": "Programs.TypeScript.JSXElement"
           },
-          "field": "children",
+          "property": "children",
           "index": 9
         },
         {
@@ -466,7 +466,7 @@
             "$ref": "s44",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 10
         },
         {
@@ -474,7 +474,7 @@
             "$ref": "s45",
             "$schema": "Programs.TypeScript.JSXElement"
           },
-          "field": "children",
+          "property": "children",
           "index": 11
         },
         {
@@ -482,7 +482,7 @@
             "$ref": "s46",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 12
         },
         {
@@ -490,7 +490,7 @@
             "$ref": "s47",
             "$schema": "Programs.TypeScript.JSXClosingElement"
           },
-          "field": "closingElement"
+          "property": "closingElement"
         }
       ]
     },
@@ -506,7 +506,7 @@
             "$ref": "s48",
             "$schema": "Programs.TypeScript.TSPropertySignature"
           },
-          "field": "members",
+          "property": "members",
           "index": 0
         }
       ]
@@ -519,14 +519,14 @@
             "$ref": "s49",
             "$schema": "Programs.TypeScript.JSXOpeningElement"
           },
-          "field": "openingElement"
+          "property": "openingElement"
         },
         {
           "child": {
             "$ref": "s50",
             "$schema": "Programs.TypeScript.JSXExpressionContainer"
           },
-          "field": "children",
+          "property": "children",
           "index": 0
         },
         {
@@ -534,7 +534,7 @@
             "$ref": "s51",
             "$schema": "Programs.TypeScript.JSXClosingElement"
           },
-          "field": "closingElement"
+          "property": "closingElement"
         }
       ]
     },
@@ -546,7 +546,7 @@
             "$ref": "s52",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -558,7 +558,7 @@
             "$ref": "s53",
             "$schema": "Programs.TypeScript.TSTypeReference"
           },
-          "field": "typeAnnotation"
+          "property": "typeAnnotation"
         }
       ]
     },
@@ -570,14 +570,14 @@
             "$ref": "s54",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         },
         {
           "child": {
             "$ref": "s55",
             "$schema": "Programs.TypeScript.JSXAttribute"
           },
-          "field": "attributes",
+          "property": "attributes",
           "index": 0
         },
         {
@@ -585,7 +585,7 @@
             "$ref": "s56",
             "$schema": "Programs.TypeScript.JSXAttribute"
           },
-          "field": "attributes",
+          "property": "attributes",
           "index": 1
         },
         {
@@ -593,7 +593,7 @@
             "$ref": "s57",
             "$schema": "Programs.TypeScript.JSXSpreadAttribute"
           },
-          "field": "attributes",
+          "property": "attributes",
           "index": 2
         }
       ]
@@ -610,7 +610,7 @@
             "$ref": "s58",
             "$schema": "Programs.TypeScript.JSXEmptyExpression"
           },
-          "field": "expression"
+          "property": "expression"
         }
       ]
     },
@@ -626,7 +626,7 @@
             "$ref": "s59",
             "$schema": "Programs.TypeScript.CallExpression"
           },
-          "field": "expression"
+          "property": "expression"
         }
       ]
     },
@@ -642,7 +642,7 @@
             "$ref": "s60",
             "$schema": "Programs.TypeScript.ArrayExpression"
           },
-          "field": "expression"
+          "property": "expression"
         }
       ]
     },
@@ -658,7 +658,7 @@
             "$ref": "s61",
             "$schema": "Programs.TypeScript.JSXOpeningElement"
           },
-          "field": "openingElement"
+          "property": "openingElement"
         }
       ]
     },
@@ -674,14 +674,14 @@
             "$ref": "s62",
             "$schema": "Programs.TypeScript.JSXOpeningElement"
           },
-          "field": "openingElement"
+          "property": "openingElement"
         },
         {
           "child": {
             "$ref": "s63",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 0
         },
         {
@@ -689,7 +689,7 @@
             "$ref": "s64",
             "$schema": "Programs.TypeScript.JSXFragment"
           },
-          "field": "children",
+          "property": "children",
           "index": 1
         },
         {
@@ -697,7 +697,7 @@
             "$ref": "s65",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 2
         },
         {
@@ -705,7 +705,7 @@
             "$ref": "s66",
             "$schema": "Programs.TypeScript.JSXClosingElement"
           },
-          "field": "closingElement"
+          "property": "closingElement"
         }
       ]
     },
@@ -721,7 +721,7 @@
             "$ref": "s67",
             "$schema": "Programs.TypeScript.JSXOpeningElement"
           },
-          "field": "openingElement"
+          "property": "openingElement"
         }
       ]
     },
@@ -737,7 +737,7 @@
             "$ref": "s68",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -749,14 +749,14 @@
             "$ref": "s69",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "key"
+          "property": "key"
         },
         {
           "child": {
             "$ref": "s70",
             "$schema": "Programs.TypeScript.TSTypeAnnotation"
           },
-          "field": "typeAnnotation"
+          "property": "typeAnnotation"
         }
       ]
     },
@@ -768,7 +768,7 @@
             "$ref": "s71",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -780,7 +780,7 @@
             "$ref": "s72",
             "$schema": "Programs.TypeScript.ConditionalExpression"
           },
-          "field": "expression"
+          "property": "expression"
         }
       ]
     },
@@ -792,7 +792,7 @@
             "$ref": "s73",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -808,7 +808,7 @@
             "$ref": "s74",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "typeName"
+          "property": "typeName"
         }
       ]
     },
@@ -824,14 +824,14 @@
             "$ref": "s75",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         },
         {
           "child": {
             "$ref": "s76",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "value"
+          "property": "value"
         }
       ]
     },
@@ -843,14 +843,14 @@
             "$ref": "s77",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         },
         {
           "child": {
             "$ref": "s78",
             "$schema": "Programs.TypeScript.JSXExpressionContainer"
           },
-          "field": "value"
+          "property": "value"
         }
       ]
     },
@@ -862,7 +862,7 @@
             "$ref": "s79",
             "$schema": "Programs.TypeScript.ObjectExpression"
           },
-          "field": "argument"
+          "property": "argument"
         }
       ]
     },
@@ -877,14 +877,14 @@
             "$ref": "s80",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "callee"
+          "property": "callee"
         },
         {
           "child": {
             "$ref": "s81",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "arguments",
+          "property": "arguments",
           "index": 0
         }
       ]
@@ -897,7 +897,7 @@
             "$ref": "s82",
             "$schema": "Programs.TypeScript.JSXElement"
           },
-          "field": "elements",
+          "property": "elements",
           "index": 0
         }
       ]
@@ -911,14 +911,14 @@
             "$ref": "s83",
             "$schema": "Programs.TypeScript.JSXNamespacedName"
           },
-          "field": "name"
+          "property": "name"
         },
         {
           "child": {
             "$ref": "s84",
             "$schema": "Programs.TypeScript.JSXAttribute"
           },
-          "field": "attributes",
+          "property": "attributes",
           "index": 0
         }
       ]
@@ -931,7 +931,7 @@
             "$ref": "s85",
             "$schema": "Programs.TypeScript.JSXMemberExpression"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -947,14 +947,14 @@
             "$ref": "s86",
             "$schema": "Programs.TypeScript.JSXOpeningFragment"
           },
-          "field": "openingFragment"
+          "property": "openingFragment"
         },
         {
           "child": {
             "$ref": "s87",
             "$schema": "Programs.TypeScript.JSXText"
           },
-          "field": "children",
+          "property": "children",
           "index": 0
         },
         {
@@ -962,7 +962,7 @@
             "$ref": "s88",
             "$schema": "Programs.TypeScript.JSXClosingFragment"
           },
-          "field": "closingFragment"
+          "property": "closingFragment"
         }
       ]
     },
@@ -978,7 +978,7 @@
             "$ref": "s89",
             "$schema": "Programs.TypeScript.JSXMemberExpression"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -991,21 +991,21 @@
             "$ref": "s90",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         },
         {
           "child": {
             "$ref": "s91",
             "$schema": "Programs.TypeScript.TSTypeParameterInstantiation"
           },
-          "field": "typeArguments"
+          "property": "typeArguments"
         },
         {
           "child": {
             "$ref": "s92",
             "$schema": "Programs.TypeScript.JSXAttribute"
           },
-          "field": "attributes",
+          "property": "attributes",
           "index": 0
         }
       ]
@@ -1026,7 +1026,7 @@
             "$ref": "s93",
             "$schema": "Programs.TypeScript.TSBooleanKeyword"
           },
-          "field": "typeAnnotation"
+          "property": "typeAnnotation"
         }
       ]
     },
@@ -1042,21 +1042,21 @@
             "$ref": "s94",
             "$schema": "Programs.TypeScript.MemberExpression"
           },
-          "field": "test"
+          "property": "test"
         },
         {
           "child": {
             "$ref": "s95",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "consequent"
+          "property": "consequent"
         },
         {
           "child": {
             "$ref": "s96",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "alternate"
+          "property": "alternate"
         }
       ]
     },
@@ -1088,7 +1088,7 @@
             "$ref": "s97",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "expression"
+          "property": "expression"
         }
       ]
     },
@@ -1100,7 +1100,7 @@
             "$ref": "s98",
             "$schema": "Programs.TypeScript.Property"
           },
-          "field": "properties",
+          "property": "properties",
           "index": 0
         }
       ]
@@ -1121,7 +1121,7 @@
             "$ref": "s99",
             "$schema": "Programs.TypeScript.JSXOpeningElement"
           },
-          "field": "openingElement"
+          "property": "openingElement"
         }
       ]
     },
@@ -1133,14 +1133,14 @@
             "$ref": "s100",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "namespace"
+          "property": "namespace"
         },
         {
           "child": {
             "$ref": "s101",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -1152,14 +1152,14 @@
             "$ref": "s102",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         },
         {
           "child": {
             "$ref": "s103",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "value"
+          "property": "value"
         }
       ]
     },
@@ -1171,14 +1171,14 @@
             "$ref": "s104",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "object"
+          "property": "object"
         },
         {
           "child": {
             "$ref": "s105",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "property"
+          "property": "property"
         }
       ]
     },
@@ -1200,14 +1200,14 @@
             "$ref": "s106",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "object"
+          "property": "object"
         },
         {
           "child": {
             "$ref": "s107",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "property"
+          "property": "property"
         }
       ]
     },
@@ -1223,7 +1223,7 @@
             "$ref": "s108",
             "$schema": "Programs.TypeScript.TSStringKeyword"
           },
-          "field": "params",
+          "property": "params",
           "index": 0
         }
       ]
@@ -1236,7 +1236,7 @@
             "$ref": "s109",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         }
       ]
     },
@@ -1251,14 +1251,14 @@
             "$ref": "s110",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "object"
+          "property": "object"
         },
         {
           "child": {
             "$ref": "s111",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "property"
+          "property": "property"
         }
       ]
     },
@@ -1283,14 +1283,14 @@
             "$ref": "s112",
             "$schema": "Programs.TypeScript.Identifier"
           },
-          "field": "key"
+          "property": "key"
         },
         {
           "child": {
             "$ref": "s113",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "value"
+          "property": "value"
         }
       ]
     },
@@ -1303,14 +1303,14 @@
             "$ref": "s114",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         },
         {
           "child": {
             "$ref": "s115",
             "$schema": "Programs.TypeScript.JSXAttribute"
           },
-          "field": "attributes",
+          "property": "attributes",
           "index": 0
         }
       ]
@@ -1382,14 +1382,14 @@
             "$ref": "s116",
             "$schema": "Programs.TypeScript.JSXIdentifier"
           },
-          "field": "name"
+          "property": "name"
         },
         {
           "child": {
             "$ref": "s117",
             "$schema": "Programs.TypeScript.Literal"
           },
-          "field": "value"
+          "property": "value"
         }
       ]
     },

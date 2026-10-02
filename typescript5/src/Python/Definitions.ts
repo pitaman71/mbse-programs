@@ -10,9 +10,9 @@
  * - 'parameter' (of a function or lambda), 'type parameter' and 'type alias';
  * - 'import': a name an import binds (`import a.b` binds `a`).
  *
- * There is one entity per name per scope: every node that binds the name is one of its `declarations`, in source order,
- * and the first is its `definition`. The first binding visited decides its kind: the module's names are visited first,
- * then each function's and class's, as Python's symbol tables are built.
+ * There is one entity per name per scope: every syntax node that binds the name is one of its `declarations`, in source
+ * order, and the first is its `definition`. The first binding visited decides its kind: the module's names are visited
+ * first, then each function's and class's, as Python's symbol tables are built.
  *
  * Scopes are those of Python's execution model (§4.2): 'module', 'class', 'function', 'lambda', 'comprehension' and
  * 'type parameters' (the annotation scope of a generic function, class or type alias). A name bound anywhere in a scope
@@ -26,7 +26,7 @@
  */
 
 import { Entity, Program, Scope } from "../Framework/Definitions.js";
-import { children, type Node, walk } from "../Framework/Syntax.js";
+import { children, type SyntaxNode, walk } from "../Framework/Syntax.js";
 import * as S from "./Syntax.js";
 
 type Handler = (self: Definer, node: any, scope: Scope) => void;
@@ -36,7 +36,7 @@ type Handler = (self: Definer, node: any, scope: Scope) => void;
 class Definer {
   static HANDLERS = new Map<Function, Handler>();
   readonly program: Program;
-  readonly bodies: [Node[], Scope][] = [];
+  readonly bodies: [SyntaxNode[], Scope][] = [];
 
   constructor(module: S.Module) {
     this.program = new Program(new Scope("module", null, null, module, "."));
@@ -61,7 +61,7 @@ class Definer {
   }
 
   /** Binds `identifier` in `scope`, `node` binding it. */
-  bind(scope: Scope, identifier: S.Identifier, node: Node, kind: string): Entity {
+  bind(scope: Scope, identifier: S.Identifier, node: SyntaxNode, kind: string): Entity {
     const entity = this.entity(scope, identifier.spelling as string, kind);
     entity.declarations.push(node);
     this.program.declares(node, entity);
@@ -71,14 +71,14 @@ class Definer {
   }
 
   /** An assignment target: names bind in `scope`, and other expressions are evaluated there. */
-  target(node: Node, scope: Scope): void {
+  target(node: SyntaxNode, scope: Scope): void {
     this.program.located(node, scope);
     if (node instanceof S.Name) {
       this.bind(scope, node.id as S.Identifier, node, "variable");
     } else if (node instanceof S.Tuple || node instanceof S.List) {
       for (const elt of node.elts) this.target(elt, scope);
     } else if (node instanceof S.Starred || node instanceof S.Parenthesized) {
-      this.target(node.value as Node, scope);
+      this.target(node.value as SyntaxNode, scope);
     } else {
       this.visit(node, scope);
     }
@@ -96,7 +96,7 @@ class Definer {
 
   // Visiting
 
-  visit(node: Node, scope: Scope): void {
+  visit(node: SyntaxNode, scope: Scope): void {
     this.program.located(node, scope);
     const method = Definer.HANDLERS.get(node.constructor);
     if (method !== undefined) {
@@ -106,11 +106,11 @@ class Definer {
     for (const [, , child] of children(node)) this.visit(child, scope);
   }
 
-  statements(statements: Node[], scope: Scope): void {
+  statements(statements: SyntaxNode[], scope: Scope): void {
     for (const statement of statements) this.visit(statement, scope);
   }
 
-  visitAll(nodes: (Node | null)[], scope: Scope): void {
+  visitAll(nodes: (SyntaxNode | null)[], scope: Scope): void {
     for (const node of nodes) if (node !== null) this.visit(node, scope);
   }
 
@@ -142,15 +142,15 @@ class Definer {
 }
 
 const loop: Handler = (self, node: S.For | S.AsyncFor, scope) => {
-  self.visit(node.iter as Node, scope);
-  self.target(node.target as Node, scope);
+  self.visit(node.iter as SyntaxNode, scope);
+  self.target(node.target as SyntaxNode, scope);
   self.statements(node.body, scope);
   self.statements(node.orelse, scope);
 };
 const withItems: Handler = (self, node: S.With | S.AsyncWith, scope) => {
   for (const item of node.items) {
     self.program.located(item, scope);
-    self.visit(item.context_expr as Node, scope);
+    self.visit(item.context_expr as SyntaxNode, scope);
     if (item.optional_vars !== null) self.target(item.optional_vars, scope);
   }
   self.statements(node.body, scope);
@@ -186,12 +186,12 @@ const comprehension: Handler = (self, node: S.ListComp | S.SetComp | S.Generator
   const inner = new Scope("comprehension", null, Definer.enclosing(scope), node);
   node.generators.forEach((generator, i) => {
     self.program.located(generator, inner);
-    self.visit(generator.iter as Node, i === 0 ? scope : inner); // the first iterable is evaluated outside
-    self.target(generator.target as Node, inner);
+    self.visit(generator.iter as SyntaxNode, i === 0 ? scope : inner); // the first iterable is evaluated outside
+    self.target(generator.target as SyntaxNode, inner);
     self.visitAll(generator.ifs, inner);
   });
   if (node instanceof S.DictComp) self.visitAll([node.key, node.value], inner);
-  else self.visit(node.elt as Node, inner);
+  else self.visit(node.elt as SyntaxNode, inner);
 };
 const capture: Handler = (self, node: S.MatchAs | S.MatchStar, scope) => {
   if (node instanceof S.MatchAs && node.pattern !== null) self.visit(node.pattern, scope);
@@ -200,20 +200,21 @@ const capture: Handler = (self, node: S.MatchAs | S.MatchStar, scope) => {
 
 Definer.HANDLERS = new Map<Function, Handler>([
   [S.Name, (self, node: S.Name, scope) => self.program.located(node.id, scope)],
-  [S.Attribute, (self, node: S.Attribute, scope) => self.visit(node.value as Node, scope)], // the name is not located
-  [S.Keyword, (self, node: S.Keyword, scope) => self.visit(node.value as Node, scope)],
+  // the name is not located
+  [S.Attribute, (self, node: S.Attribute, scope) => self.visit(node.value as SyntaxNode, scope)],
+  [S.Keyword, (self, node: S.Keyword, scope) => self.visit(node.value as SyntaxNode, scope)],
   [S.Assign, (self, node: S.Assign, scope) => {
-    self.visit(node.value as Node, scope);
+    self.visit(node.value as SyntaxNode, scope);
     for (const target of node.targets) self.target(target, scope);
   }],
   [S.AugAssign, (self, node: S.AugAssign, scope) => {
-    self.visit(node.value as Node, scope);
-    self.target(node.target as Node, scope);
+    self.visit(node.value as SyntaxNode, scope);
+    self.target(node.target as SyntaxNode, scope);
   }],
   [S.AnnAssign, (self, node: S.AnnAssign, scope) => {
-    self.visit(node.annotation as Node, scope);
+    self.visit(node.annotation as SyntaxNode, scope);
     if (node.value !== null) self.visit(node.value, scope);
-    self.target(node.target as Node, scope);
+    self.target(node.target as SyntaxNode, scope);
   }],
   [S.Delete, (self, node: S.Delete, scope) => {
     for (const target of node.targets) self.target(target, scope);
@@ -238,17 +239,17 @@ Definer.HANDLERS = new Map<Function, Handler>([
     const name = node.name as S.Name;
     self.program.located(name, scope);
     self.program.declares(name, self.bind(scope, name.id as S.Identifier, node, "type alias"));
-    self.visit(node.value as Node, self.typeParameters(node, scope));
+    self.visit(node.value as SyntaxNode, self.typeParameters(node, scope));
   }],
   [S.Lambda, (self, node: S.Lambda, scope) => {
     const inner = new Scope("lambda", null, Definer.enclosing(scope), node);
     self.arguments(node.args as S.Arguments, scope, scope, inner);
-    self.visit(node.body as Node, inner);
+    self.visit(node.body as SyntaxNode, inner);
   }],
   [S.ListComp, comprehension], [S.SetComp, comprehension], [S.GeneratorExp, comprehension],
   [S.DictComp, comprehension],
   [S.NamedExpr, (self, node: S.NamedExpr, scope) => {
-    self.visit(node.value as Node, scope);
+    self.visit(node.value as SyntaxNode, scope);
     let outer = scope;
     while (outer.kind === "comprehension") outer = outer.parent as Scope; // it binds in the scope around them
     const target = node.target as S.Name;
@@ -257,7 +258,7 @@ Definer.HANDLERS = new Map<Function, Handler>([
     self.bind(outer, target.id as S.Identifier, target, "variable");
   }],
   [S.MatchCase, (self, node: S.MatchCase, scope) => {
-    self.visit(node.pattern as Node, scope);
+    self.visit(node.pattern as SyntaxNode, scope);
     self.visitAll([node.guard], scope);
     self.statements(node.body, scope);
   }],
@@ -278,10 +279,11 @@ export function define(module: S.Module): Program {
   program.located(module, program.root);
   definer.bodies.push([module.body, program.root]);
   while (definer.bodies.length > 0) {
-    const [body, scope] = definer.bodies.shift() as [Node[], Scope];
+    const [body, scope] = definer.bodies.shift() as [SyntaxNode[], Scope];
     definer.statements(body, scope);
   }
-  const order = new Map<unknown, number>([...walk(module)].map((node, i) => [node, i])); // fields are in source order
+  // properties are in source order
+  const order = new Map<unknown, number>([...walk(module)].map((node, i) => [node, i]));
   for (const entity of program.entities()) {
     entity.declarations.sort((a, b) => (order.get(a) as number) - (order.get(b) as number));
     entity.definition = entity.declarations[0] ?? null;
@@ -291,7 +293,7 @@ export function define(module: S.Module): Program {
 
 /** The entities a `Name`, or an `Identifier` of the program, refers to, looked up from where it is. An attribute's name
  * depends on a value, and a keyword argument's on the function called, so they find nothing. */
-export function referents(program: Program, name: Node): Entity[] {
+export function referents(program: Program, name: SyntaxNode): Entity[] {
   const identifier = name instanceof S.Name ? name.id as S.Identifier : name as S.Identifier;
   const scope = program.scope_of(identifier);
   if (scope === null) return [];

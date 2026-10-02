@@ -7,12 +7,12 @@
  *     const text = TypeScript59.print(program);
  */
 
-import type { Node } from "../Framework/Syntax.js";
+import type { SyntaxNode } from "../Framework/Syntax.js";
 import type { Program } from "./Syntax.js";
 import { TypeScriptStandard } from "./_Standard.js";
 
 export const STANDARD = new TypeScriptStandard(5, 9);
 export const JSX = new TypeScriptStandard(5, 9, true);
 export const parse = (text: string): Program => STANDARD.parse(text);
-export const print = (node: Node): string => STANDARD.print(node);
-export const check = (node: Node): string[] => STANDARD.check(node);
+export const print = (node: SyntaxNode): string => STANDARD.print(node);
+export const check = (node: SyntaxNode): string[] => STANDARD.check(node);

@@ -7,7 +7,7 @@
  * assumes a valid tree: standards validate before they print.
  */
 
-import type { Node } from "../Framework/Syntax.js";
+import type { SyntaxNode } from "../Framework/Syntax.js";
 import * as S from "./Syntax.js";
 
 const INDENT = "    ";
@@ -51,12 +51,12 @@ function abstract(declarator: any): boolean {
 type StatementMethod = (self: Printer, node: any, depth: number, semicolon: boolean) => string;
 type TextMethod = (self: Printer, node: any, depth: number) => string;
 
-/** Prints any Ccpp node: a translation unit as a file, anything else as the text it stands for. */
+/** Prints any Ccpp syntax node: a translation unit as a file, anything else as the text it stands for. */
 export class Printer {
   static STATEMENTS = new Map<Function, StatementMethod>();
   static TEXTS = new Map<Function, TextMethod>();
 
-  print(node: Node): string {
+  print(node: SyntaxNode): string {
     if (node instanceof S.TranslationUnit) return this.lines(node.items, (i) => this.item(i, 0)).map((l) => l + "\n").join("");
     if (isAny(node, [S.Statement, S.Declaration, S.Directive, S.Comment])) return this.item(node, 0);
     return this.text(node, 0);
@@ -74,7 +74,7 @@ export class Printer {
     return indent(depth) + this.statement(node, depth);
   }
 
-  /** Each node rendered on its own lines, but for trailing comments, which end the line before them. */
+  /** Each syntax node rendered on its own lines, but for trailing comments, which end the line before them. */
   lines(nodes: readonly any[], render: (node: any) => string): string[] {
     const out: string[] = [];
     for (const node of nodes) {
@@ -191,11 +191,11 @@ export class Printer {
     return node.handlers.map((h) => ` catch (${this.text(h.parameter, depth)}) ${this.block((h.body as S.CompoundStatement).items, depth)}`).join("");
   }
 
-  prefix(attributes: readonly Node[], depth: number): string {
+  prefix(attributes: readonly SyntaxNode[], depth: number): string {
     return attributes.length > 0 ? this.attributes(attributes, depth) + " " : "";
   }
 
-  specifiers(specifiers: readonly Node[], depth: number): string {
+  specifiers(specifiers: readonly SyntaxNode[], depth: number): string {
     return specifiers.map((s) => this.text(s, depth)).join(" ");
   }
 
@@ -224,7 +224,7 @@ export class Printer {
     return this.expression(node, ASSIGNMENT, depth);
   }
 
-  contracts(contracts: readonly Node[], depth: number): string {
+  contracts(contracts: readonly SyntaxNode[], depth: number): string {
     return contracts.map((c) => " " + this.text(c, depth)).join("");
   }
 
@@ -247,19 +247,19 @@ export class Printer {
   }
 
   /** Arguments: expressions or types, separated by commas. */
-  list(nodes: readonly Node[], depth: number): string {
+  list(nodes: readonly SyntaxNode[], depth: number): string {
     return nodes.map((n) => (n instanceof S.TypeId ? this.text(n, depth) : this.expression(n, ASSIGNMENT, depth))).join(", ");
   }
 
   /** Template arguments, parenthesized where a `>` would end the list. */
-  templateArguments(nodes: readonly Node[], depth: number): string {
+  templateArguments(nodes: readonly SyntaxNode[], depth: number): string {
     return "<" + nodes.map((n) => {
       const text = n instanceof S.TypeId ? this.text(n, depth) : this.expression(n, CONDITIONAL, depth);
       return precedence(n) <= (BINARY[">"] as number) && text.includes(">") && !text.startsWith("(") ? `(${text})` : text;
     }).join(", ") + ">";
   }
 
-  /** The text of any node that is neither an item nor a statement: `item` and `statement` print those. */
+  /** The text of any syntax node that is neither an item nor a statement: `item` and `statement` print those. */
   text(node: any, depth: number): string {
     return (Printer.TEXTS.get(node.constructor) as TextMethod)(this, node, depth);
   }
@@ -297,7 +297,7 @@ export class Printer {
   }
 
   /** A class body: members one level in, access specifiers at the class's level. */
-  members(nodes: readonly Node[], depth: number): string {
+  members(nodes: readonly SyntaxNode[], depth: number): string {
     if (nodes.length === 0) return "{}";
     return "{\n" + this.lines(nodes, (i) => this.item(i, depth + 1)).join("\n") + "\n" + indent(depth) + "}";
   }
@@ -306,7 +306,7 @@ export class Printer {
     if (node.enumerators.length === 0) return "{}";
     let last = -1;
     node.enumerators.forEach((e, i) => { if (e instanceof S.Enumerator) last = i; });
-    const render = (e: Node) => {
+    const render = (e: SyntaxNode) => {
       const text = this.item(e, depth + 1, true);
       return last >= 0 && e === node.enumerators[last] && !node.trailing_comma ? text.slice(0, -1) : text;
     };
@@ -349,7 +349,7 @@ export class Printer {
       inside = inside && size ? inside + " " + size : inside + size;
       return inner + `[${inside}]` + this.attributesAfter(node.attributes, depth);
     }
-    let text = inner + "(" + node.parameters.map((p: Node) => this.text(p, depth)).join(", ") + ")";
+    let text = inner + "(" + node.parameters.map((p: SyntaxNode) => this.text(p, depth)).join(", ") + ")";
     text += node.qualifiers.map((q: S.CvQualifier) => " " + q.keyword).join("");
     if (node.ref_qualifier !== null) text += " " + node.ref_qualifier;
     if (node.exception !== null) text += " " + this.text(node.exception, depth);
@@ -360,11 +360,11 @@ export class Printer {
 
   // Attributes
 
-  attributes(nodes: readonly Node[], depth: number): string {
+  attributes(nodes: readonly SyntaxNode[], depth: number): string {
     return nodes.map((a) => this.text(a, depth)).join(" ");
   }
 
-  attributesAfter(nodes: readonly Node[], depth: number): string {
+  attributesAfter(nodes: readonly SyntaxNode[], depth: number): string {
     return nodes.map((a) => " " + this.text(a, depth)).join("");
   }
 }
@@ -514,7 +514,7 @@ const name: TextMethod = (self, node, depth) => {
   if (node instanceof S.TemplateId) {
     return (node.template_keyword ? "template " : "") + self.text(node.name, depth) + self.templateArguments(node.arguments, depth);
   }
-  return (node.global_scope ? "::" : "") + node.qualifiers.map((q: Node) => self.text(q, depth) + "::").join("")
+  return (node.global_scope ? "::" : "") + node.qualifiers.map((q: SyntaxNode) => self.text(q, depth) + "::").join("")
     + self.text(node.name, depth);
 };
 for (const k of [S.Identifier, S.OperatorName, S.ConversionName, S.LiteralOperatorName, S.DestructorName, S.TemplateId,
@@ -703,7 +703,7 @@ const templateParameter: TextMethod = (self, node, depth) => {
   if (node instanceof S.TypeParameter) {
     text = node.constraint !== null ? self.text(node.constraint, depth) : node.key ?? "typename";
   } else {
-    text = "template <" + node.parameters.map((p: Node) => self.text(p, depth)).join(", ") + ">";
+    text = "template <" + node.parameters.map((p: SyntaxNode) => self.text(p, depth)).join(", ") + ">";
     if (node.requires !== null) text += " requires " + self.constraint(node.requires, depth);
     text += " " + node.key;
   }
@@ -718,7 +718,7 @@ const exception: TextMethod = (self, node, depth) => {
   if (node instanceof S.NoexceptSpecifier) {
     return "noexcept" + (node.condition !== null ? `(${self.expression(node.condition, COMMA, depth)})` : "");
   }
-  return "throw(" + node.types.map((t: Node) => self.text(t, depth)).join(", ") + ")";
+  return "throw(" + node.types.map((t: SyntaxNode) => self.text(t, depth)).join(", ") + ")";
 };
 T.set(S.NoexceptSpecifier, exception);
 T.set(S.ThrowSpecifier, exception);
@@ -741,7 +741,7 @@ const attributeSpecifier: TextMethod = (self, node, depth) => {
     return node.pack ? operand.slice(0, -1) + "...)" : operand;
   }
   if (node instanceof S.GnuAttributeSpecifier) return node.keyword + "((" + node.attributes.map((a) => self.text(a, depth)).join(", ") + "))";
-  return "__declspec(" + node.attributes.map((a: Node) => self.text(a, depth)).join(" ") + ")";
+  return "__declspec(" + node.attributes.map((a: SyntaxNode) => self.text(a, depth)).join(" ") + ")";
 };
 for (const k of [S.StandardAttributeSpecifier, S.AlignasSpecifier, S.GnuAttributeSpecifier, S.DeclspecSpecifier]) T.set(k, attributeSpecifier);
 T.set(S.Attribute, (self, node: S.Attribute, depth) => (node.namespace !== null ? `${node.namespace}::` : "") + node.name

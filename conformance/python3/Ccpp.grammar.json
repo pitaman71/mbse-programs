@@ -7,11 +7,11 @@
  "categories": [
   {
    "name": "Name",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Expression",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Literal",
@@ -19,69 +19,69 @@
   },
   {
    "name": "Capture",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Requirement",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Designator",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Statement",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Declaration",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Specifier",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Declarator",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Parameter",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Initializer",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "ExceptionSpecification",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "ContractSpecifier",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "AttributeSpecifier",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "TemplateParameter",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Directive",
-   "base": "Node"
+   "base": "SyntaxNode"
   }
  ],
  "kinds": [
   {
    "kind": "Comment",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "block",
      "type": "bool",
@@ -101,11 +101,11 @@
   },
   {
    "kind": "TranslationUnit",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "items",
      "type": [
@@ -125,7 +125,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "spelling",
      "type": "str",
@@ -150,7 +150,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "operator",
      "type": "str",
@@ -212,7 +212,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "type",
      "type": [
@@ -231,7 +231,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "suffix",
      "type": "str",
@@ -247,7 +247,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "type",
      "type": [
@@ -268,7 +268,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "template_keyword",
      "type": "bool",
@@ -303,7 +303,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "global_scope",
      "type": "bool",
@@ -337,7 +337,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "spelling",
      "type": "str",
@@ -351,7 +351,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "spelling",
      "type": "str",
@@ -380,7 +380,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "prefix",
      "type": "str",
@@ -420,7 +420,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "prefix",
      "type": "str",
@@ -447,7 +447,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "prefix",
      "type": "str",
@@ -479,7 +479,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "literal",
      "type": [
@@ -505,7 +505,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "parts",
      "type": [
@@ -528,7 +528,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "value",
      "type": "bool",
@@ -545,7 +545,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "ThisExpression",
@@ -555,7 +555,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "ParenthesizedExpression",
@@ -563,7 +563,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -580,7 +580,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -610,7 +610,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "captures",
      "type": [
@@ -664,7 +664,7 @@
   },
   {
    "kind": "LambdaDeclarator",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 2011
    },
@@ -681,7 +681,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "parameters",
      "type": [
@@ -748,7 +748,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "mode",
      "type": "str",
@@ -768,7 +768,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "by_reference",
      "type": "bool",
@@ -803,7 +803,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "copy",
      "type": "bool",
@@ -825,7 +825,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "by_reference",
      "type": "bool",
@@ -863,7 +863,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "left",
      "type": [
@@ -929,7 +929,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "parameters",
      "type": [
@@ -956,7 +956,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -975,7 +975,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -994,7 +994,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -1026,7 +1026,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "constraint",
      "type": [
@@ -1045,7 +1045,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "pack",
      "type": [
@@ -1072,7 +1072,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1093,7 +1093,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "template_keyword",
      "type": "bool",
@@ -1124,7 +1124,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "object",
      "type": [
@@ -1149,7 +1149,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "function",
      "type": [
@@ -1177,7 +1177,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "type",
      "type": [
@@ -1203,7 +1203,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "object",
      "type": [
@@ -1242,7 +1242,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1270,7 +1270,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operator",
      "type": "str",
@@ -1308,7 +1308,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1326,7 +1326,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operator",
      "type": "str",
@@ -1360,7 +1360,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1377,7 +1377,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1397,7 +1397,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "pack",
      "type": [
@@ -1427,7 +1427,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -1459,7 +1459,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1478,7 +1478,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "global_scope",
      "type": "bool",
@@ -1524,7 +1524,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "global_scope",
      "type": "bool",
@@ -1551,7 +1551,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "type",
      "type": [
@@ -1588,7 +1588,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "left",
      "type": [
@@ -1642,7 +1642,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "condition",
      "type": [
@@ -1675,7 +1675,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "left",
      "type": [
@@ -1720,7 +1720,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1739,7 +1739,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1758,7 +1758,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "pattern",
      "type": [
@@ -1776,7 +1776,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "items",
      "type": [
@@ -1795,14 +1795,14 @@
   },
   {
    "kind": "DesignatedInitializer",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 2020,
     "C": 1999
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "designators",
      "type": [
@@ -1828,7 +1828,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -1847,7 +1847,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "index",
      "type": [
@@ -1874,7 +1874,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "type",
      "type": [
@@ -1901,7 +1901,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "controlling",
      "type": [
@@ -1923,13 +1923,13 @@
   },
   {
    "kind": "GenericAssociation",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C": 2011
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "type",
      "type": [
@@ -1954,7 +1954,7 @@
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -1971,7 +1971,7 @@
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operand",
      "type": [
@@ -1988,7 +1988,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -2005,7 +2005,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "label",
      "type": [
@@ -2031,7 +2031,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "value",
      "type": [
@@ -2065,7 +2065,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "statement",
      "type": [
@@ -2083,7 +2083,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -2100,7 +2100,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "items",
      "type": [
@@ -2136,7 +2136,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "constexpr",
      "type": "bool",
@@ -2202,7 +2202,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "initializer",
      "type": [
@@ -2238,7 +2238,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "condition",
      "type": [
@@ -2265,7 +2265,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -2291,7 +2291,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "initializer",
      "type": [
@@ -2348,7 +2348,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "template_keyword",
      "type": "bool",
@@ -2396,7 +2396,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "ContinueStatement",
@@ -2404,7 +2404,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "ReturnStatement",
@@ -2412,7 +2412,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "value",
      "type": [
@@ -2431,7 +2431,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "value",
      "type": [
@@ -2448,7 +2448,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "label",
      "type": [
@@ -2467,7 +2467,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -2488,13 +2488,13 @@
   },
   {
    "kind": "Handler",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 1998
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "parameter",
      "type": [
@@ -2519,7 +2519,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -2546,7 +2546,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -2571,7 +2571,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -2601,7 +2601,7 @@
   },
   {
    "kind": "InitDeclarator",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {
@@ -2626,7 +2626,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "declarator",
      "type": [
@@ -2710,7 +2710,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -2783,17 +2783,17 @@
   },
   {
    "kind": "DefaultedBody",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 2011
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "DeletedBody",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 2011
    },
@@ -2805,7 +2805,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "reason",
      "type": [
@@ -2818,13 +2818,13 @@
   },
   {
    "kind": "MemberInitializer",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 1998
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "member",
      "type": [
@@ -2851,13 +2851,13 @@
   },
   {
    "kind": "VirtSpecifier",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 2011
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -2918,7 +2918,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -2962,7 +2962,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "condition",
      "type": [
@@ -2988,7 +2988,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -3048,7 +3048,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -3093,7 +3093,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -3112,7 +3112,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -3140,7 +3140,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "key",
      "type": "str",
@@ -3192,11 +3192,11 @@
   },
   {
    "kind": "MemberList",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "items",
      "type": [
@@ -3230,7 +3230,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "key",
      "type": "str",
@@ -3277,11 +3277,11 @@
   },
   {
    "kind": "EnumeratorList",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "enumerators",
      "type": [
@@ -3301,11 +3301,11 @@
   },
   {
    "kind": "Enumerator",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -3340,7 +3340,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -3371,7 +3371,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "constraint",
      "type": [
@@ -3395,7 +3395,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -3426,7 +3426,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "type",
      "type": [
@@ -3445,7 +3445,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "width",
      "type": [
@@ -3464,7 +3464,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "pack",
      "type": [
@@ -3491,7 +3491,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typename_keyword",
      "type": "bool",
@@ -3527,7 +3527,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -3554,7 +3554,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "declarator",
      "type": [
@@ -3577,7 +3577,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "scope",
      "type": [
@@ -3626,7 +3626,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "rvalue",
      "type": "bool",
@@ -3672,7 +3672,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "declarator",
      "type": [
@@ -3739,7 +3739,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "declarator",
      "type": [
@@ -3805,7 +3805,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "declarator",
      "type": [
@@ -3824,7 +3824,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "bindings",
      "type": [
@@ -3838,11 +3838,11 @@
   },
   {
    "kind": "TypeId",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "specifiers",
      "type": [
@@ -3874,7 +3874,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -3921,7 +3921,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "EqualInitializer",
@@ -3929,7 +3929,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "value",
      "type": [
@@ -3948,7 +3948,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "arguments",
      "type": [
@@ -3967,7 +3967,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "condition",
      "type": [
@@ -3986,7 +3986,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "types",
      "type": [
@@ -4006,7 +4006,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -4033,7 +4033,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -4079,7 +4079,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "inline",
      "type": "bool",
@@ -4115,13 +4115,13 @@
   },
   {
    "kind": "NamespaceName",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 1998
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "inline",
      "type": "bool",
@@ -4145,7 +4145,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -4172,7 +4172,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -4199,7 +4199,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "declarators",
      "type": [
@@ -4212,7 +4212,7 @@
   },
   {
    "kind": "UsingDeclarator",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 1998
    },
@@ -4224,7 +4224,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "typename_keyword",
      "type": "bool",
@@ -4253,7 +4253,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "type",
      "type": [
@@ -4272,7 +4272,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -4318,7 +4318,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -4355,7 +4355,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -4372,7 +4372,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "LinkageSpecification",
@@ -4382,7 +4382,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "language",
      "type": "str",
@@ -4411,7 +4411,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -4489,11 +4489,11 @@
   },
   {
    "kind": "AsmOperand",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -4535,7 +4535,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "using_namespace",
      "type": "str",
@@ -4554,11 +4554,11 @@
   },
   {
    "kind": "Attribute",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "namespace",
      "type": "str",
@@ -4587,13 +4587,13 @@
   },
   {
    "kind": "Annotation",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 2026
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "value",
      "type": [
@@ -4628,7 +4628,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -4660,7 +4660,7 @@
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "keyword",
      "type": "str",
@@ -4686,7 +4686,7 @@
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -4705,7 +4705,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "export",
      "type": "bool",
@@ -4739,7 +4739,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "PrivateModuleFragment",
@@ -4749,7 +4749,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "ImportDeclaration",
@@ -4759,7 +4759,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "export",
      "type": "bool",
@@ -4803,7 +4803,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "braced",
      "type": "bool",
@@ -4829,7 +4829,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "access",
      "type": "str",
@@ -4844,7 +4844,7 @@
   },
   {
    "kind": "BaseSpecifier",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "C++": 1998
    },
@@ -4861,7 +4861,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "attributes",
      "type": [
@@ -4911,7 +4911,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "types",
      "type": [
@@ -4937,7 +4937,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "parameters",
      "type": [
@@ -4984,7 +4984,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "key",
      "type": "str",
@@ -5055,7 +5055,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "parameters",
      "type": [
@@ -5115,7 +5115,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -5156,7 +5156,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "extern",
      "type": "bool",
@@ -5178,7 +5178,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "directive",
      "type": "str",
@@ -5215,7 +5215,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -5255,7 +5255,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "condition",
      "type": [
@@ -5267,7 +5267,7 @@
     {
      "name": "items",
      "type": [
-      "Node"
+      "SyntaxNode"
      ],
      "optional": true,
      "many": true
@@ -5290,7 +5290,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "negated",
      "type": "bool",
@@ -5307,7 +5307,7 @@
     {
      "name": "items",
      "type": [
-      "Node"
+      "SyntaxNode"
      ],
      "optional": true,
      "many": true
@@ -5330,7 +5330,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "condition",
      "type": [
@@ -5342,7 +5342,7 @@
     {
      "name": "items",
      "type": [
-      "Node"
+      "SyntaxNode"
      ],
      "optional": true,
      "many": true
@@ -5368,7 +5368,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "negated",
      "type": "bool",
@@ -5385,7 +5385,7 @@
     {
      "name": "items",
      "type": [
-      "Node"
+      "SyntaxNode"
      ],
      "optional": true,
      "many": true
@@ -5408,11 +5408,11 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "items",
      "type": [
-      "Node"
+      "SyntaxNode"
      ],
      "optional": true,
      "many": true
@@ -5425,7 +5425,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "directive",
      "type": "str",

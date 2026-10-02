@@ -34,8 +34,8 @@ _PRINTER = Printer()
 
 
 def name_of(name: Any) -> str:
-    """The name a `Name` node declares or refers to, as text: an identifier's spelling, a template's name without its
-    arguments, `operator+`, `operator int*`, `~Point`, or a qualified name's last part."""
+    """The name a `Name` syntax node declares or refers to, as text: an identifier's spelling, a template's name without
+    its arguments, `operator+`, `operator int*`, `~Point`, or a qualified name's last part."""
     if isinstance(name, S.QualifiedName):
         return name_of(name.name)
     if isinstance(name, S.TemplateId):
@@ -49,7 +49,7 @@ def _unnamed(declarator: Any) -> Any:
     """A copy of a declarator without its name, for printing the type it declares."""
     if declarator is None or isinstance(declarator, S.IdDeclarator):
         return None
-    made = type(declarator)(**{f.name: getattr(declarator, f.name) for f in declarator.FIELDS})
+    made = type(declarator)(**{f.name: getattr(declarator, f.name) for f in declarator.PROPERTIES})
     made.declarator = _unnamed(declarator.declarator)
     return made
 
@@ -74,7 +74,7 @@ def _qualifiers(name: S.QualifiedName) -> list[str] | None:
 
 
 def _resolve(name: Any, scope: Scope) -> list[Entity]:
-    """The entities a `Name` node names, looked up from `scope`. Anything else, such as a decltype, names nothing
+    """The entities a `Name` syntax node names, looked up from `scope`. Anything else, such as a decltype, names nothing
     found by name."""
     if isinstance(name, S.QualifiedName):
         names = _qualifiers(name)
@@ -87,7 +87,7 @@ def _keywords(specifiers: list[Any]) -> set[str]:
 
 
 class _Definer:
-    """Walks a tree, declaring entities into scopes and recording where every node is."""
+    """Walks a tree, declaring entities into scopes and recording where every syntax node is."""
 
     def __init__(self, unit: S.TranslationUnit):
         self.program = Program(Scope("namespace", None, None, unit))
@@ -97,7 +97,7 @@ class _Definer:
     def entity(self, kind: str, name: str | None, scope: Scope, node: Any, *, definition: bool = False,
                signature: str | None = None) -> Entity:
         """The entity of this kind, name and signature in `scope`, declared there if it is new, with `node` among its
-        declarations (and as its definition with `definition`, unless an earlier node defines it)."""
+        declarations (and as its definition with `definition`, unless an earlier syntax node defines it)."""
         found = None
         if name is not None and kind not in ("parameter", "template parameter", "label"):
             found = next((e for e in scope.names.get(name, []) if e.kind == kind and e.parent is scope
@@ -461,7 +461,7 @@ def define(unit: S.TranslationUnit) -> Program:
 
 
 def referents(program: Program, name: Any) -> list[Entity]:
-    """The entities a `Name` node of the program refers to, looked up from where it is. A member's name after `.`
+    """The entities a `Name` syntax node of the program refers to, looked up from where it is. A member's name after `.`
     or `->` depends on types, so it finds nothing."""
     scope = program.scope_of(name)
     return [] if scope is None else _resolve(name, scope)

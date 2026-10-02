@@ -21,16 +21,16 @@
  */
 
 import { Entity, Program, Scope } from "../Framework/Definitions.js";
-import { children, type Node } from "../Framework/Syntax.js";
+import { children, type SyntaxNode } from "../Framework/Syntax.js";
 import * as S from "./Syntax.js";
 import { Printer } from "./_Printer.js";
 
 const PRINTER = new Printer();
 
-/** The name a `Name` node declares or refers to, as text: an identifier's spelling, a template's name without its
- * arguments, `operator+`, `operator int*`, `~Point`, or a qualified name's last part. */
-export function name_of(name: Node): string {
-  if (name instanceof S.QualifiedName || name instanceof S.TemplateId) return name_of(name.name as Node);
+/** The name a `Name` syntax node declares or refers to, as text: an identifier's spelling, a template's name without
+ * its arguments, `operator+`, `operator int*`, `~Point`, or a qualified name's last part. */
+export function name_of(name: SyntaxNode): string {
+  if (name instanceof S.QualifiedName || name instanceof S.TemplateId) return name_of(name.name as SyntaxNode);
   if (name instanceof S.DestructorName) {
     return "~" + (name.type instanceof S.Name ? name_of(name.type) : PRINTER.text(name.type, 0));
   }
@@ -41,7 +41,8 @@ export function name_of(name: Node): string {
 function unnamed(declarator: any): any {
   if (declarator === null || declarator instanceof S.IdDeclarator) return null;
   const kind = declarator.kind();
-  const made = new kind(Object.fromEntries(kind.FIELDS.map((f: { name: string }) => [f.name, declarator.field(f.name)])));
+  const made = new kind(Object.fromEntries(kind.PROPERTIES.map((f: { name: string }) =>
+    [f.name, declarator.get(f.name)])));
   made.declarator = unnamed(declarator.declarator);
   return made;
 }
@@ -61,23 +62,23 @@ function qualifiers(name: S.QualifiedName): string[] | null {
   return names.length === name.qualifiers.length ? names : null;
 }
 
-/** The entities a `Name` node names, looked up from `scope`. Anything else, such as a decltype, names nothing found
- * by name. */
-function resolve(name: Node, scope: Scope): Entity[] {
+/** The entities a `Name` syntax node names, looked up from `scope`. Anything else, such as a decltype, names nothing
+ * found by name. */
+function resolve(name: SyntaxNode, scope: Scope): Entity[] {
   if (name instanceof S.QualifiedName) {
     const names = qualifiers(name);
-    return names === null ? [] : scope.qualified([...names, name_of(name.name as Node)], name.global_scope);
+    return names === null ? [] : scope.qualified([...names, name_of(name.name as SyntaxNode)], name.global_scope);
   }
   return scope.resolve(name_of(name));
 }
 
-function keywords(specifiers: readonly Node[]): Set<string> {
+function keywords(specifiers: readonly SyntaxNode[]): Set<string> {
   return new Set(specifiers.filter((s): s is S.DeclSpecifier => s instanceof S.DeclSpecifier).map((s) => s.keyword as string));
 }
 
 type Handler = (self: Definer, node: any, scope: Scope, lexical: Scope) => void;
 
-/** Walks a tree, declaring entities into scopes and recording where every node is. */
+/** Walks a tree, declaring entities into scopes and recording where every syntax node is. */
 class Definer {
   static HANDLERS = new Map<Function, Handler>();
   readonly program: Program;
@@ -89,7 +90,7 @@ class Definer {
   // Entities
 
   /** The entity of this kind, name and signature in `scope`, declared there if it is new, with `node` among its
-   * declarations (and as its definition with `definition`, unless an earlier node defines it). */
+   * declarations (and as its definition with `definition`, unless an earlier syntax node defines it). */
   entity(kind: string, name: string | null, scope: Scope, node: unknown, definition = false,
     sig: string | null = null): Entity {
     let found: Entity | undefined;
@@ -114,7 +115,7 @@ class Definer {
   }
 
   /** Where a declarator's name is declared: `scope`, or for a qualified name the scope its qualifiers name. */
-  target(name: Node | null, scope: Scope): Scope {
+  target(name: SyntaxNode | null, scope: Scope): Scope {
     const names = name instanceof S.QualifiedName ? qualifiers(name) : null;
     if (names !== null && names.length > 0) {
       const found = scope.qualified(names, (name as S.QualifiedName).global_scope);
@@ -128,26 +129,26 @@ class Definer {
 
   /** Records that `node` is in `scope`, then declares what it declares. `lexical` is where the scopes it opens are
    * nested, when that is not `scope`: a template's parameters enclose what the template declares. */
-  visit(node: Node, scope: Scope, lexical: Scope | null = null): void {
+  visit(node: SyntaxNode, scope: Scope, lexical: Scope | null = null): void {
     this.program.located(node, scope);
     const handler = Definer.HANDLERS.get(node.constructor);
     if (handler !== undefined) handler(this, node, scope, lexical ?? scope);
     else this.visitChildren(node, scope);
   }
 
-  visitChildren(node: Node, scope: Scope): void {
+  visitChildren(node: SyntaxNode, scope: Scope): void {
     for (const [, , child] of children(node)) this.visit(child, scope);
   }
 
-  visitAll(nodes: readonly (Node | null)[], scope: Scope): void {
+  visitAll(nodes: readonly (SyntaxNode | null)[], scope: Scope): void {
     for (const node of nodes) if (node !== null) this.visit(node, scope);
   }
 
   /** Declares a parameter that names itself, in `scope`. */
-  parameter(node: Node, scope: Scope, kind: string): void {
-    const [named] = S.binding((node.field("declarator") ?? null) as S.Declarator | null);
+  parameter(node: SyntaxNode, scope: Scope, kind: string): void {
+    const [named] = S.binding((node.get("declarator") ?? null) as S.Declarator | null);
     if (named instanceof S.IdDeclarator) {
-      const entity = this.entity(kind, name_of(named.name as Node), scope, node, true);
+      const entity = this.entity(kind, name_of(named.name as SyntaxNode), scope, node, true);
       this.program.declares(named, entity);
     }
   }
@@ -163,14 +164,14 @@ class Definer {
     if (named instanceof S.StructuredBindingDeclarator) {
       for (const binding of named.bindings) {
         const [inner] = S.binding(binding);
-        this.program.declares(binding, this.entity("variable", name_of((inner as S.IdDeclarator).name as Node), scope,
-          binding, true));
+        const declared = name_of((inner as S.IdDeclarator).name as SyntaxNode);
+        this.program.declares(binding, this.entity("variable", declared, scope, binding, true));
       }
       return;
     }
     if (named === null) return;
     const target = this.target(named.name, scope);
-    const name = name_of(named.name as Node);
+    const name = name_of(named.name as SyntaxNode);
     let entity: Entity;
     if (words.has("typedef")) {
       entity = this.entity("type alias", name, target, node, true);
@@ -227,11 +228,11 @@ H.set(S.NamespaceDefinition, (self, node: S.NamespaceDefinition, scope) => {
 });
 H.set(S.NamespaceAliasDefinition, (self, node: S.NamespaceAliasDefinition, scope) => {
   const entity = self.entity("namespace alias", (node.name as S.Identifier).spelling, scope, node, true);
-  entity.target = resolve(node.target as Node, scope).find((e) => e.resolved().kind === "namespace") ?? null;
+  entity.target = resolve(node.target as SyntaxNode, scope).find((e) => e.resolved().kind === "namespace") ?? null;
   self.visitChildren(node, scope);
 });
 H.set(S.UsingDirective, (self, node: S.UsingDirective, scope) => {
-  for (const entity of resolve(node.name as Node, scope)) {
+  for (const entity of resolve(node.name as SyntaxNode, scope)) {
     const target = entity.resolved().scope;
     if (target !== null && !scope.using.includes(target)) scope.using.push(target);
   }
@@ -239,18 +240,18 @@ H.set(S.UsingDirective, (self, node: S.UsingDirective, scope) => {
 });
 H.set(S.UsingDeclaration, (self, node: S.UsingDeclaration, scope) => {
   for (const declarator of node.declarators) {
-    const found = resolve(declarator.name as Node, scope);
+    const found = resolve(declarator.name as SyntaxNode, scope);
     if (found.length > 0) {
       for (const entity of found) scope.declare(entity);
       self.program.declares(declarator, found[0] as Entity);
     } else {
-      self.entity("using declaration", name_of(declarator.name as Node), scope, declarator);
+      self.entity("using declaration", name_of(declarator.name as SyntaxNode), scope, declarator);
     }
   }
   self.visitChildren(node, scope);
 });
 H.set(S.UsingEnumDeclaration, (self, node: S.UsingEnumDeclaration, scope) => {
-  for (const entity of resolve(node.type as Node, scope)) {
+  for (const entity of resolve(node.type as SyntaxNode, scope)) {
     if (entity.kind === "enumeration" && entity.scope !== null && !scope.transparent.includes(entity.scope)) {
       scope.transparent.push(entity.scope);
     }
@@ -266,7 +267,7 @@ H.set(S.ClassSpecifier, (self, node: S.ClassSpecifier, scope, lexical) => {
   const members = self.scopeFor(entity, "class", target === scope ? lexical : target, node);
   for (const base of node.bases) {
     self.visit(base, scope);
-    for (const found of resolve(base.type as Node, scope)) { // a decltype or a splice finds nothing
+    for (const found of resolve(base.type as SyntaxNode, scope)) { // a decltype or a splice finds nothing
       const resolved = found.resolved();
       if (resolved.kind === "class" && resolved.scope !== null && !members.bases.includes(resolved.scope)) {
         members.bases.push(resolved.scope);
@@ -313,17 +314,17 @@ H.set(S.FunctionDefinition, (self, node: S.FunctionDefinition, scope, lexical) =
   const target = self.target(named.name, scope);
   let entity: Entity | null = null;
   if (!keywords(node.specifiers).has("friend")) {
-    entity = self.entity("function", name_of(named.name as Node), target, node, true,
+    entity = self.entity("function", name_of(named.name as SyntaxNode), target, node, true,
       binder instanceof S.FunctionDeclarator ? signature(binder) : null);
     self.program.declares(named, entity);
   }
   const inner = new Scope("function", entity, target === scope ? lexical : target, node);
-  self.visit(node.declarator as Node, scope);
+  self.visit(node.declarator as SyntaxNode, scope);
   if (binder instanceof S.FunctionDeclarator) for (const p of binder.parameters) self.parameter(p, inner, "parameter");
   self.visitAll([...node.virt_specifiers, node.requires, ...node.contracts, ...node.initializers], inner);
   self.program.located(node.body, inner);
   if (node.body instanceof S.CompoundStatement) self.block(node.body, inner);
-  else self.visitChildren(node.body as Node, inner);
+  else self.visitChildren(node.body as SyntaxNode, inner);
 });
 H.set(S.TemplateDeclaration, (self, node: S.TemplateDeclaration, scope, lexical) => {
   const parameters = new Scope("template", null, lexical, node);
@@ -342,7 +343,7 @@ H.set(S.TemplateDeclaration, (self, node: S.TemplateDeclaration, scope, lexical)
     }
   }
   self.visitAll([node.requires], parameters);
-  self.visit(node.declaration as Node, scope, parameters);
+  self.visit(node.declaration as SyntaxNode, scope, parameters);
   const inner = node.declaration;
   const candidates = inner instanceof S.SimpleDeclaration ? [...inner.declarators, ...inner.specifiers] : [inner];
   const declared = candidates.map((c) => self.program.entity_of(c)).find((e) => e !== null);
@@ -367,7 +368,7 @@ for (const kind of [S.IfStatement, S.SwitchStatement, S.WhileStatement, S.ForSta
 }
 H.set(S.Handler, (self, node: S.Handler, scope) => {
   const inner = new Scope("block", null, scope, node);
-  self.parameter(node.parameter as Node, inner, "variable");
+  self.parameter(node.parameter as SyntaxNode, inner, "variable");
   self.visitChildren(node, inner);
 });
 H.set(S.LabeledStatement, (self, node: S.LabeledStatement, scope) => {
@@ -396,10 +397,10 @@ H.set(S.LambdaExpression, (self, node: S.LambdaExpression, scope) => {
 H.set(S.MemberExpression, (self, node: S.MemberExpression, scope) => {
   // the member is found in the object's class, which only types tell, so its name has no scope; what it holds that is
   // found where the expression is (template arguments, qualifiers, the types of destructor and conversion names) is
-  self.visit(node.object as Node, scope);
+  self.visit(node.object as SyntaxNode, scope);
   const name = node.member;
   if (name instanceof S.TemplateId) self.visitAll(name.arguments, scope);
-  else if (!(name instanceof S.Identifier)) self.visitChildren(name as Node, scope);
+  else if (!(name instanceof S.Identifier)) self.visitChildren(name as SyntaxNode, scope);
 });
 H.set(S.RequiresExpression, (self, node: S.RequiresExpression, scope) => {
   const inner = new Scope("requires", null, scope, node);
@@ -415,9 +416,9 @@ export function define(unit: S.TranslationUnit): Program {
   return definer.program;
 }
 
-/** The entities a `Name` node of the program refers to, looked up from where it is. A member's name after `.` or `->`
- * depends on types, so it finds nothing. */
-export function referents(program: Program, name: Node): Entity[] {
+/** The entities a `Name` syntax node of the program refers to, looked up from where it is. A member's name after `.` or
+ * `->` depends on types, so it finds nothing. */
+export function referents(program: Program, name: SyntaxNode): Entity[] {
   const scope = program.scope_of(name);
   return scope === null ? [] : resolve(name, scope);
 }

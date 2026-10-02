@@ -56,7 +56,7 @@ MEANINGS: dict[str, frozenset[str]] = {
 _NAMES = (S.Identifier, S.PrivateIdentifier, S.JSXIdentifier)
 # Scopes where `var` binds.
 _VAR_SCOPES = {"module", "function", "static block", "namespace"}
-# Kinds whose nodes open a scope of types.
+# Kinds whose syntax nodes open a scope of types.
 _TYPES = (S.TypeNode, S.TSTypeAnnotation, S.TSTypeParameterInstantiation, S.TSInterfaceHeritage,
           S.TSClassImplements)
 
@@ -79,7 +79,7 @@ class TypeScriptProgram(Program):
 
 
 class _Definer:
-    """Declares what a program binds, visiting each node with its scope and the meaning a name has there."""
+    """Declares what a program binds, visiting each syntax node with its scope and the meaning a name has there."""
 
     def __init__(self, program: S.Program):
         self.program = TypeScriptProgram(Scope("module", None, None, program, separator="."))
@@ -241,7 +241,8 @@ class _Definer:
         self.visit_all([node.typeAnnotation], scope, "type")
 
     def unnamed(self, node: Any, scope: Scope, space: str) -> None:
-        """A node whose names name no entity of the program: a label, a meta-property, an export's exported name."""
+        """A syntax node whose names name no entity of the program: a label, a meta-property, an export's exported
+        name."""
 
     def export_specifier(self, node: S.ExportSpecifier, scope: Scope, space: str) -> None:
         self.program.located(node.local, scope)  # it exports whatever the name means
@@ -560,13 +561,13 @@ def define(program: S.Program) -> TypeScriptProgram:
             found = scopes[0].lookup(name) if scopes else []
         entity.target = found[0] if found else None
     stack: list[tuple[Any, Scope]] = [(program, out.root)]
-    while stack:  # every other node is in its parent's scope, but for the names of properties and members
+    while stack:  # every other syntax node is in its parent's scope, but for the names of properties and members
         node, scope = stack.pop()
         found = out.scope_of(node)
         if found is None and not isinstance(node, _NAMES):
             out.located(node, scope)
         stack.extend((child, found or scope) for _, _, child in children(node))
-    order = {id(node): i for i, node in enumerate(walk(program))}  # fields are in source order
+    order = {id(node): i for i, node in enumerate(walk(program))}  # properties are in source order
     for entity in out.entities():
         entity.declarations.sort(key=lambda node: order[id(node)])
         entity.definition = next((d for d in entity.declarations if not _signature(d)), None)

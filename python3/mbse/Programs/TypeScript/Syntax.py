@@ -1,13 +1,13 @@
 """Syntax: the abstract syntax of TypeScript and JavaScript, as one tree language.
 
-The kinds follow typescript-estree (TSESTree), the ESTree of TypeScript that ESLint and its tools read: the same
-kinds with the same names and fields, in source order, but for fields whose names are keywords of Python or clash
-with the framework's tag `kind`: `kind` is `declarationKind`, `methodKind`, `propertyKind` or `moduleKind`, and
-`async`, `await`, `in` and `out` are `isAsync`, `isAwait`, `isIn` and `isOut`. Each kind and feature records where
-it exists in two families (`SINCE`, `FEATURES`): ECMAScript, by edition year (ES2015 is 2015), and TypeScript, by
-version (`100 * major + minor`: 5.9 is 509). Type syntax is TypeScript's alone; proposals that TypeScript implements
-before an ECMAScript edition has them (decorators, `accessor`, `using`, `import defer`) are TypeScript's too. JSX is
-an extension, outside every edition and version, which the standards made with `jsx` accept.
+The kinds follow typescript-estree (TSESTree), the ESTree of TypeScript that ESLint and its tools read: the same kinds
+with the same names and properties, in source order, but for properties whose names are keywords of Python or clash with
+the framework's tag `kind`: `kind` is `declarationKind`, `methodKind`, `propertyKind` or `moduleKind`, and `async`,
+`await`, `in` and `out` are `isAsync`, `isAwait`, `isIn` and `isOut`. Each kind and feature records where it exists in
+two families (`SINCE`, `FEATURES`): ECMAScript, by edition year (ES2015 is 2015), and TypeScript, by version (`100 *
+major + minor`: 5.9 is 509). Type syntax is TypeScript's alone; proposals that TypeScript implements before an
+ECMAScript edition has them (decorators, `accessor`, `using`, `import defer`) are TypeScript's too. JSX is an extension,
+outside every edition and version, which the standards made with `jsx` accept.
 
 Where TSESTree drops what a transpiler needs to see or a printer needs to write it back, the tree is concrete:
 
@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from typing import Literal as Choice
 
-from ..Framework.Syntax import Availability, Language, Node
+from ..Framework.Syntax import Availability, Language, SyntaxNode
 
 __all__ = ["LANGUAGE", "KINDS"]
 
@@ -71,35 +71,35 @@ def _a(noun: str) -> str:
     return f"{'an' if noun[0].lower() in 'aeiou' else 'a'} {noun}"
 
 
-def _needs(node: Node, field: str, what: str) -> list[str]:
-    """A problem if the list `field` of `node` is empty."""
-    return [] if getattr(node, field) else [f"{_a(node.KIND)} needs {what}"]
+def _needs(node: SyntaxNode, prop: str, what: str) -> list[str]:
+    """A problem if the list `prop` of `node` is empty."""
+    return [] if getattr(node, prop) else [f"{_a(node.KIND)} needs {what}"]
 
 
 # --- Categories ---
 
 
-class Statement(Node):
+class Statement(SyntaxNode):
     """A statement or a declaration, where statements are listed; also a comment there."""
 
 
-class Expression(Node):
+class Expression(SyntaxNode):
     """An expression."""
 
 
-class Pattern(Node):
+class Pattern(SyntaxNode):
     """A destructuring pattern: what an assignment, a declaration or a parameter binds."""
 
 
-class TypeNode(Node):
+class TypeNode(SyntaxNode):
     """A type."""
 
 
-class ClassElement(Node):
+class ClassElement(SyntaxNode):
     """A member of a class body."""
 
 
-class TypeElement(Node):
+class TypeElement(SyntaxNode):
     """A member of an interface or an object type."""
 
 
@@ -115,7 +115,7 @@ class Comment(Statement):
     trailing: bool
 
 
-class Program(Node):
+class Program(SyntaxNode):
     """A source file: `hashbang`, the text of a first line `#!...` without the `#!`, then its statements."""
 
     hashbang: str | None
@@ -174,7 +174,7 @@ class Literal(Expression):
         return []
 
 
-class TemplateElement(Node):
+class TemplateElement(SyntaxNode):
     """Text of a template literal between its substitutions, as written; `tail` for the last."""
 
     raw: str
@@ -215,11 +215,11 @@ class ParenthesizedExpression(Expression):
     expression: Expression | Pattern
 
 
-class Elision(Node):
+class Elision(SyntaxNode):
     """A hole in an array, as in `[a, , b]`."""
 
 
-class SpreadElement(Node):
+class SpreadElement(SyntaxNode):
     """`...argument` in an array, a call or an object."""
 
     argument: Expression
@@ -231,7 +231,7 @@ class ArrayExpression(Expression):
     elements: list[Expression | SpreadElement | Elision]
 
 
-class Property(Node):
+class Property(SyntaxNode):
     """`key: value` in an object or an object pattern; a method (`method`), an accessor (`propertyKind` 'get' or
     'set'), or the shorthand `key` (`shorthand`)."""
 
@@ -597,7 +597,7 @@ class IfStatement(Statement):
         return []
 
 
-class SwitchCase(Node):
+class SwitchCase(SyntaxNode):
     """`case test: consequent`, or `default: consequent` without `test`."""
 
     test: Expression | None
@@ -617,7 +617,7 @@ class ThrowStatement(Statement):
     argument: Expression
 
 
-class CatchClause(Node):
+class CatchClause(SyntaxNode):
     """`catch (param) body`, or `catch body` without `param`."""
 
     param: Identifier | Pattern | None
@@ -681,7 +681,7 @@ class ForOfStatement(Statement):
     FEATURES = {"isAwait": {True: es(2018, 203)}}
 
 
-class VariableDeclarator(Node):
+class VariableDeclarator(SyntaxNode):
     """`id: type = init`, or with `definite` `id!: type`."""
 
     id: Identifier | Pattern
@@ -736,14 +736,14 @@ class TSDeclareFunction(Statement):
     SINCE = ts(100)
 
 
-class Decorator(Node):
+class Decorator(SyntaxNode):
     """`@expression`."""
 
     expression: Expression
     SINCE = ts(105)
 
 
-class ClassBody(Node):
+class ClassBody(SyntaxNode):
     """`{ body }`: a class's members."""
 
     body: list[ClassElement | TSIndexSignature | Comment]
@@ -804,7 +804,7 @@ class TSAbstractMethodDefinition(ClassElement):
     SINCE = ts(106)
 
 
-class TSEmptyBodyFunctionExpression(Node):
+class TSEmptyBodyFunctionExpression(SyntaxNode):
     """The signature of a method without a body: an overload's, an abstract one's, or a declared class's."""
 
     isAsync: bool
@@ -890,7 +890,7 @@ class TSAbstractAccessorProperty(ClassElement):
     SINCE = ts(409)
 
 
-class TSParameterProperty(Node):
+class TSParameterProperty(SyntaxNode):
     """A constructor's parameter that declares a field: `accessibility static override readonly parameter`."""
 
     decorators: list[Decorator]
@@ -905,14 +905,14 @@ class TSParameterProperty(Node):
 # === Modules ===
 
 
-class ImportAttribute(Node):
+class ImportAttribute(SyntaxNode):
     """`key: value` in `with { ... }`."""
 
     key: Identifier | Literal
     value: Literal
 
 
-class ImportSpecifier(Node):
+class ImportSpecifier(SyntaxNode):
     """`imported as local`, or with `importKind` 'type' `type imported as local`."""
 
     importKind: ImportExportKind
@@ -921,13 +921,13 @@ class ImportSpecifier(Node):
     FEATURES = {"importKind": {"type": ts(405)}}
 
 
-class ImportDefaultSpecifier(Node):
+class ImportDefaultSpecifier(SyntaxNode):
     """`local`, the default export's binding."""
 
     local: Identifier
 
 
-class ImportNamespaceSpecifier(Node):
+class ImportNamespaceSpecifier(SyntaxNode):
     """`* as local`."""
 
     local: Identifier
@@ -945,7 +945,7 @@ class ImportDeclaration(Statement):
     FEATURES = {"importKind": {"type": ts(308)}, "phase": {"defer": ts(509)}, "attributes": {True: es(2025, 503)}}
 
 
-class ExportSpecifier(Node):
+class ExportSpecifier(SyntaxNode):
     """`local as exported`, or with `exportKind` 'type' `type local as exported`."""
 
     exportKind: ImportExportKind
@@ -994,7 +994,7 @@ class TSImportEqualsDeclaration(Statement):
     SINCE = ts(100)
 
 
-class TSExternalModuleReference(Node):
+class TSExternalModuleReference(SyntaxNode):
     """`require(expression)`, in `import x = require('m')`."""
 
     expression: Literal
@@ -1018,14 +1018,14 @@ class TSNamespaceExportDeclaration(Statement):
 # === TypeScript's declarations ===
 
 
-class TSTypeAnnotation(Node):
+class TSTypeAnnotation(SyntaxNode):
     """`: typeAnnotation`, after a binding, a parameter, a field or a signature."""
 
     typeAnnotation: TypeNode
     SINCE = ts(100)
 
 
-class TSTypeParameter(Node):
+class TSTypeParameter(SyntaxNode):
     """`const in out name extends constraint = default`."""
 
     const: bool
@@ -1039,7 +1039,7 @@ class TSTypeParameter(Node):
                 "default": {True: ts(203)}}
 
 
-class TSTypeParameterDeclaration(Node):
+class TSTypeParameterDeclaration(SyntaxNode):
     """`<params>`, a declaration's type parameters."""
 
     params: list[TSTypeParameter]
@@ -1049,7 +1049,7 @@ class TSTypeParameterDeclaration(Node):
         return _needs(self, "params", "a type parameter")
 
 
-class TSTypeParameterInstantiation(Node):
+class TSTypeParameterInstantiation(SyntaxNode):
     """`<params>`, type arguments."""
 
     params: list[TypeNode]
@@ -1066,7 +1066,7 @@ class TSTypeAliasDeclaration(Statement):
     SINCE = ts(104)
 
 
-class TSInterfaceHeritage(Node):
+class TSInterfaceHeritage(SyntaxNode):
     """`expression<typeArguments>`, which an interface extends."""
 
     expression: Expression
@@ -1074,7 +1074,7 @@ class TSInterfaceHeritage(Node):
     SINCE = ts(100)
 
 
-class TSClassImplements(Node):
+class TSClassImplements(SyntaxNode):
     """`expression<typeArguments>`, which a class implements."""
 
     expression: Expression
@@ -1082,7 +1082,7 @@ class TSClassImplements(Node):
     SINCE = ts(100)
 
 
-class TSInterfaceBody(Node):
+class TSInterfaceBody(SyntaxNode):
     """`{ body }`: an interface's members."""
 
     body: list[TypeElement | Comment]
@@ -1100,7 +1100,7 @@ class TSInterfaceDeclaration(Statement):
     SINCE = ts(100)
 
 
-class TSEnumMember(Node):
+class TSEnumMember(SyntaxNode):
     """`id = initializer`; `computed` for `[id]`."""
 
     computed: bool
@@ -1109,7 +1109,7 @@ class TSEnumMember(Node):
     SINCE = ts(100)
 
 
-class TSEnumBody(Node):
+class TSEnumBody(SyntaxNode):
     """`{ members }`."""
 
     members: list[TSEnumMember | Comment]
@@ -1127,7 +1127,7 @@ class TSEnumDeclaration(Statement):
     FEATURES = {"const": {True: ts(104)}}
 
 
-class TSModuleBlock(Node):
+class TSModuleBlock(SyntaxNode):
     """`{ body }`: a namespace's or module's statements."""
 
     body: list[Statement]
@@ -1502,14 +1502,14 @@ class TSTypePredicate(TypeNode):
 # === JSX, an extension that the standards made with `jsx` accept ===
 
 
-class JSXIdentifier(Node):
+class JSXIdentifier(SyntaxNode):
     """A JSX name, which may hold `-`."""
 
     name: str
     EXTENSION = True
 
 
-class JSXNamespacedName(Node):
+class JSXNamespacedName(SyntaxNode):
     """`namespace:name`."""
 
     namespace: JSXIdentifier
@@ -1517,7 +1517,7 @@ class JSXNamespacedName(Node):
     EXTENSION = True
 
 
-class JSXMemberExpression(Node):
+class JSXMemberExpression(SyntaxNode):
     """`object.property`, a tag's name."""
 
     object: JSXIdentifier | JSXMemberExpression
@@ -1525,34 +1525,34 @@ class JSXMemberExpression(Node):
     EXTENSION = True
 
 
-class JSXEmptyExpression(Node):
+class JSXEmptyExpression(SyntaxNode):
     """Nothing, in `{}` or `{/* comment */}`."""
 
     EXTENSION = True
 
 
-class JSXExpressionContainer(Node):
+class JSXExpressionContainer(SyntaxNode):
     """`{expression}`."""
 
     expression: Expression | JSXEmptyExpression
     EXTENSION = True
 
 
-class JSXSpreadChild(Node):
+class JSXSpreadChild(SyntaxNode):
     """`{...expression}`, a child."""
 
     expression: Expression | JSXEmptyExpression
     EXTENSION = True
 
 
-class JSXText(Node):
+class JSXText(SyntaxNode):
     """Text between tags, as written."""
 
     raw: str
     EXTENSION = True
 
 
-class JSXAttribute(Node):
+class JSXAttribute(SyntaxNode):
     """`name=value`, or `name` without a value."""
 
     name: JSXIdentifier | JSXNamespacedName
@@ -1560,14 +1560,14 @@ class JSXAttribute(Node):
     EXTENSION = True
 
 
-class JSXSpreadAttribute(Node):
+class JSXSpreadAttribute(SyntaxNode):
     """`{...argument}`, an attribute."""
 
     argument: Expression
     EXTENSION = True
 
 
-class JSXOpeningElement(Node):
+class JSXOpeningElement(SyntaxNode):
     """`<name<typeArguments> attributes>`, or with `selfClosing` `<name ... />`."""
 
     name: JSXIdentifier | JSXMemberExpression | JSXNamespacedName
@@ -1577,7 +1577,7 @@ class JSXOpeningElement(Node):
     EXTENSION = True
 
 
-class JSXClosingElement(Node):
+class JSXClosingElement(SyntaxNode):
     """`</name>`."""
 
     name: JSXIdentifier | JSXMemberExpression | JSXNamespacedName
@@ -1593,13 +1593,13 @@ class JSXElement(Expression):
     EXTENSION = True
 
 
-class JSXOpeningFragment(Node):
+class JSXOpeningFragment(SyntaxNode):
     """`<>`."""
 
     EXTENSION = True
 
 
-class JSXClosingFragment(Node):
+class JSXClosingFragment(SyntaxNode):
     """`</>`."""
 
     EXTENSION = True
@@ -1614,7 +1614,7 @@ class JSXFragment(Expression):
     EXTENSION = True
 
 
-KINDS: list[type[Node]] = [
+KINDS: list[type[SyntaxNode]] = [
     Comment, Program, Identifier, PrivateIdentifier,
     Literal, TemplateElement, TemplateLiteral, TaggedTemplateExpression, ThisExpression, Super,
     ParenthesizedExpression, Elision, SpreadElement, ArrayExpression, Property, ObjectExpression, FunctionExpression,

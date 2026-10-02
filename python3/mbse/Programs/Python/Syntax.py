@@ -1,13 +1,13 @@
 """Syntax: the abstract syntax of Python 3, as one tree language, organized as the language reference is.
 
 The kinds follow Python's own abstract syntax, the `ast` module, through Python 3.15: the same kinds with the same
-names and fields where `ast` has them (capitalized where `ast`'s are lowercase: `Arg`, `Keyword`, `Alias`,
-`WithItem`, `MatchCase`, `Comprehension`), with fields in source order. Each kind and feature records the version
+names and properties where `ast` has them (capitalized where `ast`'s are lowercase: `Arg`, `Keyword`, `Alias`,
+`WithItem`, `MatchCase`, `Comprehension`), with properties in source order. Each kind and feature records the version
 that introduced it (`SINCE`, `FEATURES`), which `Python312`, `Python314` and other versions check.
 
 Where `ast` drops what a transpiler needs to see or a printer needs to write it back, the tree is concrete:
 
-- Names are nodes (`Identifier`) wherever `ast` has an identifier string, so one traversal finds every use and
+- Names are syntax nodes (`Identifier`) wherever `ast` has an identifier string, so one traversal finds every use and
   declaration of a name. A module's dotted name is a `DottedName`.
 - Literals keep their spelling: `Constant.spelling` is the literal as written (`0x_FF`, `1e3j`, `rb'\\d'`, a
   triple-quoted string with its newlines). f-strings and t-strings keep their prefix and quotes, the text between
@@ -27,7 +27,7 @@ from __future__ import annotations
 import keyword
 from typing import Literal as Choice
 
-from ..Framework.Syntax import Availability, Language, Node
+from ..Framework.Syntax import Availability, Language, SyntaxNode
 
 __all__ = ["LANGUAGE", "KINDS"]
 
@@ -51,42 +51,42 @@ Singleton = Choice["None", "True", "False"]
 Delimiter = Choice["[]", "()"]
 
 
-def _needs(node: Node, field: str, what: str) -> list[str]:
-    """A problem if the list `field` of `node` is empty."""
-    return [] if getattr(node, field) else [f"{_a(node.KIND)} needs {what}"]
+def _needs(node: SyntaxNode, prop: str, what: str) -> list[str]:
+    """A problem if the list `prop` of `node` is empty."""
+    return [] if getattr(node, prop) else [f"{_a(node.KIND)} needs {what}"]
 
 
 def _a(noun: str) -> str:
     return f"{'an' if noun[0].lower() in 'aeiou' else 'a'} {noun}"
 
 
-def _suite(node: Node, *fields: str) -> list[str]:
-    """Problems with the blocks in `fields` of `node`: the first must hold a statement other than a comment, and the
+def _suite(node: SyntaxNode, *properties: str) -> list[str]:
+    """Problems with the blocks in `properties` of `node`: the first must hold a statement other than a comment, and the
     others, if they hold anything, too."""
     problems = []
-    for i, field in enumerate(fields):
-        body = getattr(node, field)
+    for i, prop in enumerate(properties):
+        body = getattr(node, prop)
         if (i == 0 or body) and all(isinstance(s, Comment) for s in body):
-            problems.append(f"{_a(node.KIND)} needs a statement in its {field}")
+            problems.append(f"{_a(node.KIND)} needs a statement in its {prop}")
     return problems
 
 
 # --- Categories ---
 
 
-class Statement(Node):
+class Statement(SyntaxNode):
     """A statement (simple statements, §7; compound statements, §8), or a comment where statements are listed."""
 
 
-class Expression(Node):
+class Expression(SyntaxNode):
     """An expression (§6)."""
 
 
-class Pattern(Node):
+class Pattern(SyntaxNode):
     """A pattern of a `case` clause (§8.6.4)."""
 
 
-class TypeParameter(Node):
+class TypeParameter(SyntaxNode):
     """A type parameter of a generic function, class or type alias (§8.11)."""
 
 
@@ -101,7 +101,7 @@ class Comment(Statement):
     trailing: bool
 
 
-class Identifier(Node):
+class Identifier(SyntaxNode):
     """An identifier (§2.3): a letter or `_`, then letters, digits and `_`, as Unicode defines them, other than a
     keyword. Soft keywords (`match`, `case`, `type`, `_`, `lazy`) are identifiers."""
 
@@ -118,7 +118,7 @@ class Identifier(Node):
         return []
 
 
-class DottedName(Node):
+class DottedName(SyntaxNode):
     """`name.name...`, a module's name in an import (§7.11)."""
 
     names: list[Identifier]
@@ -154,20 +154,20 @@ class ConcatenatedString(Expression):
         return [] if len(self.values) > 1 else ["a ConcatenatedString needs two strings"]
 
 
-class StringText(Node):
+class StringText(SyntaxNode):
     """Text of an f-string, a t-string or a format spec between replacement fields, as written: escapes and doubled
     braces (`{{`) included."""
 
     spelling: str
 
 
-class FormatSpec(Node):
+class FormatSpec(SyntaxNode):
     """`:spec` after a replacement field's expression, which may hold replacement fields itself."""
 
     values: list[StringText | FormattedValue]
 
 
-class FormattedValue(Node):
+class FormattedValue(SyntaxNode):
     """`{value=!conversion:format_spec}` in an f-string (§2.6.3). `text` is the field as written from after `{` to
     its conversion, format spec or `}`: the expression with its whitespace, and with `debug` (`{x = }`) the `=` and
     the whitespace after it, which a self-documenting field writes into the string. Printing writes `text` while it
@@ -181,7 +181,7 @@ class FormattedValue(Node):
     FEATURES = {"debug": {True: py(8)}}
 
 
-class Interpolation(Node):
+class Interpolation(SyntaxNode):
     """`{value=!conversion:format_spec}` in a t-string (§2.6.4), as `FormattedValue`; `text` is also what the
     template records as the expression."""
 
@@ -254,7 +254,7 @@ class Set(Expression):
         return _needs(self, "elts", "an element")  # `{}` is a dict
 
 
-class DictItem(Node):
+class DictItem(SyntaxNode):
     """`key: value` in a dict display, or `**value` without a key."""
 
     key: Expression | None
@@ -267,7 +267,7 @@ class Dict(Expression):
     items: list[DictItem]
 
 
-class Comprehension(Node):
+class Comprehension(SyntaxNode):
     """`for target in iter if condition...` in a comprehension, or `async for` with `is_async` (§6.2.4)."""
 
     is_async: bool
@@ -375,7 +375,7 @@ class Slice(Expression):
     step: Expression | None
 
 
-class Keyword(Node):
+class Keyword(SyntaxNode):
     """`arg=value` in a call or a class's bases, or `**value` without `arg` (§6.3.4)."""
 
     arg: Identifier | None
@@ -423,7 +423,7 @@ class BinOp(Expression):
     FEATURES = {"op": {"@": py(5)}}
 
 
-class Comparison(Node):
+class Comparison(SyntaxNode):
     """`op comparator`, one link of a comparison chain."""
 
     op: ComparisonOperator
@@ -466,7 +466,7 @@ class IfExp(Expression):
     orelse: Expression
 
 
-class Arg(Node):
+class Arg(SyntaxNode):
     """A parameter: `arg: annotation = default_value` (§8.7). A lambda's parameters have no annotations."""
 
     arg: Identifier
@@ -474,7 +474,7 @@ class Arg(Node):
     default_value: Expression | None
 
 
-class Arguments(Node):
+class Arguments(SyntaxNode):
     """A parameter list (§8.7): `posonlyargs, /, args, *vararg, kwonlyargs, **kwarg`. A bare `*` comes before
     keyword-only parameters when there is no `vararg`."""
 
@@ -582,7 +582,7 @@ class Continue(Statement):
     """`continue` (§7.10)."""
 
 
-class Alias(Node):
+class Alias(SyntaxNode):
     """`name as asname` in an import; without `name`, the `*` of `from module import *` (§7.11)."""
 
     name: DottedName | None
@@ -694,7 +694,7 @@ class AsyncFor(Statement):
         return _suite(self, "body", "orelse")
 
 
-class ExceptHandler(Node):
+class ExceptHandler(SyntaxNode):
     """`except type as name: body` (§8.4). Several types are a `Tuple`, unparenthesized since Python 3.14."""
 
     type: Expression | None
@@ -742,7 +742,7 @@ class TryStar(Statement):
         return _try(self)
 
 
-class WithItem(Node):
+class WithItem(SyntaxNode):
     """`context_expr as optional_vars` (§8.5)."""
 
     context_expr: Expression
@@ -770,7 +770,7 @@ class AsyncWith(Statement):
         return _needs(self, "items", "an item") + _suite(self, "body")
 
 
-class MatchCase(Node):
+class MatchCase(SyntaxNode):
     """`case pattern if guard: body` (§8.6)."""
 
     pattern: Pattern
@@ -967,13 +967,13 @@ class TypeVarTuple(TypeParameter):
 # === Top-level components (§9) ===
 
 
-class Module(Node):
+class Module(SyntaxNode):
     """A source file: its statements (§9.2)."""
 
     body: list[Statement]
 
 
-KINDS: list[type[Node]] = [
+KINDS: list[type[SyntaxNode]] = [
     Comment, Identifier, DottedName,
     Name, Constant, ConcatenatedString, StringText, FormatSpec, FormattedValue, Interpolation, JoinedStr, TemplateStr,
     Parenthesized, Tuple, List, Set, DictItem, Dict, Comprehension, ListComp, SetComp, DictComp, GeneratorExp, Yield,

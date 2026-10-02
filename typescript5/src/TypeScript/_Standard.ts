@@ -2,7 +2,7 @@
  * printing them back, with JSX or without. */
 
 import { PrintError } from "../Framework/Errors.js";
-import { children, type Node, Standard } from "../Framework/Syntax.js";
+import { children, type SyntaxNode, Standard } from "../Framework/Syntax.js";
 import * as S from "./Syntax.js";
 import * as Parser from "./_Parser.js";
 import { Printer } from "./_Printer.js";
@@ -18,7 +18,7 @@ abstract class TypeScriptLanguageStandard extends Standard {
     this.printer = new Printer(jsx);
   }
 
-  override problems(node: Node): string[] {
+  override problems(node: SyntaxNode): string[] {
     if (this.jsx && node instanceof S.TSTypeAssertion) return [`${node.kind().KIND} is not allowed with JSX`];
     if (!this.jsx && node.kind().KIND.startsWith("JSX")) return [`${node.kind().KIND} needs JSX`];
     return super.problems(node);
@@ -28,10 +28,10 @@ abstract class TypeScriptLanguageStandard extends Standard {
    * lacks. */
   override parse(text: string): S.Program {
     const [program, positions, source] = Parser.parse(text, this.jsx);
-    const stack: Node[] = [program];
+    const stack: SyntaxNode[] = [program];
     while (stack.length > 0) {
-      const node = stack.pop() as Node;
-      const offset = positions.get(node) as number; // the parser places every node
+      const node = stack.pop() as SyntaxNode;
+      const offset = positions.get(node) as number; // the parser places every syntax node
       const problems = this.problems(node);
       if (problems.length > 0) throw source.error(`${problems[0]}, but this is ${this.name()}`, offset);
       stack.push(...children(node).reverse().map(([, , child]) => child));
@@ -39,9 +39,9 @@ abstract class TypeScriptLanguageStandard extends Standard {
     return program;
   }
 
-  /** The source text of a tree: a program as a file, any other node as the text it stands for. Throws `PrintError` for
-   * an invalid tree, or one with a construct the standard lacks. */
-  override print(node: Node): string {
+  /** The source text of a tree: a program as a file, any other syntax node as the text it stands for. Throws
+   * `PrintError` for an invalid tree, or one with a construct the standard lacks. */
+  override print(node: SyntaxNode): string {
     let problems = this.language.validate(node);
     if (problems.length === 0) problems = this.check(node).map((p) => `${p}, but this is ${this.name()}`);
     if (problems.length > 0) throw new PrintError(problems[0]);

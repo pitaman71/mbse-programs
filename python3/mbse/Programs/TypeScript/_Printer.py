@@ -77,7 +77,7 @@ def _leftmost(node: Any) -> Any:
 
 
 class Printer:
-    """Prints a program as a file, and any other node as the text it stands for: a statement or a member as its
+    """Prints a program as a file, and any other syntax node as the text it stands for: a statement or a member as its
     lines, an expression, a pattern or a type as its text. With `jsx`, it prints for the JSX grammar, where an arrow
     function's lone type parameter is `<T,>`."""
 

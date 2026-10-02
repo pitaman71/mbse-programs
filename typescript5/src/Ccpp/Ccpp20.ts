@@ -7,11 +7,11 @@
  *     const text = Ccpp20.print(unit);
  */
 
-import type { Node } from "../Framework/Syntax.js";
+import type { SyntaxNode } from "../Framework/Syntax.js";
 import type { TranslationUnit } from "./Syntax.js";
 import { CcppStandard } from "./_Standard.js";
 
 export const STANDARD = new CcppStandard(2020);
 export const parse = (text: string): TranslationUnit => STANDARD.parse(text);
-export const print = (node: Node): string => STANDARD.print(node);
-export const check = (node: Node): string[] => STANDARD.check(node);
+export const print = (node: SyntaxNode): string => STANDARD.print(node);
+export const check = (node: SyntaxNode): string[] => STANDARD.check(node);

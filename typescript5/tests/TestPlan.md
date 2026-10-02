@@ -17,7 +17,7 @@ npm run conformance           # regenerate ../conformance/typescript5
 
 | Notebook | Suite | Cases | Focus |
 |---|---|---|---|
-| `01_Syntax.ipynb` | SYN | 11 | as in Python; SYN-01 reads fields from specs (Python's annotation cases have no counterpart), SYN-02 shows nodes with `toString` |
+| `01_Syntax.ipynb` | SYN | 11 | as in Python; SYN-01 reads properties from specs (Python's annotation cases have no counterpart), SYN-02 shows syntax nodes with `toString` |
 | `02_Ccpp.ipynb` | CPP | 4 | as in Python |
 | `03_Parse.ipynb` | PRS | 13 | as in Python, through web-tree-sitter; PRS-12's positions are converted from UTF-16 units |
 | `04_Print.ipynb` | PRT | 6 | as in Python |

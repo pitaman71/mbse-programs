@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..Framework.Errors import PrintError
-from ..Framework.Syntax import Node, Standard, children
+from ..Framework.Syntax import SyntaxNode, Standard, children
 from . import Syntax as S
 from . import _Parser
 from ._Printer import Printer
@@ -25,7 +25,7 @@ class CcppStandard(Standard):
         """The tree of a source file. Raises `ParseError` at the first syntax error, or at the first construct the
         standard lacks."""
         unit, positions, source = _Parser.parse(text)
-        stack: list[tuple[Node, int]] = [(unit, 0)]
+        stack: list[tuple[SyntaxNode, int]] = [(unit, 0)]
         while stack:
             node, inherited = stack.pop()
             offset = positions.get(id(node), inherited)
@@ -36,7 +36,7 @@ class CcppStandard(Standard):
         return unit
 
     def print(self, node: Any) -> str:
-        """The source text of a tree: a translation unit as a file, any other node as the text it stands for.
+        """The source text of a tree: a translation unit as a file, any other syntax node as the text it stands for.
         Raises `PrintError` for an invalid tree, or one with a construct the standard lacks."""
         problems = self.language.validate(node)
         if not problems:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..Framework.Errors import PrintError
-from ..Framework.Syntax import Node, Standard, children
+from ..Framework.Syntax import SyntaxNode, Standard, children
 from . import Syntax as S
 from . import _Parser
 from ._Printer import Printer
@@ -29,10 +29,10 @@ class PythonStandard(Standard):
         """The tree of a source file. Raises `ParseError` at the first syntax error, or at the first construct the
         version lacks."""
         module, positions, source = _Parser.parse(text)
-        stack: list[Node] = [module]
+        stack: list[SyntaxNode] = [module]
         while stack:
             node = stack.pop()
-            offset = positions[id(node)]  # the parser places every node
+            offset = positions[id(node)]  # the parser places every syntax node
             problems = self.problems(node)
             if problems:
                 raise source.error(f"{problems[0]}, but this is {self.name()}", offset)
@@ -40,7 +40,7 @@ class PythonStandard(Standard):
         return module
 
     def print(self, node: Any) -> str:
-        """The source text of a tree: a module as a file, any other node as the text it stands for. Raises
+        """The source text of a tree: a module as a file, any other syntax node as the text it stands for. Raises
         `PrintError` for an invalid tree, or one with a construct the version lacks."""
         problems = self.language.validate(node)
         if not problems:

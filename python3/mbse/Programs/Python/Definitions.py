@@ -9,9 +9,9 @@
 - 'parameter' (of a function or lambda), 'type parameter' and 'type alias';
 - 'import': a name an import binds (`import a.b` binds `a`).
 
-There is one entity per name per scope: every node that binds the name is one of its `declarations`, in source order,
-and the first is its `definition`. The first binding visited decides its kind: the module's names are visited first,
-then each function's and class's, as Python's symbol tables are built.
+There is one entity per name per scope: every syntax node that binds the name is one of its `declarations`, in source
+order, and the first is its `definition`. The first binding visited decides its kind: the module's names are visited
+first, then each function's and class's, as Python's symbol tables are built.
 
 Scopes are those of Python's execution model (§4.2): 'module', 'class', 'function', 'lambda', 'comprehension' and
 'type parameters' (the annotation scope of a generic function, class or type alias). A name bound anywhere in a scope
@@ -294,7 +294,7 @@ def define(module: S.Module) -> Program:
     while definer.bodies:
         body, scope = definer.bodies.popleft()
         definer.statements(body, scope)
-    order = {id(node): i for i, node in enumerate(walk(module))}  # fields are in source order
+    order = {id(node): i for i, node in enumerate(walk(module))}  # properties are in source order
     for entity in program.entities():
         entity.declarations.sort(key=lambda node: order[id(node)])
         entity.definition = entity.declarations[0] if entity.declarations else None

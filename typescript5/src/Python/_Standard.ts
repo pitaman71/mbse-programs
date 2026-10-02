@@ -1,7 +1,7 @@
 /** The versions of Python, each parsing source text into Python trees and printing them back. */
 
 import { PrintError } from "../Framework/Errors.js";
-import { children, type Node, Standard } from "../Framework/Syntax.js";
+import { children, type SyntaxNode, Standard } from "../Framework/Syntax.js";
 import * as S from "./Syntax.js";
 import * as Parser from "./_Parser.js";
 import { Printer } from "./_Printer.js";
@@ -24,10 +24,10 @@ export class PythonStandard extends Standard {
    * lacks. */
   override parse(text: string): S.Module {
     const [module, positions, source] = Parser.parse(text);
-    const stack: Node[] = [module];
+    const stack: SyntaxNode[] = [module];
     while (stack.length > 0) {
-      const node = stack.pop() as Node;
-      const offset = positions.get(node) as number; // the parser places every node
+      const node = stack.pop() as SyntaxNode;
+      const offset = positions.get(node) as number; // the parser places every syntax node
       const problems = this.problems(node);
       if (problems.length > 0) throw source.error(`${problems[0]}, but this is ${this.name()}`, offset);
       stack.push(...children(node).reverse().map(([, , child]) => child));
@@ -35,9 +35,9 @@ export class PythonStandard extends Standard {
     return module;
   }
 
-  /** The source text of a tree: a module as a file, any other node as the text it stands for. Throws `PrintError` for
-   * an invalid tree, or one with a construct the version lacks. */
-  override print(node: Node): string {
+  /** The source text of a tree: a module as a file, any other syntax node as the text it stands for. Throws
+   * `PrintError` for an invalid tree, or one with a construct the version lacks. */
+  override print(node: SyntaxNode): string {
     let problems = this.language.validate(node);
     if (problems.length === 0) problems = this.check(node).map((p) => `${p}, but this is ${this.name()}`);
     if (problems.length > 0) throw new PrintError(problems[0]);

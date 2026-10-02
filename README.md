@@ -22,8 +22,10 @@ unit = Ccpp20.parse("int twice(int x) { return x * 2; }\nint y = twice(3);\n")
 for node in walk(unit):
     if isinstance(node, S.Identifier) and node.spelling == "twice":
         node.spelling = "doubled"
-unit.items.append(S.StaticAssertDeclaration(keyword="static_assert", condition=S.BinaryExpression(
-    left=S.IntegerLiteral(spelling="1"), operator="<=>", right=S.IntegerLiteral(spelling="2"))))
+Cc = S.LANGUAGE.Builders   # a fluent builder per kind
+unit.items.append(Cc.StaticAssertDeclaration().keyword("static_assert").condition(
+    lambda b: b.BinaryExpression().left(Cc.IntegerLiteral().spelling("1")).operator("<=>")
+    .right(Cc.IntegerLiteral().spelling("2"))).create())
 Ccpp20.print(unit)   # 'int doubled(int x) {\n    return x * 2;\n}\nint y = doubled(3);\nstatic_assert(1 <=> 2);\n'
 Ccpp17.check(unit)   # ["items[2].condition: BinaryExpression.operator '<=>' needs C++20"]
 ```
@@ -36,8 +38,9 @@ const unit = Ccpp20.parse("int twice(int x) { return x * 2; }\nint y = twice(3);
 for (const node of walk(unit)) {
   if (node instanceof S.Identifier && node.spelling === "twice") node.spelling = "doubled";
 }
-unit.items.push(new S.StaticAssertDeclaration({ keyword: "static_assert", condition: new S.BinaryExpression({
-  left: new S.IntegerLiteral({ spelling: "1" }), operator: "<=>", right: new S.IntegerLiteral({ spelling: "2" }) }) }));
+const Cc = S.LANGUAGE.Builders; // a fluent builder per kind, typed
+unit.items.push(Cc.StaticAssertDeclaration().keyword("static_assert").condition((b) => b.BinaryExpression()
+  .left(Cc.IntegerLiteral().spelling("1")).operator("<=>").right(Cc.IntegerLiteral().spelling("2"))).create());
 Ccpp20.print(unit);
 Ccpp17.check(unit);
 ```
@@ -52,7 +55,8 @@ module = Python314.parse("def twice(x):\n    return x * 2\n\nprint(twice(3))\n")
 for node in walk(module):
     if isinstance(node, P.Identifier) and node.spelling == "twice":
         node.spelling = "doubled"
-module.body.insert(0, P.Import(is_lazy=True, names=[P.Alias(name=P.DottedName(names=[P.Identifier(spelling="json")]))]))
+Py = P.LANGUAGE.Builders
+module.body.insert(0, Py.Import().is_lazy(True).add_names(lambda b: b.name(lambda b: b.add_names("json"))).create())
 Python314.check(module)   # ['body[0]: Import.is_lazy needs Python 3.15']
 module.body[0].is_lazy = False
 Python314.print(module)   # 'import json\n\n\ndef doubled(x):\n    return x * 2\n\n\nprint(doubled(3))\n'

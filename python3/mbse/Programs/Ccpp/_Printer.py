@@ -51,7 +51,7 @@ def _abstract(declarator: Any) -> bool:
 
 
 class Printer:
-    """Prints any Ccpp node: a translation unit as a file, anything else as the text it stands for."""
+    """Prints any Ccpp syntax node: a translation unit as a file, anything else as the text it stands for."""
 
     def print(self, node: Any) -> str:
         if isinstance(node, S.TranslationUnit):
@@ -77,7 +77,7 @@ class Printer:
         return _INDENT * depth + self.statement(node, depth)
 
     def lines(self, nodes: list[Any], render: Callable[[Any], str]) -> list[str]:
-        """Each node rendered on its own lines, but for trailing comments, which end the line before them."""
+        """Each syntax node rendered on its own lines, but for trailing comments, which end the line before them."""
         out: list[str] = []
         for node in nodes:
             if isinstance(node, S.Comment) and node.trailing and out:
@@ -447,7 +447,7 @@ class Printer:
         return "<" + ", ".join(out) + ">"
 
     def text(self, node: Any, depth: int) -> str:
-        """The text of any node that is neither an item nor a statement: `item` and `statement` print those."""
+        """The text of any syntax node that is neither an item nor a statement: `item` and `statement` print those."""
         return self.TEXTS[type(node)](self, node, depth)
 
     def unary(self, node: S.UnaryExpression, depth: int) -> str:

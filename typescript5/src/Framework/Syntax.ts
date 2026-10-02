@@ -1,24 +1,24 @@
 /**
  * Syntax: the protocols every language's abstract syntax trees implement, and the machinery that implements them.
  *
- * A language is a set of node kinds, grouped into categories (Expression, Statement, Declaration, ...). Every
+ * A language is a set of syntax node kinds, grouped into categories (Expression, Statement, Declaration, ...). Every
  * language's trees are:
  *
- * - Plain in-memory objects. A kind is a class whose fields are declared once, in its static `SPEC`: natives
- *   (`text()`, `flag()`, `integer()`, or a `choice(...)` of strings) are attributes, and nodes or lists of nodes
- *   (`one(...)`, `optional(...)`, `many(...)`) are children. A kind's interface takes its fields' types from its spec
- *   (`interface K extends Fields<typeof KSpec> {}`). Nodes are mutable: a transpiler builds, reads and rewrites them
- *   directly.
+ * - Plain in-memory objects. A kind is a class whose properties are declared once, in its static `SPEC`: natives
+ *   (`text()`, `flag()`, `integer()`, or a `choice(...)` of strings) are attributes, and syntax nodes or lists of
+ *   syntax nodes (`one(...)`, `optional(...)`, `many(...)`) are children. A kind's interface takes its properties'
+ *   types from its spec (`interface K extends Properties<typeof KSpec> {}`). Syntax nodes are mutable: a transpiler
+ *   builds, reads and rewrites them directly.
  * - Serializable. Each kind has a meta-schema, an mbse-schemas reference object schema with the tag `kind` and one
- *   property per attribute, and a builder (`create()` / `clone()` / `update()`) that implements `Visitors.OfObject`,
- *   so `JSON`, `YAML` and `Plain` read and write trees. Children are entries of the adjacency `children`, to the
- *   relation `Children` (registered as 'Programs.Children' and shared by every language), which links a `parent` to a
- *   `child` with the child's `field` and, in a list, its `index`. Every kind also declares `parent`, the same relation
- *   seen from the child, which data never writes.
- * - Traversable through their fields alone: `children`, `walk`, `fold`, `same`, `copy`, `Parents`, `Visitor` and
+ *   property per attribute, and a builder (`create()` / `clone()` / `update()`) that implements `Visitors.OfObject`, so
+ *   `JSON`, `YAML` and `Plain` read and write trees. Children are entries of the adjacency `children`, to the relation
+ *   `Children` (registered as 'Programs.Children' and shared by every language), which links a `parent` to a `child`
+ *   with the child's `property` and, in a list, its `index`. Every kind also declares `parent`, the same relation seen
+ *   from the child, which data never writes.
+ * - Traversable through their properties alone: `children`, `walk`, `fold`, `same`, `copy`, `Parents`, `Visitor` and
  *   `Transformer` work for every language.
- * - Validatable: `Language.validate` reports missing fields, misplaced children, choices out of range and shared
- *   nodes.
+ * - Validatable: `Language.validate` reports missing properties, misplaced children, choices out of range and shared
+ *   syntax nodes.
  * - Standardized: each kind and feature records the standards that have it (`SINCE`, `FEATURES`), and a `Standard`
  *   (such as C++20) checks a tree against them, parses source text into trees and prints trees into source text.
  */
@@ -32,7 +32,7 @@ type Callback<V> = Visitors.Callback<V>;
 
 export const CHILDREN = "Programs.Children";
 
-/** A native value of a node: str, bool or int. */
+/** A native value of a syntax node: str, bool or int. */
 export type Native = string | boolean | bigint;
 type NativeToken = StringConstructor | BooleanConstructor | BigIntConstructor;
 const NATIVES = new Map<NativeToken, string>([[String, "str"], [Boolean, "bool"], [BigInt, "int"]]);
@@ -45,7 +45,7 @@ function isNative(token: NativeToken, value: unknown): boolean {
  * or [first, last exclusive] for a feature a later standard removed. */
 export type Availability = Readonly<Record<string, number | readonly [number, number]>>;
 
-/** A kind's features: for each field, the values that make a feature of it (a choice, or `true`), each with where it
+/** A kind's features: for each property, the values that make a feature of it (a choice, or `true`), each with where it
  * exists. */
 export type Features = Readonly<Record<string, readonly (readonly [string | true, Availability])[]>>;
 
@@ -61,13 +61,13 @@ function setNative(visitor: HasProperty, name: string, value: Native): void {
   visitor.property(name, (p) => p.value((a) => a.as_native((n) => n.set(value))));
 }
 
-// --- Fields ---
+// --- Properties ---
 
 type Ctor<T> = abstract new (...args: any[]) => T;
 
 /** How a kind's spec declares an attribute. */
 export interface AttributeSpec<T = unknown, O extends boolean = boolean> {
-  readonly field: "attribute";
+  readonly sort: "attribute";
   readonly native: NativeToken;
   readonly optional: O;
   readonly choices: readonly string[] | null;
@@ -75,24 +75,25 @@ export interface AttributeSpec<T = unknown, O extends boolean = boolean> {
 }
 
 /** How a kind's spec declares a child or a list of children. */
-export interface ChildSpec<T = unknown, M extends boolean = boolean, O extends boolean = boolean> {
-  readonly field: "child";
-  readonly categories: () => readonly Ctor<unknown>[];
+export interface ChildSpec<T = unknown, M extends boolean = boolean, O extends boolean = boolean,
+  A extends readonly Ctor<unknown>[] = readonly Ctor<unknown>[]> {
+  readonly sort: "child";
+  readonly categories: () => A;
   readonly optional: O;
   readonly many: M;
   readonly type?: T;
 }
 
-export type FieldSpec = AttributeSpec | ChildSpec;
+export type PropertySpec = AttributeSpec | ChildSpec;
 type Instances<A extends readonly Ctor<unknown>[]> = A[number] extends Ctor<infer T> ? T : never;
 
 function attribute<T, O extends boolean>(native: NativeToken, optional: O, choices: readonly string[] | null) {
-  return { field: "attribute", native, optional, choices } as AttributeSpec<T, O>;
+  return { sort: "attribute", native, optional, choices } as AttributeSpec<T, O>;
 }
 
-function child<T, M extends boolean, O extends boolean>(categories: () => readonly Ctor<unknown>[], many: M,
-  optional: O) {
-  return { field: "child", categories, optional, many } as ChildSpec<T, M, O>;
+function child<T, M extends boolean, O extends boolean, A extends readonly Ctor<unknown>[]>(categories: () => A,
+  many: M, optional: O) {
+  return { sort: "child", categories, optional, many } as ChildSpec<T, M, O, A>;
 }
 
 /** A str attribute. */
@@ -111,22 +112,22 @@ export const optionalChoice = <const C extends readonly string[]>(...choices: C)
   attribute<C[number], true>(String, true, choices);
 /** A child of one of `categories` (categories or kinds), given by a function because they may be declared later. */
 export const one = <const A extends readonly Ctor<unknown>[]>(categories: () => A) =>
-  child<Instances<A>, false, false>(categories, false, false);
+  child<Instances<A>, false, false, A>(categories, false, false);
 /** A child of one of `categories`, that may be absent. */
 export const optional = <const A extends readonly Ctor<unknown>[]>(categories: () => A) =>
-  child<Instances<A>, false, true>(categories, false, true);
+  child<Instances<A>, false, true, A>(categories, false, true);
 /** An ordered list of children of `categories`. */
 export const many = <const A extends readonly Ctor<unknown>[]>(categories: () => A) =>
-  child<Instances<A>, true, true>(categories, true, true);
+  child<Instances<A>, true, true, A>(categories, true, true);
 
 type FieldType<S> = S extends ChildSpec<infer T, infer M, infer _O> ? (M extends true ? T[] : T | null)
   : S extends AttributeSpec<infer T, infer _O> ? (T extends boolean ? boolean : T | null) : never;
 
-/** The fields a spec declares, typed: a kind's interface extends `Fields<typeof Spec>`. */
-export type Fields<Spec> = { -readonly [K in keyof Spec]: FieldType<Spec[K]> };
+/** The properties a spec declares, typed: a kind's interface extends `Properties<typeof Spec>`. */
+export type Properties<Spec> = { -readonly [K in keyof Spec]: FieldType<Spec[K]> };
 
-/** A native field: `native` is String, Boolean or BigInt; a str attribute may be limited to `choices`. A bool is false
- * unless set, and is written only when true. */
+/** A native property: `native` is String, Boolean or BigInt; a str attribute may be limited to `choices`. A bool is
+ * false unless set, and is written only when true. */
 export class Attribute {
   constructor(readonly name: string, readonly native: NativeToken, readonly optional = false,
     readonly choices: readonly string[] | null = null) {}
@@ -138,7 +139,8 @@ export class Attribute {
   }
 }
 
-/** A field holding a node of one of `categories` (categories or kinds), or with `many` an ordered list of them. */
+/** A property holding a syntax node of one of `categories` (categories or kinds), or with `many` an ordered list of
+ * them. */
 export class Child {
   constructor(readonly name: string, readonly categories: readonly Function[], readonly optional = false,
     readonly many = false) {}
@@ -148,83 +150,85 @@ export class Child {
   }
 }
 
-export type Field = Attribute | Child;
+export type Property = Attribute | Child;
 
-function fieldsOf(kind: NodeClass): Field[] {
-  return Object.entries(kind.SPEC).map(([name, spec]) => (spec.field === "attribute"
+function propertiesOf(kind: SyntaxNodeClass): Property[] {
+  return Object.entries(kind.SPEC).map(([name, spec]) => (spec.sort === "attribute"
     ? new Attribute(name, spec.native, spec.optional, spec.choices)
     : new Child(name, spec.categories() as unknown as Function[], spec.optional, spec.many)));
 }
 
-// --- Nodes ---
+// --- Syntax nodes ---
 
 let nextIdentity = 0;
 
-/** A kind or category: a class derived from `Node`. */
-export type NodeClass = typeof Node;
+/** A kind or category: a class derived from `SyntaxNode`. */
+export type SyntaxNodeClass = typeof SyntaxNode;
 
 function isUnset(value: unknown): boolean {
   return value === null || value === undefined || value === false || (Array.isArray(value) && value.length === 0);
 }
 
 function show(value: unknown): string {
-  if (value instanceof Node) return value.toString();
+  if (value instanceof SyntaxNode) return value.toString();
   if (Array.isArray(value)) return `[${value.map(show).join(", ")}]`;
   return repr(value);
 }
 
 /**
- * Every language's nodes: kinds are leaf classes, and the classes between them and `Node` are categories.
- * `Language` sets `LANGUAGE`, `KIND`, `NAME`, `FIELDS` and `Schema` on each kind.
+ * Every language's syntax nodes: kinds are leaf classes, and the classes between them and `SyntaxNode` are categories.
+ * `Language` sets `LANGUAGE`, `KIND`, `NAME`, `PROPERTIES` and `Schema` on each kind.
  *
- * `SINCE` is where a kind exists (by default, wherever its language exists). `FEATURES` maps a field to the values
+ * `SINCE` is where a kind exists (by default, wherever its language exists). `FEATURES` maps a property to the values
  * that make a feature of it, each with where that feature exists: a choice or `true` for an attribute, `true` for a
  * child that is present or a list that is not empty. `EXTENSION` marks a kind no standard has, which every standard
  * accepts. `check()` and `features()` add a kind's own problems and features.
  */
-export class Node implements Visitors.Visitable {
+export class SyntaxNode implements Visitors.Visitable {
   static LANGUAGE: Language;
   static KIND: string;
   static NAME: string;
-  static SPEC: Readonly<Record<string, FieldSpec>> = {};
-  static FIELDS: readonly Field[] = [];
-  static BY_NAME: ReadonlyMap<string, Field> = new Map();
+  static SPEC: Readonly<Record<string, PropertySpec>> = {};
+  static PROPERTIES: readonly Property[] = [];
+  static BY_NAME: ReadonlyMap<string, Property> = new Map();
   static Schema: Schemas.OfObject.Data;
   static SINCE: Availability | null = null;
   static FEATURES: Features = {};
   static EXTENSION = false;
   private readonly nodeIdentity = ++nextIdentity;
 
-  /** A node of this kind, with the fields `values` gives; the others are null, false or empty. */
+  /** A syntax node of this kind, with the properties `values` gives; the others are null, false or empty. */
   constructor(values: object = {}) {
-    const kind = this.constructor as NodeClass;
-    if (!Object.prototype.hasOwnProperty.call(kind, "KIND")) throw new TypeError(`${kind.name} is not a kind of node`);
+    const kind = this.constructor as SyntaxNodeClass;
+    if (!Object.prototype.hasOwnProperty.call(kind, "KIND")) {
+      throw new TypeError(`${kind.name} is not a kind of syntax node`);
+    }
     const self = this as unknown as Record<string, unknown>;
-    for (const field of kind.FIELDS) {
-      self[field.name] = field instanceof Child && field.many ? []
-        : field instanceof Attribute && field.native === Boolean ? false : null;
+    for (const prop of kind.PROPERTIES) {
+      self[prop.name] = prop instanceof Child && prop.many ? []
+        : prop instanceof Attribute && prop.native === Boolean ? false : null;
     }
     for (const [name, value] of Object.entries(values)) {
-      const field = kind.BY_NAME.get(name);
-      if (field === undefined) throw new TypeError(`${kind.KIND} has no field ${repr(name)}`);
-      self[name] = field instanceof Child && field.many ? [...(value as Iterable<unknown>)] : value;
+      const prop = kind.BY_NAME.get(name);
+      if (prop === undefined) throw new TypeError(`${kind.KIND} has no property ${repr(name)}`);
+      self[name] = prop instanceof Child && prop.many ? [...(value as Iterable<unknown>)] : value;
     }
   }
 
-  /** The node's kind: its class. */
-  kind(): NodeClass {
-    return this.constructor as NodeClass;
+  /** The syntax node's kind: its class. */
+  kind(): SyntaxNodeClass {
+    return this.constructor as SyntaxNodeClass;
   }
 
-  /** A field's value. */
-  field(name: string): unknown {
+  /** A property's value. */
+  get(name: string): unknown {
     return (this as unknown as Record<string, unknown>)[name];
   }
 
-  /** The kind and the fields that are set: not null, false or an empty list. Python's `repr` of the node. */
+  /** The kind and the properties that are set: not null, false or an empty list. Python's `repr` of the syntax node. */
   toString(): string {
-    const shown = this.kind().FIELDS.filter((f) => !isUnset(this.field(f.name)))
-      .map((f) => `${f.name}=${show(this.field(f.name))}`);
+    const shown = this.kind().PROPERTIES.filter((f) => !isUnset(this.get(f.name)))
+      .map((f) => `${f.name}=${show(this.get(f.name))}`);
     return `${this.kind().KIND}(${shown.join(", ")})`;
   }
 
@@ -238,19 +242,19 @@ export class Node implements Visitors.Visitable {
     return this.kind().NAME;
   }
 
-  /** Nodes are reference objects, linked by their parents. */
+  /** Syntax nodes are reference objects, linked by their parents. */
   owner(): null {
     return null;
   }
 
   /** Writes the tag, the attributes that are set (a bool only when true), then one `children` entry per child, in
-   * field order, with its field and, in a list, its index. */
+   * property order, with its property and, in a list, its index. */
   accept(visitor: Visitors.OfObject): void {
     setNative(visitor, "kind", this.kind().KIND);
-    for (const field of this.kind().FIELDS) {
-      const value = this.field(field.name);
-      if (field instanceof Attribute && value !== null && value !== undefined && value !== false) {
-        setNative(visitor, field.name, value as Native);
+    for (const prop of this.kind().PROPERTIES) {
+      const value = this.get(prop.name);
+      if (prop instanceof Attribute && value !== null && value !== undefined && value !== false) {
+        setNative(visitor, prop.name, value as Native);
       }
     }
     for (const [name, index, node] of children(this)) writeChild(visitor, name, index, node);
@@ -258,7 +262,7 @@ export class Node implements Visitors.Visitable {
 
   // Hooks
 
-  /** The kind's own problems, beyond those of its fields; none by default. */
+  /** The kind's own problems, beyond those of its properties; none by default. */
   check(): string[] {
     return [];
   }
@@ -268,37 +272,38 @@ export class Node implements Visitors.Visitable {
     return [];
   }
 
-  /** Where this node's kind exists, if its attributes do not change that: `SINCE`, or null for wherever its language
-   * exists. */
+  /** Where this syntax node's kind exists, if its attributes do not change that: `SINCE`, or null for wherever its
+   * language exists. */
   availability(): Availability | null {
     return this.kind().SINCE;
   }
 }
 
-/** A node's children in field order, each with its field and, in a list, its index. Empty slots are skipped. */
-export function children(node: Node): [string, number | null, Node][] {
-  const out: [string, number | null, Node][] = [];
-  for (const field of node.kind().FIELDS) {
-    if (!(field instanceof Child)) continue;
-    const value = node.field(field.name);
-    if (field.many) {
-      ((value ?? []) as (Node | null)[]).forEach((c, i) => { if (c !== null) out.push([field.name, i, c]); });
+/** A syntax node's children in property order, each with its property and, in a list, its index. Empty slots are
+ * skipped. */
+export function children(node: SyntaxNode): [string, number | null, SyntaxNode][] {
+  const out: [string, number | null, SyntaxNode][] = [];
+  for (const prop of node.kind().PROPERTIES) {
+    if (!(prop instanceof Child)) continue;
+    const value = node.get(prop.name);
+    if (prop.many) {
+      ((value ?? []) as (SyntaxNode | null)[]).forEach((c, i) => { if (c !== null) out.push([prop.name, i, c]); });
     } else if (value !== null) {
-      out.push([field.name, null, value as Node]);
+      out.push([prop.name, null, value as SyntaxNode]);
     }
   }
   return out;
 }
 
-function writeChild(visitor: Visitors.OfObject, field: string, index: number | null, node: Node): void {
+function writeChild(visitor: Visitors.OfObject, prop: string, index: number | null, node: SyntaxNode): void {
   visitor.adjacency("children", (a) => a.add((entry) => {
     entry.link("child", (k) => k.set(node));
-    setNative(entry, "field", field);
+    setNative(entry, "property", prop);
     if (index !== null) setNative(entry, "index", BigInt(index));
   }));
 }
 
-// --- Builders: Visitors that build nodes ---
+// --- Builders: Visitors that build syntax nodes ---
 
 /** `Visitors.OfProperty`, `OfAny` and `OfNative` over one native value. */
 class _Native implements Visitors.OfProperty, Visitors.OfAny, Visitors.OfNative {
@@ -380,18 +385,19 @@ class _Link implements Visitors.OfLink {
 }
 
 /** `Visitors.OfEntry` for one entry of `Children`, seen from the end that fills `me`: it sets the other link, the
- * child's `field` and its `index`. */
+ * child's `property` and its `index`. */
 class _Entry implements Visitors.OfEntry {
   readonly other: string;
 
-  constructor(me: string, public target: unknown = null, public fieldName: string | null = null,
+  constructor(me: string, public target: unknown = null, public propertyName: string | null = null,
     public index: bigint | null = null) {
     this.other = me === "parent" ? "child" : "parent";
   }
 
   private native(name: string): _Native {
-    return name === "field"
-      ? new _Native("field", String, () => this.fieldName, (value) => { this.fieldName = value as string | null; })
+    return name === "property"
+      ? new _Native("property", String, () => this.propertyName,
+        (value) => { this.propertyName = value as string | null; })
       : new _Native("index", BigInt, () => this.index, (value) => { this.index = value as bigint | null; });
   }
 
@@ -407,28 +413,28 @@ class _Entry implements Visitors.OfEntry {
   }
 
   properties(callback: Callback<Visitors.OfProperty>): _Entry {
-    for (const name of ["field", "index"]) if (this.has(name)) callback(this.native(name));
+    for (const name of ["property", "index"]) if (this.has(name)) callback(this.native(name));
     return this;
   }
 
   has(name: string): boolean {
-    return (name === "field" && this.fieldName !== null) || (name === "index" && this.index !== null);
+    return (name === "property" && this.propertyName !== null) || (name === "index" && this.index !== null);
   }
 
   property(name: string, callback: Callback<Visitors.OfProperty>): _Entry {
-    if (name !== "field" && name !== "index") throw new KeyError(`unknown property ${repr(name)}`);
+    if (name !== "property" && name !== "index") throw new KeyError(`unknown property ${repr(name)}`);
     callback(this.native(name));
     return this;
   }
 
   clear(name: string): _Entry {
-    if (name === "field") this.fieldName = null;
+    if (name === "property") this.propertyName = null;
     if (name === "index") this.index = null;
     return this;
   }
 }
 
-/** `Visitors.OfAdjacency` over a node's `children`, or over `parent`, whose entries are ignored (the parents'
+/** `Visitors.OfAdjacency` over a syntax node's `children`, or over `parent`, whose entries are ignored (the parents'
  * children imply them). */
 class _Adjacency implements Visitors.OfAdjacency {
   constructor(private readonly adjacencyName: string, private readonly own: string,
@@ -463,105 +469,144 @@ class _Adjacency implements Visitors.OfAdjacency {
 /**
  * Shared by every kind's builder: `create()` / `clone()` / `update()` with the rules and messages of every builder,
  * and `Visitors.OfObject` over the tag `kind`, the kind's attributes and its `children` entries. None of them
- * validate. DSL: `.set(field, value)` sets an attribute, a child or a list of children, and `.add(field, child)`
+ * validate. DSL: `.set(property, value)` sets an attribute, a child or a list of children, and `.add(property, child)`
  * appends to a list.
+ *
+ * Each kind's builder is also fluent, with one setter per property, named as the property, or with a trailing `_` where
+ * the builder has a method of that name (`update_`): an attribute's setter takes its value, a child's takes a `Spec`
+ * (see `child`), and a list's takes a list of them, which `add_<property>` appends to one at a time. `null` clears a
+ * property.
  */
 export class Builder implements Visitors.OfObject {
-  static KIND: NodeClass;
-  private readonly source: Node | undefined;
-  private values = new Map<string, unknown>();
-  private list: _Entry[] = [];
+  static KIND: SyntaxNodeClass;
+  readonly #source: SyntaxNode | undefined;
+  #values = new Map<string, unknown>();
+  #list: _Entry[] = [];
 
-  constructor(instance?: Node) {
-    const kind = this.kindClass;
+  constructor(instance?: SyntaxNode) {
+    const kind = this.#kindClass;
     if (instance !== undefined && instance !== null && instance.constructor !== kind) {
       throw new TypeError(`expected ${article(kind.KIND)} to build from, got ${typeName(instance)}`);
     }
-    this.source = instance ?? undefined;
-    if (this.source !== undefined) {
-      for (const f of kind.FIELDS) if (f instanceof Attribute) this.values.set(f.name, this.source.field(f.name));
-      this.list = children(this.source).map(([name, index, node]) =>
+    this.#source = instance ?? undefined;
+    if (this.#source !== undefined) {
+      for (const f of kind.PROPERTIES) if (f instanceof Attribute) this.#values.set(f.name, this.#source.get(f.name));
+      this.#list = children(this.#source).map(([name, index, node]) =>
         new _Entry("parent", node, name, index === null ? null : BigInt(index)));
     }
   }
 
-  private get kindClass(): NodeClass {
+  get #kindClass(): SyntaxNodeClass {
     return (this.constructor as typeof Builder).KIND;
   }
 
   // DSL
 
-  private childField(name: string): Child {
-    const field = this.kindClass.BY_NAME.get(name);
-    if (!(field instanceof Child)) throw new KeyError(`${this.kindClass.KIND} has no child field ${repr(name)}`);
-    return field;
+  #childProperty(name: string): Child {
+    const prop = this.#kindClass.BY_NAME.get(name);
+    if (!(prop instanceof Child)) throw new KeyError(`${this.#kindClass.KIND} has no child property ${repr(name)}`);
+    return prop;
   }
 
   set(name: string, value: unknown): this {
-    if (this.kindClass.BY_NAME.get(name) instanceof Attribute) {
-      this.values.set(name, value);
+    if (this.#kindClass.BY_NAME.get(name) instanceof Attribute) {
+      this.#values.set(name, value);
       return this;
     }
-    const field = this.childField(name);
-    this.list = this.list.filter((entry) => entry.fieldName !== name);
-    if (field.many) {
-      (value as Node[]).forEach((node, i) => this.list.push(new _Entry("parent", node, name, BigInt(i))));
+    const prop = this.#childProperty(name);
+    this.#list = this.#list.filter((entry) => entry.propertyName !== name);
+    if (prop.many) {
+      (value as SyntaxNode[]).forEach((node, i) => this.#list.push(new _Entry("parent", node, name, BigInt(i))));
     } else if (value !== null && value !== undefined) {
-      this.list.push(new _Entry("parent", value, name));
+      this.#list.push(new _Entry("parent", value, name));
     }
     return this;
   }
 
-  add(name: string, node: Node): this {
-    if (!this.childField(name).many) throw new TypeError(`${this.kindClass.KIND}.${name} holds one child; use set()`);
-    const index = this.list.filter((entry) => entry.fieldName === name).length;
-    this.list.push(new _Entry("parent", node, name, BigInt(index)));
+  add(name: string, node: SyntaxNode): this {
+    if (!this.#childProperty(name).many) {
+      throw new TypeError(`${this.#kindClass.KIND}.${name} holds one child; use set()`);
+    }
+    const index = this.#list.filter((entry) => entry.propertyName === name).length;
+    this.#list.push(new _Entry("parent", node, name, BigInt(index)));
     return this;
+  }
+
+  /** The syntax node a `Spec` gives the child property `name`: a syntax node itself; a builder, finalized; or a
+   * function that makes one, which is passed the builder of the property's kind where the property holds one kind, and
+   * the language's `Builders` otherwise, so that it names the kind. A property that holds one kind, whose only property
+   * is an attribute, also takes that attribute's value (an `Identifier` takes its spelling). */
+  child(name: string, spec: unknown): SyntaxNode | null {
+    const prop = this.#childProperty(name);
+    if (spec === null || spec === undefined || spec instanceof SyntaxNode) return spec ?? null;
+    if (spec instanceof Builder) return spec.finish();
+    const kind = oneKind(prop);
+    const own = this.#kindClass;
+    if (typeof spec === "function") {
+      const made: unknown = spec(kind !== null ? kind.LANGUAGE.builder(kind) : own.LANGUAGE.Builders);
+      if (made instanceof Builder) return made.finish();
+      if (made instanceof SyntaxNode) return made;
+      throw new TypeError(`the function for ${own.KIND}.${name} must return a builder or a syntax node, got ${
+        typeName(made)}`);
+    }
+    const only = kind?.PROPERTIES[0];
+    if (kind !== null && kind.PROPERTIES.length === 1 && only instanceof Attribute && isNative(only.native, spec)) {
+      return new (kind as unknown as new (values: object) => SyntaxNode)({ [only.name]: spec });
+    }
+    throw new TypeError(`${own.KIND}.${name} takes a syntax node, a builder or a function that makes one, got ${
+      typeName(spec)}`);
   }
 
   // Finalizing
 
+  /** `clone()` for a builder made from an instance, and `create()` otherwise. */
+  finish(): any {
+    return this.#source === undefined ? this.create() : this.clone();
+  }
+
   create(): any {
-    if (this.source !== undefined) {
+    if (this.#source !== undefined) {
       throw new ValueError("create() is only valid without a source instance; use clone() or update()");
     }
-    return this.make();
+    return this.#make();
   }
 
   clone(): any {
-    if (this.source === undefined) throw new ValueError("clone() is only valid with a source instance");
-    return this.make();
+    if (this.#source === undefined) throw new ValueError("clone() is only valid with a source instance");
+    return this.#make();
   }
 
   update(): any {
-    if (this.source === undefined) throw new ValueError("update() is only valid with a source instance");
-    const made = this.make();
-    for (const field of this.kindClass.FIELDS) {
-      (this.source as unknown as Record<string, unknown>)[field.name] = made.field(field.name);
+    if (this.#source === undefined) throw new ValueError("update() is only valid with a source instance");
+    const made = this.#make();
+    for (const prop of this.#kindClass.PROPERTIES) {
+      (this.#source as unknown as Record<string, unknown>)[prop.name] = made.get(prop.name);
     }
-    return this.source;
+    return this.#source;
   }
 
-  private make(): Node {
-    const kind = this.kindClass;
-    const values = new Map(this.values);
+  #make(): SyntaxNode {
+    const kind = this.#kindClass;
+    const values = new Map(this.#values);
     const lists = new Map<string, _Entry[]>();
-    for (const entry of this.list) {
+    for (const entry of this.#list) {
       if (entry.target === null) throw new ValueError("link 'child' is not set");
-      if (entry.fieldName === null) throw new ValueError("a child entry needs a field");
-      const field = kind.BY_NAME.get(entry.fieldName);
-      if (!(field instanceof Child)) {
-        throw new ValueError(`${article(kind.KIND)} has no child field ${repr(entry.fieldName)}`);
+      if (entry.propertyName === null) throw new ValueError("a child entry needs a property");
+      const prop = kind.BY_NAME.get(entry.propertyName);
+      if (!(prop instanceof Child)) {
+        throw new ValueError(`${article(kind.KIND)} has no child property ${repr(entry.propertyName)}`);
       }
-      if (!(entry.target instanceof Node)) throw new TypeError(`a child must be a node, got ${typeName(entry.target)}`);
-      if (field.many) {
-        lists.set(field.name, [...(lists.get(field.name) ?? []), entry]);
+      if (!(entry.target instanceof SyntaxNode)) {
+        throw new TypeError(`a child must be a syntax node, got ${typeName(entry.target)}`);
+      }
+      if (prop.many) {
+        lists.set(prop.name, [...(lists.get(prop.name) ?? []), entry]);
       } else if (entry.index !== null) {
-        throw new ValueError(`${kind.KIND}.${field.name} holds one child, not a list`);
-      } else if (values.has(field.name)) {
-        throw new ValueError(`${kind.KIND}.${field.name} holds one child, got several`);
+        throw new ValueError(`${kind.KIND}.${prop.name} holds one child, not a list`);
+      } else if (values.has(prop.name)) {
+        throw new ValueError(`${kind.KIND}.${prop.name} holds one child, got several`);
       } else {
-        values.set(field.name, entry.target);
+        values.set(prop.name, entry.target);
       }
     }
     for (const [name, entries] of lists) {
@@ -571,69 +616,135 @@ export class Builder implements Visitors.OfObject {
         .sort(([a, i], [b, j]) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : i - j));
       values.set(name, ordered.map(([entry]) => entry.target));
     }
-    return new (kind as unknown as new (values: object) => Node)(Object.fromEntries(values));
+    return new (kind as unknown as new (values: object) => SyntaxNode)(Object.fromEntries(values));
   }
 
   // Visitors.OfObject
 
-  private checkKind(kind: unknown): void {
-    if (kind !== null && kind !== this.kindClass.KIND) {
-      throw new ValueError(`expected kind ${repr(this.kindClass.KIND)}, got ${repr(kind)}`);
+  #checkKind(kind: unknown): void {
+    if (kind !== null && kind !== this.#kindClass.KIND) {
+      throw new ValueError(`expected kind ${repr(this.#kindClass.KIND)}, got ${repr(kind)}`);
     }
   }
 
-  private names(): string[] {
-    return ["kind", ...this.kindClass.FIELDS.filter((f) => f instanceof Attribute).map((f) => f.name)];
+  #names(): string[] {
+    return ["kind", ...this.#kindClass.PROPERTIES.filter((f) => f instanceof Attribute).map((f) => f.name)];
   }
 
-  private native(name: string): _Native {
-    if (name === "kind") return new _Native("kind", String, () => this.kindClass.KIND, (kind) => this.checkKind(kind));
-    const field = this.kindClass.BY_NAME.get(name) as Attribute;
-    return new _Native(name, field.native, () => this.values.get(name) ?? null,
-      (value) => { this.values.set(name, value); });
+  #native(name: string): _Native {
+    if (name === "kind") {
+      return new _Native("kind", String, () => this.#kindClass.KIND, (kind) => this.#checkKind(kind));
+    }
+    const prop = this.#kindClass.BY_NAME.get(name) as Attribute;
+    return new _Native(name, prop.native, () => this.#values.get(name) ?? null,
+      (value) => { this.#values.set(name, value); });
   }
 
   properties(callback: Callback<Visitors.OfProperty>): this {
-    for (const name of this.names()) if (this.has(name)) callback(this.native(name));
+    for (const name of this.#names()) if (this.has(name)) callback(this.#native(name));
     return this;
   }
 
   has(name: string): boolean {
-    return this.names().includes(name) && this.native(name).has();
+    return this.#names().includes(name) && this.#native(name).has();
   }
 
   property(name: string, callback: Callback<Visitors.OfProperty>): this {
-    if (!this.names().includes(name)) throw new KeyError(`unknown property ${repr(name)}`);
-    callback(this.native(name));
+    if (!this.#names().includes(name)) throw new KeyError(`unknown property ${repr(name)}`);
+    callback(this.#native(name));
     return this;
   }
 
   clear(name: string): this {
-    if (name !== "kind" && this.names().includes(name)) this.native(name).clear();
+    if (name !== "kind" && this.#names().includes(name)) this.#native(name).clear();
     return this;
   }
 
-  private parent(): boolean {
-    return this.kindClass.FIELDS.some((f) => f instanceof Child);
+  #parent(): boolean {
+    return this.#kindClass.PROPERTIES.some((f) => f instanceof Child);
   }
 
   adjacencies(callback: Callback<Visitors.OfAdjacency>): this {
-    for (const name of this.parent() ? ["children", "parent"] : ["parent"]) this.adjacency(name, callback);
+    for (const name of this.#parent() ? ["children", "parent"] : ["parent"]) this.adjacency(name, callback);
     return this;
   }
 
   adjacency(name: string, callback: Callback<Visitors.OfAdjacency>): this {
-    if (name === "children" && this.parent()) callback(new _Adjacency("children", "parent", this.list));
+    if (name === "children" && this.#parent()) callback(new _Adjacency("children", "parent", this.#list));
     else if (name === "parent") callback(new _Adjacency("parent", "child", null));
     else throw new KeyError(`unknown adjacency ${repr(name)}`);
     return this;
   }
 
-  /** Nodes hold no value objects, so there is nothing to identify. */
+  /** Syntax nodes hold no value objects, so there is nothing to identify. */
   identify(_value: Visitors.Visitable): this {
     return this;
   }
 }
+
+/** The kind a property holds, if it is declared with one kind rather than with categories. */
+function oneKind(prop: Child): SyntaxNodeClass | null {
+  const only = prop.categories[0];
+  return prop.categories.length === 1 && Object.prototype.hasOwnProperty.call(only, "KIND") ? only as SyntaxNodeClass
+    : null;
+}
+
+type Setter = (this: Builder, spec: any) => Builder;
+
+/** The fluent setters of `kind`'s builder, by name. */
+function setters(kind: SyntaxNodeClass): Record<string, Setter> {
+  const own = Object.getOwnPropertyNames(Builder.prototype);
+  const out: Record<string, Setter> = {};
+  for (const prop of kind.PROPERTIES) {
+    const name = prop.name;
+    out[own.includes(name) ? `${name}_` : name] = prop instanceof Attribute
+      ? function (value) { return this.set(name, value); }
+      : prop.many
+        ? function (specs: readonly unknown[]) { return this.set(name, specs.map((s) => this.child(name, s))); }
+        : function (spec) { return this.set(name, this.child(name, spec)); };
+    if (prop instanceof Child && prop.many) {
+      out[`add_${name}`] = function (spec) { return this.add(name, this.child(name, spec) as SyntaxNode); };
+    }
+  }
+  return out;
+}
+
+// --- Fluent builders' types ---
+
+/** A kind: a class of syntax nodes that is not a category, with its spec. */
+export type KindClass = (new (values?: object) => SyntaxNode)
+  & { readonly SPEC: Readonly<Record<string, PropertySpec>> };
+
+type IsOne<U, All = U> = [U] extends [never] ? false : U extends unknown ? ([All] extends [U] ? true : false) : never;
+/** The kind a property declared with the classes `A` holds, if it holds one. */
+type OneKind<A> = A extends readonly [infer C] ? (C extends KindClass ? C : never) : never;
+/** The value that stands for a syntax node of kind `C`, where its only property is an attribute. */
+type ValueOf<C> = C extends { SPEC: infer S }
+  ? (IsOne<keyof S> extends true ? (S[keyof S] extends AttributeSpec<infer V, infer _O> ? V : never) : never) : never;
+
+/** What a child's setter takes, in the language whose module is `M`: a syntax node, a builder, a function that makes
+ * one (from the builder of the property's kind if it holds one, and from the language's `Builders` otherwise), or the
+ * value of a kind whose only property is an attribute. */
+export type Spec<T, A, M> = T | Builder | ValueOf<OneKind<A>>
+  | ((b: [OneKind<A>] extends [never] ? Builders<M> : Fluent<OneKind<A>, M>) => Builder | SyntaxNode);
+
+type SetterOf<S, M, B> = S extends ChildSpec<infer T, infer Many, infer _O, infer A>
+  ? (Many extends true ? (specs: readonly Spec<T, A, M>[]) => B : (spec: Spec<T, A, M> | null) => B)
+  : S extends AttributeSpec<infer V, infer _O> ? (value: V | null) => B : never;
+
+/** The fluent builder of kind `C`, in the language whose module is `M`. */
+export type Fluent<C, M> = C extends { SPEC: infer S } ? Builder & {
+  [K in keyof S & string as K extends keyof Builder ? `${K}_` : K]: SetterOf<S[K], M, Fluent<C, M>>;
+} & {
+  [K in keyof S & string as S[K] extends ChildSpec<unknown, true> ? `add_${K}` : never]:
+    S[K] extends ChildSpec<infer T, true, infer _O, infer A> ? (spec: Spec<T, A, M>) => Fluent<C, M> : never;
+} : never;
+
+/** A language's builders, typed from its module `M`: by each kind's name, a function that returns its fluent
+ * builder. */
+export type Builders<M> = Registry & {
+  readonly [K in keyof M as M[K] extends KindClass ? K : never]: (instance?: SyntaxNode) => Fluent<M[K], M>;
+};
 
 // --- Meta-schemas and the registry ---
 
@@ -642,24 +753,25 @@ function nativeProperty(name: string, native: NativeToken) {
 }
 
 export const Children = new Schemas.OfRelation.Builder().links("parent", "child")
-  .properties(nativeProperty("field", String), nativeProperty("index", BigInt)).unique("child").create();
+  .properties(nativeProperty("property", String), nativeProperty("index", BigInt)).unique("child").create();
 Proxies.register(CHILDREN, Children);
 const CHILDREN_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("children").of(Children).me("parent");
 const PARENT_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("parent").of(Children).me("child");
 
-/** A kind's meta-schema: the tag, one property per attribute, and the adjacencies `children` (if it has child fields)
- * and `parent`. */
-function schemaOf(kind: NodeClass): Schemas.OfObject.Data {
-  const attributes = kind.FIELDS.filter((f): f is Attribute => f instanceof Attribute)
+/** A kind's meta-schema: the tag, one property per attribute, and the adjacencies `children` (if it has child
+ * properties) and `parent`. */
+function schemaOf(kind: SyntaxNodeClass): Schemas.OfObject.Data {
+  const attributes = kind.PROPERTIES.filter((f): f is Attribute => f instanceof Attribute)
     .map((f) => nativeProperty(f.name, f.native));
-  const relations = kind.FIELDS.some((f) => f instanceof Child) ? [CHILDREN_ADJACENCY, PARENT_ADJACENCY]
+  const relations = kind.PROPERTIES.some((f) => f instanceof Child) ? [CHILDREN_ADJACENCY, PARENT_ADJACENCY]
     : [PARENT_ADJACENCY];
   return new Schemas.OfObject.Builder().ref().properties(nativeProperty("kind", String), ...attributes)
     .relations(...relations).create();
 }
 
-/** Builds a language's nodes from snapshots: `registry['Programs.Ccpp.Identifier'](instance)` returns a builder, as
- * `Plain.FromPlain` expects. `schema` and `name_of` look the meta-schemas up. */
+/** Builds a language's syntax nodes from snapshots: `registry['Programs.Ccpp.Identifier'](instance)` returns a builder,
+ * as `Plain.FromPlain` expects, and so does the kind's own name: `registry.Identifier(instance)`. `schema` and
+ * `name_of` look the meta-schemas up. */
 export class Registry {
   private readonly schemas: Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>;
   readonly [name: string]: unknown;
@@ -667,7 +779,8 @@ export class Registry {
   constructor(schemas: ReadonlyMap<string, Schemas.OfObject.Data>, builders: ReadonlyMap<string, typeof Builder>) {
     this.schemas = new Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>([...schemas, [CHILDREN, Children]]);
     for (const [name, builder] of builders) {
-      (this as Record<string, unknown>)[name] = (instance?: Node) => new builder(instance);
+      (this as Record<string, unknown>)[name] = (instance?: SyntaxNode) => new builder(instance);
+      (this as Record<string, unknown>)[builder.KIND.KIND] = (instance?: SyntaxNode) => new builder(instance);
     }
   }
 
@@ -683,7 +796,7 @@ export class Registry {
     throw new LookupError("schema is not registered");
   }
 
-  /** The value a node holds in its attribute `name`. */
+  /** The value a syntax node holds in its attribute `name`. */
   member(instance: unknown, name: string): unknown {
     return (instance as Record<string, unknown>)[name];
   }
@@ -691,28 +804,28 @@ export class Registry {
 
 // --- Languages ---
 
-/** The classes between a kind and `Node`, its category first. */
+/** The classes between a kind and `SyntaxNode`, its category first. */
 function ancestors(kind: Function): Function[] {
   const out: Function[] = [];
-  for (let base = Object.getPrototypeOf(kind); base !== Node; base = Object.getPrototypeOf(base)) out.push(base);
+  for (let base = Object.getPrototypeOf(kind); base !== SyntaxNode; base = Object.getPrototypeOf(base)) out.push(base);
   return out;
 }
 
 type BranchBuilder = Parameters<Parameters<Schemas.OfUnion.Builder["branches"]>[0]>[0];
 
-/** A language declared by its kinds, from which it derives their fields, builders, meta-schemas (registered with
+/** A language declared by its kinds, from which it derives their properties, builders, meta-schemas (registered with
  * `Proxies` as 'Programs.<name>.<Kind>'), the union `Schema` of every kind, whose branches are named by the kinds,
  * and the registry `Builders`. `BASE` is where a kind exists unless it says otherwise. */
-export class Language {
+export class Language<M = {}> {
   readonly BASE: Availability;
-  readonly classes: readonly NodeClass[];
+  readonly classes: readonly SyntaxNodeClass[];
   readonly Schema: Schemas.OfUnion.Data;
-  readonly Builders: Registry;
+  readonly Builders: Builders<M>;
   private readonly languageName: string;
-  private readonly byKind = new Map<string, NodeClass>();
+  private readonly byKind = new Map<string, SyntaxNodeClass>();
   private readonly byCategory = new Map<string, Function>();
 
-  constructor(name: string, kinds: readonly NodeClass[], options: { base: Availability }) {
+  constructor(name: string, kinds: readonly SyntaxNodeClass[], options: { base: Availability }) {
     this.languageName = name;
     this.BASE = options.base;
     this.classes = [...kinds];
@@ -721,19 +834,23 @@ export class Language {
     for (const kind of kinds) {
       Object.assign(kind, { LANGUAGE: this, KIND: kind.name, NAME: `Programs.${name}.${kind.name}` });
       this.byKind.set(kind.KIND, kind);
-      for (const base of ancestors(kind).reverse()) if (!this.byCategory.has(base.name)) this.byCategory.set(base.name, base);
+      for (const base of ancestors(kind).reverse()) {
+        if (!this.byCategory.has(base.name)) this.byCategory.set(base.name, base);
+      }
     }
-    for (const kind of kinds) { // fields refer to other kinds, so they are read once every kind is known
-      const fields = fieldsOf(kind);
-      Object.assign(kind, { FIELDS: fields, BY_NAME: new Map(fields.map((f) => [f.name, f])) });
+    for (const kind of kinds) { // properties refer to other kinds, so they are read once every kind is known
+      const properties = propertiesOf(kind);
+      Object.assign(kind, { PROPERTIES: properties, BY_NAME: new Map(properties.map((f) => [f.name, f])) });
       kind.Schema = schemaOf(kind);
       schemas.set(kind.NAME, kind.Schema);
-      builders.set(kind.NAME, class extends Builder { static override KIND = kind; });
+      const built = class extends Builder { static override KIND = kind; };
+      Object.assign(built.prototype, setters(kind));
+      builders.set(kind.NAME, built);
     }
     for (const [schemaName, schema] of schemas) Proxies.register(schemaName, schema);
     this.Schema = new Schemas.OfUnion.Builder().branches(
       ...kinds.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema))).create();
-    this.Builders = new Registry(schemas, builders);
+    this.Builders = new Registry(schemas, builders) as Builders<M>;
   }
 
   name(): string {
@@ -741,7 +858,7 @@ export class Language {
   }
 
   /** Every kind, by name, in declaration order. */
-  kinds(): Map<string, NodeClass> {
+  kinds(): Map<string, SyntaxNodeClass> {
     return new Map(this.byKind);
   }
 
@@ -751,20 +868,20 @@ export class Language {
   }
 
   /** A builder for `kind`, or for `instance` of it. */
-  builder(kind: string | NodeClass, instance?: Node): Builder {
+  builder(kind: string | SyntaxNodeClass, instance?: SyntaxNode): Builder {
     const name = typeof kind === "string" ? kind : kind.name;
     const found = this.byKind.get(name);
     if (found === undefined) throw new KeyError(`${this.languageName} has no kind ${repr(name)}`);
-    return (this.Builders[found.NAME] as (instance?: Node) => Builder)(instance);
+    return (this.Builders[found.NAME] as (instance?: SyntaxNode) => Builder)(instance);
   }
 
-  private isNode(value: unknown): value is Node {
-    return value instanceof Node && this.classes.includes(value.kind());
+  private isNode(value: unknown): value is SyntaxNode {
+    return value instanceof SyntaxNode && this.classes.includes(value.kind());
   }
 
   /** The meta-schema of `node`'s kind: the root schema for its snapshots. */
   schema_of(node: unknown): Schemas.OfObject.Data {
-    if (!this.isNode(node)) throw new TypeError(`not ${article(this.languageName)} node: ${show(node)}`);
+    if (!this.isNode(node)) throw new TypeError(`not ${article(this.languageName)} syntax node: ${show(node)}`);
     return node.kind().Schema;
   }
 
@@ -772,7 +889,7 @@ export class Language {
     return `<language ${this.languageName}>`;
   }
 
-  /** The language as plain data: its categories, and each kind's category, availability, features and fields. Every
+  /** The language as plain data: its categories, and each kind's category, availability, features and properties. Every
    * implementation describes a language identically. */
   grammar(): Record<string, unknown> {
     const since = (availability: Availability | null) => (availability === null ? null
@@ -785,54 +902,57 @@ export class Language {
         kind: k.KIND, category: Object.getPrototypeOf(k).name, since: since(k.SINCE), extension: k.EXTENSION,
         features: Object.fromEntries(Object.entries(k.FEATURES).map(([f, values]) =>
           [f, Object.fromEntries(values.map(([v, a]) => [v === true ? "true" : v, since(a)]))])),
-        fields: k.FIELDS.map((f) => f.describe()),
+        properties: k.PROPERTIES.map((f) => f.describe()),
       })),
     };
   }
 
   // Checks
 
-  /** Problems with the tree at `node`, each prefixed with the path to the node it concerns: required fields that are
-   * missing, children of the wrong category, attributes of the wrong type or out of their choices, nodes that appear
-   * twice, cycles, and each kind's own problems. */
+  /** Problems with the tree at `node`, each prefixed with the path to the syntax node it concerns: required properties
+   * that are missing, children of the wrong category, attributes of the wrong type or out of their choices, syntax
+   * nodes that appear twice, cycles, and each kind's own problems. */
   validate(node: unknown): string[] {
     const problems: string[] = [];
-    const seen = new Map<Node, string>();
+    const seen = new Map<SyntaxNode, string>();
     const at = (path: string, problem: string) => (path ? `${path}: ${problem}` : problem);
 
     const visit = (item: unknown, path: string): void => {
       if (!this.isNode(item)) {
-        problems.push(at(path, `not ${article(this.languageName)} node: ${show(item)}`));
+        problems.push(at(path, `not ${article(this.languageName)} syntax node: ${show(item)}`));
         return;
       }
       if (seen.has(item)) {
-        problems.push(at(path, `the node is also at ${seen.get(item) || "the root"}`));
+        problems.push(at(path, `the syntax node is also at ${seen.get(item) || "the root"}`));
         return;
       }
       seen.set(item, path);
       const kind = item.kind();
-      for (const field of kind.FIELDS) {
-        const value = item.field(field.name);
-        if (field instanceof Attribute) {
-          problems.push(...attributeProblems(kind, field, value).map((p) => at(path, p)));
+      for (const prop of kind.PROPERTIES) {
+        const value = item.get(prop.name);
+        if (prop instanceof Attribute) {
+          problems.push(...attributeProblems(kind, prop, value).map((p) => at(path, p)));
           continue;
         }
-        const where = path ? `${path}.${field.name}` : field.name;
-        if (!field.many) {
+        const where = path ? `${path}.${prop.name}` : prop.name;
+        if (!prop.many) {
           if (value === null || value === undefined) {
-            if (!field.optional) problems.push(at(path, `${article(kind.KIND)} needs ${article(field.name)}`));
-          } else if (placed(kind, field, value, where, problems)) {
+            if (!prop.optional) problems.push(at(path, `${article(kind.KIND)} needs ${article(prop.name)}`));
+          } else if (placed(kind, prop, value, where, problems)) {
             visit(value, where);
           }
           continue;
         }
         if (!Array.isArray(value)) {
-          problems.push(at(path, `${kind.KIND}.${field.name} must be a list, got ${typeName(value)}`));
+          problems.push(at(path, `${kind.KIND}.${prop.name} must be a list, got ${typeName(value)}`));
           continue;
         }
         value.forEach((child: unknown, i: number) => {
-          if (child === null || child === undefined) problems.push(at(path, `${kind.KIND}.${field.name}[${i}] is empty`));
-          else if (placed(kind, field, child, `${where}[${i}]`, problems)) visit(child, `${where}[${i}]`);
+          if (child === null || child === undefined) {
+            problems.push(at(path, `${kind.KIND}.${prop.name}[${i}] is empty`));
+          } else if (placed(kind, prop, child, `${where}[${i}]`, problems)) {
+            visit(child, `${where}[${i}]`);
+          }
         });
       }
       problems.push(...item.check().map((p) => at(path, p)));
@@ -843,26 +963,26 @@ export class Language {
   }
 }
 
-function attributeProblems(kind: NodeClass, field: Attribute, value: unknown): string[] {
-  if (value === null || value === undefined || (value === false && field.native === Boolean)) {
-    return field.optional || field.native === Boolean ? [] : [`${article(kind.KIND)} needs ${article(field.name)}`];
+function attributeProblems(kind: SyntaxNodeClass, prop: Attribute, value: unknown): string[] {
+  if (value === null || value === undefined || (value === false && prop.native === Boolean)) {
+    return prop.optional || prop.native === Boolean ? [] : [`${article(kind.KIND)} needs ${article(prop.name)}`];
   }
-  if (!isNative(field.native, value)) {
-    return [`${kind.KIND}.${field.name} must be ${article(NATIVES.get(field.native) as string)}, got ${typeName(value)}`];
+  if (!isNative(prop.native, value)) {
+    return [`${kind.KIND}.${prop.name} must be ${article(NATIVES.get(prop.native) as string)}, got ${typeName(value)}`];
   }
-  if (field.choices !== null && !field.choices.includes(value as string)) {
-    return [`${kind.KIND}.${field.name} cannot be ${repr(value)}`];
+  if (prop.choices !== null && !prop.choices.includes(value as string)) {
+    return [`${kind.KIND}.${prop.name} cannot be ${repr(value)}`];
   }
   return [];
 }
 
-/** Whether `child` may fill `field`; if not, says why. */
-function placed(kind: NodeClass, field: Child, child: unknown, where: string, problems: string[]): boolean {
-  if (field.categories.some((c) => child instanceof c)) return true;
-  const expected = field.categories.map((c) => article(c.name)).join(" or ");
-  const got = child instanceof Node && Object.prototype.hasOwnProperty.call(child.kind(), "KIND")
+/** Whether `child` may fill `property`; if not, says why. */
+function placed(kind: SyntaxNodeClass, prop: Child, child: unknown, where: string, problems: string[]): boolean {
+  if (prop.categories.some((c) => child instanceof c)) return true;
+  const expected = prop.categories.map((c) => article(c.name)).join(" or ");
+  const got = child instanceof SyntaxNode && Object.prototype.hasOwnProperty.call(child.kind(), "KIND")
     ? article(child.kind().KIND) : typeName(child);
-  problems.push(`${where}: ${kind.KIND}.${field.name} must be ${expected}, got ${got}`);
+  problems.push(`${where}: ${kind.KIND}.${prop.name} must be ${expected}, got ${got}`);
   return false;
 }
 
@@ -873,7 +993,7 @@ export function label(family: string, year: number): string {
   return `${family}${String(year % 100).padStart(2, "0")}`;
 }
 
-/** Whether a field's value makes the feature `key`: true for a bool that is set, a child that is present or a list
+/** Whether a property's value makes the feature `key`: true for a bool that is set, a child that is present or a list
  * that is not empty, a choice for an attribute equal to it. */
 function uses(value: unknown, key: string | true): boolean {
   if (key === true) return !isUnset(value);
@@ -915,14 +1035,14 @@ export class Standard {
   }
 
   /** The features of `node` itself that this standard lacks. */
-  problems(node: Node): string[] {
+  problems(node: SyntaxNode): string[] {
     const kind = node.kind();
     if (kind.EXTENSION) return [];
     const found: string[] = [];
     const missing = this.missing(node.availability() ?? this.language.BASE);
     if (missing !== null) found.push(`${kind.KIND} ${missing}`);
     for (const [name, values] of Object.entries(kind.FEATURES)) {
-      const value = node.field(name);
+      const value = node.get(name);
       for (const [key, availability] of values) {
         if (!uses(value, key)) continue;
         const absent = this.missing(availability);
@@ -936,32 +1056,32 @@ export class Standard {
     return found;
   }
 
-  /** The features of the tree at `node` that this standard lacks, each prefixed with the path to its node. */
-  check(node: Node): string[] {
+  /** The features of the tree at `node` that this standard lacks, each prefixed with the path to its syntax node. */
+  check(node: SyntaxNode): string[] {
     const out: string[] = [];
     for (const [path, item] of paths(node)) out.push(...this.problems(item).map((p) => (path ? `${path}: ${p}` : p)));
     return out;
   }
 
   /** The tree of a source text of this standard. Throws `Errors.ParseError` for text that is not. */
-  parse(_text: string): Node {
+  parse(_text: string): SyntaxNode {
     throw new NotImplementedError(`${this.name()} has no parser`);
   }
 
   /** The source text of a tree, in this standard. Throws `Errors.PrintError` for a tree it cannot print. */
-  print(_node: Node): string {
+  print(_node: SyntaxNode): string {
     throw new NotImplementedError(`${this.name()} has no printer`);
   }
 }
 
 // --- Traversal ---
 
-/** Every node of the tree at `root`, each once, with its path, parents before their children. */
-function* paths(root: Node): Generator<[string, Node]> {
-  const seen = new Set<Node>();
-  const stack: [string, Node][] = [["", root]];
+/** Every syntax node of the tree at `root`, each once, with its path, parents before their children. */
+function* paths(root: SyntaxNode): Generator<[string, SyntaxNode]> {
+  const seen = new Set<SyntaxNode>();
+  const stack: [string, SyntaxNode][] = [["", root]];
   while (stack.length > 0) {
-    const [path, node] = stack.pop() as [string, Node];
+    const [path, node] = stack.pop() as [string, SyntaxNode];
     if (seen.has(node)) continue;
     seen.add(node);
     yield [path, node];
@@ -972,18 +1092,18 @@ function* paths(root: Node): Generator<[string, Node]> {
   }
 }
 
-/** Every node reachable from `node`, each once, parents before their children and children in field order. Shared
- * nodes are visited once, and cycles end the walk rather than repeat it. */
-export function* walk(node: Node): Generator<Node> {
+/** Every syntax node reachable from `node`, each once, parents before their children and children in property order.
+ * Shared syntax nodes are visited once, and cycles end the walk rather than repeat it. */
+export function* walk(node: SyntaxNode): Generator<SyntaxNode> {
   for (const [, item] of paths(node)) yield item;
 }
 
-/** Combines a tree bottom-up: `fn(node, results)` is called once per node, shared ones included, with the results for
- * its children in field order. Throws on cycles. */
-export function fold<R>(node: Node, fn: (node: Node, results: R[]) => R): R {
-  const memo = new Map<Node, R>();
-  const active = new Set<Node>();
-  const visit = (item: Node): R => {
+/** Combines a tree bottom-up: `fn(node, results)` is called once per syntax node, shared ones included, with the
+ * results for its children in property order. Throws on cycles. */
+export function fold<R>(node: SyntaxNode, fn: (node: SyntaxNode, results: R[]) => R): R {
+  const memo = new Map<SyntaxNode, R>();
+  const active = new Set<SyntaxNode>();
+  const visit = (item: SyntaxNode): R => {
     if (memo.has(item)) return memo.get(item) as R;
     if (active.has(item)) throw new ValueError("the tree contains a cycle");
     active.add(item);
@@ -999,20 +1119,20 @@ export function fold<R>(node: Node, fn: (node: Node, results: R[]) => R): R {
  * Sharing is not compared. */
 export function same(a: unknown, b: unknown): boolean {
   const assumed = new Set<string>();
-  const ids = new Map<Node, number>();
-  const id = (node: Node) => { if (!ids.has(node)) ids.set(node, ids.size); return ids.get(node); };
+  const ids = new Map<SyntaxNode, number>();
+  const id = (node: SyntaxNode) => { if (!ids.has(node)) ids.set(node, ids.size); return ids.get(node); };
   const visit = (x: unknown, y: unknown): boolean => {
-    if (!(x instanceof Node) || !(y instanceof Node)) return x === y;
+    if (!(x instanceof SyntaxNode) || !(y instanceof SyntaxNode)) return x === y;
     const pair = `${id(x)},${id(y)}`;
     if (assumed.has(pair)) return true; // a cycle: the same if they are the same everywhere else
     assumed.add(pair);
     if (x.constructor !== y.constructor) return false;
-    for (const field of x.kind().FIELDS) {
-      const u = x.field(field.name);
-      const v = y.field(field.name);
-      if (field instanceof Attribute) {
+    for (const prop of x.kind().PROPERTIES) {
+      const u = x.get(prop.name);
+      const v = y.get(prop.name);
+      if (prop instanceof Attribute) {
         if (typeof u !== typeof v || u !== v) return false;
-      } else if (field.many) {
+      } else if (prop.many) {
         const us = u as unknown[];
         const vs = v as unknown[];
         if (us.length !== vs.length || !us.every((item, i) => visit(item, vs[i]))) return false;
@@ -1025,17 +1145,17 @@ export function same(a: unknown, b: unknown): boolean {
   return visit(a, b);
 }
 
-/** A deep copy of the tree at `node`. Nodes shared within it are shared within the copy. */
-export function copy<T extends Node>(node: T): T {
-  const copies = new Map<Node, Node>();
+/** A deep copy of the tree at `node`. Syntax nodes shared within it are shared within the copy. */
+export function copy<T extends SyntaxNode>(node: T): T {
+  const copies = new Map<SyntaxNode, SyntaxNode>();
   const visit = (item: unknown): unknown => {
-    if (!(item instanceof Node)) return item;
+    if (!(item instanceof SyntaxNode)) return item;
     if (!copies.has(item)) {
-      const made = new (item.kind() as unknown as new () => Node)();
+      const made = new (item.kind() as unknown as new () => SyntaxNode)();
       copies.set(item, made);
-      for (const field of item.kind().FIELDS) {
-        const value = item.field(field.name);
-        (made as unknown as Record<string, unknown>)[field.name] = field instanceof Child && field.many
+      for (const prop of item.kind().PROPERTIES) {
+        const value = item.get(prop.name);
+        (made as unknown as Record<string, unknown>)[prop.name] = prop instanceof Child && prop.many
           ? (value as unknown[]).map(visit) : visit(value);
       }
     }
@@ -1044,34 +1164,36 @@ export function copy<T extends Node>(node: T): T {
   return visit(node) as T;
 }
 
-/** Where each node of a tree is: its parent, field and index. Taken once, it stays right while the tree changes only
- * through `replace` and `remove`. */
+/** Where each syntax node of a tree is: its parent, property and index. Taken once, it stays right while the tree
+ * changes only through `replace` and `remove`. */
 export class Parents {
-  private readonly where = new Map<Node, [Node, string, number | null]>();
+  private readonly where = new Map<SyntaxNode, [SyntaxNode, string, number | null]>();
 
-  constructor(readonly root: Node) {
+  constructor(readonly root: SyntaxNode) {
     for (const item of walk(root)) {
-      for (const [name, index, child] of children(item)) if (!this.where.has(child)) this.where.set(child, [item, name, index]);
+      for (const [name, index, child] of children(item)) {
+        if (!this.where.has(child)) this.where.set(child, [item, name, index]);
+      }
     }
   }
 
-  /** The node's parent; null for the root or a node outside the tree. */
-  parent(node: Node): Node | null {
+  /** The syntax node's parent; null for the root or a syntax node outside the tree. */
+  parent(node: SyntaxNode): SyntaxNode | null {
     return this.where.get(node)?.[0] ?? null;
   }
 
-  /** The node's parent, the field holding it, and its index in that field if it is a list. */
-  location(node: Node): [Node, string, number | null] | null {
+  /** The syntax node's parent, the property holding it, and its index in that property if it is a list. */
+  location(node: SyntaxNode): [SyntaxNode, string, number | null] | null {
     return this.where.get(node) ?? null;
   }
 
-  /** The node's parent, its parent's parent, and so on to the root. */
-  * ancestors(node: Node): Generator<Node> {
+  /** The syntax node's parent, its parent's parent, and so on to the root. */
+  * ancestors(node: SyntaxNode): Generator<SyntaxNode> {
     for (let parent = this.parent(node); parent !== null; parent = this.parent(parent)) yield parent;
   }
 
-  /** The path from the root to the node, such as 'items[0].body.items[2]'; '' for the root. */
-  path(node: Node): string {
+  /** The path from the root to the syntax node, such as 'items[0].body.items[2]'; '' for the root. */
+  path(node: SyntaxNode): string {
     const parts: string[] = [];
     for (let where = this.where.get(node); where !== undefined; where = this.where.get(where[0])) {
       const [, name, index] = where;
@@ -1080,19 +1202,21 @@ export class Parents {
     return parts.reverse().join(".");
   }
 
-  /** Puts `replacement` where `node` is: a node, null to empty a single field or remove from a list, or a list of nodes
-   * to splice into a list. */
-  replace(node: Node, replacement: Node | Node[] | null): void {
+  /** Puts `replacement` where `node` is: a syntax node, null to empty a single property or remove from a list, or a
+   * list of syntax nodes to splice into a list. */
+  replace(node: SyntaxNode, replacement: SyntaxNode | SyntaxNode[] | null): void {
     const where = this.where.get(node);
-    if (where === undefined) throw new ValueError("the node has no parent in this tree");
+    if (where === undefined) throw new ValueError("the syntax node has no parent in this tree");
     const [parent, name, index] = where;
     const added = Array.isArray(replacement) ? replacement : replacement === null ? [] : [replacement];
     const holder = parent as unknown as Record<string, unknown>;
     if (index === null) {
-      if (Array.isArray(replacement)) throw new TypeError(`${parent.kind().KIND}.${name} holds one node, not a list`);
+      if (Array.isArray(replacement)) {
+        throw new TypeError(`${parent.kind().KIND}.${name} holds one syntax node, not a list`);
+      }
       holder[name] = replacement;
     } else {
-      (holder[name] as Node[]).splice(index, 1, ...added);
+      (holder[name] as SyntaxNode[]).splice(index, 1, ...added);
     }
     this.where.delete(node);
     for (const item of added) {
@@ -1103,51 +1227,53 @@ export class Parents {
     if (index === null) {
       for (const item of added) this.where.set(item, [parent, name, null]);
     } else {
-      (holder[name] as Node[]).forEach((item, i) => this.where.set(item, [parent, name, i]));
+      (holder[name] as SyntaxNode[]).forEach((item, i) => this.where.set(item, [parent, name, i]));
     }
   }
 
-  /** Takes `node` out of the tree: empties its field, or removes it from its list. */
-  remove(node: Node): void {
+  /** Takes `node` out of the tree: empties its property, or removes it from its list. */
+  remove(node: SyntaxNode): void {
     this.replace(node, null);
   }
 }
 
 /** Walks a tree by kind: `visit(node)` calls `visit_<Kind>(node)` if the visitor defines it, and otherwise
- * `generic_visit(node)`, which visits the node's children in field order. */
+ * `generic_visit(node)`, which visits the syntax node's children in property order. */
 export class Visitor {
-  visit(node: Node): any {
+  visit(node: SyntaxNode): any {
     const method = (this as unknown as Record<string, unknown>)[`visit_${node.kind().KIND}`];
     return typeof method === "function" ? method.call(this, node) : this.generic_visit(node);
   }
 
-  generic_visit(node: Node): any {
+  generic_visit(node: SyntaxNode): any {
     for (const [, , child] of children(node)) this.visit(child);
     return null;
   }
 }
 
-/** Rewrites a tree by kind, in place: `visit` returns what replaces the node, which `generic_visit` stores. It returns
- * the node itself to keep it, another node to replace it, null to remove it (from a list, or emptying its field) or,
- * in a list, a list of nodes to splice in. */
+/** Rewrites a tree by kind, in place: `visit` returns what replaces the syntax node, which `generic_visit` stores. It
+ * returns the syntax node itself to keep it, another syntax node to replace it, null to remove it (from a list, or
+ * emptying its property) or, in a list, a list of syntax nodes to splice in. */
 export class Transformer extends Visitor {
-  override generic_visit(node: Node): any {
+  override generic_visit(node: SyntaxNode): any {
     const holder = node as unknown as Record<string, unknown>;
-    for (const field of node.kind().FIELDS) {
-      if (!(field instanceof Child)) continue;
-      const value = node.field(field.name);
-      if (field.many) {
-        const items: Node[] = [];
-        for (const child of value as Node[]) {
+    for (const prop of node.kind().PROPERTIES) {
+      if (!(prop instanceof Child)) continue;
+      const value = node.get(prop.name);
+      if (prop.many) {
+        const items: SyntaxNode[] = [];
+        for (const child of value as SyntaxNode[]) {
           const result = this.visit(child);
           if (Array.isArray(result)) items.push(...result);
           else if (result !== null && result !== undefined) items.push(result);
         }
-        holder[field.name] = items;
+        holder[prop.name] = items;
       } else if (value !== null) {
-        const result = this.visit(value as Node);
-        if (Array.isArray(result)) throw new TypeError(`${node.kind().KIND}.${field.name} holds one node, not a list`);
-        holder[field.name] = result ?? null;
+        const result = this.visit(value as SyntaxNode);
+        if (Array.isArray(result)) {
+          throw new TypeError(`${node.kind().KIND}.${prop.name} holds one syntax node, not a list`);
+        }
+        holder[prop.name] = result ?? null;
       }
     }
     return node;

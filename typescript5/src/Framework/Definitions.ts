@@ -21,8 +21,8 @@
 
 /** Something a program declares. `kind` names what it is in its language ('namespace', 'class', 'function', ...);
  * `name` is null for an unnamed entity. `parent` is the scope it is declared in, and `scope` its own members, for an
- * entity that has them. `declarations` are the nodes that declare it, in source order, and `definition` the one that
- * defines it, if any. `signature` tells overloaded functions apart, and `target` is what an alias names. */
+ * entity that has them. `declarations` are the syntax nodes that declare it, in source order, and `definition` the one
+ * that defines it, if any. `signature` tells overloaded functions apart, and `target` is what an alias names. */
 export class Entity {
   scope: Scope | null = null;
   declarations: unknown[] = [];
@@ -150,8 +150,8 @@ export class Scope {
   }
 }
 
-/** What a set of trees declares: the global scope, every entity, and for each node the entity it declares and the
- * scope it is in. */
+/** What a set of trees declares: the global scope, every entity, and for each syntax node the entity it declares and
+ * the scope it is in. */
 export class Program {
   readonly macros = new Scope("macros", null, null);
   private readonly all: Entity[] = [];
@@ -186,7 +186,7 @@ export class Program {
     return this.declared.get(node) ?? null;
   }
 
-  /** The innermost scope `node` is in; null for a node outside the program's trees. */
+  /** The innermost scope `node` is in; null for a syntax node outside the program's trees. */
   scope_of(node: unknown): Scope | null {
     return this.scopes.get(node) ?? null;
   }

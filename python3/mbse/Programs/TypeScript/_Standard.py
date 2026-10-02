@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..Framework.Errors import PrintError
-from ..Framework.Syntax import Node, Standard, children
+from ..Framework.Syntax import SyntaxNode, Standard, children
 from . import Syntax as S
 from . import _Parser
 from ._Printer import Printer
@@ -24,7 +24,7 @@ class _Standard(Standard):
         self.jsx = jsx
         self._printer = Printer(jsx)
 
-    def problems(self, node: Node) -> list[str]:
+    def problems(self, node: SyntaxNode) -> list[str]:
         if self.jsx and isinstance(node, S.TSTypeAssertion):
             return [f"{node.KIND} is not allowed with JSX"]
         if not self.jsx and type(node).KIND.startswith("JSX"):
@@ -35,10 +35,10 @@ class _Standard(Standard):
         """The tree of a source file. Raises `ParseError` at the first syntax error, or at the first construct the
         standard lacks."""
         program, positions, source = _Parser.parse(text, self.jsx)
-        stack: list[Node] = [program]
+        stack: list[SyntaxNode] = [program]
         while stack:
             node = stack.pop()
-            offset = positions[id(node)]  # the parser places every node
+            offset = positions[id(node)]  # the parser places every syntax node
             problems = self.problems(node)
             if problems:
                 raise source.error(f"{problems[0]}, but this is {self.name()}", offset)
@@ -46,7 +46,7 @@ class _Standard(Standard):
         return program
 
     def print(self, node: Any) -> str:
-        """The source text of a tree: a program as a file, any other node as the text it stands for. Raises
+        """The source text of a tree: a program as a file, any other syntax node as the text it stands for. Raises
         `PrintError` for an invalid tree, or one with a construct the standard lacks."""
         problems = self.language.validate(node)
         if not problems:

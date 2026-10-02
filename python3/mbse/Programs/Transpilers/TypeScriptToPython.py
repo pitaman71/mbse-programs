@@ -1,7 +1,8 @@
 """TypeScriptToPython: translates TypeScript trees into Python trees, without parsing or printing text.
 
 `transpile(program)` reads a `TypeScript.Syntax.Program` and returns a `Python.Syntax.Module`, which `Python314` prints.
-It covers a subset of TypeScript, and raises `TranspileError` at the first node outside it, with the node's path:
+It covers a subset of TypeScript, and raises `TranspileError` at the first syntax node outside it, with the syntax
+node's path:
 
 - Statements: variable declarations (names and array patterns), expressions, `if`, `while`, `do ... while`, `for`
   (as `for ... in range(...)` where it counts, as `while` otherwise), `for ... of`, `for ... in`, `switch` without
@@ -41,6 +42,8 @@ from ..TypeScript import Syntax as S
 
 __all__ = ["transpile"]
 
+Py = P.LANGUAGE.Builders
+
 # Names the translation writes, which a name of the program must not take: Python's keywords and builtins it uses.
 RESERVED = frozenset(keyword.kwlist) | {
     "self", "print", "len", "str", "int", "float", "bool", "isinstance", "list", "dict", "set", "range", "map",
@@ -52,28 +55,6 @@ COMPARISONS = {"==": "==", "===": "==", "!=": "!=", "!==": "!=", "<": "<", "<=":
 BINARY = {"+", "-", "*", "/", "%", "**", "<<", ">>", "&", "|", "^"}
 # The modules a mapped global needs, by the name the translation writes.
 MODULES = {"math": "math", "json": "json", "random": "random", "sys": "sys", "functools": "functools"}
-
-
-def _name(name: str) -> P.Name:
-    return P.Name(id=P.Identifier(spelling=name))
-
-
-def _constant(spelling: str) -> P.Constant:
-    return P.Constant(spelling=spelling)
-
-
-def _call(function: Any, *args: Any, keywords: list[Any] | None = None) -> P.Call:
-    if isinstance(function, str):
-        function = _name(function)
-    return P.Call(func=function, args=list(args), keywords=keywords or [])
-
-
-def _attribute(value: Any, attr: str) -> P.Attribute:
-    return P.Attribute(value=value, attr=P.Identifier(spelling=attr))
-
-
-def _arguments(names: list[str]) -> P.Arguments:
-    return P.Arguments(args=[P.Arg(arg=P.Identifier(spelling=n)) for n in names])
 
 
 class _Translator:
@@ -110,12 +91,12 @@ class _Translator:
     def module(self, name: str) -> P.Name:
         """The module `name`, imported."""
         self.imports.add(name)
-        return _name(name)
+        return Py.Name().id(name).create()
 
     def imported(self, module: str, name: str) -> P.Name:
         """`name` from `module`, imported."""
         self.from_imports.setdefault(module, set()).add(name)
-        return _name(name)
+        return Py.Name().id(name).create()
 
     @staticmethod
     def python(name: str) -> str:
@@ -130,13 +111,13 @@ class _Translator:
 
     def program(self, program: S.Program) -> P.Module:
         body = self.statements(program.body)
-        head: list[Any] = [P.Import(names=[P.Alias(name=P.DottedName(names=[P.Identifier(spelling=m)]))])
+        head: list[Any] = [Py.Import().names([Py.Alias().name(Py.DottedName().names([m]))]).create()
                            for m in sorted(self.imports)]
         for module in sorted(self.from_imports):
-            names = [P.Alias(name=P.DottedName(names=[P.Identifier(spelling=n)])) for n in sorted(
+            names = [Py.Alias().name(Py.DottedName().names([n])).create() for n in sorted(
                 self.from_imports[module])]
-            head.append(P.ImportFrom(module=P.DottedName(names=[P.Identifier(spelling=module)]), names=names))
-        return P.Module(body=head + body)
+            head.append(Py.ImportFrom().module(Py.DottedName().names([module])).names(names).create())
+        return Py.Module().body(head + body).create()
 
     # Statements
 
@@ -152,7 +133,7 @@ class _Translator:
     def block(self, statement: Any) -> list[Any]:
         """A statement as a block's body, which is never empty."""
         body = self.statements(statement.body if isinstance(statement, S.BlockStatement) else [statement])
-        return body if any(not isinstance(s, P.Comment) for s in body) else body + [P.Pass()]
+        return body if any(not isinstance(s, P.Comment) for s in body) else body + [Py.Pass().create()]
 
     def statement(self, node: Any) -> list[Any]:
         method = self.STATEMENTS.get(type(node))
@@ -162,7 +143,8 @@ class _Translator:
 
     def comment(self, node: S.Comment) -> list[Any]:
         lines = node.text.split("\n") if node.block else [node.text]
-        return [P.Comment(text=" " + line.strip(" *") if node.block else line, trailing=node.trailing and i == 0)
+        return [Py.Comment().text(" " + line.strip(" *") if node.block else line)
+                .trailing(node.trailing and i == 0).create()
                 for i, line in enumerate(lines) if not node.block or line.strip(" *")]
 
     def expression_statement(self, node: S.ExpressionStatement) -> list[Any]:
@@ -170,10 +152,10 @@ class _Translator:
         if isinstance(expression, S.AssignmentExpression):
             return self.assignment(expression)
         if isinstance(expression, S.UpdateExpression):
-            return [P.AugAssign(target=self.target(expression.argument), op="+" if expression.operator == "++" else "-",
-                                value=_constant("1"))]
+            return [Py.AugAssign().target(self.target(expression.argument))
+                    .op("+" if expression.operator == "++" else "-").value(Py.Constant().spelling("1")).create()]
         if isinstance(expression, S.UnaryExpression) and expression.operator == "delete":
-            return [P.Delete(targets=[self.target(expression.argument)])]
+            return [Py.Delete().targets([self.target(expression.argument)]).create()]
         if isinstance(expression, S.CallExpression):
             each = self.for_each(expression)
             if each is not None:
@@ -181,28 +163,29 @@ class _Translator:
             mapped = self.set_call(expression)
             if mapped is not None:
                 return mapped
-        return [P.Expr(value=self.expression(expression))]
+        return [Py.Expr().value(self.expression(expression)).create()]
 
     def assignment(self, node: S.AssignmentExpression) -> list[Any]:
         operator = node.operator
         if operator in ("&&=", "||=", "??="):  # `a ||= b` assigns only where `a` is falsy
             target = self.target(node.left)
             current = self.expression(node.left)
-            test: Any = {"&&=": current, "||=": P.UnaryOp(op="not", operand=current),
-                         "??=": P.Compare(left=current, comparisons=[P.Comparison(op="is", comparator=_constant(
-                             "None"))])}[operator]
-            return [P.If(test=test, body=[P.Assign(targets=[target], value=self.expression(node.right))])]
+            test: Any = {"&&=": current, "||=": Py.UnaryOp().op("not").operand(current).create(),
+                         "??=": Py.Compare().left(current).add_comparisons(
+                             Py.Comparison().op("is").comparator(Py.Constant().spelling("None"))).create()}[operator]
+            assign = Py.Assign().targets([target]).value(self.expression(node.right))
+            return [Py.If().test(test).add_body(assign).create()]
         if operator != "=":
             op = operator[:-1]
             if op not in BINARY:
                 raise self.error(node, f"the operator {operator} is not supported")
-            return [P.AugAssign(target=self.target(node.left), op=op, value=self.expression(node.right))]
+            return [Py.AugAssign().target(self.target(node.left)).op(op).value(self.expression(node.right)).create()]
         targets = [self.target(node.left)]
         value = node.right
         while isinstance(value, S.AssignmentExpression) and value.operator == "=":  # `a = b = c`
             targets.append(self.target(value.left))
             value = value.right
-        return [P.Assign(targets=targets, value=self.expression(value))]
+        return [Py.Assign().targets(targets).value(self.expression(value)).create()]
 
     def target(self, node: Any) -> Any:
         """What an assignment assigns to."""
@@ -211,16 +194,16 @@ class _Translator:
             if isinstance(translated, (P.Name, P.Attribute, P.Subscript)):
                 return translated
         if isinstance(node, S.ArrayPattern):
-            return P.Tuple(elts=[self.pattern_element(e) for e in node.elements])
+            return Py.Tuple().elts([self.pattern_element(e) for e in node.elements]).create()
         if isinstance(node, S.ParenthesizedExpression):
             return self.target(node.expression)
         raise self.error(node, f"{node.KIND} as a target is not supported")
 
     def pattern_element(self, node: Any) -> Any:
         if isinstance(node, S.Elision):
-            return _name("_")
+            return Py.Name().id("_").create()
         if isinstance(node, S.RestElement):
-            return P.Starred(value=self.target(node.argument))
+            return Py.Starred().value(self.target(node.argument)).create()
         return self.target(node)
 
     def variables(self, node: S.VariableDeclaration) -> list[Any]:
@@ -236,20 +219,22 @@ class _Translator:
                 out.append(self.function(declarator.init, self.python(declarator.id.name)))  # `const f = () => {}`
                 continue
             target = self.binding(declarator.id)
-            value = _constant("None") if declarator.init is None else self.expression(declarator.init)
+            value = (Py.Constant().spelling("None").create() if declarator.init is None
+                     else self.expression(declarator.init))
             annotation = self.annotation(declarator.id) if isinstance(declarator.id, S.Identifier) else None
             if annotation is not None and declarator.init is not None:
-                out.append(P.AnnAssign(target=target, annotation=annotation, value=value))
+                out.append(Py.AnnAssign().target(target).annotation(annotation).value(value).create())
             else:
-                out.append(P.Assign(targets=[target], value=value))
+                out.append(Py.Assign().targets([target]).value(value).create())
         return out
 
     def binding(self, node: Any) -> Any:
         if isinstance(node, S.Identifier):
-            return _name(self.python(node.name))
+            return Py.Name().id(self.python(node.name)).create()
         if isinstance(node, S.ArrayPattern):
-            return P.Tuple(elts=[_name("_") if isinstance(e, S.Elision) else P.Starred(value=self.binding(e.argument))
-                                 if isinstance(e, S.RestElement) else self.binding(e) for e in node.elements])
+            return Py.Tuple().elts([Py.Name().id("_") if isinstance(e, S.Elision)
+                                    else Py.Starred().value(self.binding(e.argument)) if isinstance(e, S.RestElement)
+                                    else self.binding(e) for e in node.elements]).create()
         raise self.error(node, f"{node.KIND} as a binding is not supported")
 
     def if_statement(self, node: S.IfStatement) -> list[Any]:
@@ -257,21 +242,21 @@ class _Translator:
         if node.alternate is not None:
             orelse = self.statements([node.alternate]) if isinstance(node.alternate, S.IfStatement) else self.block(
                 node.alternate)
-        return [P.If(test=self.expression(node.test), body=self.block(node.consequent), orelse=orelse)]
+        return [Py.If().test(self.expression(node.test)).body(self.block(node.consequent)).orelse(orelse).create()]
 
     def while_statement(self, node: S.WhileStatement) -> list[Any]:
-        return [P.While(test=self.expression(node.test), body=self.block(node.body))]
+        return [Py.While().test(self.expression(node.test)).body(self.block(node.body)).create()]
 
     def do_while(self, node: S.DoWhileStatement) -> list[Any]:
         """`do body while (test)`: a `while True` that breaks after the body, which must not `continue`."""
         self.no_continue(node.body, node)
-        stop = P.If(test=self.negate(self.expression(node.test)), body=[P.Break()])
-        return [P.While(test=_constant("True"), body=self.block(node.body) + [stop])]
+        stop = Py.If().test(self.negate(self.expression(node.test))).body([Py.Break()]).create()
+        return [Py.While().test(Py.Constant().spelling("True")).body(self.block(node.body) + [stop]).create()]
 
     def negate(self, test: Any) -> Any:
         if isinstance(test, P.UnaryOp) and test.op == "not":
             return test.operand
-        return P.UnaryOp(op="not", operand=test)
+        return Py.UnaryOp().op("not").operand(test).create()
 
     def no_continue(self, body: Any, loop: Any) -> None:
         """Raises if `body` continues the loop it is the body of: its translation would skip what follows the body."""
@@ -303,8 +288,8 @@ class _Translator:
         body = self.block(node.body)
         if node.update is not None:
             body = [s for s in body if not isinstance(s, P.Pass)] + self.update(node.update)
-        test = _constant("True") if node.test is None else self.expression(node.test)
-        return out + [P.While(test=test, body=body)]
+        test = Py.Constant().spelling("True").create() if node.test is None else self.expression(node.test)
+        return out + [Py.While().test(test).body(body).create()]
 
     def update(self, node: Any) -> list[Any]:
         if isinstance(node, S.SequenceExpression):
@@ -340,20 +325,25 @@ class _Translator:
         stop = self.expression(test.right)
         if test.operator in ("<=", ">="):  # one past the bound, folded where the bound is a number
             past = 1 if step > 0 else -1
-            stop = _constant(str(int(stop.spelling) + past)) if isinstance(stop, P.Constant) and re.fullmatch(
-                "[0-9]+", stop.spelling) else P.BinOp(left=stop, op="+" if past > 0 else "-", right=_constant("1"))
-        bounds = [self.expression(init.declarations[0].init), stop] + ([] if step == 1 else [_constant(str(step))])
-        return [P.For(target=_name(self.python(name)), iter=_call("range", *bounds), body=self.block(node.body))]
+            if isinstance(stop, P.Constant) and re.fullmatch("[0-9]+", stop.spelling):
+                stop = Py.Constant().spelling(str(int(stop.spelling) + past)).create()
+            else:
+                stop = Py.BinOp().left(stop).op("+" if past > 0 else "-").right(Py.Constant().spelling("1")).create()
+        bounds = [self.expression(init.declarations[0].init), stop]
+        if step != 1:
+            bounds.append(Py.Constant().spelling(str(step)).create())
+        iterable = Py.Call().func(Py.Name().id("range")).args(bounds)
+        return [Py.For().target(Py.Name().id(self.python(name))).iter(iterable).body(self.block(node.body)).create()]
 
     def for_of(self, node: Any) -> list[Any]:
         left = node.left
         target = self.binding(left.declarations[0].id) if isinstance(left, S.VariableDeclaration) else self.target(left)
         iterable = self.expression(node.right)
         if isinstance(node, S.ForInStatement):  # the keys of an object
-            iterable = _call("vars", iterable)
+            iterable = Py.Call().func(Py.Name().id("vars")).args([iterable]).create()
         elif node.isAwait:
             raise self.error(node, "for await is not supported")
-        return [P.For(target=target, iter=iterable, body=self.block(node.body))]
+        return [Py.For().target(target).iter(iterable).body(self.block(node.body)).create()]
 
     def switch(self, node: S.SwitchStatement) -> list[Any]:
         """`switch` as `if ... elif ... else`: each case must end its body, with `break`, `return`, `throw` or
@@ -362,8 +352,8 @@ class _Translator:
         subject: Any = self.expression(node.discriminant)
         if not isinstance(subject, (P.Name, P.Constant)):
             name = self.fresh("subject")
-            out.append(P.Assign(targets=[_name(name)], value=subject))
-            subject = _name(name)
+            out.append(Py.Assign().targets([Py.Name().id(name)]).value(subject).create())
+            subject = Py.Name().id(name).create()
         branches: list[tuple[list[Any], list[Any]]] = []  # each branch's tests (none for default) and body
         tests: list[Any] = []
         default = False
@@ -372,8 +362,8 @@ class _Translator:
             if case.test is None:
                 default = True
             else:
-                test = P.Comparison(op="==", comparator=self.expression(case.test))
-                tests.append(P.Compare(left=copy(subject), comparisons=[test]))
+                test = Py.Comparison().op("==").comparator(self.expression(case.test)).create()
+                tests.append(Py.Compare().left(copy(subject)).comparisons([test]).create())
             if not body and i + 1 < len(node.cases):
                 continue  # shares the next case's body
             if body and not isinstance(body[-1], (S.BreakStatement, S.ReturnStatement, S.ThrowStatement,
@@ -391,20 +381,20 @@ class _Translator:
             if not tests_:
                 chain = body
             else:
-                test = tests_[0] if len(tests_) == 1 else P.BoolOp(op="or", values=tests_)
-                chain = [P.If(test=test, body=body, orelse=chain)]
+                test = tests_[0] if len(tests_) == 1 else Py.BoolOp().op("or").values(tests_).create()
+                chain = [Py.If().test(test).body(body).orelse(chain).create()]
         return out + chain
 
     def jump(self, node: Any) -> list[Any]:
         if self.loop_of(node) is None:
             raise self.error(node, f"{node.KIND} outside of a loop is not supported")
-        return [P.Break() if isinstance(node, S.BreakStatement) else P.Continue()]
+        return [Py.Break().create() if isinstance(node, S.BreakStatement) else Py.Continue().create()]
 
     def return_statement(self, node: S.ReturnStatement) -> list[Any]:
-        return [P.Return(value=None if node.argument is None else self.expression(node.argument))]
+        return [Py.Return().value(None if node.argument is None else self.expression(node.argument)).create()]
 
     def throw(self, node: S.ThrowStatement) -> list[Any]:
-        return [P.Raise(exc=self.expression(node.argument))]
+        return [Py.Raise().exc(self.expression(node.argument)).create()]
 
     def try_statement(self, node: S.TryStatement) -> list[Any]:
         handlers: list[Any] = []
@@ -415,10 +405,11 @@ class _Translator:
             if param is not None:
                 entity = self.definitions.entity_of(param)
                 self.catches.add(id(entity))
-            handlers.append(P.ExceptHandler(type=_name("Exception"), name=None if param is None else P.Identifier(
-                spelling=self.python(param.name)), body=self.block(node.handler.body)))
-        return [P.Try(body=self.block(node.block), handlers=handlers,
-                      finalbody=[] if node.finalizer is None else self.block(node.finalizer))]
+            handlers.append(Py.ExceptHandler().type(Py.Name().id("Exception"))
+                            .name(None if param is None else self.python(param.name))
+                            .body(self.block(node.handler.body)).create())
+        finalbody = [] if node.finalizer is None else self.block(node.finalizer)
+        return [Py.Try().body(self.block(node.block)).handlers(handlers).finalbody(finalbody).create()]
 
     # Declarations
 
@@ -441,16 +432,15 @@ class _Translator:
         else:
             outer, self.pending = self.pending, []
             value = self.expression(node.body)
-            body = self.pending + [P.Return(value=value)]
+            body = self.pending + [Py.Return().value(value).create()]
             self.pending = outer
         body = self.outer_names(node) + (prefix or []) + body
         if not any(not isinstance(s, P.Comment) for s in body):
-            body.append(P.Pass())
+            body.append(Py.Pass().create())
         self.methods.pop()
-        kind = P.AsyncFunctionDef if node.isAsync else P.FunctionDef
-        return kind(decorator_list=decorators or [], name=P.Identifier(spelling=name), args=args,
-                    returns=self.type(node.returnType.typeAnnotation) if node.returnType is not None else None,
-                    body=body)
+        kind = Py.AsyncFunctionDef() if node.isAsync else Py.FunctionDef()
+        return kind.decorator_list(decorators or []).name(name).args(args).returns(
+            self.type(node.returnType.typeAnnotation) if node.returnType is not None else None).body(body).create()
 
     def outer_names(self, node: Any) -> list[Any]:
         """`global` and `nonlocal` for the names a function assigns but does not declare: in TypeScript, assigning
@@ -473,9 +463,9 @@ class _Translator:
                     which.append(name)
         out: list[Any] = []
         if found["global"]:
-            out.append(P.Global(names=[P.Identifier(spelling=n) for n in found["global"]]))
+            out.append(Py.Global().names(found["global"]).create())
         if found["nonlocal"]:
-            out.append(P.Nonlocal(names=[P.Identifier(spelling=n) for n in found["nonlocal"]]))
+            out.append(Py.Nonlocal().names(found["nonlocal"]).create())
         return out
 
     def assigned(self, node: Any) -> list[S.Identifier]:
@@ -495,7 +485,7 @@ class _Translator:
         return out
 
     def parameters(self, params: list[Any], method: bool) -> P.Arguments:
-        args: list[Any] = [P.Arg(arg=P.Identifier(spelling="self"))] if method else []
+        args: list[Any] = [Py.Arg().arg("self").create()] if method else []
         vararg = None
         for param in params:
             if isinstance(param, S.TSParameterProperty):
@@ -504,18 +494,17 @@ class _Translator:
             if isinstance(param, S.AssignmentPattern):
                 param, default = param.left, self.expression(param.right)
             if isinstance(param, S.RestElement) and isinstance(param.argument, S.Identifier):
-                vararg = P.Arg(arg=P.Identifier(spelling=self.python(param.argument.name)),
-                               annotation=None)
+                vararg = Py.Arg().arg(self.python(param.argument.name)).create()
                 continue
             if not isinstance(param, S.Identifier):
                 raise self.error(param, f"{param.KIND} as a parameter is not supported")
             if param.name == "this":
                 continue
             if param.optional and default is None:
-                default = _constant("None")
-            args.append(P.Arg(arg=P.Identifier(spelling=self.python(param.name)), annotation=self.annotation(param),
-                              default_value=default))
-        return P.Arguments(args=args, vararg=vararg)
+                default = Py.Constant().spelling("None").create()
+            args.append(Py.Arg().arg(self.python(param.name)).annotation(self.annotation(param))
+                        .default_value(default).create())
+        return Py.Arguments().args(args).vararg(vararg).create()
 
     def annotation(self, node: Any) -> Any:
         return None if node.typeAnnotation is None else self.type(node.typeAnnotation.typeAnnotation)
@@ -528,8 +517,8 @@ class _Translator:
         bases: list[Any] = []
         if node.superClass is not None:
             base = node.superClass
-            bases.append(_name("Exception") if isinstance(base, S.Identifier) and base.name == "Error" and (
-                self.is_global(base)) else self.expression(base))
+            error = isinstance(base, S.Identifier) and base.name == "Error" and self.is_global(base)
+            bases.append(Py.Name().id("Exception").create() if error else self.expression(base))
         body: list[Any] = []
         fields: list[Any] = []  # instance fields, which the constructor assigns
         constructor = None
@@ -553,8 +542,8 @@ class _Translator:
                          len(body))
             body.insert(index, self.constructor(constructor, fields, node.superClass is not None))
         if not any(not isinstance(s, P.Comment) for s in body):
-            body.append(P.Pass())
-        return [P.ClassDef(name=P.Identifier(spelling=self.python(node.id.name)), bases=bases, body=body)]
+            body.append(Py.Pass().create())
+        return [Py.ClassDef().name(self.python(node.id.name)).bases(bases).body(body).create()]
 
     def member_name(self, member: Any) -> str:
         if member.computed:
@@ -567,16 +556,17 @@ class _Translator:
         name = self.member_name(member)
         annotation = None if member.typeAnnotation is None else self.type(member.typeAnnotation.typeAnnotation)
         if member.static:
-            value = _constant("None") if member.value is None else self.expression(member.value)
+            value = Py.Constant().spelling("None").create() if member.value is None else self.expression(member.value)
             if annotation is not None:
-                return [P.AnnAssign(target=_name(name), annotation=annotation, value=value)]
-            return [P.Assign(targets=[_name(name)], value=value)]
+                return [Py.AnnAssign().target(Py.Name().id(name)).annotation(annotation).value(value).create()]
+            return [Py.Assign().targets([Py.Name().id(name)]).value(value).create()]
         if member.value is not None:
             self.methods.append(True)
-            fields.append(P.Assign(targets=[_attribute(_name("self"), name)], value=self.expression(member.value)))
+            target = Py.Attribute().value(Py.Name().id("self")).attr(name)
+            fields.append(Py.Assign().add_targets(target).value(self.expression(member.value)).create())
             self.methods.pop()
         if annotation is not None:
-            return [P.AnnAssign(target=_name(name), annotation=annotation)]
+            return [Py.AnnAssign().target(Py.Name().id(name)).annotation(annotation).create()]
         return []
 
     def constructor(self, member: Any, fields: list[Any], derived: bool) -> Any:
@@ -587,8 +577,9 @@ class _Translator:
                                         body=S.BlockStatement())
             prefix: list[Any] = []
             if derived:
-                arguments = P.Starred(value=_name("args"))
-                prefix.append(P.Expr(value=_call(_attribute(_call("super"), "__init__"), arguments)))
+                arguments = Py.Starred().value(Py.Name().id("args")).create()
+                init = Py.Attribute().value(Py.Call().func(Py.Name().id("super"))).attr("__init__")
+                prefix.append(Py.Expr().value(Py.Call().func(init).add_args(arguments)).create())
             return self.function(node, "__init__", method=True, prefix=prefix + fields)
         value = member.value
         properties: list[Any] = []  # `constructor(private x)` assigns `self.x = x`
@@ -596,14 +587,15 @@ class _Translator:
             if isinstance(param, S.TSParameterProperty):
                 bound = param.parameter.left if isinstance(param.parameter, S.AssignmentPattern) else param.parameter
                 name = self.python(bound.name)
-                properties.append(P.Assign(targets=[_attribute(_name("self"), name)], value=_name(name)))
+                target = Py.Attribute().value(Py.Name().id("self")).attr(name)
+                properties.append(Py.Assign().add_targets(target).value(Py.Name().id(name)).create())
         made = self.function(value, "__init__", method=True)
         statements = made.body
         index = next((i + 1 for i, s in enumerate(statements) if isinstance(s, P.Expr) and isinstance(
             s.value, P.Call) and isinstance(s.value.func, P.Attribute) and s.value.func.attr.spelling == "__init__"),
                      0)
         statements[index:index] = properties + fields
-        made.body = [s for s in statements if not isinstance(s, P.Pass)] or [P.Pass()]
+        made.body = [s for s in statements if not isinstance(s, P.Pass)] or [Py.Pass().create()]
         return made
 
     def method(self, member: Any) -> Any:
@@ -611,17 +603,17 @@ class _Translator:
         if name == "toString" and not member.static and not member.value.params:
             name = "__str__"  # what `String(x)` and templates call, as `str(x)` and f-strings do
         if isinstance(member, S.TSAbstractMethodDefinition):
-            raise_ = P.Raise(exc=_name("NotImplementedError"))
+            raise_ = Py.Raise().exc(Py.Name().id("NotImplementedError")).create()
             node = S.FunctionExpression(params=member.value.params, returnType=member.value.returnType,
                                         body=S.BlockStatement())
             return self.function(node, name, method=not member.static, prefix=[raise_])
         decorators: list[Any] = []
         if member.static:
-            decorators.append(_name("staticmethod"))
+            decorators.append(Py.Name().id("staticmethod").create())
         if member.methodKind == "get":
-            decorators.append(_name("property"))
+            decorators.append(Py.Name().id("property").create())
         elif member.methodKind == "set":
-            decorators.append(_attribute(_name(name), "setter"))
+            decorators.append(Py.Attribute().value(Py.Name().id(name)).attr("setter").create())
         return self.function(member.value, name, method=not member.static, decorators=decorators)
 
     def enum(self, node: S.TSEnumDeclaration) -> list[Any]:
@@ -641,7 +633,7 @@ class _Translator:
             if member.initializer is None:
                 if strings:
                     raise self.error(member, "a member of a string enum needs a value")
-                value = _constant(str(following))
+                value = Py.Constant().spelling(str(following)).create()
                 following += 1
             elif isinstance(member.initializer, S.Literal) and (
                     strings or re.fullmatch("[0-9]+", member.initializer.raw)):
@@ -650,16 +642,15 @@ class _Translator:
                     following = int(member.initializer.raw) + 1
             else:
                 raise self.error(member.initializer, "an enum member's value must be a literal")
-            body.append(P.Assign(targets=[_name(name)], value=value))
+            body.append(Py.Assign().targets([Py.Name().id(name)]).value(value).create())
         base = self.imported("enum", "StrEnum" if strings else "IntEnum")
-        return [P.ClassDef(name=P.Identifier(spelling=self.python(node.id.name)), bases=[base],
-                           body=body or [P.Pass()])]
+        return [Py.ClassDef().name(self.python(node.id.name)).bases([base]).body(body or [Py.Pass().create()]).create()]
 
     def type_alias(self, node: S.TSTypeAliasDeclaration) -> list[Any]:
         value = self.type(node.typeAnnotation)
         if value is None or node.typeParameters is not None:
             return []
-        return [P.TypeAlias(name=_name(self.python(node.id.name)), value=value)]
+        return [Py.TypeAlias().name(Py.Name().id(self.python(node.id.name))).value(value).create()]
 
     def import_declaration(self, node: S.ImportDeclaration) -> list[Any]:
         if node.importKind == "type":
@@ -668,17 +659,17 @@ class _Translator:
         out: list[Any] = []
         named: list[Any] = []
         def parent() -> P.DottedName | None:
-            return P.DottedName(names=names[:-1]) if len(names) > 1 else None
+            return Py.DottedName().names(names[:-1]).create() if len(names) > 1 else None
 
         for specifier in node.specifiers:
             if isinstance(specifier, S.ImportNamespaceSpecifier):
                 local = self.python(specifier.local.name)
                 if level:
-                    out.append(P.ImportFrom(level=level, module=parent(), names=[P.Alias(
-                        name=P.DottedName(names=[copy(n) for n in names[-1:]]), asname=P.Identifier(spelling=local))]))
+                    alias = Py.Alias().name(Py.DottedName().names([copy(n) for n in names[-1:]])).asname(local)
+                    out.append(Py.ImportFrom().level(level).module(parent()).add_names(alias).create())
                 else:
-                    out.append(P.Import(names=[P.Alias(name=P.DottedName(names=[copy(n) for n in names]),
-                                                       asname=P.Identifier(spelling=local))]))
+                    alias = Py.Alias().name(Py.DottedName().names([copy(n) for n in names])).asname(local)
+                    out.append(Py.Import().add_names(alias).create())
             elif isinstance(specifier, S.ImportSpecifier):
                 if specifier.importKind == "type":
                     continue
@@ -686,16 +677,19 @@ class _Translator:
                 if imported is None:
                     raise self.error(specifier, "importing a name that is a string is not supported")
                 local = self.python(specifier.local.name)
-                named.append(P.Alias(name=P.DottedName(names=[P.Identifier(spelling=self.python(imported))]),
-                                     asname=None if local == self.python(imported) else P.Identifier(spelling=local)))
+                named.append(Py.Alias().name(Py.DottedName().add_names(self.python(imported)))
+                             .asname(None if local == self.python(imported) else local).create())
             else:
                 raise self.error(specifier, "a default import is not supported")
         if named:
-            out.insert(0, P.ImportFrom(level=level or None, module=P.DottedName(names=[copy(n) for n in names]),
-                                       names=named))
+            module = Py.DottedName().names([copy(n) for n in names])
+            out.insert(0, Py.ImportFrom().level(level or None).module(module).names(named).create())
         if not node.specifiers:
-            out.append(P.Import(names=[P.Alias(name=P.DottedName(names=names))]) if not level else P.ImportFrom(
-                level=level, module=parent(), names=[P.Alias(name=P.DottedName(names=names[-1:]))]))
+            if not level:
+                out.append(Py.Import().add_names(Py.Alias().name(Py.DottedName().names(names))).create())
+            else:
+                alias = Py.Alias().name(Py.DottedName().names(names[-1:]))
+                out.append(Py.ImportFrom().level(level).module(parent()).add_names(alias).create())
         return out
 
     def module_path(self, source: S.Literal) -> tuple[int, list[P.Identifier]]:
@@ -712,7 +706,8 @@ class _Translator:
         parts = [p for p in path.split("/") if p]
         if not parts or any(not re.fullmatch("[A-Za-z_$][A-Za-z0-9_$-]*", p) for p in parts):
             raise self.error(source, f"the module {source.raw} has no Python name")
-        return level, [P.Identifier(spelling=self.python(p.replace("-", "_").replace("$", "_"))) for p in parts]
+        return level, [Py.Identifier().spelling(self.python(p.replace("-", "_").replace("$", "_"))).create()
+                       for p in parts]
 
     def export_named(self, node: S.ExportNamedDeclaration) -> list[Any]:
         if node.declaration is not None:
@@ -754,28 +749,28 @@ class _Translator:
     def identifier(self, node: S.Identifier) -> Any:
         if self.is_global(node):
             if node.name == "undefined":
-                return _constant("None")
+                return Py.Constant().spelling("None").create()
             if node.name in ("NaN", "Infinity"):
-                return _attribute(self.module("math"), "nan" if node.name == "NaN" else "inf")
+                return Py.Attribute().value(self.module("math")).attr("nan" if node.name == "NaN" else "inf").create()
             if node.name in GLOBALS or node.name in OBJECTS:
                 raise self.error(node, f"the global {node.name} is not supported here")
-        return _name(self.python(node.name))
+        return Py.Name().id(self.python(node.name)).create()
 
     def literal(self, node: S.Literal) -> Any:
         raw = node.raw
         if raw in ("true", "false"):
-            return _constant(raw.capitalize())
+            return Py.Constant().spelling(raw.capitalize()).create()
         if raw == "null":
-            return _constant("None")
+            return Py.Constant().spelling("None").create()
         if raw[:1] in ("'", '"'):
-            return _constant(self.string(raw))
+            return Py.Constant().spelling(self.string(raw)).create()
         if raw.startswith("/"):
             raise self.error(node, "a regular expression is not supported")
         if raw.endswith("n"):
             raw = raw[:-1]  # a bigint: Python's integers have no bounds
         if re.fullmatch(r"0[0-7]+", raw):
             raw = "0o" + raw[1:]  # a legacy octal
-        return _constant(raw)
+        return Py.Constant().spelling(raw).create()
 
     def string(self, raw: str) -> str:
         """A Python string literal's spelling of a TypeScript one: escapes Python lacks rewritten."""
@@ -787,24 +782,24 @@ class _Translator:
             text = self.string(quasi.raw).replace("{", "{{").replace("}", "}}").replace("\\`", "`").replace(
                 '"', '\\"').replace("\n", "\\n")
             if text:
-                values.append(P.StringText(spelling=text))
+                values.append(Py.StringText().spelling(text).create())
             if i < len(node.expressions):
-                values.append(P.FormattedValue(value=self.expression(node.expressions[i])))
-        return P.JoinedStr(prefix="f", quote='"', values=values)
+                values.append(Py.FormattedValue().value(self.expression(node.expressions[i])).create())
+        return Py.JoinedStr().prefix("f").quote('"').values(values).create()
 
     def this(self, node: S.ThisExpression) -> Any:
         if not self.methods or not self.methods[-1]:
             raise self.error(node, "this outside a method is not supported")
-        return _name("self")
+        return Py.Name().id("self").create()
 
     def array(self, node: S.ArrayExpression) -> Any:
         elements: list[Any] = []
         for element in node.elements:
             if isinstance(element, S.Elision):
                 raise self.error(element, "a hole in an array is not supported")
-            elements.append(P.Starred(value=self.expression(element.argument)) if isinstance(
+            elements.append(Py.Starred().value(self.expression(element.argument)).create() if isinstance(
                 element, S.SpreadElement) else self.expression(element))
-        return P.List(elts=elements)
+        return Py.List().elts(elements).create()
 
     def object(self, node: S.ObjectExpression) -> Any:
         keywords: list[Any] = []
@@ -816,14 +811,15 @@ class _Translator:
                 item.key, S.Literal) and item.key.raw.startswith(("'", '"')) else None
             if key is None or not key.isidentifier():
                 raise self.error(item, "a key that is not a name is not supported")
-            keywords.append(P.Keyword(arg=P.Identifier(spelling=key + "_" if keyword.iskeyword(key) else key),
-                                      value=self.expression(item.value)))
-        return _call(self.imported("types", "SimpleNamespace"), keywords=keywords)
+            keywords.append(Py.Keyword().arg(key + "_" if keyword.iskeyword(key) else key)
+                            .value(self.expression(item.value)).create())
+        return Py.Call().func(self.imported("types", "SimpleNamespace")).keywords(keywords).create()
 
     def unary(self, node: S.UnaryExpression) -> Any:
         if node.operator in ("typeof", "void", "delete"):
             raise self.error(node, f"the operator {node.operator} is not supported")
-        return P.UnaryOp(op="not" if node.operator == "!" else node.operator, operand=self.expression(node.argument))
+        return (Py.UnaryOp().op("not" if node.operator == "!" else node.operator)
+                .operand(self.expression(node.argument)).create())
 
     def binary(self, node: Any) -> Any:
         operator = node.operator
@@ -831,26 +827,29 @@ class _Translator:
             raise self.error(node, "#name in is not supported")
         left, right = self.expression(node.left), self.expression(node.right)
         if operator in ("&&", "||"):
-            return P.BoolOp(op="and" if operator == "&&" else "or", values=[left, right])
+            return Py.BoolOp().op("and" if operator == "&&" else "or").values([left, right]).create()
         if operator == "??":  # `a ?? b`: `a` is evaluated once, kept in a name unless it is one or a constant
             value = left
             if not isinstance(left, (P.Name, P.Constant)):
-                value = _name(self.fresh("value"))
-                left = P.NamedExpr(target=value, value=left)
-            test = P.Compare(left=left, comparisons=[P.Comparison(op="is not", comparator=_constant("None"))])
-            return P.IfExp(test=test, body=copy(value), orelse=right)
+                value = Py.Name().id(self.fresh("value")).create()
+                left = Py.NamedExpr().target(value).value(left).create()
+            test = Py.Compare().left(left).add_comparisons(
+                Py.Comparison().op("is not").comparator(Py.Constant().spelling("None"))).create()
+            return Py.IfExp().test(test).body(copy(value)).orelse(right).create()
         if operator == "instanceof":
-            return _call("isinstance", left, right)
+            return Py.Call().func(Py.Name().id("isinstance")).args([left, right]).create()
         if operator in COMPARISONS:
             op = COMPARISONS[operator]
             if isinstance(right, P.Constant) and right.spelling == "None" and op in ("==", "!="):
                 op = "is" if op == "==" else "is not"  # `x === null`
-            return P.Compare(left=left, comparisons=[P.Comparison(op=op, comparator=right)])
+            return Py.Compare().left(left).comparisons([Py.Comparison().op(op).comparator(right)]).create()
         if operator not in BINARY:
             raise self.error(node, f"the operator {operator} is not supported")
         if operator == "+" and self.textual(left) != self.textual(right):  # `"n" + 1` makes a string of the number
-            left, right = (left, _call("str", right)) if self.textual(left) else (_call("str", left), right)
-        return P.BinOp(left=left, op=operator, right=right)
+            def text(value: Any) -> Any:
+                return Py.Call().func(Py.Name().id("str")).add_args(value).create()
+            left, right = (left, text(right)) if self.textual(left) else (text(left), right)
+        return Py.BinOp().left(left).op(operator).right(right).create()
 
     @staticmethod
     def textual(node: Any) -> bool:
@@ -861,18 +860,19 @@ class _Translator:
         return isinstance(node, P.JoinedStr) or (isinstance(node, P.Constant) and node.spelling.startswith(("'", '"')))
 
     def conditional(self, node: S.ConditionalExpression) -> Any:
-        return P.IfExp(test=self.expression(node.test), body=self.expression(node.consequent),
-                       orelse=self.expression(node.alternate))
+        return (Py.IfExp().test(self.expression(node.test)).body(self.expression(node.consequent))
+                .orelse(self.expression(node.alternate)).create())
 
     def assignment_expression(self, node: S.AssignmentExpression) -> Any:
         if node.operator == "=" and isinstance(node.left, S.Identifier) and not self.lambdas:  # a lambda's own
-            return P.NamedExpr(target=_name(self.python(node.left.name)), value=self.expression(node.right))
+            return (Py.NamedExpr().target(Py.Name().id(self.python(node.left.name)))
+                    .value(self.expression(node.right)).create())
         raise self.error(node, "an assignment within an expression is not supported")
 
     def member(self, node: S.MemberExpression) -> Any:
         target = node.object
         if node.computed:
-            return P.Subscript(value=self.expression(target), slice=self.expression(node.property))
+            return Py.Subscript().value(self.expression(target)).slice(self.expression(node.property)).create()
         name = self.property_name(node.property)
         if isinstance(target, S.Identifier) and self.is_global(target) and target.name in OBJECTS:
             mapped = OBJECTS[target.name].get(name)
@@ -880,12 +880,13 @@ class _Translator:
                 raise self.error(node, f"{target.name}.{name} is not supported")
             return self.global_value(mapped)
         if name == "length" and name not in self.members:
-            return _call("len", self.expression(target))
+            return Py.Call().func(Py.Name().id("len")).args([self.expression(target)]).create()
         if name == "size" and name not in self.members:
-            return _call("len", self.expression(target))
+            return Py.Call().func(Py.Name().id("len")).args([self.expression(target)]).create()
         if name == "message" and isinstance(target, S.Identifier) and self.caught(target):
-            return _call("str", self.expression(target))  # an exception's message
-        return _attribute(self.expression(target), name)
+            # an exception's message
+            return Py.Call().func(Py.Name().id("str")).add_args(self.expression(target)).create()
+        return Py.Attribute().value(self.expression(target)).attr(name).create()
 
     @staticmethod
     def property_name(key: Any) -> str:
@@ -897,7 +898,7 @@ class _Translator:
     def global_value(self, path: str) -> Any:
         """`module.name` (or a builtin) for a global's member, its module imported."""
         module, _, name = path.rpartition(".")
-        return _attribute(self.module(module), name) if module else _name(name)
+        return Py.Attribute().value(self.module(module)).attr(name).create() if module else Py.Name().id(name).create()
 
     def caught(self, identifier: S.Identifier) -> bool:
         found = D.referents(self.definitions, identifier)
@@ -906,10 +907,12 @@ class _Translator:
     def call(self, node: S.CallExpression) -> Any:
         callee = node.callee
         if isinstance(callee, S.Super):
-            return _call(_attribute(_call("super"), "__init__"), *self.arguments(node.arguments))
+            init = Py.Attribute().value(Py.Call().func(Py.Name().id("super"))).attr("__init__")
+            return Py.Call().func(init).args(self.arguments(node.arguments)).create()
         if isinstance(callee, S.MemberExpression) and isinstance(callee.object, S.Super):
-            return _call(_attribute(_call("super"), self.property_name(callee.property)),
-                         *self.arguments(node.arguments))
+            parent = Py.Call().func(Py.Name().id("super"))
+            method = Py.Attribute().value(parent).attr(self.property_name(callee.property))
+            return Py.Call().func(method).args(self.arguments(node.arguments)).create()
         if isinstance(callee, S.Identifier) and self.is_global(callee) and callee.name in GLOBALS:
             return GLOBALS[callee.name](self, node)
         if isinstance(callee, S.MemberExpression) and not callee.computed and isinstance(callee.object, S.Identifier) \
@@ -922,11 +925,11 @@ class _Translator:
                 callee.property, S.Identifier) and callee.property.name in METHODS and (
                 callee.property.name not in self.members):
             return METHODS[callee.property.name](self, self.expression(callee.object), node)
-        return _call(self.expression(callee), *self.arguments(node.arguments))
+        return Py.Call().func(self.expression(callee)).args(self.arguments(node.arguments)).create()
 
     def arguments(self, args: list[Any]) -> list[Any]:
-        return [P.Starred(value=self.expression(a.argument)) if isinstance(a, S.SpreadElement) else self.expression(a)
-                for a in args]
+        return [Py.Starred().value(self.expression(a.argument)).create() if isinstance(a, S.SpreadElement)
+                else self.expression(a) for a in args]
 
     def arguments_of(self, node: S.CallExpression, *counts: int) -> list[Any]:
         """The arguments of a call that a mapping translates, which must be as many as one of `counts`."""
@@ -942,8 +945,8 @@ class _Translator:
                       "Set": "set", "Map": "dict"}.get(callee.name)
             if mapped is None:
                 raise self.error(node, f"new {callee.name} is not supported")
-            return _call(mapped, *self.arguments(node.arguments))
-        return _call(self.expression(callee), *self.arguments(node.arguments))
+            return Py.Call().func(Py.Name().id(mapped)).args(self.arguments(node.arguments)).create()
+        return Py.Call().func(self.expression(callee)).args(self.arguments(node.arguments)).create()
 
     def function_value(self, node: Any) -> Any:
         """An arrow function or a function expression used as a value: a lambda where its body is an expression,
@@ -960,19 +963,19 @@ class _Translator:
             body = self.expression(node.body)
             self.methods.pop()
             self.lambdas -= 1
-            return P.Lambda(args=_arguments(names), body=body)
+            return Py.Lambda().args(Py.Arguments().args([Py.Arg().arg(n) for n in names])).body(body).create()
         if self.lambdas:
             raise self.error(node, "a function with a body within a lambda is not supported")
         name = self.python(node.id.name) if getattr(node, "id", None) is not None else self.fresh("function")
         self.pending.append(self.function(node, name))
-        return _name(name)
+        return Py.Name().id(name).create()
 
     def await_(self, node: S.AwaitExpression) -> Any:
-        return P.Await(value=self.expression(node.argument))
+        return Py.Await().value(self.expression(node.argument)).create()
 
     def yield_(self, node: S.YieldExpression) -> Any:
         value = None if node.argument is None else self.expression(node.argument)
-        return P.YieldFrom(value=value) if node.delegate else P.Yield(value=value)
+        return Py.YieldFrom().value(value).create() if node.delegate else Py.Yield().value(value).create()
 
     def callback(self, node: S.CallExpression) -> tuple[Any, Any] | None:
         """The parameter and body of the callback `node` passes, if it is an arrow function of one name with an
@@ -985,7 +988,7 @@ class _Translator:
             self.lambdas += 1
             body = self.expression(f.body)
             self.lambdas -= 1
-            return _name(self.python(f.params[0].name)), body
+            return Py.Name().id(self.python(f.params[0].name)).create(), body
         return None
 
     def for_each(self, node: S.CallExpression) -> list[Any] | None:
@@ -999,8 +1002,10 @@ class _Translator:
         if not (isinstance(f, S.ArrowFunctionExpression) and len(f.params) == 1 and isinstance(
                 f.params[0], S.Identifier)):
             raise self.error(f, "forEach takes an arrow function of one parameter here")
-        body = self.block(f.body) if isinstance(f.body, S.BlockStatement) else [P.Expr(value=self.expression(f.body))]
-        return [P.For(target=_name(self.python(f.params[0].name)), iter=self.expression(callee.object), body=body)]
+        body = (self.block(f.body) if isinstance(f.body, S.BlockStatement)
+                else [Py.Expr().value(self.expression(f.body)).create()])
+        return [Py.For().target(Py.Name().id(self.python(f.params[0].name))).iter(self.expression(callee.object))
+                .body(body).create()]
 
     def set_call(self, node: S.CallExpression) -> list[Any] | None:
         """`map.set(k, v)` as a statement: an assignment to `map[k]`."""
@@ -1009,7 +1014,8 @@ class _Translator:
                 callee.property, S.Identifier) and callee.property.name == "set" and "set" not in self.members and (
                 len(node.arguments) == 2):
             key, value = self.arguments(node.arguments)
-            return [P.Assign(targets=[P.Subscript(value=self.expression(callee.object), slice=key)], value=value)]
+            target = Py.Subscript().value(self.expression(callee.object)).slice(key)
+            return [Py.Assign().add_targets(target).value(value).create()]
         return None
 
     def stripped(self, node: Any) -> Any:
@@ -1035,30 +1041,31 @@ class _Translator:
                     S.TSBigIntKeyword: "int", S.TSObjectKeyword: "object", S.TSUnknownKeyword: "object",
                     S.TSVoidKeyword: "None", S.TSUndefinedKeyword: "None", S.TSNullKeyword: "None"}.get(type(node))
         if keyword_ is not None:
-            return _constant("None") if keyword_ == "None" else _name(keyword_)
+            return Py.Constant().spelling("None").create() if keyword_ == "None" else Py.Name().id(keyword_).create()
         if isinstance(node, S.TSAnyKeyword):
             return self.imported("typing", "Any")
         if isinstance(node, S.TSArrayType):
             element = self.type(node.elementType)
-            return None if element is None else P.Subscript(value=_name("list"), slice=element)
+            return None if element is None else Py.Subscript().value(Py.Name().id("list")).slice(element).create()
         if isinstance(node, S.TSTypeOperator) and node.operator == "readonly" and node.typeAnnotation is not None:
             return self.type(node.typeAnnotation)
         if isinstance(node, S.TSTupleType):
             elements = [self.type(t) for t in node.elementTypes]
-            return None if None in elements or not elements else P.Subscript(value=_name("tuple"), slice=P.Tuple(
-                elts=elements))
+            if None in elements or not elements:
+                return None
+            return Py.Subscript().value(Py.Name().id("tuple")).slice(Py.Tuple().elts(elements)).create()
         if isinstance(node, S.TSUnionType):
             types = [self.type(t) for t in node.types]
             if None in types:
                 return None
             union = types[0]
             for t in types[1:]:
-                union = P.BinOp(left=union, op="|", right=t)
+                union = Py.BinOp().left(union).op("|").right(t).create()
             return union
         if isinstance(node, S.TSParenthesizedType):
             return self.type(node.typeAnnotation)
         if isinstance(node, S.TSLiteralType) and isinstance(node.literal, S.Literal):
-            return P.Subscript(value=self.imported("typing", "Literal"), slice=self.literal(node.literal))
+            return Py.Subscript().value(self.imported("typing", "Literal")).slice(self.literal(node.literal)).create()
         if isinstance(node, S.TSTypeReference) and isinstance(node.typeName, S.Identifier):
             name = node.typeName.name
             args = [] if node.typeArguments is None else [self.type(t) for t in node.typeArguments.params]
@@ -1067,53 +1074,55 @@ class _Translator:
             generic = {"Array": "list", "ReadonlyArray": "list", "Set": "set", "Map": "dict", "Record": "dict"}.get(
                 name)
             if generic is not None and args:
-                return P.Subscript(value=_name(generic), slice=args[0] if len(args) == 1 else P.Tuple(elts=args))
+                return (Py.Subscript().value(Py.Name().id(generic))
+                        .slice(args[0] if len(args) == 1 else Py.Tuple().elts(args)).create())
             if name in ("Promise", "Array", "Set", "Map", "Record", "Partial", "Readonly"):
                 return None
             if args:
-                return P.Subscript(value=_name(self.python(name)), slice=args[0] if len(args) == 1 else P.Tuple(
-                    elts=args))
-            return _name(self.python(name))
+                return (Py.Subscript().value(Py.Name().id(self.python(name)))
+                        .slice(args[0] if len(args) == 1 else Py.Tuple().elts(args)).create())
+            return Py.Name().id(self.python(name)).create()
         return None
 
 
 def _console(stream: str | None) -> Callable[[_Translator, S.CallExpression], Any]:
     def call(self: _Translator, node: S.CallExpression) -> Any:
-        keywords = [] if stream is None else [P.Keyword(arg=P.Identifier(spelling="file"), value=_attribute(
-            self.module("sys"), stream))]
-        return _call("print", *self.arguments(node.arguments), keywords=keywords)
+        keywords = [] if stream is None else [
+            Py.Keyword().arg("file").value(Py.Attribute().value(self.module("sys")).attr(stream)).create()]
+        return Py.Call().func(Py.Name().id("print")).args(self.arguments(node.arguments)).keywords(keywords).create()
     return call
 
 
 def _function(path: str) -> Callable[[_Translator, S.CallExpression], Any]:
     """A global function that is a Python function of the same arguments."""
-    return lambda self, node: _call(self.global_value(path), *self.arguments(node.arguments))
+    return lambda self, node: Py.Call().func(self.global_value(path)).args(self.arguments(node.arguments)).create()
 
 
 def _stringify(self: _Translator, node: S.CallExpression) -> Any:
     """`JSON.stringify(x)`, which writes no spaces, as `json.dumps` does with these separators."""
-    separators = P.Tuple(elts=[_constant("','"), _constant("':'")])
-    return _call(_attribute(self.module("json"), "dumps"), *self.arguments(node.arguments),
-                 keywords=[P.Keyword(arg=P.Identifier(spelling="separators"), value=separators)])
+    separators = Py.Tuple().elts([Py.Constant().spelling("','"), Py.Constant().spelling("':'")]).create()
+    return (Py.Call().func(Py.Attribute().value(self.module("json")).attr("dumps")).args(self.arguments(node.arguments))
+            .add_keywords(Py.Keyword().arg("separators").value(separators)).create())
 
 
 def _power(self: _Translator, node: S.CallExpression) -> Any:
     base, exponent = self.arguments_of(node, 2)
-    return P.BinOp(left=base, op="**", right=exponent)
+    return Py.BinOp().left(base).op("**").right(exponent).create()
 
 
 def _object_view(view: str) -> Callable[[_Translator, S.CallExpression], Any]:
     """`Object.keys(o)` and the like, of an object, which is a `SimpleNamespace`."""
     def call(self: _Translator, node: S.CallExpression) -> Any:
         (value,) = self.arguments_of(node, 1)
-        names = _call("vars", value)
-        return _call("list", names if view == "keys" else _call(_attribute(names, view)))
+        names = Py.Call().func(Py.Name().id("vars")).args([value]).create()
+        listed = names if view == "keys" else Py.Call().func(Py.Attribute().value(names).attr(view))
+        return Py.Call().func(Py.Name().id("list")).add_args(listed).create()
     return call
 
 
 def _is_array(self: _Translator, node: S.CallExpression) -> Any:
     (value,) = self.arguments_of(node, 1)
-    return _call("isinstance", value, _name("list"))
+    return Py.Call().func(Py.Name().id("isinstance")).args([value, Py.Name().id("list")]).create()
 
 
 # Global functions, by name, and the members of global objects, by object and name: a Python path for a value, or a
@@ -1136,32 +1145,34 @@ OBJECTS: dict[str, dict[str, Any]] = {
 
 def _rename(name: str) -> Callable[[_Translator, Any, S.CallExpression], Any]:
     """A method that is Python's method of another name."""
-    return lambda self, target, node: _call(_attribute(target, name), *self.arguments(node.arguments))
+    return lambda self, target, node: (Py.Call().func(Py.Attribute().value(target).attr(name))
+                                       .args(self.arguments(node.arguments)).create())
 
 
 def _push(self: _Translator, target: Any, node: S.CallExpression) -> Any:
     args = self.arguments(node.arguments)
     if len(args) == 1 and not isinstance(args[0], P.Starred):
-        return _call(_attribute(target, "append"), args[0])
-    return _call(_attribute(target, "extend"), P.List(elts=args))
+        return Py.Call().func(Py.Attribute().value(target).attr("append")).args([args[0]]).create()
+    return Py.Call().func(Py.Attribute().value(target).attr("extend")).args([Py.List().elts(args)]).create()
 
 
 def _includes(self: _Translator, target: Any, node: S.CallExpression) -> Any:
     """`includes` and `has`: `in`."""
     (value,) = self.arguments_of(node, 1)
-    return P.Compare(left=value, comparisons=[P.Comparison(op="in", comparator=target)])
+    return Py.Compare().left(value).comparisons([Py.Comparison().op("in").comparator(target)]).create()
 
 
 def _join(self: _Translator, target: Any, node: S.CallExpression) -> Any:
     args = self.arguments_of(node, 0, 1)
-    separator = args[0] if args else _constant("','")
-    return _call(_attribute(separator, "join"), _call("map", _name("str"), target))
+    separator = args[0] if args else Py.Constant().spelling("','").create()
+    strings = Py.Call().func(Py.Name().id("map")).args([Py.Name().id("str"), target])
+    return Py.Call().func(Py.Attribute().value(separator).attr("join")).add_args(strings).create()
 
 
 def _slice(self: _Translator, target: Any, node: S.CallExpression) -> Any:
     args = self.arguments_of(node, 0, 1, 2)
-    return P.Subscript(value=target, slice=P.Slice(lower=args[0] if args else None,
-                                                   upper=args[1] if len(args) > 1 else None))
+    bounds = Py.Slice().lower(args[0] if args else None).upper(args[1] if len(args) > 1 else None)
+    return Py.Subscript().value(target).slice(bounds).create()
 
 
 def _comprehension(kind: str) -> Callable[[_Translator, Any, S.CallExpression], Any]:
@@ -1172,22 +1183,24 @@ def _comprehension(kind: str) -> Callable[[_Translator, Any, S.CallExpression], 
         if found is not None:
             name, body = found
             if kind == "map":
-                return P.ListComp(elt=body, generators=[P.Comprehension(target=name, iter=target)])
-            return P.ListComp(elt=_name(name.id.spelling), generators=[P.Comprehension(target=name, iter=target,
-                                                                                         ifs=[body])])
+                return Py.ListComp().elt(body).generators([Py.Comprehension().target(name).iter(target)]).create()
+            generator = Py.Comprehension().target(name).iter(target).add_ifs(body)
+            return Py.ListComp().elt(Py.Name().id(name.id.spelling)).add_generators(generator).create()
         (f,) = self.arguments_of(node, 1)
-        return _call("list", _call(kind, f, target))
+        mapped = Py.Call().func(Py.Name().id(kind)).args([f, target])
+        return Py.Call().func(Py.Name().id("list")).add_args(mapped).create()
     return call
 
 
 def _reduce(self: _Translator, target: Any, node: S.CallExpression) -> Any:
     args = self.arguments_of(node, 1, 2)
-    return _call(_attribute(self.module("functools"), "reduce"), args[0], target, *args[1:])
+    reduce = Py.Attribute().value(self.module("functools")).attr("reduce")
+    return Py.Call().func(reduce).args([args[0], target, *args[1:]]).create()
 
 
 def _to_string(self: _Translator, target: Any, node: S.CallExpression) -> Any:
     self.arguments_of(node, 0)
-    return _call("str", target)
+    return Py.Call().func(Py.Name().id("str")).args([target]).create()
 
 
 # Methods of arrays, strings, maps and sets, by name.
@@ -1200,6 +1213,6 @@ METHODS: dict[str, Callable[[_Translator, Any, S.CallExpression], Any]] = {
 
 
 def transpile(program: S.Program) -> P.Module:
-    """The Python module that does what `program` does. Raises `TranspileError` at the first node it cannot
+    """The Python module that does what `program` does. Raises `TranspileError` at the first syntax node it cannot
     translate."""
     return _Translator(program).program(program)

@@ -2,10 +2,10 @@
  * Parses Python source text into Python trees, delegating to tree-sitter-python (through web-tree-sitter).
  *
  * tree-sitter-python builds a concrete syntax tree; `Converter` rewrites it into Python kinds, one tree-sitter node
- * type at a time. tree-sitter-python 0.25 cannot parse three constructs of Python 3.13 and later. When the text does not
- * parse, a pre-pass (`prepare`) rewrites them, keeping every other character where it was: it moves `lazy` after the
- * `import` or `from` it qualifies, and removes the `**` of a dict comprehension that unpacks and the defaults of type
- * parameters. The converter puts them back where they were.
+ * type at a time. tree-sitter-python 0.25 cannot parse three constructs of Python 3.13 and later. When the text does
+ * not parse, a pre-pass (`prepare`) rewrites them, keeping every other character where it was: it moves `lazy` after
+ * the `import` or `from` it qualifies, and removes the `**` of a dict comprehension that unpacks and the defaults of
+ * type parameters. The converter puts them back where they were.
  *
  * Positions are counted in characters (code points), never UTF-16 units, so that every implementation reports the same
  * line and column.
@@ -14,7 +14,7 @@
 import type { Node as TS, Parser as TSParser } from "web-tree-sitter";
 
 import { ParseError } from "../Framework/Errors.js";
-import { type Node, walk } from "../Framework/Syntax.js";
+import { type SyntaxNode, walk } from "../Framework/Syntax.js";
 import { parser } from "../Framework/_TreeSitter.js";
 import * as S from "./Syntax.js";
 
@@ -171,7 +171,7 @@ type Method = (self: Converter, ts: TS) => any;
  * `origin` place a tree parsed from a part of the text: its offsets are `shift` past those of the part, and its errors
  * are located in `origin`. */
 class Converter {
-  readonly positions = new Map<Node, number>();
+  readonly positions = new Map<SyntaxNode, number>();
   static STATEMENTS: Record<string, Method> = {};
   static EXPRESSIONS: Record<string, Method> = {};
   static PATTERNS: Record<string, Method> = {};
@@ -205,12 +205,12 @@ class Converter {
     return this.error(ts, `unsupported syntax: ${ts.type}`);
   }
 
-  made<N extends Node>(ts: TS, node: N): N {
+  made<N extends SyntaxNode>(ts: TS, node: N): N {
     if (!this.positions.has(node)) this.positions.set(node, this.at(ts));
     return node;
   }
 
-  madeAt<N extends Node>(unit: number, node: N): N {
+  madeAt<N extends SyntaxNode>(unit: number, node: N): N {
     if (!this.positions.has(node)) this.positions.set(node, this.shift + this.source.offset(unit));
     return node;
   }
@@ -746,8 +746,8 @@ class Converter {
   }
 
   /** The text and replacement fields between two UTF-16 offsets of an f-string, t-string or format spec. */
-  pieces(start: number, end: number, fields: TS[], template: boolean): Node[] {
-    const out: Node[] = [];
+  pieces(start: number, end: number, fields: TS[], template: boolean): SyntaxNode[] {
+    const out: SyntaxNode[] = [];
     let at = start;
     for (const field of fields) {
       if (field.startIndex > at) out.push(this.madeAt(at, new S.StringText({ spelling: this.between(at, field.startIndex) })));
@@ -1169,7 +1169,7 @@ Converter.PATTERNS = {
 
 /** The tree of `text`, the offset where each of its nodes starts, and the source, for locating problems. Throws
  * `ParseError` for text tree-sitter-python cannot parse. */
-export function parse(text: string): [S.Module, Map<Node, number>, Source] {
+export function parse(text: string): [S.Module, Map<SyntaxNode, number>, Source] {
   let source = new Source(text);
   let tree = PARSER.parse(text) as NonNullable<ReturnType<TSParser["parse"]>>;
   let prepared = new Prepared();

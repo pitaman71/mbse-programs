@@ -13,7 +13,7 @@
 import type { Node as TS, Parser as TSParser } from "web-tree-sitter";
 
 import { ParseError } from "../Framework/Errors.js";
-import type { Node } from "../Framework/Syntax.js";
+import type { SyntaxNode } from "../Framework/Syntax.js";
 import { parser } from "../Framework/_TreeSitter.js";
 import * as S from "./Syntax.js";
 
@@ -34,7 +34,7 @@ function op(token: string): string {
   return ALTERNATIVES[token] ?? token;
 }
 
-type Lifted = { requires: Node[]; virt_specifiers: S.VirtSpecifier[] };
+type Lifted = { requires: SyntaxNode[]; virt_specifiers: S.VirtSpecifier[] };
 const lifted = (): Lifted => ({ requires: [], virt_specifiers: [] });
 
 // --- Source text ---
@@ -76,7 +76,7 @@ export class Source {
  * offset (in characters); and the offsets (in UTF-16 units) of declarations that `export` or `extern template`
  * introduced, and of blocks `export` introduced. */
 class Premodules {
-  readonly declarations: [number, Node][] = [];
+  readonly declarations: [number, SyntaxNode][] = [];
   readonly exported = new Set<number>();
   readonly exportBlocks = new Set<number>();
   readonly externTemplates = new Set<number>();
@@ -218,7 +218,7 @@ function premodules(text: string, source: Source): [string, Premodules] {
 
 /** The module or import declaration whose tokens are `spans[k:end]`, from its keyword to before its `;`. */
 function module(text: string, spans: [number, number][], k: number, end: number, exported: boolean,
-  source: Source): Node {
+  source: Source): SyntaxNode {
   const words = spans.slice(k + 1, end).map(([s, e]) => text.slice(s, e));
   const keyword = text.slice(...(spans[k] as [number, number]));
   const at = source.offset((spans[k] as [number, number])[0]);
@@ -262,7 +262,7 @@ type Method = (self: Converter, ts: TS) => any;
 
 /** Rewrites a tree-sitter-cpp tree into Ccpp nodes, recording where each node starts in `positions`. */
 class Converter {
-  readonly positions = new Map<Node, number>();
+  readonly positions = new Map<SyntaxNode, number>();
   static EXPRESSIONS: Record<string, Method> = {};
   static STATEMENTS: Record<string, Method> = {};
   static DECLARATIONS: Record<string, Method> = {};
@@ -287,7 +287,7 @@ class Converter {
     return this.error(ts, `unsupported syntax: ${ts.type}`);
   }
 
-  made<N extends Node>(ts: TS, node: N): N {
+  made<N extends SyntaxNode>(ts: TS, node: N): N {
     if (!this.positions.has(node)) this.positions.set(node, this.at(ts));
     return node;
   }
@@ -343,7 +343,7 @@ class Converter {
     this.check(ts);
     const items = this.items(Converter.all(ts), true);
     for (const [offset, declaration] of this.pre.declarations) this.positions.set(declaration, offset);
-    const merged: [number, Node][] = [...items.map((item): [number, Node] => [this.positions.get(item) as number, item]),
+    const merged: [number, SyntaxNode][] = [...items.map((item): [number, SyntaxNode] => [this.positions.get(item) as number, item]),
       ...this.pre.declarations];
     merged.sort((a, b) => a[0] - b[0]);
     return this.made(ts, new S.TranslationUnit({ items: merged.map(([, item]) => item) }));
@@ -387,8 +387,8 @@ class Converter {
   }
 
   /** A declaration or statement, exported if `export` introduced it. */
-  item(ts: TS): Node {
-    let made: Node;
+  item(ts: TS): SyntaxNode {
+    let made: SyntaxNode;
     if (ts.type === "compound_statement" && this.pre.exportBlocks.has(ts.startIndex)) {
       made = new S.ExportDeclaration({ braced: true, items: this.items(Converter.all(ts), true) });
     } else {
@@ -401,21 +401,21 @@ class Converter {
   /** The case or default label `nodes[i]`, and the index of the node after what it took: tree-sitter lists the
    * statements after a label as its children; here it labels the first, and the others follow it. A label without
    * statements labels the next label. */
-  case(nodes: TS[], i: number): [Node[], number] {
+  case(nodes: TS[], i: number): [SyntaxNode[], number] {
     const ts = nodes[i] as TS;
     i++;
     const value = this.field(ts, "value");
     const body = Converter.all(ts).filter((c) => c.isNamed && c.type !== "comment" && (value === null || c.id !== value.id));
     const comments = Converter.all(ts).filter((c) => c.type === "comment").map((c) => this.comment(c));
-    let statement: Node | null = null;
-    let rest: Node[] = [];
+    let statement: SyntaxNode | null = null;
+    let rest: SyntaxNode[] = [];
     if (body.length > 0) {
       statement = this.statement(body[0] as TS);
       rest = body.slice(1).map((c) => this.statement(c));
     } else if (i < nodes.length && (nodes[i] as TS).type === "case_statement") {
       const [nested, next] = this.case(nodes, i);
       i = next;
-      statement = nested[0] as Node;
+      statement = nested[0] as SyntaxNode;
       rest = nested.slice(1);
     }
     const label = value === null ? new S.DefaultStatement({ statement })
@@ -436,7 +436,7 @@ class Converter {
 
   // Directives
 
-  directive(ts: TS, declarations: boolean, enumerators: boolean): Node {
+  directive(ts: TS, declarations: boolean, enumerators: boolean): SyntaxNode {
     const kind = ts.type;
     if (kind === "preproc_include") {
       const directive = this.text(this.kids(ts)[0] as TS).slice(1).trim();
@@ -509,7 +509,7 @@ class Converter {
     return this.operatorName(ts); // the last kind of name tree-sitter writes outside declarators
   }
 
-  operatorName(ts: TS): Node {
+  operatorName(ts: TS): SyntaxNode {
     const parts = this.kids(ts).slice(1).map((c) => this.text(c));
     if (parts[0] === '""') return this.made(ts, new S.LiteralOperatorName({ suffix: parts[1] }));
     return this.made(ts, new S.OperatorName({ operator: op(parts.join("")) }));
@@ -520,18 +520,18 @@ class Converter {
     return this.made(ts, new S.QualifiedName({ global_scope, qualifiers, name: this.name(last) }));
   }
 
-  scope(ts: TS): Node {
-    if (ts.type === "decltype") return this.specifiers(ts)[0] as Node;
+  scope(ts: TS): SyntaxNode {
+    if (ts.type === "decltype") return this.specifiers(ts)[0] as SyntaxNode;
     return this.name(ts);
   }
 
-  templateArguments(ts: TS): Node[] {
+  templateArguments(ts: TS): SyntaxNode[] {
     return this.named(ts).map((c) => (c.type === "type_descriptor" ? this.typeId(c) : this.expression(c)));
   }
 
   // Literals
 
-  number(ts: TS): Node {
+  number(ts: TS): SyntaxNode {
     const spelling = this.text(ts);
     const lower = spelling.toLowerCase();
     const floating = lower.startsWith("0x") ? lower.includes("p") || lower.includes(".")
@@ -539,7 +539,7 @@ class Converter {
     return this.made(ts, new (floating ? S.FloatingLiteral : S.IntegerLiteral)({ spelling }));
   }
 
-  quoted(ts: TS): Node {
+  quoted(ts: TS): SyntaxNode {
     const spelling = this.text(ts);
     if (ts.type === "raw_string_literal") {
       const quote = spelling.indexOf('"');
@@ -561,32 +561,32 @@ class Converter {
     return this.made(ts, method(this, ts));
   }
 
-  expressions(ts: TS): Node[] {
+  expressions(ts: TS): SyntaxNode[] {
     return this.named(ts).map((c) => this.expression(c));
   }
 
-  idExpression(ts: TS): Node {
+  idExpression(ts: TS): SyntaxNode {
     return new S.IdExpression({ name: this.name(ts) });
   }
 
-  null(ts: TS): Node {
+  null(ts: TS): SyntaxNode {
     if (this.text(ts) === "nullptr") return new S.NullptrLiteral();
     return new S.IdExpression({ name: this.identifier(ts) });
   }
 
-  parenthesized(ts: TS): Node {
+  parenthesized(ts: TS): SyntaxNode {
     const inner = this.named(ts)[0] as TS;
     if (inner.type === "compound_statement") return new S.StatementExpression({ body: this.statement(inner) });
     return new S.ParenthesizedExpression({ expression: this.expression(inner) });
   }
 
-  binary(ts: TS): Node {
+  binary(ts: TS): SyntaxNode {
     return new S.BinaryExpression({ left: this.expression(this.require(ts, "left")),
       operator: op(this.text(this.require(ts, "operator"))), right: this.expression(this.require(ts, "right")) });
   }
 
   /** `a, b, c`, which tree-sitter nests to the right; the comma operator groups to the left. */
-  comma(ts: TS): Node {
+  comma(ts: TS): SyntaxNode {
     const operands = [this.require(ts, "left")];
     let right = this.require(ts, "right");
     while (right.type === "comma_expression") {
@@ -600,36 +600,36 @@ class Converter {
     return made;
   }
 
-  assignment(ts: TS): Node {
+  assignment(ts: TS): SyntaxNode {
     return new S.AssignmentExpression({ left: this.expression(this.require(ts, "left")),
       operator: op(this.text(this.require(ts, "operator"))), right: this.expression(this.require(ts, "right")) });
   }
 
-  conditional(ts: TS): Node {
+  conditional(ts: TS): SyntaxNode {
     const consequence = this.field(ts, "consequence");
     return new S.ConditionalExpression({ condition: this.expression(this.require(ts, "condition")),
       consequence: consequence !== null ? this.expression(consequence) : null,
       alternative: this.expression(this.require(ts, "alternative")) });
   }
 
-  unary(ts: TS): Node {
+  unary(ts: TS): SyntaxNode {
     return new S.UnaryExpression({ operator: op(this.text(this.require(ts, "operator"))),
       operand: this.expression(this.require(ts, "argument")) });
   }
 
-  update(ts: TS): Node {
+  update(ts: TS): SyntaxNode {
     const operator = this.text(this.require(ts, "operator"));
     const operand = this.expression(this.require(ts, "argument"));
     if (["++", "--"].includes((this.kids(ts)[0] as TS).type)) return new S.UnaryExpression({ operator, operand });
     return new S.PostfixExpression({ operand, operator });
   }
 
-  cast(ts: TS): Node {
+  cast(ts: TS): SyntaxNode {
     return new S.CastExpression({ type: this.typeId(this.require(ts, "type")),
       operand: this.expression(this.require(ts, "value")) });
   }
 
-  call(ts: TS): Node {
+  call(ts: TS): SyntaxNode {
     const fn = this.require(ts, "function");
     const args = this.require(ts, "arguments");
     if (fn.type === "primitive_type") {
@@ -656,7 +656,7 @@ class Converter {
     return new S.CallExpression({ function: this.expression(fn), arguments: this.expressions(args) });
   }
 
-  fieldExpression(ts: TS): Node {
+  fieldExpression(ts: TS): SyntaxNode {
     const operator = this.text(this.require(ts, "operator"));
     const member = this.require(ts, "field");
     if (operator === ".*") {
@@ -668,12 +668,12 @@ class Converter {
       template_keyword: keyword, member: this.name(keyword ? this.named(member)[0] as TS : member) });
   }
 
-  subscript(ts: TS): Node {
+  subscript(ts: TS): SyntaxNode {
     return new S.SubscriptExpression({ object: this.expression(this.require(ts, "argument")),
       indices: this.expressions(this.require(ts, "indices")) });
   }
 
-  sizeof(ts: TS): Node {
+  sizeof(ts: TS): SyntaxNode {
     const type = this.field(ts, "type");
     if (type !== null) return new S.SizeofExpression({ operand: this.typeId(type) });
     const value = this.require(ts, "value");
@@ -681,14 +681,14 @@ class Converter {
     return new S.SizeofExpression({ operand: this.expression(value) });
   }
 
-  alignof(ts: TS): Node {
+  alignof(ts: TS): SyntaxNode {
     return new S.AlignofExpression({ keyword: this.text(this.kids(ts)[0] as TS),
       operand: this.typeId(this.require(ts, "type")) });
   }
 
-  new(ts: TS): Node {
+  new(ts: TS): SyntaxNode {
     const type = this.require(ts, "type");
-    let declarator: Node | null = null;
+    let declarator: SyntaxNode | null = null;
     for (let node = this.field(ts, "declarator"); node !== null;
       node = this.named(node).find((c) => c.type === "new_declarator") ?? null) {
       declarator = this.made(node, new S.ArrayDeclarator({ declarator,
@@ -696,7 +696,7 @@ class Converter {
     }
     const placement = this.field(ts, "placement");
     const args = this.field(ts, "arguments");
-    let initializer: Node | null = null;
+    let initializer: SyntaxNode | null = null;
     if (args !== null && args.type === "argument_list") {
       initializer = this.made(args, new S.ParenthesizedInitializer({ arguments: this.expressions(args) }));
     } else if (args !== null) {
@@ -707,42 +707,42 @@ class Converter {
       type: this.made(type, new S.TypeId({ specifiers: this.specifiers(type), declarator })), initializer });
   }
 
-  delete(ts: TS): Node {
+  delete(ts: TS): SyntaxNode {
     return new S.DeleteExpression({ global_scope: this.has(ts, "::"), array: this.has(ts, "["),
       operand: this.expression(this.named(ts)[0] as TS) });
   }
 
-  fold(ts: TS): Node {
+  fold(ts: TS): SyntaxNode {
     const left = this.require(ts, "left");
     const right = this.require(ts, "right");
     return new S.FoldExpression({ left: left.isNamed ? this.expression(left) : null,
       operator: op(this.text(this.require(ts, "operator"))), right: right.isNamed ? this.expression(right) : null });
   }
 
-  packExpansion(ts: TS): Node {
+  packExpansion(ts: TS): SyntaxNode {
     const pattern = this.require(ts, "pattern");
     return new S.PackExpansion({ pattern: pattern.type === "type_descriptor" ? this.typeId(pattern)
       : this.expression(pattern) });
   }
 
-  concatenated(ts: TS): Node {
+  concatenated(ts: TS): SyntaxNode {
     return new S.ConcatenatedString({ parts: this.named(ts).map((c) => this.expression(c)) });
   }
 
-  userDefined(ts: TS): Node {
+  userDefined(ts: TS): SyntaxNode {
     const [literal, suffix] = this.named(ts) as [TS, TS];
     return new S.UserDefinedLiteral({ literal: this.expression(literal), suffix: this.text(suffix) });
   }
 
-  initializerList(ts: TS): Node {
+  initializerList(ts: TS): SyntaxNode {
     const kids = this.kids(ts);
     return new S.InitializerList({
       items: this.named(ts).map((c) => (c.type === "initializer_pair" ? this.designated(c) : this.expression(c))),
       trailing_comma: kids.length > 2 && (kids[kids.length - 2] as TS).type === "," });
   }
 
-  designated(ts: TS): Node {
-    const designators: Node[] = [];
+  designated(ts: TS): SyntaxNode {
+    const designators: SyntaxNode[] = [];
     for (const d of this.fields(ts, "designator")) {
       if (d.type === "field_designator" || d.type === "field_identifier") {
         const name = d.type === "field_designator" ? this.named(d)[0] as TS : d;
@@ -759,14 +759,14 @@ class Converter {
     return this.made(ts, new S.DesignatedInitializer({ designators, initializer }));
   }
 
-  compoundLiteral(ts: TS): Node {
+  compoundLiteral(ts: TS): SyntaxNode {
     const type = this.require(ts, "type");
     const value = this.expression(this.require(ts, "value"));
     if (type.type === "type_descriptor") return new S.CompoundLiteralExpression({ type: this.typeId(type), initializer: value });
     return new S.FunctionalCastExpression({ type: this.specifiers(type)[0], initializer: value });
   }
 
-  generic(ts: TS): Node {
+  generic(ts: TS): SyntaxNode {
     const parts = this.named(ts);
     const first = parts[0] as TS;
     const made = new S.GenericSelection({ controlling: this.expression(first) }); // tree-sitter reads no type there
@@ -779,13 +779,13 @@ class Converter {
     return made;
   }
 
-  offsetof(ts: TS): Node {
+  offsetof(ts: TS): SyntaxNode {
     const keyword = this.kids(ts)[0] as TS;
     return new S.CallExpression({ function: this.made(keyword, new S.IdExpression({ name: this.identifier(keyword) })),
       arguments: [this.typeId(this.require(ts, "type")), this.idExpression(this.require(ts, "member"))] });
   }
 
-  lambda(ts: TS): Node {
+  lambda(ts: TS): SyntaxNode {
     const made = new S.LambdaExpression({ body: this.statement(this.require(ts, "body")) });
     const kids = this.kids(this.require(ts, "captures"));
     let i = 1;
@@ -829,7 +829,7 @@ class Converter {
     return made;
   }
 
-  initCapture(ts: TS): Node {
+  initCapture(ts: TS): SyntaxNode {
     const value = this.require(ts, "right");
     const initializer = this.made(value, new S.EqualInitializer({ value: this.expression(value) }));
     return this.made(ts, new S.InitCapture({ by_reference: this.has(ts, "&"), pack: this.has(ts, "..."),
@@ -850,7 +850,7 @@ class Converter {
     return this.made(ts, made);
   }
 
-  requiresExpression(ts: TS): Node {
+  requiresExpression(ts: TS): SyntaxNode {
     const parameters = this.field(ts, "parameters");
     const made = new S.RequiresExpression({ parameters: parameters !== null ? this.parameters(parameters) : [] });
     for (const r of this.named(this.require(ts, "requirements"))) {
@@ -860,7 +860,7 @@ class Converter {
     return made;
   }
 
-  requirement(ts: TS): Node {
+  requirement(ts: TS): SyntaxNode {
     if (ts.type === "simple_requirement") {
       const inner = this.named(ts)[0] as TS;
       if (inner.type === "requires_clause") { // `requires constraint;`
@@ -875,12 +875,12 @@ class Converter {
     return this.made(ts, made);
   }
 
-  requiresClause(ts: TS): Node {
+  requiresClause(ts: TS): SyntaxNode {
     return this.constraint(this.fields(ts, "constraint"));
   }
 
   /** A constraint expression from tree-sitter's constraint fields, which hold parentheses as tokens. */
-  constraint(parts: TS[]): Node {
+  constraint(parts: TS[]): SyntaxNode {
     const ts = parts[0] as TS;
     if (ts.type === "(") {
       return this.made(ts, new S.ParenthesizedExpression({ expression: this.constraint(parts.slice(1, -1)) }));
@@ -906,8 +906,8 @@ class Converter {
 
   /** The specifiers of a declaration-like node, in source order. Attributes before the first specifier go to
    * `attributes` when given. */
-  specifiersOf(ts: TS, attributes: Node[] | null = null): Node[] {
-    const out: Node[] = [];
+  specifiersOf(ts: TS, attributes: SyntaxNode[] | null = null): SyntaxNode[] {
+    const out: SyntaxNode[] = [];
     const type = this.field(ts, "type");
     Converter.all(ts).forEach((c, i) => {
       if (type !== null && c.id === type.id) out.push(...this.specifiers(c));
@@ -960,7 +960,7 @@ class Converter {
     return [this.made(ts, new S.ExplicitSpecifier({ condition: condition.length > 0 ? this.expression(condition[0] as TS) : null }))];
   }
 
-  classSpecifier(ts: TS): Node {
+  classSpecifier(ts: TS): SyntaxNode {
     const made = new S.ClassSpecifier({ key: this.text(this.kids(ts)[0] as TS) });
     const name = this.field(ts, "name");
     if (name !== null) made.name = this.name(name);
@@ -992,7 +992,7 @@ class Converter {
     return out;
   }
 
-  enumSpecifier(ts: TS): Node {
+  enumSpecifier(ts: TS): SyntaxNode {
     const kids = this.kids(ts);
     const second = kids[1];
     const key = second !== undefined && (second.type === "class" || second.type === "struct") ? `enum ${second.type}` : "enum";
@@ -1011,7 +1011,7 @@ class Converter {
     return this.made(ts, made);
   }
 
-  enumerator(ts: TS): Node {
+  enumerator(ts: TS): SyntaxNode {
     const value = this.field(ts, "value");
     return this.made(ts, new S.Enumerator({ name: this.identifier(this.require(ts, "name")),
       value: value !== null ? this.expression(value) : null }));
@@ -1044,7 +1044,7 @@ class Converter {
       operand: operand.type === "type_descriptor" ? this.typeId(operand) : this.expression(operand) }));
   }
 
-  standardAttribute(ts: TS): Node {
+  standardAttribute(ts: TS): SyntaxNode {
     const prefix = this.field(ts, "prefix");
     const args = this.named(ts).find((c) => c.type === "argument_list");
     return this.made(ts, new S.Attribute({ namespace: prefix !== null ? this.text(prefix) : null,
@@ -1119,8 +1119,8 @@ class Converter {
 
   /** A qualified_identifier, which tree-sitter nests: whether it starts with `::`, its qualifiers, and its last name's
    * node. */
-  qualifiedParts(ts: TS): [boolean, Node[], TS] {
-    const qualifiers: Node[] = [];
+  qualifiedParts(ts: TS): [boolean, SyntaxNode[], TS] {
+    const qualifiers: SyntaxNode[] = [];
     let node = ts;
     while (node.type === "qualified_identifier") {
       const scope = this.field(node, "scope");
@@ -1131,9 +1131,9 @@ class Converter {
   }
 
   /** `C::* declarator`, which tree-sitter writes as a qualified name ending in a pointer declarator. */
-  memberPointer(ts: TS, global_scope: boolean, qualifiers: Node[], last: TS, lift: Lifted | null): Node {
+  memberPointer(ts: TS, global_scope: boolean, qualifiers: SyntaxNode[], last: TS, lift: Lifted | null): SyntaxNode {
     const made = this.declarator(last, lift);
-    const scope = qualifiers.pop() as Node;
+    const scope = qualifiers.pop() as SyntaxNode;
     made.scope = qualifiers.length > 0 || global_scope
       ? this.made(ts, new S.QualifiedName({ global_scope, qualifiers, name: scope })) : scope;
     return made;
@@ -1162,14 +1162,14 @@ class Converter {
    * declarator inside the conversion type's pointers; the conversion type is `type` and those pointers, and the
    * function declarator declares it. */
   conversion(ts: TS, lift: Lifted | null, qualified: TS | null = null, global_scope = false,
-    qualifiers: Node[] = []): Node {
+    qualifiers: SyntaxNode[] = []): SyntaxNode {
     const wrappers: TS[] = [];
     let node = this.require(ts, "declarator");
     while (node.type === "abstract_pointer_declarator" || node.type === "abstract_reference_declarator") {
       wrappers.push(node);
       node = this.named(node).at(-1) as TS;
     }
-    let typeDeclarator: Node | null = null;
+    let typeDeclarator: SyntaxNode | null = null;
     for (const w of wrappers.reverse()) {
       typeDeclarator = w.type === "abstract_pointer_declarator"
         ? this.made(w, new S.PointerDeclarator({ declarator: typeDeclarator,
@@ -1177,7 +1177,7 @@ class Converter {
             .map((c) => this.made(c, new S.CvQualifier({ keyword: this.text(c) as S.CvKeyword }))) }))
         : this.made(w, new S.ReferenceDeclarator({ rvalue: this.has(w, "&&"), declarator: typeDeclarator }));
     }
-    let conversion: Node = this.made(ts, new S.ConversionName({ type: this.made(ts, new S.TypeId({
+    let conversion: SyntaxNode = this.made(ts, new S.ConversionName({ type: this.made(ts, new S.TypeId({
       specifiers: this.specifiersOf(ts), declarator: typeDeclarator })) }));
     const made = this.functionDeclarator(node, lift);
     if (qualified !== null) {
@@ -1187,7 +1187,7 @@ class Converter {
     return made;
   }
 
-  exception(ts: TS): Node {
+  exception(ts: TS): SyntaxNode {
     if (ts.type === "noexcept") {
       const condition = this.named(ts);
       return this.made(ts, new S.NoexceptSpecifier({ condition: condition.length > 0 ? this.expression(condition[0] as TS) : null }));
@@ -1197,8 +1197,8 @@ class Converter {
 
   // Parameters
 
-  parameters(ts: TS): Node[] {
-    const out: Node[] = [];
+  parameters(ts: TS): SyntaxNode[] {
+    const out: SyntaxNode[] = [];
     for (const c of this.kids(ts)) {
       if (c.type === "...") out.push(this.made(c, new S.EllipsisParameter()));
       else if (c.isNamed) out.push(this.parameter(c));
@@ -1206,7 +1206,7 @@ class Converter {
     return out;
   }
 
-  parameter(ts: TS): Node {
+  parameter(ts: TS): SyntaxNode {
     const made = new S.ParameterDeclaration();
     made.specifiers = this.specifiersOf(ts, made.attributes);
     const declarator = this.field(ts, "declarator");
@@ -1216,7 +1216,7 @@ class Converter {
     return this.made(ts, made);
   }
 
-  templateParameters(ts: TS): Node[] {
+  templateParameters(ts: TS): SyntaxNode[] {
     return this.named(ts).map((c) => {
       const kind = c.type;
       if (["type_parameter_declaration", "variadic_type_parameter_declaration", "optional_type_parameter_declaration"].includes(kind)) {
@@ -1253,18 +1253,18 @@ class Converter {
     return this.made(ts, method(this, ts));
   }
 
-  compound(ts: TS): Node {
+  compound(ts: TS): SyntaxNode {
     return new S.CompoundStatement({ items: this.items(Converter.all(ts), false) });
   }
 
-  expressionStatement(ts: TS): Node {
+  expressionStatement(ts: TS): SyntaxNode {
     const inner = this.named(ts);
     if (inner.length === 0) return new S.ExpressionStatement();
     if ((inner[0] as TS).type === "gnu_asm_expression") return this.asm(inner[0] as TS);
     return new S.ExpressionStatement({ expression: this.expression(inner[0] as TS) });
   }
 
-  asm(ts: TS): Node {
+  asm(ts: TS): SyntaxNode {
     const made = new S.AsmDeclaration({ keyword: this.text(this.kids(ts)[0] as TS),
       template: this.expression(this.require(ts, "assembly_code")) });
     for (const q of this.named(ts)) {
@@ -1288,7 +1288,7 @@ class Converter {
   }
 
   /** Fills `made`'s initializer and condition from a condition_clause. */
-  condition<N extends Node>(ts: TS, made: N): N {
+  condition<N extends SyntaxNode>(ts: TS, made: N): N {
     const fields = made as unknown as Record<string, unknown>;
     const initializer = this.field(ts, "initializer");
     if (initializer !== null) fields["initializer"] = this.declarationOrStatement(this.named(initializer)[0] as TS);
@@ -1297,7 +1297,7 @@ class Converter {
     return made;
   }
 
-  if(ts: TS): Node {
+  if(ts: TS): SyntaxNode {
     const made = new S.IfStatement({ constexpr: this.has(ts, "constexpr"),
       consequence: this.statement(this.require(ts, "consequence")) });
     this.condition(this.require(ts, "condition"), made);
@@ -1306,20 +1306,20 @@ class Converter {
     return made;
   }
 
-  switch(ts: TS): Node {
+  switch(ts: TS): SyntaxNode {
     return this.condition(this.require(ts, "condition"), new S.SwitchStatement({ body: this.statement(this.require(ts, "body")) }));
   }
 
-  while(ts: TS): Node {
+  while(ts: TS): SyntaxNode {
     return this.condition(this.require(ts, "condition"), new S.WhileStatement({ body: this.statement(this.require(ts, "body")) }));
   }
 
-  do(ts: TS): Node {
+  do(ts: TS): SyntaxNode {
     return new S.DoStatement({ body: this.statement(this.require(ts, "body")),
       condition: this.expression(this.named(this.require(ts, "condition"))[0] as TS) });
   }
 
-  for(ts: TS): Node {
+  for(ts: TS): SyntaxNode {
     const made = new S.ForStatement({ body: this.statement(this.require(ts, "body")) });
     const initializer = this.field(ts, "initializer");
     const condition = this.field(ts, "condition");
@@ -1333,7 +1333,7 @@ class Converter {
     return made;
   }
 
-  rangeFor(ts: TS): Node {
+  rangeFor(ts: TS): SyntaxNode {
     const declaration = new S.SimpleDeclaration();
     declaration.specifiers = this.specifiersOf(ts, declaration.attributes);
     declaration.declarators = [this.made(ts, new S.InitDeclarator({ declarator: this.declarator(this.require(ts, "declarator")) }))];
@@ -1344,32 +1344,32 @@ class Converter {
     return made;
   }
 
-  return(ts: TS): Node {
+  return(ts: TS): SyntaxNode {
     const value = this.named(ts);
     return new S.ReturnStatement({ value: value.length > 0 ? this.expression(value[0] as TS) : null });
   }
 
-  coReturn(ts: TS): Node {
+  coReturn(ts: TS): SyntaxNode {
     const value = this.named(ts);
     return new S.CoReturnStatement({ value: value.length > 0 ? this.expression(value[0] as TS) : null });
   }
 
-  coYield(ts: TS): Node {
+  coYield(ts: TS): SyntaxNode {
     return new S.ExpressionStatement({ expression: this.made(ts, new S.YieldExpression({
       operand: this.expression(this.named(ts)[0] as TS) })) });
   }
 
-  throw(ts: TS): Node {
+  throw(ts: TS): SyntaxNode {
     const value = this.named(ts);
     return new S.ExpressionStatement({ expression: this.made(ts, new S.ThrowExpression({
       operand: value.length > 0 ? this.expression(value[0] as TS) : null })) });
   }
 
-  goto(ts: TS): Node {
+  goto(ts: TS): SyntaxNode {
     return new S.GotoStatement({ label: this.identifier(this.require(ts, "label")) });
   }
 
-  labeled(ts: TS): Node {
+  labeled(ts: TS): SyntaxNode {
     const label = this.require(ts, "label");
     const body = this.named(ts).filter((c) => c.id !== label.id);
     // tree-sitter parses no label that ends a block
@@ -1387,7 +1387,7 @@ class Converter {
     return made;
   }
 
-  attributed(ts: TS): Node {
+  attributed(ts: TS): SyntaxNode {
     const parts = this.named(ts);
     return new S.AttributedStatement({ attributes: parts.slice(0, -1).map((a) => this.attribute(a)),
       statement: this.statement(parts.at(-1) as TS) });
@@ -1443,9 +1443,9 @@ class Converter {
     return this.made(ts, new S.EqualInitializer({ value }));
   }
 
-  functionDefinition(ts: TS): Node {
+  functionDefinition(ts: TS): SyntaxNode {
     const lift = lifted();
-    const attributes: Node[] = [];
+    const attributes: SyntaxNode[] = [];
     const specifiers = this.specifiersOf(ts, attributes);
     const declarator = this.declarator(this.require(ts, "declarator"), lift);
     const clauses = new Map(this.named(ts).map((c) => [c.type, c]));
@@ -1484,7 +1484,7 @@ class Converter {
     });
   }
 
-  templateDeclaration(ts: TS): Node {
+  templateDeclaration(ts: TS): SyntaxNode {
     const parameters = this.require(ts, "parameters");
     const made = new S.TemplateDeclaration({ parameters: this.templateParameters(parameters) });
     for (const c of this.named(ts)) {
@@ -1495,7 +1495,7 @@ class Converter {
     return made;
   }
 
-  templateInstantiation(ts: TS): Node {
+  templateInstantiation(ts: TS): SyntaxNode {
     const declaration = new S.SimpleDeclaration();
     declaration.specifiers = this.specifiersOf(ts, declaration.attributes);
     const declarator = this.require(ts, "declarator");
@@ -1504,11 +1504,11 @@ class Converter {
       declaration: this.made(ts, declaration) });
   }
 
-  typeSpecifierDeclaration(ts: TS): Node {
+  typeSpecifierDeclaration(ts: TS): SyntaxNode {
     return new S.SimpleDeclaration({ specifiers: this.specifiers(ts) });
   }
 
-  friend(ts: TS): Node {
+  friend(ts: TS): SyntaxNode {
     const friend = this.made(this.kids(ts)[0] as TS, new S.DeclSpecifier({ keyword: "friend" }));
     const inner = this.named(ts);
     const first = inner[0] as TS;
@@ -1523,13 +1523,13 @@ class Converter {
     return new S.SimpleDeclaration({ specifiers: [friend, specifier] });
   }
 
-  alias(ts: TS): Node {
+  alias(ts: TS): SyntaxNode {
     return new S.AliasDeclaration({ name: this.identifier(this.require(ts, "name")),
       attributes: this.named(ts).filter((c) => ATTRIBUTES.has(c.type)).map((c) => this.attribute(c)),
       type: this.typeId(this.require(ts, "type")) });
   }
 
-  using(ts: TS): Node {
+  using(ts: TS): SyntaxNode {
     const target = this.name(this.named(ts)[0] as TS);
     if (this.has(ts, "namespace")) return new S.UsingDirective({ name: target });
     if (this.has(ts, "enum")) return new S.UsingEnumDeclaration({ type: target });
@@ -1537,7 +1537,7 @@ class Converter {
       typename_keyword: this.has(ts, "typename"), name: target }))] });
   }
 
-  namespace(ts: TS): Node {
+  namespace(ts: TS): SyntaxNode {
     const made = new S.NamespaceDefinition({ inline: this.has(ts, "inline"),
       attributes: this.named(ts).filter((c) => ATTRIBUTES.has(c.type)).map((c) => this.attribute(c)) });
     const name = this.field(ts, "name");
@@ -1566,10 +1566,10 @@ class Converter {
     return out;
   }
 
-  namespaceAlias(ts: TS): Node {
+  namespaceAlias(ts: TS): SyntaxNode {
     const name = this.require(ts, "name");
     const target = this.named(ts).find((c) => c.id !== name.id) as TS;
-    let resolved: Node;
+    let resolved: SyntaxNode;
     if (target.type === "nested_namespace_specifier") {
       const parts = this.namespaceNames(target).map(([, n]) => this.identifier(n));
       resolved = this.made(target, new S.QualifiedName({ qualifiers: parts.slice(0, -1), name: parts.at(-1),
@@ -1580,13 +1580,13 @@ class Converter {
     return new S.NamespaceAliasDefinition({ name: this.identifier(name), target: resolved });
   }
 
-  staticAssert(ts: TS): Node {
+  staticAssert(ts: TS): SyntaxNode {
     const message = this.field(ts, "message");
     return new S.StaticAssertDeclaration({ keyword: this.text(this.kids(ts)[0] as TS),
       condition: this.expression(this.require(ts, "condition")), message: message !== null ? this.expression(message) : null });
   }
 
-  linkage(ts: TS): Node {
+  linkage(ts: TS): SyntaxNode {
     const body = this.require(ts, "body");
     const language = this.text(this.require(ts, "value")).slice(1, -1);
     if (body.type === "declaration_list") {
@@ -1595,7 +1595,7 @@ class Converter {
     return new S.LinkageSpecification({ language, items: [this.declarationOrStatement(body)] });
   }
 
-  concept(ts: TS): Node {
+  concept(ts: TS): SyntaxNode {
     const name = this.require(ts, "name");
     return new S.ConceptDefinition({ name: this.identifier(name),
       constraint: this.expression(this.named(ts).find((c) => c.id !== name.id) as TS) });
@@ -1649,7 +1649,7 @@ Converter.DECLARATIONS = {
 
 /** The tree of `text`, the offset where each of its nodes starts, and the source, for locating problems. Throws
  * `ParseError` for text tree-sitter-cpp cannot parse. */
-export function parse(text: string): [S.TranslationUnit, Map<Node, number>, Source] {
+export function parse(text: string): [S.TranslationUnit, Map<SyntaxNode, number>, Source] {
   const plain = new Source(text);
   const [cleaned, pre] = premodules(text, plain);
   const source = new Source(text, cleaned);

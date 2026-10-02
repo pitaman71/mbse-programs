@@ -16,7 +16,7 @@
 import type { Node as TS, Parser as TSParser } from "web-tree-sitter";
 
 import { ParseError } from "../Framework/Errors.js";
-import type { Node } from "../Framework/Syntax.js";
+import type { SyntaxNode } from "../Framework/Syntax.js";
 import { parser } from "../Framework/_TreeSitter.js";
 import * as S from "./Syntax.js";
 
@@ -26,7 +26,7 @@ const PARSERS = {
 };
 
 const EXTRAS = new Set(["comment", "html_comment"]);
-const KEYWORD_TYPES: Record<string, new () => Node> = {
+const KEYWORD_TYPES: Record<string, new () => SyntaxNode> = {
   any: S.TSAnyKeyword, unknown: S.TSUnknownKeyword, number: S.TSNumberKeyword, bigint: S.TSBigIntKeyword,
   boolean: S.TSBooleanKeyword, string: S.TSStringKeyword, symbol: S.TSSymbolKeyword, object: S.TSObjectKeyword,
   never: S.TSNeverKeyword, void: S.TSVoidKeyword, undefined: S.TSUndefinedKeyword, null: S.TSNullKeyword,
@@ -189,7 +189,7 @@ type Method = (self: Converter, ts: TS) => any;
  * `shift` and `origin` place a tree parsed from a part of the text: its offsets are `shift` past those of the part,
  * and its errors are located in `origin`. */
 class Converter {
-  readonly positions = new Map<Node, number>();
+  readonly positions = new Map<SyntaxNode, number>();
   static STATEMENTS: Record<string, Method> = {};
   static EXPRESSIONS: Record<string, Method> = {};
   static TYPES: Record<string, Method> = {};
@@ -223,12 +223,12 @@ class Converter {
     return this.error(ts, `unsupported syntax: ${ts.type}`);
   }
 
-  made<N extends Node>(ts: TS, node: N): N {
+  made<N extends SyntaxNode>(ts: TS, node: N): N {
     if (!this.positions.has(node)) this.positions.set(node, this.at(ts));
     return node;
   }
 
-  madeAt<N extends Node>(unit: number, node: N): N {
+  madeAt<N extends SyntaxNode>(unit: number, node: N): N {
     if (!this.positions.has(node)) this.positions.set(node, this.shift + this.source.offset(unit));
     return node;
   }
@@ -1421,7 +1421,7 @@ class Converter {
       return new S.TSTypeOperator({ operator: "unique", typeAnnotation: this.made(all(ts).at(-1) as TS,
         new S.TSSymbolKeyword()) });
     }
-    return new (KEYWORD_TYPES[text] as new () => Node)();
+    return new (KEYWORD_TYPES[text] as new () => SyntaxNode)();
   }
 
   typeReference(ts: TS): any {
@@ -1872,7 +1872,7 @@ Converter.TYPES = {
 
 /** The tree of `text`, with the `tsx` grammar if `jsx`, the offset where each of its nodes starts, and the source, for
  * locating problems. Throws `ParseError` for text tree-sitter-typescript cannot parse. */
-export function parse(text: string, jsx = false): [S.Program, Map<Node, number>, Source] {
+export function parse(text: string, jsx = false): [S.Program, Map<SyntaxNode, number>, Source] {
   const grammar = jsx ? PARSERS.true : PARSERS.false;
   let source = new Source(text);
   let tree = grammar.parse(text) as NonNullable<ReturnType<TSParser["parse"]>>;

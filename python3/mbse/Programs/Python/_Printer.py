@@ -78,7 +78,7 @@ def _definition(node: Any) -> bool:
 
 
 class Printer:
-    """Prints a module as a file, and any other node as the text it stands for: a statement as its lines, an
+    """Prints a module as a file, and any other syntax node as the text it stands for: a statement as its lines, an
     expression, a pattern or a part (an `Arg`, a `Keyword`, an `Alias`, ...) as its text."""
 
     def print(self, node: Any) -> str:

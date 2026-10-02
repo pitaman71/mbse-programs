@@ -10,10 +10,10 @@ The tree is abstract where the grammar only spells and concrete where a transpil
   as `ParenthesizedExpression`, and printing adds those a hand-built tree needs.
 - Equivalent spellings are normalized: alternative tokens (`and`, `bitor`) and digraphs become the primary tokens,
   and `defined X` becomes `defined(X)`. Keywords with distinct spellings (`_Alignof`, `alignof`) keep them.
-- Names are nodes (category `Name`) wherever they occur, so one traversal finds every use and declaration of a name.
-  Expressions refer to them through `IdExpression`, types through `NamedTypeSpecifier`, declarators through
+- Names are syntax nodes (category `Name`) wherever they occur, so one traversal finds every use and declaration of a
+  name. Expressions refer to them through `IdExpression`, types through `NamedTypeSpecifier`, declarators through
   `IdDeclarator`.
-- Specifiers stay in source order, one node per keyword, as decl-specifier-seq lists them.
+- Specifiers stay in source order, one syntax node per keyword, as decl-specifier-seq lists them.
 - Declarators nest inside out, as the grammar defines them: `int *a[3]` declares `a` with
   `ArrayDeclarator(declarator=PointerDeclarator(declarator=IdDeclarator(a)))`... read from the name outwards.
 - Literals keep their spelling: digits, separators and suffixes for numbers, and the characters between the quotes,
@@ -21,14 +21,14 @@ The tree is abstract where the grammar only spells and concrete where a transpil
 - Comments are kept where declarations, statements, members and enumerators are listed; elsewhere they are dropped.
   Preprocessor directives are kept where they are listed too, with conditional branches as trees.
 
-Field names avoid both languages' reserved words: an `if` has a `consequence` and an `alternative`.
+Property names avoid both languages' reserved words: an `if` has a `consequence` and an `alternative`.
 """
 
 from __future__ import annotations
 
 from typing import Literal as Choice
 
-from ..Framework.Syntax import Availability, Language, Node
+from ..Framework.Syntax import Availability, Language, SyntaxNode
 
 __all__ = ["LANGUAGE", "KINDS"]
 
@@ -89,11 +89,11 @@ IncludeKeyword = Choice["include", "include_next", "import"]
 # --- Categories ---
 
 
-class Name(Node):
+class Name(SyntaxNode):
     """A name: what declarations declare and what expressions, types and declarators refer to ([expr.prim.id])."""
 
 
-class Expression(Node):
+class Expression(SyntaxNode):
     """An expression ([expr]); also a braced initializer list where one may stand for an expression."""
 
 
@@ -101,67 +101,67 @@ class Literal(Expression):
     """A literal ([lex.literal])."""
 
 
-class Statement(Node):
+class Statement(SyntaxNode):
     """A statement ([stmt]). Declarations are not statements here: blocks list them directly, and substatements may be
     declarations, as C++'s declaration statements are."""
 
 
-class Declaration(Node):
+class Declaration(SyntaxNode):
     """A declaration ([dcl]), a member declaration ([class.mem]) or a module declaration ([module])."""
 
 
-class Specifier(Node):
+class Specifier(SyntaxNode):
     """A decl-specifier or type-specifier ([dcl.spec]): one keyword, a type name, or a class or enum definition."""
 
 
-class Declarator(Node):
+class Declarator(SyntaxNode):
     """A declarator ([dcl.decl]), named or abstract: the part of a declaration that declares one name and its type."""
 
 
-class Parameter(Node):
+class Parameter(SyntaxNode):
     """A function parameter ([dcl.fct]), or the ellipsis of a variadic function."""
 
 
-class TemplateParameter(Node):
+class TemplateParameter(SyntaxNode):
     """A template parameter that is a type or a template ([temp.param]). Constants are `ParameterDeclaration`s."""
 
 
-class Initializer(Node):
+class Initializer(SyntaxNode):
     """An initializer ([dcl.init]): `= value` or `(arguments)`; a braced list is an `InitializerList`."""
 
 
-class Capture(Node):
+class Capture(SyntaxNode):
     """A lambda capture ([expr.prim.lambda.capture])."""
 
 
-class Requirement(Node):
+class Requirement(SyntaxNode):
     """A requirement in a requires-expression ([expr.prim.req])."""
 
 
-class Designator(Node):
+class Designator(SyntaxNode):
     """A designator in a designated initializer ([dcl.init.general], C [6.7.10])."""
 
 
-class AttributeSpecifier(Node):
+class AttributeSpecifier(SyntaxNode):
     """An attribute specifier ([dcl.attr]): `[[...]]`, `alignas(...)`, or an extension's attribute syntax."""
 
 
-class ExceptionSpecification(Node):
+class ExceptionSpecification(SyntaxNode):
     """An exception specification ([except.spec]): `noexcept(...)` or a dynamic `throw(...)`."""
 
 
-class ContractSpecifier(Node):
+class ContractSpecifier(SyntaxNode):
     """A function contract specifier ([dcl.contract.func]): a precondition or a postcondition."""
 
 
-class Directive(Node):
+class Directive(SyntaxNode):
     """A preprocessing directive ([cpp]), where declarations, statements, members or enumerators are listed."""
 
 
 # === Lexical conventions [lex] ===
 
 
-class Comment(Node):
+class Comment(SyntaxNode):
     """`// text` or, with `block`, `/* text */`. `text` excludes the delimiters. A `trailing` comment ends the line of
     the item before it."""
 
@@ -173,7 +173,7 @@ class Comment(Node):
 # === Basics [basic] ===
 
 
-class TranslationUnit(Node):
+class TranslationUnit(SyntaxNode):
     """A source file after its directives are kept as trees rather than performed ([basic.link])."""
 
     items: list[Declaration | Statement | Directive | Comment]
@@ -350,7 +350,7 @@ class LambdaExpression(Expression):
     FEATURES = {"template_parameters": {True: cpp(2020)}, "attributes": {True: cpp(2023)}}
 
 
-class LambdaDeclarator(Node):
+class LambdaDeclarator(SyntaxNode):
     """`(parameters) specifiers exception attributes -> trailing_return requires contracts` ([expr.prim.lambda])."""
 
     parameters: list[Parameter]
@@ -617,7 +617,8 @@ class BinaryExpression(Expression):
 
 
 class ConditionalExpression(Expression):
-    """`condition ? consequence : alternative` ([expr.cond]); without a consequence, the GNU `condition ?: alternative`."""
+    """`condition ? consequence : alternative` ([expr.cond]); without a consequence, the GNU `condition ?:
+    alternative`."""
 
     condition: Expression
     consequence: Expression | None
@@ -660,7 +661,7 @@ class InitializerList(Expression):
     trailing_comma: bool
 
 
-class DesignatedInitializer(Node):
+class DesignatedInitializer(SyntaxNode):
     """`designators initializer`, such as `.x = 1`, `.x{1}` or C's `[2].y = 3` ([dcl.init.general], C [6.7.10])."""
 
     designators: list[Designator]
@@ -702,7 +703,7 @@ class GenericSelection(Expression):
     SINCE = c(2011)
 
 
-class GenericAssociation(Node):
+class GenericAssociation(SyntaxNode):
     """`type: value`, or `default: value` without a type (C [6.5.2.1])."""
 
     type: TypeId | None
@@ -870,7 +871,7 @@ class TryStatement(Statement):
     SINCE = cpp(1998)
 
 
-class Handler(Node):
+class Handler(SyntaxNode):
     """`catch (parameter) body`; `catch (...)` when the parameter is an `EllipsisParameter` ([except.pre])."""
 
     parameter: Parameter
@@ -905,7 +906,7 @@ class SimpleDeclaration(Declaration):
     declarators: list[InitDeclarator]
 
 
-class InitDeclarator(Node):
+class InitDeclarator(SyntaxNode):
     """One declarator of a declaration with what follows it ([dcl.decl], [class.mem]): `declarator virt_specifiers
     = 0` (with `pure`), `declarator : bitfield initializer`, `declarator initializer`, or `declarator requires
     contracts`. Without a declarator, an unnamed bit-field."""
@@ -937,13 +938,13 @@ class FunctionDefinition(Declaration):
                 "initializers": {True: cpp(1998)}}
 
 
-class DefaultedBody(Node):
+class DefaultedBody(SyntaxNode):
     """`= default;` ([dcl.fct.def.default])."""
 
     SINCE = cpp(2011)
 
 
-class DeletedBody(Node):
+class DeletedBody(SyntaxNode):
     """`= delete;`, or `= delete(reason);` ([dcl.fct.def.delete])."""
 
     reason: Expression | None
@@ -951,7 +952,7 @@ class DeletedBody(Node):
     FEATURES = {"reason": {True: cpp(2026)}}
 
 
-class MemberInitializer(Node):
+class MemberInitializer(SyntaxNode):
     """`member(arguments)` or `member{items}` in a constructor's initializer list, with `pack` `member(...)...`
     ([class.base.init])."""
 
@@ -961,7 +962,7 @@ class MemberInitializer(Node):
     SINCE = cpp(1998)
 
 
-class VirtSpecifier(Node):
+class VirtSpecifier(SyntaxNode):
     """`override` or `final` ([class.mem])."""
 
     keyword: Choice["override", "final"]
@@ -1033,7 +1034,7 @@ class ClassSpecifier(Specifier):
     FEATURES = {"final": {True: cpp(2011)}, "bases": {True: cpp(1998)}}
 
 
-class MemberList(Node):
+class MemberList(SyntaxNode):
     """`{ items }`: a class's member specification ([class.mem])."""
 
     items: list[Declaration | Directive | Comment]
@@ -1051,14 +1052,14 @@ class EnumSpecifier(Specifier):
     FEATURES = {"key": {"enum class": cpp(2011), "enum struct": cpp(2011)}, "base": {True: both(2011, 2023)}}
 
 
-class EnumeratorList(Node):
+class EnumeratorList(SyntaxNode):
     """`{ enumerators }`, with `trailing_comma` `{ enumerators, }` ([dcl.enum])."""
 
     enumerators: list[Enumerator | Directive | Comment]
     trailing_comma: bool
 
 
-class Enumerator(Node):
+class Enumerator(SyntaxNode):
     """`name attributes = value` ([dcl.enum])."""
 
     name: Identifier
@@ -1209,7 +1210,7 @@ class StructuredBindingDeclarator(Declarator):
         return found
 
 
-class TypeId(Node):
+class TypeId(SyntaxNode):
     """`specifiers declarator`: a type, named by specifiers and an abstract declarator ([dcl.name])."""
 
     specifiers: list[Specifier | AttributeSpecifier]
@@ -1314,7 +1315,7 @@ class NamespaceDefinition(Declaration):
         return found
 
 
-class NamespaceName(Node):
+class NamespaceName(SyntaxNode):
     """One name of a namespace definition, `inline name` with `inline` ([namespace.def])."""
 
     inline: bool
@@ -1348,7 +1349,7 @@ class UsingDeclaration(Declaration):
         return [("UsingDeclaration with several declarators", cpp(2017))] if len(self.declarators) > 1 else []
 
 
-class UsingDeclarator(Node):
+class UsingDeclarator(SyntaxNode):
     """`typename name...` ([namespace.udecl])."""
 
     typename_keyword: bool
@@ -1423,7 +1424,7 @@ class AsmDeclaration(Declaration):
     labels: list[Identifier]
 
 
-class AsmOperand(Node):
+class AsmOperand(SyntaxNode):
     """`[name] constraint (value)` (GNU)."""
 
     name: Identifier | None
@@ -1444,7 +1445,7 @@ class StandardAttributeSpecifier(AttributeSpecifier):
     FEATURES = {"using_namespace": {True: cpp(2017)}}
 
 
-class Attribute(Node):
+class Attribute(SyntaxNode):
     """`namespace::name(arguments)`, or `name...` with `pack` ([dcl.attr.grammar]). The arguments of an attribute are
     balanced tokens in the grammar; here they are expressions."""
 
@@ -1454,7 +1455,7 @@ class Attribute(Node):
     pack: bool
 
 
-class Annotation(Node):
+class Annotation(SyntaxNode):
     """`=value`, or `=value...` with `pack`: an annotation for reflection ([dcl.attr.annotation])."""
 
     value: Expression
@@ -1543,7 +1544,7 @@ class AccessSpecifier(Declaration):
     SINCE = cpp(1998)
 
 
-class BaseSpecifier(Node):
+class BaseSpecifier(SyntaxNode):
     """`attributes virtual access type...` ([class.derived]). `virtual` is written before the access."""
 
     attributes: list[AttributeSpecifier]
@@ -1649,7 +1650,7 @@ class IfDirective(Directive):
     """`#if condition items alternative #endif` ([cpp.cond])."""
 
     condition: Expression
-    items: list[Node]
+    items: list[SyntaxNode]
     alternative: ElifDirective | ElifdefDirective | ElseDirective | None
 
 
@@ -1658,7 +1659,7 @@ class IfdefDirective(Directive):
 
     negated: bool
     name: Identifier
-    items: list[Node]
+    items: list[SyntaxNode]
     alternative: ElifDirective | ElifdefDirective | ElseDirective | None
 
 
@@ -1666,7 +1667,7 @@ class ElifDirective(Directive):
     """`#elif condition items alternative` ([cpp.cond])."""
 
     condition: Expression
-    items: list[Node]
+    items: list[SyntaxNode]
     alternative: ElifDirective | ElifdefDirective | ElseDirective | None
 
 
@@ -1675,7 +1676,7 @@ class ElifdefDirective(Directive):
 
     negated: bool
     name: Identifier
-    items: list[Node]
+    items: list[SyntaxNode]
     alternative: ElifDirective | ElifdefDirective | ElseDirective | None
     SINCE = both(2023, 2023)
 
@@ -1683,7 +1684,7 @@ class ElifdefDirective(Directive):
 class ElseDirective(Directive):
     """`#else items` ([cpp.cond])."""
 
-    items: list[Node]
+    items: list[SyntaxNode]
 
 
 class OtherDirective(Directive):
@@ -1715,7 +1716,7 @@ def binding(declarator: Declarator | None) -> tuple[IdDeclarator | StructuredBin
 
 # --- The language ---
 
-KINDS: list[type[Node]] = [
+KINDS: list[type[SyntaxNode]] = [
     Comment, TranslationUnit,
     Identifier, OperatorName, ConversionName, LiteralOperatorName, DestructorName, TemplateId, QualifiedName,
     IntegerLiteral, FloatingLiteral, CharacterLiteral, StringLiteral, RawStringLiteral, UserDefinedLiteral,

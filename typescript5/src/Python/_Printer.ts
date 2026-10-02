@@ -8,7 +8,7 @@
  * assumes a valid tree: versions validate before they print.
  */
 
-import type { Node } from "../Framework/Syntax.js";
+import type { SyntaxNode } from "../Framework/Syntax.js";
 import * as S from "./Syntax.js";
 
 const INDENT = "    ";
@@ -70,7 +70,7 @@ function code(text: string): string {
   return out.join("");
 }
 
-function definition(node: Node): boolean {
+function definition(node: SyntaxNode): boolean {
   return node instanceof S.FunctionDef || node instanceof S.AsyncFunctionDef || node instanceof S.ClassDef;
 }
 
@@ -79,15 +79,15 @@ const is = <T>(kinds: Function[], node: unknown): node is T => kinds.some((k) =>
 type Text = (self: Printer, node: any) => string;
 type Lines = (self: Printer, node: any, level: number) => string[];
 
-/** Prints a module as a file, and any other node as the text it stands for: a statement as its lines, an expression, a
- * pattern or a part (an `Arg`, a `Keyword`, an `Alias`, ...) as its text. */
+/** Prints a module as a file, and any other syntax node as the text it stands for: a statement as its lines, an
+ * expression, a pattern or a part (an `Arg`, a `Keyword`, an `Alias`, ...) as its text. */
 export class Printer {
   static SIMPLE = new Map<Function, Text>();
   static STATEMENTS = new Map<Function, Lines>();
   static TEXTS = new Map<Function, Text>();
   static PATTERNS = new Map<Function, Text>();
 
-  print(node: Node): string {
+  print(node: SyntaxNode): string {
     if (node instanceof S.Module) return this.block(node.body, 0, true).map((line) => line + "\n").join("");
     if (is([S.Statement, S.ExceptHandler, S.MatchCase], node)) return this.statement(node, 0).join("\n");
     return this.text(node);
@@ -116,16 +116,16 @@ export class Printer {
   }
 
   /** Whether the comment `statements[i]` starts the comments directly before a definition. */
-  static leads(statements: Node[], i: number): boolean {
+  static leads(statements: SyntaxNode[], i: number): boolean {
     let j = i;
     while (j < statements.length && statements[j] instanceof S.Comment) j++;
     const previous = statements[i - 1];
-    return j < statements.length && definition(statements[j] as Node)
+    return j < statements.length && definition(statements[j] as SyntaxNode)
       && (i === 0 || !(previous instanceof S.Comment) || previous.trailing);
   }
 
   /** Whether `statements[i]` follows a comment that leads it: blank lines go before that comment. */
-  static led(statements: Node[], i: number): boolean {
+  static led(statements: SyntaxNode[], i: number): boolean {
     const previous = statements[i - 1];
     return i > 0 && previous instanceof S.Comment && !previous.trailing;
   }
@@ -173,7 +173,7 @@ export class Printer {
     return node.decorator_list.map((d) => `${INDENT.repeat(level)}@${this.e(d, NAMED)}`);
   }
 
-  typeParams(params: Node[]): string {
+  typeParams(params: SyntaxNode[]): string {
     return params.length > 0 ? `[${params.map((p) => this.text(p)).join(", ")}]` : "";
   }
 
@@ -323,7 +323,7 @@ Printer.TEXTS = new Map<Function, Text>([
   }],
   [S.Tuple, (self, node: S.Tuple) => {
     if (node.elts.length === 0) return "()";
-    if (node.elts.length === 1) return e(self, node.elts[0] as Node, EXPR) + ",";
+    if (node.elts.length === 1) return e(self, node.elts[0] as SyntaxNode, EXPR) + ",";
     return node.elts.map((x) => e(self, x, EXPR)).join(", ");
   }],
   [S.List, (self, node: S.List) => `[${elements(self, node.elts)}]`],
@@ -423,13 +423,13 @@ Printer.PATTERNS = new Map<Function, Text>([
     return self.sequence(node);
   }],
   [S.MatchMapping, (self, node: S.MatchMapping) => {
-    const items = node.keys.map((k, i) => `${self.text(k)}: ${self.p(node.patterns[i] as Node)}`);
+    const items = node.keys.map((k, i) => `${self.text(k)}: ${self.p(node.patterns[i] as SyntaxNode)}`);
     if (node.rest !== null) items.push(`**${self.text(node.rest)}`);
     return `{${items.join(", ")}}`;
   }],
   [S.MatchClass, (self, node: S.MatchClass) => {
     const args = [...node.patterns.map((p) => self.p(p)),
-      ...node.kwd_attrs.map((a, i) => `${self.text(a)}=${self.p(node.kwd_patterns[i] as Node)}`)];
+      ...node.kwd_attrs.map((a, i) => `${self.text(a)}=${self.p(node.kwd_patterns[i] as SyntaxNode)}`)];
     return `${e(self, node.cls, PRIMARY)}(${args.join(", ")})`;
   }],
   [S.MatchStar, (self, node: S.MatchStar) => "*" + (node.name === null ? "_" : self.text(node.name))],

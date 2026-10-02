@@ -7,27 +7,27 @@
  "categories": [
   {
    "name": "Statement",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Expression",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "Pattern",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "ClassElement",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "TypeElement",
-   "base": "Node"
+   "base": "SyntaxNode"
   },
   {
    "name": "TypeNode",
-   "base": "Node"
+   "base": "SyntaxNode"
   }
  ],
  "kinds": [
@@ -37,7 +37,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "block",
      "type": "bool",
@@ -57,11 +57,11 @@
   },
   {
    "kind": "Program",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "hashbang",
      "type": "str",
@@ -89,7 +89,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -127,7 +127,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": "str",
@@ -141,7 +141,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "raw",
      "type": "str",
@@ -151,11 +151,11 @@
   },
   {
    "kind": "TemplateElement",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "raw",
      "type": "str",
@@ -174,7 +174,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "quasis",
      "type": [
@@ -199,7 +199,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "tag",
      "type": [
@@ -232,7 +232,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "Super",
@@ -240,7 +240,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "ParenthesizedExpression",
@@ -248,7 +248,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -262,19 +262,19 @@
   },
   {
    "kind": "Elision",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "SpreadElement",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "argument",
      "type": [
@@ -291,7 +291,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "elements",
      "type": [
@@ -306,7 +306,7 @@
   },
   {
    "kind": "Property",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {
@@ -316,7 +316,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "propertyKind",
      "type": "str",
@@ -373,7 +373,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "properties",
      "type": [
@@ -391,7 +391,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "isAsync",
      "type": "bool",
@@ -455,7 +455,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "isAsync",
      "type": "bool",
@@ -506,7 +506,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -571,7 +571,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "meta",
      "type": [
@@ -596,7 +596,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "object",
      "type": [
@@ -631,7 +631,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "callee",
      "type": [
@@ -673,7 +673,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -690,7 +690,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "callee",
      "type": [
@@ -739,7 +739,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "phase",
      "type": "str",
@@ -772,7 +772,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operator",
      "type": "str",
@@ -803,7 +803,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "operator",
      "type": "str",
@@ -837,7 +837,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "argument",
      "type": [
@@ -861,7 +861,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "left",
      "type": [
@@ -922,7 +922,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "left",
      "type": [
@@ -957,7 +957,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "test",
      "type": [
@@ -1009,7 +1009,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "left",
      "type": [
@@ -1058,7 +1058,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expressions",
      "type": [
@@ -1078,7 +1078,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "delegate",
      "type": "bool",
@@ -1102,7 +1102,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -1129,7 +1129,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -1156,7 +1156,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeAnnotation",
      "type": [
@@ -1183,7 +1183,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -1202,7 +1202,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -1236,7 +1236,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -1285,7 +1285,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -1333,7 +1333,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -1390,7 +1390,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -1438,7 +1438,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -1455,7 +1455,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -1472,7 +1472,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "DebuggerStatement",
@@ -1480,7 +1480,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "WithStatement",
@@ -1488,7 +1488,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "object",
      "type": [
@@ -1513,7 +1513,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "argument",
      "type": [
@@ -1530,7 +1530,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "label",
      "type": [
@@ -1555,7 +1555,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "label",
      "type": [
@@ -1572,7 +1572,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "label",
      "type": [
@@ -1589,7 +1589,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "test",
      "type": [
@@ -1618,11 +1618,11 @@
   },
   {
    "kind": "SwitchCase",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "test",
      "type": [
@@ -1647,7 +1647,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "discriminant",
      "type": [
@@ -1672,7 +1672,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "argument",
      "type": [
@@ -1685,11 +1685,11 @@
   },
   {
    "kind": "CatchClause",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "param",
      "type": [
@@ -1715,7 +1715,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "block",
      "type": [
@@ -1748,7 +1748,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "test",
      "type": [
@@ -1773,7 +1773,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -1798,7 +1798,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "init",
      "type": [
@@ -1840,7 +1840,7 @@
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "left",
      "type": [
@@ -1885,7 +1885,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "isAwait",
      "type": "bool",
@@ -1921,7 +1921,7 @@
   },
   {
    "kind": "VariableDeclarator",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {
@@ -1931,7 +1931,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "id",
      "type": [
@@ -1984,7 +1984,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "declare",
      "type": "bool",
@@ -2041,7 +2041,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "isAsync",
      "type": "bool",
@@ -2104,7 +2104,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "declare",
      "type": "bool",
@@ -2158,13 +2158,13 @@
   },
   {
    "kind": "Decorator",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 105
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -2177,11 +2177,11 @@
   },
   {
    "kind": "ClassBody",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -2219,7 +2219,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -2297,7 +2297,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -2330,7 +2330,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -2407,7 +2407,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -2478,13 +2478,13 @@
   },
   {
    "kind": "TSEmptyBodyFunctionExpression",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "isAsync",
      "type": "bool",
@@ -2568,7 +2568,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -2656,7 +2656,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -2744,7 +2744,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -2832,7 +2832,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -2914,13 +2914,13 @@
   },
   {
    "kind": "TSParameterProperty",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "decorators",
      "type": [
@@ -2967,11 +2967,11 @@
   },
   {
    "kind": "ImportAttribute",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "key",
      "type": [
@@ -2993,7 +2993,7 @@
   },
   {
    "kind": "ImportSpecifier",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {
@@ -3003,7 +3003,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "importKind",
      "type": "str",
@@ -3034,11 +3034,11 @@
   },
   {
    "kind": "ImportDefaultSpecifier",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "local",
      "type": [
@@ -3051,11 +3051,11 @@
   },
   {
    "kind": "ImportNamespaceSpecifier",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "local",
      "type": [
@@ -3092,7 +3092,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "importKind",
      "type": "str",
@@ -3140,7 +3140,7 @@
   },
   {
    "kind": "ExportSpecifier",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": false,
    "features": {
@@ -3150,7 +3150,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "exportKind",
      "type": "str",
@@ -3201,7 +3201,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "exportKind",
      "type": "str",
@@ -3254,7 +3254,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "declaration",
      "type": [
@@ -3293,7 +3293,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "exportKind",
      "type": "str",
@@ -3338,7 +3338,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "importKind",
      "type": "str",
@@ -3370,13 +3370,13 @@
   },
   {
    "kind": "TSExternalModuleReference",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -3395,7 +3395,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -3414,7 +3414,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "id",
      "type": [
@@ -3427,13 +3427,13 @@
   },
   {
    "kind": "TSTypeAnnotation",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeAnnotation",
      "type": [
@@ -3446,7 +3446,7 @@
   },
   {
    "kind": "TSTypeParameter",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
@@ -3473,7 +3473,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "const",
      "type": "bool",
@@ -3517,13 +3517,13 @@
   },
   {
    "kind": "TSTypeParameterDeclaration",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "params",
      "type": [
@@ -3536,13 +3536,13 @@
   },
   {
    "kind": "TSTypeParameterInstantiation",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "params",
      "type": [
@@ -3561,7 +3561,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "declare",
      "type": "bool",
@@ -3595,13 +3595,13 @@
   },
   {
    "kind": "TSInterfaceHeritage",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -3622,13 +3622,13 @@
   },
   {
    "kind": "TSClassImplements",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -3649,13 +3649,13 @@
   },
   {
    "kind": "TSInterfaceBody",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -3675,7 +3675,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "declare",
      "type": "bool",
@@ -3717,13 +3717,13 @@
   },
   {
    "kind": "TSEnumMember",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "computed",
      "type": "bool",
@@ -3749,13 +3749,13 @@
   },
   {
    "kind": "TSEnumBody",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "members",
      "type": [
@@ -3781,7 +3781,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "declare",
      "type": "bool",
@@ -3812,13 +3812,13 @@
   },
   {
    "kind": "TSModuleBlock",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": {
     "TypeScript": 100
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "body",
      "type": [
@@ -3846,7 +3846,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "declare",
      "type": "bool",
@@ -3890,7 +3890,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "accessibility",
      "type": "str",
@@ -3956,7 +3956,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "accessibility",
      "type": "str",
@@ -4042,7 +4042,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeParameters",
      "type": [
@@ -4079,7 +4079,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeParameters",
      "type": [
@@ -4122,7 +4122,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "accessibility",
      "type": "str",
@@ -4171,7 +4171,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSUnknownKeyword",
@@ -4181,7 +4181,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSNumberKeyword",
@@ -4191,7 +4191,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSBigIntKeyword",
@@ -4201,7 +4201,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSBooleanKeyword",
@@ -4211,7 +4211,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSStringKeyword",
@@ -4221,7 +4221,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSSymbolKeyword",
@@ -4231,7 +4231,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSObjectKeyword",
@@ -4241,7 +4241,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSNeverKeyword",
@@ -4251,7 +4251,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSVoidKeyword",
@@ -4261,7 +4261,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSUndefinedKeyword",
@@ -4271,7 +4271,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSNullKeyword",
@@ -4281,7 +4281,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSIntrinsicKeyword",
@@ -4291,7 +4291,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSThisType",
@@ -4301,7 +4301,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "TSQualifiedName",
@@ -4311,7 +4311,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "left",
      "type": [
@@ -4340,7 +4340,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeName",
      "type": [
@@ -4369,7 +4369,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeAnnotation",
      "type": [
@@ -4388,7 +4388,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "literal",
      "type": [
@@ -4409,7 +4409,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "quasis",
      "type": [
@@ -4436,7 +4436,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "elementType",
      "type": [
@@ -4455,7 +4455,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "elementTypes",
      "type": [
@@ -4474,7 +4474,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "label",
      "type": [
@@ -4506,7 +4506,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeAnnotation",
      "type": [
@@ -4525,7 +4525,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeAnnotation",
      "type": [
@@ -4544,7 +4544,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "types",
      "type": [
@@ -4563,7 +4563,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "types",
      "type": [
@@ -4582,7 +4582,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeParameters",
      "type": [
@@ -4625,7 +4625,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "abstract",
      "type": "bool",
@@ -4667,7 +4667,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "members",
      "type": [
@@ -4709,7 +4709,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "readonly",
      "type": "str",
@@ -4772,7 +4772,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "objectType",
      "type": [
@@ -4808,7 +4808,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "operator",
      "type": "str",
@@ -4837,7 +4837,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "exprName",
      "type": [
@@ -4867,7 +4867,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "source",
      "type": [
@@ -4912,7 +4912,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "checkType",
      "type": [
@@ -4955,7 +4955,7 @@
    },
    "extension": false,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "typeParameter",
      "type": [
@@ -4980,7 +4980,7 @@
      }
     }
    },
-   "fields": [
+   "properties": [
     {
      "name": "asserts",
      "type": "bool",
@@ -5007,11 +5007,11 @@
   },
   {
    "kind": "JSXIdentifier",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": "str",
@@ -5021,11 +5021,11 @@
   },
   {
    "kind": "JSXNamespacedName",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "namespace",
      "type": [
@@ -5046,11 +5046,11 @@
   },
   {
    "kind": "JSXMemberExpression",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "object",
      "type": [
@@ -5072,19 +5072,19 @@
   },
   {
    "kind": "JSXEmptyExpression",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "JSXExpressionContainer",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -5098,11 +5098,11 @@
   },
   {
    "kind": "JSXSpreadChild",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "expression",
      "type": [
@@ -5116,11 +5116,11 @@
   },
   {
    "kind": "JSXText",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "raw",
      "type": "str",
@@ -5130,11 +5130,11 @@
   },
   {
    "kind": "JSXAttribute",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -5159,11 +5159,11 @@
   },
   {
    "kind": "JSXSpreadAttribute",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "argument",
      "type": [
@@ -5176,11 +5176,11 @@
   },
   {
    "kind": "JSXOpeningElement",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -5217,11 +5217,11 @@
   },
   {
    "kind": "JSXClosingElement",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "name",
      "type": [
@@ -5240,7 +5240,7 @@
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "openingElement",
      "type": [
@@ -5273,19 +5273,19 @@
   },
   {
    "kind": "JSXOpeningFragment",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "JSXClosingFragment",
-   "category": "Node",
+   "category": "SyntaxNode",
    "since": null,
    "extension": true,
    "features": {},
-   "fields": []
+   "properties": []
   },
   {
    "kind": "JSXFragment",
@@ -5293,7 +5293,7 @@
    "since": null,
    "extension": true,
    "features": {},
-   "fields": [
+   "properties": [
     {
      "name": "openingFragment",
      "type": [

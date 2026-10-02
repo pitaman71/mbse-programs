@@ -11,10 +11,10 @@
  *   as `ParenthesizedExpression`, and printing adds those a hand-built tree needs.
  * - Equivalent spellings are normalized: alternative tokens (`and`, `bitor`) and digraphs become the primary tokens,
  *   and `defined X` becomes `defined(X)`. Keywords with distinct spellings (`_Alignof`, `alignof`) keep them.
- * - Names are nodes (category `Name`) wherever they occur, so one traversal finds every use and declaration of a name.
- *   Expressions refer to them through `IdExpression`, types through `NamedTypeSpecifier`, declarators through
+ * - Names are syntax nodes (category `Name`) wherever they occur, so one traversal finds every use and declaration of a
+ *   name. Expressions refer to them through `IdExpression`, types through `NamedTypeSpecifier`, declarators through
  *   `IdDeclarator`.
- * - Specifiers stay in source order, one node per keyword, as decl-specifier-seq lists them.
+ * - Specifiers stay in source order, one syntax node per keyword, as decl-specifier-seq lists them.
  * - Declarators nest inside out, as the grammar defines them: `int *a[3]` declares `a` with
  *   `ArrayDeclarator(declarator=PointerDeclarator(declarator=IdDeclarator(a)))`... read from the name outwards.
  * - Literals keep their spelling: digits, separators and suffixes for numbers, and the characters between the quotes,
@@ -22,15 +22,16 @@
  * - Comments are kept where declarations, statements, members and enumerators are listed; elsewhere they are dropped.
  *   Preprocessor directives are kept where they are listed too, with conditional branches as trees.
  *
- * Field names avoid both languages' reserved words: an `if` has a `consequence` and an `alternative`.
+ * Property names avoid both languages' reserved words: an `if` has a `consequence` and an `alternative`.
  */
 
 import { Repr } from "@mbse/schemas/Framework";
 
 import {
-  type AttributeSpec, type Availability, type ChildSpec, choice, type Features, type Fields, flag, Language, many, Node,
-  one, optional, optionalChoice, optionalText, text,
+  type AttributeSpec, type Availability, type ChildSpec, choice, type Features, flag, Language, many, one, optional,
+  optionalChoice, optionalText, type Properties, SyntaxNode, text,
 } from "../Framework/Syntax.js";
+import type * as Self from "./Syntax.js";
 
 const { repr } = Repr;
 
@@ -114,10 +115,10 @@ export type IncludeKeyword = (typeof INCLUDE_KEYWORDS)[number];
 // --- Categories ---
 
 /** A name: what declarations declare and what expressions, types and declarators refer to ([expr.prim.id]). */
-export abstract class Name extends Node {}
+export abstract class Name extends SyntaxNode {}
 
 /** An expression ([expr]); also a braced initializer list where one may stand for an expression. */
-export abstract class Expression extends Node {}
+export abstract class Expression extends SyntaxNode {}
 
 /** A literal ([lex.literal]). */
 export abstract class Literal extends Expression {}
@@ -126,46 +127,46 @@ export abstract class Literal extends Expression {}
  * A statement ([stmt]). Declarations are not statements here: blocks list them directly, and substatements may be
  * declarations, as C++'s declaration statements are.
  */
-export abstract class Statement extends Node {}
+export abstract class Statement extends SyntaxNode {}
 
 /** A declaration ([dcl]), a member declaration ([class.mem]) or a module declaration ([module]). */
-export abstract class Declaration extends Node {}
+export abstract class Declaration extends SyntaxNode {}
 
 /** A decl-specifier or type-specifier ([dcl.spec]): one keyword, a type name, or a class or enum definition. */
-export abstract class Specifier extends Node {}
+export abstract class Specifier extends SyntaxNode {}
 
 /** A declarator ([dcl.decl]), named or abstract: the part of a declaration that declares one name and its type. */
-export abstract class Declarator extends Node {}
+export abstract class Declarator extends SyntaxNode {}
 
 /** A function parameter ([dcl.fct]), or the ellipsis of a variadic function. */
-export abstract class Parameter extends Node {}
+export abstract class Parameter extends SyntaxNode {}
 
 /** A template parameter that is a type or a template ([temp.param]). Constants are `ParameterDeclaration`s. */
-export abstract class TemplateParameter extends Node {}
+export abstract class TemplateParameter extends SyntaxNode {}
 
 /** An initializer ([dcl.init]): `= value` or `(arguments)`; a braced list is an `InitializerList`. */
-export abstract class Initializer extends Node {}
+export abstract class Initializer extends SyntaxNode {}
 
 /** A lambda capture ([expr.prim.lambda.capture]). */
-export abstract class Capture extends Node {}
+export abstract class Capture extends SyntaxNode {}
 
 /** A requirement in a requires-expression ([expr.prim.req]). */
-export abstract class Requirement extends Node {}
+export abstract class Requirement extends SyntaxNode {}
 
 /** A designator in a designated initializer ([dcl.init.general], C [6.7.10]). */
-export abstract class Designator extends Node {}
+export abstract class Designator extends SyntaxNode {}
 
 /** An attribute specifier ([dcl.attr]): `[[...]]`, `alignas(...)`, or an extension's attribute syntax. */
-export abstract class AttributeSpecifier extends Node {}
+export abstract class AttributeSpecifier extends SyntaxNode {}
 
 /** An exception specification ([except.spec]): `noexcept(...)` or a dynamic `throw(...)`. */
-export abstract class ExceptionSpecification extends Node {}
+export abstract class ExceptionSpecification extends SyntaxNode {}
 
 /** A function contract specifier ([dcl.contract.func]): a precondition or a postcondition. */
-export abstract class ContractSpecifier extends Node {}
+export abstract class ContractSpecifier extends SyntaxNode {}
 
 /** A preprocessing directive ([cpp]), where declarations, statements, members or enumerators are listed. */
-export abstract class Directive extends Node {}
+export abstract class Directive extends SyntaxNode {}
 
 // === Lexical conventions [lex] ===
 
@@ -174,12 +175,12 @@ const CommentSpec = {
   text: text(),
   trailing: flag(),
 };
-export interface Comment extends Fields<typeof CommentSpec> {}
+export interface Comment extends Properties<typeof CommentSpec> {}
 /**
  * `// text` or, with `block`, `/* text *\/`. `text` excludes the delimiters. A `trailing` comment ends the line of
  * the item before it.
  */
-export class Comment extends Node {
+export class Comment extends SyntaxNode {
   static override SPEC = CommentSpec;
 }
 
@@ -188,9 +189,9 @@ export class Comment extends Node {
 const TranslationUnitSpec = {
   items: many(() => [Declaration, Statement, Directive, Comment]),
 };
-export interface TranslationUnit extends Fields<typeof TranslationUnitSpec> {}
+export interface TranslationUnit extends Properties<typeof TranslationUnitSpec> {}
 /** A source file after its directives are kept as trees rather than performed ([basic.link]). */
-export class TranslationUnit extends Node {
+export class TranslationUnit extends SyntaxNode {
   static override SPEC = TranslationUnitSpec;
 }
 
@@ -201,7 +202,7 @@ export class TranslationUnit extends Node {
 const IdentifierSpec = {
   spelling: text(),
 };
-export interface Identifier extends Fields<typeof IdentifierSpec> {}
+export interface Identifier extends Properties<typeof IdentifierSpec> {}
 /**
  * An identifier ([lex.name]): letters, digits, `_` and `$`, not starting with a digit. Characters beyond ASCII
  * are taken to be letters.
@@ -222,7 +223,7 @@ export class Identifier extends Name {
 const OperatorNameSpec = {
   operator: choice(...OVERLOADABLE_OPERATORS),
 };
-export interface OperatorName extends Fields<typeof OperatorNameSpec> {}
+export interface OperatorName extends Properties<typeof OperatorNameSpec> {}
 /** `operator op`, naming an operator function ([over.oper]). */
 export class OperatorName extends Name {
   static override SPEC = OperatorNameSpec;
@@ -233,7 +234,7 @@ export class OperatorName extends Name {
 const ConversionNameSpec = {
   type: one(() => [TypeId]),
 };
-export interface ConversionName extends Fields<typeof ConversionNameSpec> {}
+export interface ConversionName extends Properties<typeof ConversionNameSpec> {}
 /** `operator type`, naming a conversion function ([class.conv.fct]). */
 export class ConversionName extends Name {
   static override SPEC = ConversionNameSpec;
@@ -243,7 +244,7 @@ export class ConversionName extends Name {
 const LiteralOperatorNameSpec = {
   suffix: text(),
 };
-export interface LiteralOperatorName extends Fields<typeof LiteralOperatorNameSpec> {}
+export interface LiteralOperatorName extends Properties<typeof LiteralOperatorNameSpec> {}
 /** `operator""suffix`, naming a literal operator ([over.literal]). */
 export class LiteralOperatorName extends Name {
   static override SPEC = LiteralOperatorNameSpec;
@@ -253,7 +254,7 @@ export class LiteralOperatorName extends Name {
 const DestructorNameSpec = {
   type: one(() => [Identifier, TemplateId, DecltypeSpecifier]),
 };
-export interface DestructorName extends Fields<typeof DestructorNameSpec> {}
+export interface DestructorName extends Properties<typeof DestructorNameSpec> {}
 /** `~type`, naming a destructor ([class.dtor]). */
 export class DestructorName extends Name {
   static override SPEC = DestructorNameSpec;
@@ -265,7 +266,7 @@ const TemplateIdSpec = {
   name: one(() => [Identifier, OperatorName, LiteralOperatorName]),
   arguments: many(() => [Expression, TypeId]),
 };
-export interface TemplateId extends Fields<typeof TemplateIdSpec> {}
+export interface TemplateId extends Properties<typeof TemplateIdSpec> {}
 /** `name<arguments>`, or `template name<arguments>` with `template_keyword` ([temp.names]). */
 export class TemplateId extends Name {
   static override SPEC = TemplateIdSpec;
@@ -277,7 +278,7 @@ const QualifiedNameSpec = {
   qualifiers: many(() => [Identifier, TemplateId, DecltypeSpecifier, PackIndexingSpecifier, SpliceSpecifier]),
   name: one(() => [Name]),
 };
-export interface QualifiedName extends Fields<typeof QualifiedNameSpec> {}
+export interface QualifiedName extends Properties<typeof QualifiedNameSpec> {}
 /**
  * `q1::q2::name`, or `::q1::name` with `global_scope` ([expr.prim.id.qual]). Each qualifier names a namespace,
  * class or enumeration.
@@ -292,7 +293,7 @@ export class QualifiedName extends Name {
 const IntegerLiteralSpec = {
   spelling: text(),
 };
-export interface IntegerLiteral extends Fields<typeof IntegerLiteralSpec> {}
+export interface IntegerLiteral extends Properties<typeof IntegerLiteralSpec> {}
 /** An integer literal, spelled as written: prefix, digits, separators and suffix ([lex.icon]). */
 export class IntegerLiteral extends Literal {
   static override SPEC = IntegerLiteralSpec;
@@ -301,7 +302,7 @@ export class IntegerLiteral extends Literal {
 const FloatingLiteralSpec = {
   spelling: text(),
 };
-export interface FloatingLiteral extends Fields<typeof FloatingLiteralSpec> {}
+export interface FloatingLiteral extends Properties<typeof FloatingLiteralSpec> {}
 /** A floating-point literal, spelled as written ([lex.fcon]). */
 export class FloatingLiteral extends Literal {
   static override SPEC = FloatingLiteralSpec;
@@ -311,7 +312,7 @@ const CharacterLiteralSpec = {
   prefix: optionalChoice(...ENCODINGS),
   text: text(),
 };
-export interface CharacterLiteral extends Fields<typeof CharacterLiteralSpec> {}
+export interface CharacterLiteral extends Properties<typeof CharacterLiteralSpec> {}
 /** `'text'`, with an optional encoding prefix ([lex.ccon]). `text` is spelled as written, escapes included. */
 export class CharacterLiteral extends Literal {
   static override SPEC = CharacterLiteralSpec;
@@ -324,7 +325,7 @@ const StringLiteralSpec = {
   prefix: optionalChoice(...ENCODINGS),
   text: text(),
 };
-export interface StringLiteral extends Fields<typeof StringLiteralSpec> {}
+export interface StringLiteral extends Properties<typeof StringLiteralSpec> {}
 /** `"text"`, with an optional encoding prefix ([lex.string]). `text` is spelled as written, escapes included. */
 export class StringLiteral extends Literal {
   static override SPEC = StringLiteralSpec;
@@ -338,7 +339,7 @@ const RawStringLiteralSpec = {
   delimiter: optionalText(),
   text: text(),
 };
-export interface RawStringLiteral extends Fields<typeof RawStringLiteralSpec> {}
+export interface RawStringLiteral extends Properties<typeof RawStringLiteralSpec> {}
 /** `R"delimiter(text)delimiter"`, with an optional encoding prefix ([lex.string]). */
 export class RawStringLiteral extends Literal {
   static override SPEC = RawStringLiteralSpec;
@@ -349,7 +350,7 @@ const UserDefinedLiteralSpec = {
   literal: one(() => [IntegerLiteral, FloatingLiteral, CharacterLiteral, StringLiteral, RawStringLiteral]),
   suffix: text(),
 };
-export interface UserDefinedLiteral extends Fields<typeof UserDefinedLiteralSpec> {}
+export interface UserDefinedLiteral extends Properties<typeof UserDefinedLiteralSpec> {}
 /** A literal followed by a user-defined suffix, such as `10_km` ([lex.ext]). */
 export class UserDefinedLiteral extends Literal {
   static override SPEC = UserDefinedLiteralSpec;
@@ -359,7 +360,7 @@ export class UserDefinedLiteral extends Literal {
 const ConcatenatedStringSpec = {
   parts: many(() => [StringLiteral, RawStringLiteral, UserDefinedLiteral, IdExpression]),
 };
-export interface ConcatenatedString extends Fields<typeof ConcatenatedStringSpec> {}
+export interface ConcatenatedString extends Properties<typeof ConcatenatedStringSpec> {}
 /**
  * Adjacent string literals, concatenated ([lex.string]). Macros expanding to strings, such as `PRId64`, are
  * `IdExpression`s among them.
@@ -371,7 +372,7 @@ export class ConcatenatedString extends Literal {
 const BooleanLiteralSpec = {
   value: flag(),
 };
-export interface BooleanLiteral extends Fields<typeof BooleanLiteralSpec> {}
+export interface BooleanLiteral extends Properties<typeof BooleanLiteralSpec> {}
 /** `true`, or `false` unless `value` ([lex.bool]). */
 export class BooleanLiteral extends Literal {
   static override SPEC = BooleanLiteralSpec;
@@ -393,7 +394,7 @@ export class ThisExpression extends Expression {
 const ParenthesizedExpressionSpec = {
   expression: one(() => [Expression]),
 };
-export interface ParenthesizedExpression extends Fields<typeof ParenthesizedExpressionSpec> {}
+export interface ParenthesizedExpression extends Properties<typeof ParenthesizedExpressionSpec> {}
 /** `(expression)` ([expr.prim.paren]). */
 export class ParenthesizedExpression extends Expression {
   static override SPEC = ParenthesizedExpressionSpec;
@@ -402,7 +403,7 @@ export class ParenthesizedExpression extends Expression {
 const IdExpressionSpec = {
   name: one(() => [Name]),
 };
-export interface IdExpression extends Fields<typeof IdExpressionSpec> {}
+export interface IdExpression extends Properties<typeof IdExpressionSpec> {}
 /** A name used as an expression ([expr.prim.id]). */
 export class IdExpression extends Expression {
   static override SPEC = IdExpressionSpec;
@@ -416,7 +417,7 @@ const LambdaExpressionSpec = {
   declarator: optional(() => [LambdaDeclarator]),
   body: one(() => [CompoundStatement]),
 };
-export interface LambdaExpression extends Fields<typeof LambdaExpressionSpec> {}
+export interface LambdaExpression extends Properties<typeof LambdaExpressionSpec> {}
 /**
  * `[captures] <template_parameters> requires template_requires attributes declarator body`
  * ([expr.prim.lambda]). Without a declarator, the lambda has no parameter list: `[] { ... }`.
@@ -436,9 +437,9 @@ const LambdaDeclaratorSpec = {
   requires: optional(() => [Expression]),
   contracts: many(() => [ContractSpecifier]),
 };
-export interface LambdaDeclarator extends Fields<typeof LambdaDeclaratorSpec> {}
+export interface LambdaDeclarator extends Properties<typeof LambdaDeclaratorSpec> {}
 /** `(parameters) specifiers exception attributes -> trailing_return requires contracts` ([expr.prim.lambda]). */
-export class LambdaDeclarator extends Node {
+export class LambdaDeclarator extends SyntaxNode {
   static override SPEC = LambdaDeclaratorSpec;
   static override SINCE: Availability | null = cpp(2011);
   static override FEATURES: Features = { requires: [[true, cpp(2020)]], contracts: [[true, cpp(2026)]] };
@@ -447,7 +448,7 @@ export class LambdaDeclarator extends Node {
 const DefaultCaptureSpec = {
   mode: choice("=", "&"),
 };
-export interface DefaultCapture extends Fields<typeof DefaultCaptureSpec> {}
+export interface DefaultCapture extends Properties<typeof DefaultCaptureSpec> {}
 /** `=` or `&`: capture what the body uses, by copy or by reference ([expr.prim.lambda.capture]). */
 export class DefaultCapture extends Capture {
   static override SPEC = DefaultCaptureSpec;
@@ -459,7 +460,7 @@ const SimpleCaptureSpec = {
   name: one(() => [Identifier]),
   pack: flag(),
 };
-export interface SimpleCapture extends Fields<typeof SimpleCaptureSpec> {}
+export interface SimpleCapture extends Properties<typeof SimpleCaptureSpec> {}
 /** `name`, `&name`, `name...` or `&name...` ([expr.prim.lambda.capture]). */
 export class SimpleCapture extends Capture {
   static override SPEC = SimpleCaptureSpec;
@@ -469,7 +470,7 @@ export class SimpleCapture extends Capture {
 const ThisCaptureSpec = {
   copy: flag(),
 };
-export interface ThisCapture extends Fields<typeof ThisCaptureSpec> {}
+export interface ThisCapture extends Properties<typeof ThisCaptureSpec> {}
 /** `this`, or `*this` with `copy` ([expr.prim.lambda.capture]). */
 export class ThisCapture extends Capture {
   static override SPEC = ThisCaptureSpec;
@@ -483,7 +484,7 @@ const InitCaptureSpec = {
   name: one(() => [Identifier]),
   initializer: one(() => [Initializer, InitializerList]),
 };
-export interface InitCapture extends Fields<typeof InitCaptureSpec> {}
+export interface InitCapture extends Properties<typeof InitCaptureSpec> {}
 /**
  * `name initializer`, `&name initializer`, `...name initializer` or `&...name initializer`
  * ([expr.prim.lambda.capture]).
@@ -499,7 +500,7 @@ const FoldExpressionSpec = {
   operator: choice(...FOLD_OPERATORS),
   right: optional(() => [Expression]),
 };
-export interface FoldExpression extends Fields<typeof FoldExpressionSpec> {}
+export interface FoldExpression extends Properties<typeof FoldExpressionSpec> {}
 /** `(left op ...)`, `(... op right)` or `(left op ... op right)` ([expr.prim.fold]). */
 export class FoldExpression extends Expression {
   static override SPEC = FoldExpressionSpec;
@@ -510,7 +511,7 @@ const RequiresExpressionSpec = {
   parameters: many(() => [Parameter]),
   requirements: many(() => [Requirement]),
 };
-export interface RequiresExpression extends Fields<typeof RequiresExpressionSpec> {}
+export interface RequiresExpression extends Properties<typeof RequiresExpressionSpec> {}
 /** `requires (parameters) { requirements }` ([expr.prim.req]). Without parameters, `requires { ... }`. */
 export class RequiresExpression extends Expression {
   static override SPEC = RequiresExpressionSpec;
@@ -520,7 +521,7 @@ export class RequiresExpression extends Expression {
 const SimpleRequirementSpec = {
   expression: one(() => [Expression]),
 };
-export interface SimpleRequirement extends Fields<typeof SimpleRequirementSpec> {}
+export interface SimpleRequirement extends Properties<typeof SimpleRequirementSpec> {}
 /** `expression;` ([expr.prim.req.simple]). */
 export class SimpleRequirement extends Requirement {
   static override SPEC = SimpleRequirementSpec;
@@ -530,7 +531,7 @@ export class SimpleRequirement extends Requirement {
 const TypeRequirementSpec = {
   name: one(() => [Name]),
 };
-export interface TypeRequirement extends Fields<typeof TypeRequirementSpec> {}
+export interface TypeRequirement extends Properties<typeof TypeRequirementSpec> {}
 /** `typename name;` ([expr.prim.req.type]). */
 export class TypeRequirement extends Requirement {
   static override SPEC = TypeRequirementSpec;
@@ -542,7 +543,7 @@ const CompoundRequirementSpec = {
   noexcept: flag(),
   return_type: optional(() => [Name]),
 };
-export interface CompoundRequirement extends Fields<typeof CompoundRequirementSpec> {}
+export interface CompoundRequirement extends Properties<typeof CompoundRequirementSpec> {}
 /** `{ expression } noexcept -> return_type;` ([expr.prim.req.compound]). `return_type` is a type constraint. */
 export class CompoundRequirement extends Requirement {
   static override SPEC = CompoundRequirementSpec;
@@ -552,7 +553,7 @@ export class CompoundRequirement extends Requirement {
 const NestedRequirementSpec = {
   constraint: one(() => [Expression]),
 };
-export interface NestedRequirement extends Fields<typeof NestedRequirementSpec> {}
+export interface NestedRequirement extends Properties<typeof NestedRequirementSpec> {}
 /** `requires constraint;` ([expr.prim.req.nested]). */
 export class NestedRequirement extends Requirement {
   static override SPEC = NestedRequirementSpec;
@@ -563,7 +564,7 @@ const PackIndexingExpressionSpec = {
   pack: one(() => [Name]),
   index: one(() => [Expression]),
 };
-export interface PackIndexingExpression extends Fields<typeof PackIndexingExpressionSpec> {}
+export interface PackIndexingExpression extends Properties<typeof PackIndexingExpressionSpec> {}
 /** `pack...[index]` ([expr.prim.pack.index]). */
 export class PackIndexingExpression extends Expression {
   static override SPEC = PackIndexingExpressionSpec;
@@ -573,7 +574,7 @@ export class PackIndexingExpression extends Expression {
 const ReflectExpressionSpec = {
   operand: optional(() => [Name, TypeId, Expression]),
 };
-export interface ReflectExpression extends Fields<typeof ReflectExpressionSpec> {}
+export interface ReflectExpression extends Properties<typeof ReflectExpressionSpec> {}
 /** `^^operand`, reflecting a name, type, namespace or expression; `^^::` without an operand ([expr.reflect]). */
 export class ReflectExpression extends Expression {
   static override SPEC = ReflectExpressionSpec;
@@ -585,7 +586,7 @@ const SpliceExpressionSpec = {
   reflection: one(() => [Expression]),
   arguments: many(() => [Expression, TypeId]),
 };
-export interface SpliceExpression extends Fields<typeof SpliceExpressionSpec> {}
+export interface SpliceExpression extends Properties<typeof SpliceExpressionSpec> {}
 /** `[: reflection :]`, or `template [: reflection :] <arguments>` ([expr.prim.splice]). */
 export class SpliceExpression extends Expression {
   static override SPEC = SpliceExpressionSpec;
@@ -598,7 +599,7 @@ const SubscriptExpressionSpec = {
   object: one(() => [Expression]),
   indices: many(() => [Expression]),
 };
-export interface SubscriptExpression extends Fields<typeof SubscriptExpressionSpec> {}
+export interface SubscriptExpression extends Properties<typeof SubscriptExpressionSpec> {}
 /** `object[indices]` ([expr.sub]); several indices since C++23. */
 export class SubscriptExpression extends Expression {
   static override SPEC = SubscriptExpressionSpec;
@@ -611,7 +612,7 @@ const CallExpressionSpec = {
   function: one(() => [Expression]),
   arguments: many(() => [Expression, TypeId]),
 };
-export interface CallExpression extends Fields<typeof CallExpressionSpec> {}
+export interface CallExpression extends Properties<typeof CallExpressionSpec> {}
 /** `function(arguments)` ([expr.call]). A macro's arguments may be types, as in `offsetof(S, m)`. */
 export class CallExpression extends Expression {
   static override SPEC = CallExpressionSpec;
@@ -621,7 +622,7 @@ const FunctionalCastExpressionSpec = {
   type: one(() => [Specifier]),
   initializer: one(() => [ParenthesizedInitializer, InitializerList]),
 };
-export interface FunctionalCastExpression extends Fields<typeof FunctionalCastExpressionSpec> {}
+export interface FunctionalCastExpression extends Properties<typeof FunctionalCastExpressionSpec> {}
 /** `type(arguments)` or `type{items}`: explicit type conversion in functional notation ([expr.type.conv]). */
 export class FunctionalCastExpression extends Expression {
   static override SPEC = FunctionalCastExpressionSpec;
@@ -634,7 +635,7 @@ const MemberExpressionSpec = {
   template_keyword: flag(),
   member: one(() => [Name]),
 };
-export interface MemberExpression extends Fields<typeof MemberExpressionSpec> {}
+export interface MemberExpression extends Properties<typeof MemberExpressionSpec> {}
 /** `object.member` or `object->member`, with `template_keyword` `object.template member` ([expr.ref]). */
 export class MemberExpression extends Expression {
   static override SPEC = MemberExpressionSpec;
@@ -644,7 +645,7 @@ const PostfixExpressionSpec = {
   operand: one(() => [Expression]),
   operator: choice(...POSTFIX_OPERATORS),
 };
-export interface PostfixExpression extends Fields<typeof PostfixExpressionSpec> {}
+export interface PostfixExpression extends Properties<typeof PostfixExpressionSpec> {}
 /** `operand++` or `operand--` ([expr.post.incr]). */
 export class PostfixExpression extends Expression {
   static override SPEC = PostfixExpressionSpec;
@@ -655,7 +656,7 @@ const NamedCastExpressionSpec = {
   type: one(() => [TypeId]),
   operand: one(() => [Expression]),
 };
-export interface NamedCastExpression extends Fields<typeof NamedCastExpressionSpec> {}
+export interface NamedCastExpression extends Properties<typeof NamedCastExpressionSpec> {}
 /** `static_cast<type>(operand)` and its siblings ([expr.static.cast] and following). */
 export class NamedCastExpression extends Expression {
   static override SPEC = NamedCastExpressionSpec;
@@ -665,7 +666,7 @@ export class NamedCastExpression extends Expression {
 const TypeidExpressionSpec = {
   operand: one(() => [Expression, TypeId]),
 };
-export interface TypeidExpression extends Fields<typeof TypeidExpressionSpec> {}
+export interface TypeidExpression extends Properties<typeof TypeidExpressionSpec> {}
 /** `typeid(operand)` ([expr.typeid]). */
 export class TypeidExpression extends Expression {
   static override SPEC = TypeidExpressionSpec;
@@ -678,7 +679,7 @@ const UnaryExpressionSpec = {
   operator: choice(...UNARY_OPERATORS),
   operand: one(() => [Expression]),
 };
-export interface UnaryExpression extends Fields<typeof UnaryExpressionSpec> {}
+export interface UnaryExpression extends Properties<typeof UnaryExpressionSpec> {}
 /** `op operand` for the prefix operators ([expr.unary.op], [expr.pre.incr]). */
 export class UnaryExpression extends Expression {
   static override SPEC = UnaryExpressionSpec;
@@ -687,7 +688,7 @@ export class UnaryExpression extends Expression {
 const AwaitExpressionSpec = {
   operand: one(() => [Expression]),
 };
-export interface AwaitExpression extends Fields<typeof AwaitExpressionSpec> {}
+export interface AwaitExpression extends Properties<typeof AwaitExpressionSpec> {}
 /** `co_await operand` ([expr.await]). */
 export class AwaitExpression extends Expression {
   static override SPEC = AwaitExpressionSpec;
@@ -697,7 +698,7 @@ export class AwaitExpression extends Expression {
 const SizeofExpressionSpec = {
   operand: one(() => [Expression, TypeId]),
 };
-export interface SizeofExpression extends Fields<typeof SizeofExpressionSpec> {}
+export interface SizeofExpression extends Properties<typeof SizeofExpressionSpec> {}
 /** `sizeof operand` or `sizeof(type)` ([expr.sizeof]). */
 export class SizeofExpression extends Expression {
   static override SPEC = SizeofExpressionSpec;
@@ -706,7 +707,7 @@ export class SizeofExpression extends Expression {
 const SizeofPackExpressionSpec = {
   pack: one(() => [Identifier]),
 };
-export interface SizeofPackExpression extends Fields<typeof SizeofPackExpressionSpec> {}
+export interface SizeofPackExpression extends Properties<typeof SizeofPackExpressionSpec> {}
 /** `sizeof...(pack)` ([expr.sizeof]). */
 export class SizeofPackExpression extends Expression {
   static override SPEC = SizeofPackExpressionSpec;
@@ -717,7 +718,7 @@ const AlignofExpressionSpec = {
   keyword: choice(...ALIGNOF_KEYWORDS),
   operand: one(() => [TypeId, Expression]),
 };
-export interface AlignofExpression extends Fields<typeof AlignofExpressionSpec> {}
+export interface AlignofExpression extends Properties<typeof AlignofExpressionSpec> {}
 /** `alignof(operand)`, or one of its other spellings ([expr.alignof], C [6.5.4.5]). */
 export class AlignofExpression extends Expression {
   static override SPEC = AlignofExpressionSpec;
@@ -728,7 +729,7 @@ export class AlignofExpression extends Expression {
 const NoexceptExpressionSpec = {
   operand: one(() => [Expression]),
 };
-export interface NoexceptExpression extends Fields<typeof NoexceptExpressionSpec> {}
+export interface NoexceptExpression extends Properties<typeof NoexceptExpressionSpec> {}
 /** `noexcept(operand)` ([expr.unary.noexcept]). */
 export class NoexceptExpression extends Expression {
   static override SPEC = NoexceptExpressionSpec;
@@ -742,7 +743,7 @@ const NewExpressionSpec = {
   type: one(() => [TypeId]),
   initializer: optional(() => [ParenthesizedInitializer, InitializerList]),
 };
-export interface NewExpression extends Fields<typeof NewExpressionSpec> {}
+export interface NewExpression extends Properties<typeof NewExpressionSpec> {}
 /** `::new (placement) type initializer` ([expr.new]); with `parenthesized_type`, `new (type)`. */
 export class NewExpression extends Expression {
   static override SPEC = NewExpressionSpec;
@@ -754,7 +755,7 @@ const DeleteExpressionSpec = {
   array: flag(),
   operand: one(() => [Expression]),
 };
-export interface DeleteExpression extends Fields<typeof DeleteExpressionSpec> {}
+export interface DeleteExpression extends Properties<typeof DeleteExpressionSpec> {}
 /** `::delete operand` or `::delete[] operand` ([expr.delete]). */
 export class DeleteExpression extends Expression {
   static override SPEC = DeleteExpressionSpec;
@@ -767,7 +768,7 @@ const CastExpressionSpec = {
   type: one(() => [TypeId]),
   operand: one(() => [Expression]),
 };
-export interface CastExpression extends Fields<typeof CastExpressionSpec> {}
+export interface CastExpression extends Properties<typeof CastExpressionSpec> {}
 /** `(type) operand` ([expr.cast]). */
 export class CastExpression extends Expression {
   static override SPEC = CastExpressionSpec;
@@ -778,7 +779,7 @@ const BinaryExpressionSpec = {
   operator: choice(...BINARY_OPERATORS),
   right: one(() => [Expression]),
 };
-export interface BinaryExpression extends Fields<typeof BinaryExpressionSpec> {}
+export interface BinaryExpression extends Properties<typeof BinaryExpressionSpec> {}
 /** `left op right` for every binary operator but assignment ([expr.mptr.oper] to [expr.comma]). */
 export class BinaryExpression extends Expression {
   static override SPEC = BinaryExpressionSpec;
@@ -790,7 +791,7 @@ const ConditionalExpressionSpec = {
   consequence: optional(() => [Expression]),
   alternative: one(() => [Expression]),
 };
-export interface ConditionalExpression extends Fields<typeof ConditionalExpressionSpec> {}
+export interface ConditionalExpression extends Properties<typeof ConditionalExpressionSpec> {}
 /** `condition ? consequence : alternative` ([expr.cond]); without a consequence, the GNU `condition ?: alternative`. */
 export class ConditionalExpression extends Expression {
   static override SPEC = ConditionalExpressionSpec;
@@ -801,7 +802,7 @@ const AssignmentExpressionSpec = {
   operator: choice(...ASSIGNMENT_OPERATORS),
   right: one(() => [Expression]),
 };
-export interface AssignmentExpression extends Fields<typeof AssignmentExpressionSpec> {}
+export interface AssignmentExpression extends Properties<typeof AssignmentExpressionSpec> {}
 /** `left op right` for the assignment operators ([expr.assign]). */
 export class AssignmentExpression extends Expression {
   static override SPEC = AssignmentExpressionSpec;
@@ -810,7 +811,7 @@ export class AssignmentExpression extends Expression {
 const ThrowExpressionSpec = {
   operand: optional(() => [Expression]),
 };
-export interface ThrowExpression extends Fields<typeof ThrowExpressionSpec> {}
+export interface ThrowExpression extends Properties<typeof ThrowExpressionSpec> {}
 /** `throw operand`, or `throw` to rethrow ([expr.throw]). */
 export class ThrowExpression extends Expression {
   static override SPEC = ThrowExpressionSpec;
@@ -820,7 +821,7 @@ export class ThrowExpression extends Expression {
 const YieldExpressionSpec = {
   operand: one(() => [Expression]),
 };
-export interface YieldExpression extends Fields<typeof YieldExpressionSpec> {}
+export interface YieldExpression extends Properties<typeof YieldExpressionSpec> {}
 /** `co_yield operand` ([expr.yield]). */
 export class YieldExpression extends Expression {
   static override SPEC = YieldExpressionSpec;
@@ -830,7 +831,7 @@ export class YieldExpression extends Expression {
 const PackExpansionSpec = {
   pattern: one(() => [Expression, TypeId]),
 };
-export interface PackExpansion extends Fields<typeof PackExpansionSpec> {}
+export interface PackExpansion extends Properties<typeof PackExpansionSpec> {}
 /** `pattern...`, expanding a pack in a list of expressions or types ([temp.variadic]). */
 export class PackExpansion extends Expression {
   static override SPEC = PackExpansionSpec;
@@ -844,7 +845,7 @@ const InitializerListSpec: {
   items: many(() => [Expression, DesignatedInitializer]),
   trailing_comma: flag(),
 };
-export interface InitializerList extends Fields<typeof InitializerListSpec> {}
+export interface InitializerList extends Properties<typeof InitializerListSpec> {}
 /** `{items}`, with `trailing_comma` `{items,}` ([dcl.init.list]). */
 export class InitializerList extends Expression {
   static override SPEC = InitializerListSpec;
@@ -857,9 +858,9 @@ const DesignatedInitializerSpec: {
   designators: many(() => [Designator]),
   initializer: one(() => [EqualInitializer, InitializerList]),
 };
-export interface DesignatedInitializer extends Fields<typeof DesignatedInitializerSpec> {}
+export interface DesignatedInitializer extends Properties<typeof DesignatedInitializerSpec> {}
 /** `designators initializer`, such as `.x = 1`, `.x{1}` or C's `[2].y = 3` ([dcl.init.general], C [6.7.10]). */
-export class DesignatedInitializer extends Node {
+export class DesignatedInitializer extends SyntaxNode {
   static override SPEC = DesignatedInitializerSpec;
   static override SINCE: Availability | null = both(2020, 1999);
   override features(): [string, Availability][] {
@@ -871,7 +872,7 @@ export class DesignatedInitializer extends Node {
 const FieldDesignatorSpec = {
   name: one(() => [Identifier]),
 };
-export interface FieldDesignator extends Fields<typeof FieldDesignatorSpec> {}
+export interface FieldDesignator extends Properties<typeof FieldDesignatorSpec> {}
 /** `.name`. */
 export class FieldDesignator extends Designator {
   static override SPEC = FieldDesignatorSpec;
@@ -881,7 +882,7 @@ const IndexDesignatorSpec = {
   index: one(() => [Expression]),
   last: optional(() => [Expression]),
 };
-export interface IndexDesignator extends Fields<typeof IndexDesignatorSpec> {}
+export interface IndexDesignator extends Properties<typeof IndexDesignatorSpec> {}
 /** `[index]`, or the GNU `[index ... last]`. */
 export class IndexDesignator extends Designator {
   static override SPEC = IndexDesignatorSpec;
@@ -892,7 +893,7 @@ const CompoundLiteralExpressionSpec = {
   type: one(() => [TypeId]),
   initializer: one(() => [InitializerList]),
 };
-export interface CompoundLiteralExpression extends Fields<typeof CompoundLiteralExpressionSpec> {}
+export interface CompoundLiteralExpression extends Properties<typeof CompoundLiteralExpressionSpec> {}
 /** `(type){items}`: an unnamed object (C [6.5.3.6]). */
 export class CompoundLiteralExpression extends Expression {
   static override SPEC = CompoundLiteralExpressionSpec;
@@ -903,7 +904,7 @@ const GenericSelectionSpec = {
   controlling: one(() => [Expression, TypeId]),
   associations: many(() => [GenericAssociation]),
 };
-export interface GenericSelection extends Fields<typeof GenericSelectionSpec> {}
+export interface GenericSelection extends Properties<typeof GenericSelectionSpec> {}
 /** `_Generic(controlling, associations)` (C [6.5.2.1]). */
 export class GenericSelection extends Expression {
   static override SPEC = GenericSelectionSpec;
@@ -914,9 +915,9 @@ const GenericAssociationSpec = {
   type: optional(() => [TypeId]),
   value: one(() => [Expression]),
 };
-export interface GenericAssociation extends Fields<typeof GenericAssociationSpec> {}
+export interface GenericAssociation extends Properties<typeof GenericAssociationSpec> {}
 /** `type: value`, or `default: value` without a type (C [6.5.2.1]). */
-export class GenericAssociation extends Node {
+export class GenericAssociation extends SyntaxNode {
   static override SPEC = GenericAssociationSpec;
   static override SINCE: Availability | null = c(2011);
 }
@@ -924,7 +925,7 @@ export class GenericAssociation extends Node {
 const StatementExpressionSpec = {
   body: one(() => [CompoundStatement]),
 };
-export interface StatementExpression extends Fields<typeof StatementExpressionSpec> {}
+export interface StatementExpression extends Properties<typeof StatementExpressionSpec> {}
 /** `({ items })`, a GNU statement expression whose value is its last statement's. */
 export class StatementExpression extends Expression {
   static override SPEC = StatementExpressionSpec;
@@ -934,7 +935,7 @@ export class StatementExpression extends Expression {
 const ExtensionExpressionSpec = {
   operand: one(() => [Expression]),
 };
-export interface ExtensionExpression extends Fields<typeof ExtensionExpressionSpec> {}
+export interface ExtensionExpression extends Properties<typeof ExtensionExpressionSpec> {}
 /** `__extension__ operand`, a GNU marker silencing warnings about extensions. */
 export class ExtensionExpression extends Expression {
   static override SPEC = ExtensionExpressionSpec;
@@ -944,7 +945,7 @@ export class ExtensionExpression extends Expression {
 const DefinedExpressionSpec = {
   name: one(() => [Identifier]),
 };
-export interface DefinedExpression extends Fields<typeof DefinedExpressionSpec> {}
+export interface DefinedExpression extends Properties<typeof DefinedExpressionSpec> {}
 /** `defined(name)`, in a preprocessing condition ([cpp.cond]). */
 export class DefinedExpression extends Expression {
   static override SPEC = DefinedExpressionSpec;
@@ -956,7 +957,7 @@ const LabeledStatementSpec = {
   label: one(() => [Identifier]),
   statement: optional(() => [Statement, Declaration]),
 };
-export interface LabeledStatement extends Fields<typeof LabeledStatementSpec> {}
+export interface LabeledStatement extends Properties<typeof LabeledStatementSpec> {}
 /** `label: statement` ([stmt.label]); without a statement, a label ending a block (C++23, C23). */
 export class LabeledStatement extends Statement {
   static override SPEC = LabeledStatementSpec;
@@ -970,7 +971,7 @@ const CaseStatementSpec = {
   last: optional(() => [Expression]),
   statement: optional(() => [Statement, Declaration]),
 };
-export interface CaseStatement extends Fields<typeof CaseStatementSpec> {}
+export interface CaseStatement extends Properties<typeof CaseStatementSpec> {}
 /** `case value: statement`, or the GNU range `case value ... last: statement` ([stmt.label]). */
 export class CaseStatement extends Statement {
   static override SPEC = CaseStatementSpec;
@@ -982,7 +983,7 @@ export class CaseStatement extends Statement {
 const DefaultStatementSpec = {
   statement: optional(() => [Statement, Declaration]),
 };
-export interface DefaultStatement extends Fields<typeof DefaultStatementSpec> {}
+export interface DefaultStatement extends Properties<typeof DefaultStatementSpec> {}
 /** `default: statement` ([stmt.label]). */
 export class DefaultStatement extends Statement {
   static override SPEC = DefaultStatementSpec;
@@ -994,7 +995,7 @@ export class DefaultStatement extends Statement {
 const ExpressionStatementSpec = {
   expression: optional(() => [Expression]),
 };
-export interface ExpressionStatement extends Fields<typeof ExpressionStatementSpec> {}
+export interface ExpressionStatement extends Properties<typeof ExpressionStatementSpec> {}
 /** `expression;`, or `;` without an expression ([stmt.expr]). */
 export class ExpressionStatement extends Statement {
   static override SPEC = ExpressionStatementSpec;
@@ -1003,7 +1004,7 @@ export class ExpressionStatement extends Statement {
 const CompoundStatementSpec = {
   items: many(() => [Statement, Declaration, Directive, Comment]),
 };
-export interface CompoundStatement extends Fields<typeof CompoundStatementSpec> {}
+export interface CompoundStatement extends Properties<typeof CompoundStatementSpec> {}
 /** `{ items }` ([stmt.block]). */
 export class CompoundStatement extends Statement {
   static override SPEC = CompoundStatementSpec;
@@ -1018,7 +1019,7 @@ const IfStatementSpec = {
   consequence: one(() => [Statement, Declaration]),
   alternative: optional(() => [Statement, Declaration]),
 };
-export interface IfStatement extends Fields<typeof IfStatementSpec> {}
+export interface IfStatement extends Properties<typeof IfStatementSpec> {}
 /**
  * `if constexpr (initializer condition) consequence else alternative` ([stmt.if]), or `if !consteval
  * consequence else alternative` with `consteval` (and `negated`), which has no condition.
@@ -1037,7 +1038,7 @@ const SwitchStatementSpec = {
   condition: one(() => [Expression, Declaration]),
   body: one(() => [Statement, Declaration]),
 };
-export interface SwitchStatement extends Fields<typeof SwitchStatementSpec> {}
+export interface SwitchStatement extends Properties<typeof SwitchStatementSpec> {}
 /** `switch (initializer condition) body` ([stmt.switch]). */
 export class SwitchStatement extends Statement {
   static override SPEC = SwitchStatementSpec;
@@ -1048,7 +1049,7 @@ const WhileStatementSpec = {
   condition: one(() => [Expression, Declaration]),
   body: one(() => [Statement, Declaration]),
 };
-export interface WhileStatement extends Fields<typeof WhileStatementSpec> {}
+export interface WhileStatement extends Properties<typeof WhileStatementSpec> {}
 /** `while (condition) body` ([stmt.while]). */
 export class WhileStatement extends Statement {
   static override SPEC = WhileStatementSpec;
@@ -1058,7 +1059,7 @@ const DoStatementSpec = {
   body: one(() => [Statement, Declaration]),
   condition: one(() => [Expression]),
 };
-export interface DoStatement extends Fields<typeof DoStatementSpec> {}
+export interface DoStatement extends Properties<typeof DoStatementSpec> {}
 /** `do body while (condition);` ([stmt.do]). */
 export class DoStatement extends Statement {
   static override SPEC = DoStatementSpec;
@@ -1070,7 +1071,7 @@ const ForStatementSpec = {
   increment: optional(() => [Expression]),
   body: one(() => [Statement, Declaration]),
 };
-export interface ForStatement extends Fields<typeof ForStatementSpec> {}
+export interface ForStatement extends Properties<typeof ForStatementSpec> {}
 /**
  * `for (initializer condition; increment) body` ([stmt.for]). The initializer ends with its own `;`; without
  * one, the statement is `for (; condition; increment)`.
@@ -1086,7 +1087,7 @@ const RangeForStatementSpec = {
   range: one(() => [Expression]),
   body: one(() => [Statement, Declaration]),
 };
-export interface RangeForStatement extends Fields<typeof RangeForStatementSpec> {}
+export interface RangeForStatement extends Properties<typeof RangeForStatementSpec> {}
 /**
  * `for (initializer declaration : range) body` ([stmt.ranged]), or with `template_keyword` the expansion
  * statement `template for (...)` ([stmt.expand]).
@@ -1106,7 +1107,7 @@ export class ContinueStatement extends Statement {}
 const ReturnStatementSpec = {
   value: optional(() => [Expression]),
 };
-export interface ReturnStatement extends Fields<typeof ReturnStatementSpec> {}
+export interface ReturnStatement extends Properties<typeof ReturnStatementSpec> {}
 /** `return value;` ([stmt.return]). */
 export class ReturnStatement extends Statement {
   static override SPEC = ReturnStatementSpec;
@@ -1115,7 +1116,7 @@ export class ReturnStatement extends Statement {
 const CoReturnStatementSpec = {
   value: optional(() => [Expression]),
 };
-export interface CoReturnStatement extends Fields<typeof CoReturnStatementSpec> {}
+export interface CoReturnStatement extends Properties<typeof CoReturnStatementSpec> {}
 /** `co_return value;` ([stmt.return.coroutine]). */
 export class CoReturnStatement extends Statement {
   static override SPEC = CoReturnStatementSpec;
@@ -1125,7 +1126,7 @@ export class CoReturnStatement extends Statement {
 const GotoStatementSpec = {
   label: one(() => [Identifier]),
 };
-export interface GotoStatement extends Fields<typeof GotoStatementSpec> {}
+export interface GotoStatement extends Properties<typeof GotoStatementSpec> {}
 /** `goto label;` ([stmt.goto]). */
 export class GotoStatement extends Statement {
   static override SPEC = GotoStatementSpec;
@@ -1135,7 +1136,7 @@ const TryStatementSpec = {
   body: one(() => [CompoundStatement]),
   handlers: many(() => [Handler]),
 };
-export interface TryStatement extends Fields<typeof TryStatementSpec> {}
+export interface TryStatement extends Properties<typeof TryStatementSpec> {}
 /** `try body handlers` ([except.pre]); also a function-try-block, as a function definition's body. */
 export class TryStatement extends Statement {
   static override SPEC = TryStatementSpec;
@@ -1146,9 +1147,9 @@ const HandlerSpec = {
   parameter: one(() => [Parameter]),
   body: one(() => [CompoundStatement]),
 };
-export interface Handler extends Fields<typeof HandlerSpec> {}
+export interface Handler extends Properties<typeof HandlerSpec> {}
 /** `catch (parameter) body`; `catch (...)` when the parameter is an `EllipsisParameter` ([except.pre]). */
-export class Handler extends Node {
+export class Handler extends SyntaxNode {
   static override SPEC = HandlerSpec;
   static override SINCE: Availability | null = cpp(1998);
 }
@@ -1157,7 +1158,7 @@ const AttributedStatementSpec = {
   attributes: many(() => [AttributeSpecifier]),
   statement: one(() => [Statement]),
 };
-export interface AttributedStatement extends Fields<typeof AttributedStatementSpec> {}
+export interface AttributedStatement extends Properties<typeof AttributedStatementSpec> {}
 /** `attributes statement` ([stmt.pre]). */
 export class AttributedStatement extends Statement {
   static override SPEC = AttributedStatementSpec;
@@ -1167,7 +1168,7 @@ const ContractAssertStatementSpec = {
   attributes: many(() => [AttributeSpecifier]),
   predicate: one(() => [Expression]),
 };
-export interface ContractAssertStatement extends Fields<typeof ContractAssertStatementSpec> {}
+export interface ContractAssertStatement extends Properties<typeof ContractAssertStatementSpec> {}
 /** `contract_assert attributes (predicate);` ([stmt.contract.assert]). */
 export class ContractAssertStatement extends Statement {
   static override SPEC = ContractAssertStatementSpec;
@@ -1181,7 +1182,7 @@ const SimpleDeclarationSpec = {
   specifiers: many(() => [Specifier, AttributeSpecifier]),
   declarators: many(() => [InitDeclarator]),
 };
-export interface SimpleDeclaration extends Fields<typeof SimpleDeclarationSpec> {}
+export interface SimpleDeclaration extends Properties<typeof SimpleDeclarationSpec> {}
 /**
  * `attributes specifiers declarators;` ([dcl.pre]): variables, functions, types, typedefs, friends and members.
  * Without `;` where it is a condition or a for-range declaration.
@@ -1199,13 +1200,13 @@ const InitDeclaratorSpec = {
   requires: optional(() => [Expression]),
   contracts: many(() => [ContractSpecifier]),
 };
-export interface InitDeclarator extends Fields<typeof InitDeclaratorSpec> {}
+export interface InitDeclarator extends Properties<typeof InitDeclaratorSpec> {}
 /**
  * One declarator of a declaration with what follows it ([dcl.decl], [class.mem]): `declarator virt_specifiers
  * = 0` (with `pure`), `declarator : bitfield initializer`, `declarator initializer`, or `declarator requires
  * contracts`. Without a declarator, an unnamed bit-field.
  */
-export class InitDeclarator extends Node {
+export class InitDeclarator extends SyntaxNode {
   static override SPEC = InitDeclaratorSpec;
   static override FEATURES: Features = {
     requires: [[true, cpp(2020)]],
@@ -1225,7 +1226,7 @@ const FunctionDefinitionSpec = {
   initializers: many(() => [MemberInitializer]),
   body: one(() => [CompoundStatement, TryStatement, DefaultedBody, DeletedBody]),
 };
-export interface FunctionDefinition extends Fields<typeof FunctionDefinitionSpec> {}
+export interface FunctionDefinition extends Properties<typeof FunctionDefinitionSpec> {}
 /**
  * `attributes specifiers declarator virt_specifiers requires contracts : initializers body` ([dcl.fct.def]).
  * The body is a block, a function-try-block, `= default;` or `= delete;`.
@@ -1241,16 +1242,16 @@ export class FunctionDefinition extends Declaration {
 }
 
 /** `= default;` ([dcl.fct.def.default]). */
-export class DefaultedBody extends Node {
+export class DefaultedBody extends SyntaxNode {
   static override SINCE: Availability | null = cpp(2011);
 }
 
 const DeletedBodySpec = {
   reason: optional(() => [Expression]),
 };
-export interface DeletedBody extends Fields<typeof DeletedBodySpec> {}
+export interface DeletedBody extends Properties<typeof DeletedBodySpec> {}
 /** `= delete;`, or `= delete(reason);` ([dcl.fct.def.delete]). */
-export class DeletedBody extends Node {
+export class DeletedBody extends SyntaxNode {
   static override SPEC = DeletedBodySpec;
   static override SINCE: Availability | null = cpp(2011);
   static override FEATURES: Features = { reason: [[true, cpp(2026)]] };
@@ -1261,12 +1262,12 @@ const MemberInitializerSpec = {
   initializer: one(() => [ParenthesizedInitializer, InitializerList]),
   pack: flag(),
 };
-export interface MemberInitializer extends Fields<typeof MemberInitializerSpec> {}
+export interface MemberInitializer extends Properties<typeof MemberInitializerSpec> {}
 /**
  * `member(arguments)` or `member{items}` in a constructor's initializer list, with `pack` `member(...)...`
  * ([class.base.init]).
  */
-export class MemberInitializer extends Node {
+export class MemberInitializer extends SyntaxNode {
   static override SPEC = MemberInitializerSpec;
   static override SINCE: Availability | null = cpp(1998);
 }
@@ -1274,9 +1275,9 @@ export class MemberInitializer extends Node {
 const VirtSpecifierSpec = {
   keyword: choice("override", "final"),
 };
-export interface VirtSpecifier extends Fields<typeof VirtSpecifierSpec> {}
+export interface VirtSpecifier extends Properties<typeof VirtSpecifierSpec> {}
 /** `override` or `final` ([class.mem]). */
-export class VirtSpecifier extends Node {
+export class VirtSpecifier extends SyntaxNode {
   static override SPEC = VirtSpecifierSpec;
   static override SINCE: Availability | null = cpp(2011);
 }
@@ -1286,7 +1287,7 @@ export class VirtSpecifier extends Node {
 const DeclSpecifierSpec = {
   keyword: choice(...DECL_KEYWORDS),
 };
-export interface DeclSpecifier extends Fields<typeof DeclSpecifierSpec> {}
+export interface DeclSpecifier extends Properties<typeof DeclSpecifierSpec> {}
 /**
  * A keyword specifier: storage class, function specifier, `friend`, `typedef`, `constexpr`, `consteval`,
  * `constinit` or `inline` ([dcl.stc] to [dcl.constinit]).
@@ -1313,7 +1314,7 @@ export class DeclSpecifier extends Specifier {
 const ExplicitSpecifierSpec = {
   condition: optional(() => [Expression]),
 };
-export interface ExplicitSpecifier extends Fields<typeof ExplicitSpecifierSpec> {}
+export interface ExplicitSpecifier extends Properties<typeof ExplicitSpecifierSpec> {}
 /** `explicit`, or `explicit(condition)` ([dcl.fct.spec]). */
 export class ExplicitSpecifier extends Specifier {
   static override SPEC = ExplicitSpecifierSpec;
@@ -1324,7 +1325,7 @@ export class ExplicitSpecifier extends Specifier {
 const CvQualifierSpec = {
   keyword: choice(...CV_KEYWORDS),
 };
-export interface CvQualifier extends Fields<typeof CvQualifierSpec> {}
+export interface CvQualifier extends Properties<typeof CvQualifierSpec> {}
 /** `const`, `volatile`, C's `restrict` and `_Atomic`, and their extensions ([dcl.type.cv], C [6.7.4]). */
 export class CvQualifier extends Specifier {
   static override SPEC = CvQualifierSpec;
@@ -1334,7 +1335,7 @@ export class CvQualifier extends Specifier {
 const PrimitiveTypeSpecifierSpec = {
   keyword: choice(...PRIMITIVE_KEYWORDS),
 };
-export interface PrimitiveTypeSpecifier extends Fields<typeof PrimitiveTypeSpecifierSpec> {}
+export interface PrimitiveTypeSpecifier extends Properties<typeof PrimitiveTypeSpecifierSpec> {}
 /** A fundamental type keyword: `int`, `unsigned`, `double`... ([dcl.type.simple]). `unsigned long` is two. */
 export class PrimitiveTypeSpecifier extends Specifier {
   static override SPEC = PrimitiveTypeSpecifierSpec;
@@ -1358,7 +1359,7 @@ export class PrimitiveTypeSpecifier extends Specifier {
 const NamedTypeSpecifierSpec = {
   name: one(() => [Name]),
 };
-export interface NamedTypeSpecifier extends Fields<typeof NamedTypeSpecifierSpec> {}
+export interface NamedTypeSpecifier extends Properties<typeof NamedTypeSpecifierSpec> {}
 /** A type named by a class, enumeration, typedef or template name ([dcl.type.simple]). */
 export class NamedTypeSpecifier extends Specifier {
   static override SPEC = NamedTypeSpecifierSpec;
@@ -1367,7 +1368,7 @@ export class NamedTypeSpecifier extends Specifier {
 const TypenameSpecifierSpec = {
   name: one(() => [Name]),
 };
-export interface TypenameSpecifier extends Fields<typeof TypenameSpecifierSpec> {}
+export interface TypenameSpecifier extends Properties<typeof TypenameSpecifierSpec> {}
 /** `typename name`, naming a type in a dependent scope ([temp.res]). */
 export class TypenameSpecifier extends Specifier {
   static override SPEC = TypenameSpecifierSpec;
@@ -1382,7 +1383,7 @@ const ClassSpecifierSpec = {
   bases: many(() => [BaseSpecifier]),
   body: optional(() => [MemberList]),
 };
-export interface ClassSpecifier extends Fields<typeof ClassSpecifierSpec> {}
+export interface ClassSpecifier extends Properties<typeof ClassSpecifierSpec> {}
 /**
  * `key attributes name final : bases { members }` ([class.pre]); without a body, the elaborated type specifier
  * `key attributes name` ([dcl.type.elab]).
@@ -1395,9 +1396,9 @@ export class ClassSpecifier extends Specifier {
 const MemberListSpec = {
   items: many(() => [Declaration, Directive, Comment]),
 };
-export interface MemberList extends Fields<typeof MemberListSpec> {}
+export interface MemberList extends Properties<typeof MemberListSpec> {}
 /** `{ items }`: a class's member specification ([class.mem]). */
-export class MemberList extends Node {
+export class MemberList extends SyntaxNode {
   static override SPEC = MemberListSpec;
 }
 
@@ -1408,7 +1409,7 @@ const EnumSpecifierSpec = {
   base: optional(() => [TypeId]),
   body: optional(() => [EnumeratorList]),
 };
-export interface EnumSpecifier extends Fields<typeof EnumSpecifierSpec> {}
+export interface EnumSpecifier extends Properties<typeof EnumSpecifierSpec> {}
 /**
  * `key attributes name : base { enumerators }` ([dcl.enum]); without a body, an opaque enumeration declaration
  * or an elaborated type specifier.
@@ -1425,9 +1426,9 @@ const EnumeratorListSpec = {
   enumerators: many(() => [Enumerator, Directive, Comment]),
   trailing_comma: flag(),
 };
-export interface EnumeratorList extends Fields<typeof EnumeratorListSpec> {}
+export interface EnumeratorList extends Properties<typeof EnumeratorListSpec> {}
 /** `{ enumerators }`, with `trailing_comma` `{ enumerators, }` ([dcl.enum]). */
-export class EnumeratorList extends Node {
+export class EnumeratorList extends SyntaxNode {
   static override SPEC = EnumeratorListSpec;
 }
 
@@ -1436,16 +1437,16 @@ const EnumeratorSpec = {
   attributes: many(() => [AttributeSpecifier]),
   value: optional(() => [Expression]),
 };
-export interface Enumerator extends Fields<typeof EnumeratorSpec> {}
+export interface Enumerator extends Properties<typeof EnumeratorSpec> {}
 /** `name attributes = value` ([dcl.enum]). */
-export class Enumerator extends Node {
+export class Enumerator extends SyntaxNode {
   static override SPEC = EnumeratorSpec;
 }
 
 const DecltypeSpecifierSpec = {
   expression: one(() => [Expression]),
 };
-export interface DecltypeSpecifier extends Fields<typeof DecltypeSpecifierSpec> {}
+export interface DecltypeSpecifier extends Properties<typeof DecltypeSpecifierSpec> {}
 /** `decltype(expression)` ([dcl.type.decltype]). */
 export class DecltypeSpecifier extends Specifier {
   static override SPEC = DecltypeSpecifierSpec;
@@ -1456,7 +1457,7 @@ const PlaceholderTypeSpecifierSpec = {
   constraint: optional(() => [Name]),
   decltype: flag(),
 };
-export interface PlaceholderTypeSpecifier extends Fields<typeof PlaceholderTypeSpecifierSpec> {}
+export interface PlaceholderTypeSpecifier extends Properties<typeof PlaceholderTypeSpecifierSpec> {}
 /** `auto`, `decltype(auto)` with `decltype`, each optionally constrained: `C<T> auto` ([dcl.spec.auto]). */
 export class PlaceholderTypeSpecifier extends Specifier {
   static override SPEC = PlaceholderTypeSpecifierSpec;
@@ -1468,7 +1469,7 @@ const TypeofSpecifierSpec = {
   keyword: choice(...TYPEOF_KEYWORDS),
   operand: one(() => [Expression, TypeId]),
 };
-export interface TypeofSpecifier extends Fields<typeof TypeofSpecifierSpec> {}
+export interface TypeofSpecifier extends Properties<typeof TypeofSpecifierSpec> {}
 /** `typeof(operand)` or `typeof_unqual(operand)` (C [6.7.3.6]), and the GNU `__typeof__`. */
 export class TypeofSpecifier extends Specifier {
   static override SPEC = TypeofSpecifierSpec;
@@ -1481,7 +1482,7 @@ export class TypeofSpecifier extends Specifier {
 const AtomicTypeSpecifierSpec = {
   type: one(() => [TypeId]),
 };
-export interface AtomicTypeSpecifier extends Fields<typeof AtomicTypeSpecifierSpec> {}
+export interface AtomicTypeSpecifier extends Properties<typeof AtomicTypeSpecifierSpec> {}
 /** `_Atomic(type)` (C [6.7.3.5]). */
 export class AtomicTypeSpecifier extends Specifier {
   static override SPEC = AtomicTypeSpecifierSpec;
@@ -1491,7 +1492,7 @@ export class AtomicTypeSpecifier extends Specifier {
 const BitIntSpecifierSpec = {
   width: one(() => [Expression]),
 };
-export interface BitIntSpecifier extends Fields<typeof BitIntSpecifierSpec> {}
+export interface BitIntSpecifier extends Properties<typeof BitIntSpecifierSpec> {}
 /** `_BitInt(width)` (C [6.7.3]). */
 export class BitIntSpecifier extends Specifier {
   static override SPEC = BitIntSpecifierSpec;
@@ -1502,7 +1503,7 @@ const PackIndexingSpecifierSpec = {
   pack: one(() => [Name]),
   index: one(() => [Expression]),
 };
-export interface PackIndexingSpecifier extends Fields<typeof PackIndexingSpecifierSpec> {}
+export interface PackIndexingSpecifier extends Properties<typeof PackIndexingSpecifierSpec> {}
 /** `pack...[index]`, a type of a pack ([dcl.type.pack.index]). */
 export class PackIndexingSpecifier extends Specifier {
   static override SPEC = PackIndexingSpecifierSpec;
@@ -1515,7 +1516,7 @@ const SpliceSpecifierSpec = {
   reflection: one(() => [Expression]),
   arguments: many(() => [Expression, TypeId]),
 };
-export interface SpliceSpecifier extends Fields<typeof SpliceSpecifierSpec> {}
+export interface SpliceSpecifier extends Properties<typeof SpliceSpecifierSpec> {}
 /** `typename [: reflection :]`, or `template [: reflection :] <arguments>` ([dcl.type.splice]). */
 export class SpliceSpecifier extends Specifier {
   static override SPEC = SpliceSpecifierSpec;
@@ -1528,7 +1529,7 @@ const IdDeclaratorSpec = {
   name: one(() => [Name]),
   attributes: many(() => [AttributeSpecifier]),
 };
-export interface IdDeclarator extends Fields<typeof IdDeclaratorSpec> {}
+export interface IdDeclarator extends Properties<typeof IdDeclaratorSpec> {}
 /** `name attributes`: the declarator-id, innermost in every named declarator ([dcl.decl]). */
 export class IdDeclarator extends Declarator {
   static override SPEC = IdDeclaratorSpec;
@@ -1537,7 +1538,7 @@ export class IdDeclarator extends Declarator {
 const PackDeclaratorSpec = {
   declarator: optional(() => [Declarator]),
 };
-export interface PackDeclarator extends Fields<typeof PackDeclaratorSpec> {}
+export interface PackDeclarator extends Properties<typeof PackDeclaratorSpec> {}
 /** `...declarator`, declaring a pack; abstract (`...` alone) without a declarator ([dcl.fct]). */
 export class PackDeclarator extends Declarator {
   static override SPEC = PackDeclaratorSpec;
@@ -1550,7 +1551,7 @@ const PointerDeclaratorSpec = {
   qualifiers: many(() => [CvQualifier]),
   declarator: optional(() => [Declarator]),
 };
-export interface PointerDeclarator extends Fields<typeof PointerDeclaratorSpec> {}
+export interface PointerDeclarator extends Properties<typeof PointerDeclaratorSpec> {}
 /** `* attributes qualifiers declarator`, or `scope::* ...` for a pointer to member ([dcl.ptr], [dcl.mptr]). */
 export class PointerDeclarator extends Declarator {
   static override SPEC = PointerDeclaratorSpec;
@@ -1562,7 +1563,7 @@ const ReferenceDeclaratorSpec = {
   attributes: many(() => [AttributeSpecifier]),
   declarator: optional(() => [Declarator]),
 };
-export interface ReferenceDeclarator extends Fields<typeof ReferenceDeclaratorSpec> {}
+export interface ReferenceDeclarator extends Properties<typeof ReferenceDeclaratorSpec> {}
 /** `& attributes declarator`, or `&& ...` with `rvalue` ([dcl.ref]). */
 export class ReferenceDeclarator extends Declarator {
   static override SPEC = ReferenceDeclaratorSpec;
@@ -1578,7 +1579,7 @@ const ArrayDeclaratorSpec = {
   star: flag(),
   attributes: many(() => [AttributeSpecifier]),
 };
-export interface ArrayDeclarator extends Fields<typeof ArrayDeclaratorSpec> {}
+export interface ArrayDeclarator extends Properties<typeof ArrayDeclaratorSpec> {}
 /** `declarator[static qualifiers size] attributes`, or C's `[*]` with `star` ([dcl.array], C [6.7.7.3]). */
 export class ArrayDeclarator extends Declarator {
   static override SPEC = ArrayDeclaratorSpec;
@@ -1598,7 +1599,7 @@ const FunctionDeclaratorSpec = {
   attributes: many(() => [AttributeSpecifier]),
   trailing_return: optional(() => [TypeId]),
 };
-export interface FunctionDeclarator extends Fields<typeof FunctionDeclaratorSpec> {}
+export interface FunctionDeclarator extends Properties<typeof FunctionDeclaratorSpec> {}
 /** `declarator(parameters) qualifiers ref_qualifier exception attributes -> trailing_return` ([dcl.fct]). */
 export class FunctionDeclarator extends Declarator {
   static override SPEC = FunctionDeclaratorSpec;
@@ -1612,7 +1613,7 @@ export class FunctionDeclarator extends Declarator {
 const ParenthesizedDeclaratorSpec = {
   declarator: one(() => [Declarator]),
 };
-export interface ParenthesizedDeclarator extends Fields<typeof ParenthesizedDeclaratorSpec> {}
+export interface ParenthesizedDeclarator extends Properties<typeof ParenthesizedDeclaratorSpec> {}
 /** `(declarator)` ([dcl.decl]). */
 export class ParenthesizedDeclarator extends Declarator {
   static override SPEC = ParenthesizedDeclaratorSpec;
@@ -1621,7 +1622,7 @@ export class ParenthesizedDeclarator extends Declarator {
 const StructuredBindingDeclaratorSpec = {
   bindings: many(() => [IdDeclarator, PackDeclarator]),
 };
-export interface StructuredBindingDeclarator extends Fields<typeof StructuredBindingDeclaratorSpec> {}
+export interface StructuredBindingDeclarator extends Properties<typeof StructuredBindingDeclaratorSpec> {}
 /** `[bindings]` ([dcl.struct.bind]): each binding is a name with attributes, or a pack of one. */
 export class StructuredBindingDeclarator extends Declarator {
   static override SPEC = StructuredBindingDeclaratorSpec;
@@ -1642,9 +1643,9 @@ const TypeIdSpec = {
   specifiers: many(() => [Specifier, AttributeSpecifier]),
   declarator: optional(() => [Declarator]),
 };
-export interface TypeId extends Fields<typeof TypeIdSpec> {}
+export interface TypeId extends Properties<typeof TypeIdSpec> {}
 /** `specifiers declarator`: a type, named by specifiers and an abstract declarator ([dcl.name]). */
-export class TypeId extends Node {
+export class TypeId extends SyntaxNode {
   static override SPEC = TypeIdSpec;
 }
 
@@ -1655,7 +1656,7 @@ const ParameterDeclarationSpec = {
   declarator: optional(() => [Declarator]),
   default: optional(() => [Expression]),
 };
-export interface ParameterDeclaration extends Fields<typeof ParameterDeclarationSpec> {}
+export interface ParameterDeclaration extends Properties<typeof ParameterDeclarationSpec> {}
 /**
  * `attributes this specifiers declarator = default` ([dcl.fct]); with `this_keyword`, an explicit object
  * parameter. Also a constant template parameter.
@@ -1673,7 +1674,7 @@ export class EllipsisParameter extends Parameter {}
 const EqualInitializerSpec = {
   value: one(() => [Expression]),
 };
-export interface EqualInitializer extends Fields<typeof EqualInitializerSpec> {}
+export interface EqualInitializer extends Properties<typeof EqualInitializerSpec> {}
 /** `= value` ([dcl.init]). */
 export class EqualInitializer extends Initializer {
   static override SPEC = EqualInitializerSpec;
@@ -1682,7 +1683,7 @@ export class EqualInitializer extends Initializer {
 const ParenthesizedInitializerSpec = {
   arguments: many(() => [Expression]),
 };
-export interface ParenthesizedInitializer extends Fields<typeof ParenthesizedInitializerSpec> {}
+export interface ParenthesizedInitializer extends Properties<typeof ParenthesizedInitializerSpec> {}
 /** `(arguments)` ([dcl.init]). */
 export class ParenthesizedInitializer extends Initializer {
   static override SPEC = ParenthesizedInitializerSpec;
@@ -1694,7 +1695,7 @@ export class ParenthesizedInitializer extends Initializer {
 const NoexceptSpecifierSpec = {
   condition: optional(() => [Expression]),
 };
-export interface NoexceptSpecifier extends Fields<typeof NoexceptSpecifierSpec> {}
+export interface NoexceptSpecifier extends Properties<typeof NoexceptSpecifierSpec> {}
 /** `noexcept`, or `noexcept(condition)` ([except.spec]). */
 export class NoexceptSpecifier extends ExceptionSpecification {
   static override SPEC = NoexceptSpecifierSpec;
@@ -1704,7 +1705,7 @@ export class NoexceptSpecifier extends ExceptionSpecification {
 const ThrowSpecifierSpec = {
   types: many(() => [TypeId, PackExpansion]),
 };
-export interface ThrowSpecifier extends Fields<typeof ThrowSpecifierSpec> {}
+export interface ThrowSpecifier extends Properties<typeof ThrowSpecifierSpec> {}
 /**
  * `throw(types)`: a dynamic exception specification, removed in C++17; `throw()` lasted until C++20
  * ([except.spec] in C++14).
@@ -1724,7 +1725,7 @@ const PreconditionSpecifierSpec = {
   attributes: many(() => [AttributeSpecifier]),
   predicate: one(() => [Expression]),
 };
-export interface PreconditionSpecifier extends Fields<typeof PreconditionSpecifierSpec> {}
+export interface PreconditionSpecifier extends Properties<typeof PreconditionSpecifierSpec> {}
 /** `pre attributes (predicate)` ([dcl.contract.func]). */
 export class PreconditionSpecifier extends ContractSpecifier {
   static override SPEC = PreconditionSpecifierSpec;
@@ -1736,7 +1737,7 @@ const PostconditionSpecifierSpec = {
   result: optional(() => [Identifier]),
   predicate: one(() => [Expression]),
 };
-export interface PostconditionSpecifier extends Fields<typeof PostconditionSpecifierSpec> {}
+export interface PostconditionSpecifier extends Properties<typeof PostconditionSpecifierSpec> {}
 /** `post attributes (result: predicate)` ([dcl.contract.func]). */
 export class PostconditionSpecifier extends ContractSpecifier {
   static override SPEC = PostconditionSpecifierSpec;
@@ -1751,7 +1752,7 @@ const NamespaceDefinitionSpec = {
   names: many(() => [NamespaceName]),
   items: many(() => [Declaration, Directive, Comment]),
 };
-export interface NamespaceDefinition extends Fields<typeof NamespaceDefinitionSpec> {}
+export interface NamespaceDefinition extends Properties<typeof NamespaceDefinitionSpec> {}
 /**
  * `inline namespace attributes names { items }` ([namespace.def]); unnamed without names, nested with several
  * (`namespace a::inline b`).
@@ -1774,9 +1775,9 @@ const NamespaceNameSpec = {
   inline: flag(),
   name: one(() => [Identifier]),
 };
-export interface NamespaceName extends Fields<typeof NamespaceNameSpec> {}
+export interface NamespaceName extends Properties<typeof NamespaceNameSpec> {}
 /** One name of a namespace definition, `inline name` with `inline` ([namespace.def]). */
-export class NamespaceName extends Node {
+export class NamespaceName extends SyntaxNode {
   static override SPEC = NamespaceNameSpec;
   static override SINCE: Availability | null = cpp(1998);
 }
@@ -1785,7 +1786,7 @@ const NamespaceAliasDefinitionSpec = {
   name: one(() => [Identifier]),
   target: one(() => [Name]),
 };
-export interface NamespaceAliasDefinition extends Fields<typeof NamespaceAliasDefinitionSpec> {}
+export interface NamespaceAliasDefinition extends Properties<typeof NamespaceAliasDefinitionSpec> {}
 /** `namespace name = target;` ([namespace.alias]). */
 export class NamespaceAliasDefinition extends Declaration {
   static override SPEC = NamespaceAliasDefinitionSpec;
@@ -1796,7 +1797,7 @@ const UsingDirectiveSpec = {
   attributes: many(() => [AttributeSpecifier]),
   name: one(() => [Name]),
 };
-export interface UsingDirective extends Fields<typeof UsingDirectiveSpec> {}
+export interface UsingDirective extends Properties<typeof UsingDirectiveSpec> {}
 /** `attributes using namespace name;` ([namespace.udir]). */
 export class UsingDirective extends Declaration {
   static override SPEC = UsingDirectiveSpec;
@@ -1806,7 +1807,7 @@ export class UsingDirective extends Declaration {
 const UsingDeclarationSpec = {
   declarators: many(() => [UsingDeclarator]),
 };
-export interface UsingDeclaration extends Fields<typeof UsingDeclarationSpec> {}
+export interface UsingDeclaration extends Properties<typeof UsingDeclarationSpec> {}
 /** `using declarators;` ([namespace.udecl]). */
 export class UsingDeclaration extends Declaration {
   static override SPEC = UsingDeclarationSpec;
@@ -1821,9 +1822,9 @@ const UsingDeclaratorSpec = {
   name: one(() => [Name]),
   pack: flag(),
 };
-export interface UsingDeclarator extends Fields<typeof UsingDeclaratorSpec> {}
+export interface UsingDeclarator extends Properties<typeof UsingDeclaratorSpec> {}
 /** `typename name...` ([namespace.udecl]). */
-export class UsingDeclarator extends Node {
+export class UsingDeclarator extends SyntaxNode {
   static override SPEC = UsingDeclaratorSpec;
   static override SINCE: Availability | null = cpp(1998);
   static override FEATURES: Features = { pack: [[true, cpp(2017)]] };
@@ -1832,7 +1833,7 @@ export class UsingDeclarator extends Node {
 const UsingEnumDeclarationSpec = {
   type: one(() => [Name]),
 };
-export interface UsingEnumDeclaration extends Fields<typeof UsingEnumDeclarationSpec> {}
+export interface UsingEnumDeclaration extends Properties<typeof UsingEnumDeclarationSpec> {}
 /** `using enum type;` ([enum.udecl]). */
 export class UsingEnumDeclaration extends Declaration {
   static override SPEC = UsingEnumDeclarationSpec;
@@ -1844,7 +1845,7 @@ const AliasDeclarationSpec = {
   attributes: many(() => [AttributeSpecifier]),
   type: one(() => [TypeId]),
 };
-export interface AliasDeclaration extends Fields<typeof AliasDeclarationSpec> {}
+export interface AliasDeclaration extends Properties<typeof AliasDeclarationSpec> {}
 /** `using name attributes = type;` ([dcl.typedef]). */
 export class AliasDeclaration extends Declaration {
   static override SPEC = AliasDeclarationSpec;
@@ -1856,7 +1857,7 @@ const StaticAssertDeclarationSpec = {
   condition: one(() => [Expression]),
   message: optional(() => [Expression]),
 };
-export interface StaticAssertDeclaration extends Fields<typeof StaticAssertDeclarationSpec> {}
+export interface StaticAssertDeclaration extends Properties<typeof StaticAssertDeclarationSpec> {}
 /** `static_assert(condition, message);` ([dcl.pre], C [6.7.12]). */
 export class StaticAssertDeclaration extends Declaration {
   static override SPEC = StaticAssertDeclarationSpec;
@@ -1870,7 +1871,7 @@ export class StaticAssertDeclaration extends Declaration {
 const AttributeDeclarationSpec = {
   attributes: many(() => [AttributeSpecifier]),
 };
-export interface AttributeDeclaration extends Fields<typeof AttributeDeclarationSpec> {}
+export interface AttributeDeclaration extends Properties<typeof AttributeDeclarationSpec> {}
 /** `attributes;` ([dcl.pre]). */
 export class AttributeDeclaration extends Declaration {
   static override SPEC = AttributeDeclarationSpec;
@@ -1885,7 +1886,7 @@ const LinkageSpecificationSpec = {
   braced: flag(),
   items: many(() => [Declaration, Directive, Comment]),
 };
-export interface LinkageSpecification extends Fields<typeof LinkageSpecificationSpec> {}
+export interface LinkageSpecification extends Properties<typeof LinkageSpecificationSpec> {}
 /** `extern "language" { items }`, or without `braced` `extern "language" item` ([dcl.link]). */
 export class LinkageSpecification extends Declaration {
   static override SPEC = LinkageSpecificationSpec;
@@ -1904,7 +1905,7 @@ const AsmDeclarationSpec = {
   clobbers: many(() => [Expression]),
   labels: many(() => [Identifier]),
 };
-export interface AsmDeclaration extends Fields<typeof AsmDeclarationSpec> {}
+export interface AsmDeclaration extends Properties<typeof AsmDeclarationSpec> {}
 /**
  * `asm volatile inline goto (template : outputs : inputs : clobbers : labels);` ([dcl.asm]). Operands and the
  * sections after the template are GNU extensions.
@@ -1918,9 +1919,9 @@ const AsmOperandSpec = {
   constraint: one(() => [Expression]),
   value: one(() => [Expression]),
 };
-export interface AsmOperand extends Fields<typeof AsmOperandSpec> {}
+export interface AsmOperand extends Properties<typeof AsmOperandSpec> {}
 /** `[name] constraint (value)` (GNU). */
-export class AsmOperand extends Node {
+export class AsmOperand extends SyntaxNode {
   static override SPEC = AsmOperandSpec;
   static override EXTENSION = true;
 }
@@ -1931,7 +1932,7 @@ const StandardAttributeSpecifierSpec = {
   using_namespace: optionalText(),
   attributes: many(() => [Attribute, Annotation]),
 };
-export interface StandardAttributeSpecifier extends Fields<typeof StandardAttributeSpecifierSpec> {}
+export interface StandardAttributeSpecifier extends Properties<typeof StandardAttributeSpecifierSpec> {}
 /** `[[using namespace: attributes]]` ([dcl.attr.grammar]). */
 export class StandardAttributeSpecifier extends AttributeSpecifier {
   static override SPEC = StandardAttributeSpecifierSpec;
@@ -1945,12 +1946,12 @@ const AttributeSpec = {
   arguments: many(() => [Expression, TypeId]),
   pack: flag(),
 };
-export interface Attribute extends Fields<typeof AttributeSpec> {}
+export interface Attribute extends Properties<typeof AttributeSpec> {}
 /**
  * `namespace::name(arguments)`, or `name...` with `pack` ([dcl.attr.grammar]). The arguments of an attribute are
  * balanced tokens in the grammar; here they are expressions.
  */
-export class Attribute extends Node {
+export class Attribute extends SyntaxNode {
   static override SPEC = AttributeSpec;
 }
 
@@ -1958,9 +1959,9 @@ const AnnotationSpec = {
   value: one(() => [Expression]),
   pack: flag(),
 };
-export interface Annotation extends Fields<typeof AnnotationSpec> {}
+export interface Annotation extends Properties<typeof AnnotationSpec> {}
 /** `=value`, or `=value...` with `pack`: an annotation for reflection ([dcl.attr.annotation]). */
-export class Annotation extends Node {
+export class Annotation extends SyntaxNode {
   static override SPEC = AnnotationSpec;
   static override SINCE: Availability | null = cpp(2026);
 }
@@ -1970,7 +1971,7 @@ const AlignasSpecifierSpec = {
   operand: one(() => [Expression, TypeId]),
   pack: flag(),
 };
-export interface AlignasSpecifier extends Fields<typeof AlignasSpecifierSpec> {}
+export interface AlignasSpecifier extends Properties<typeof AlignasSpecifierSpec> {}
 /** `alignas(operand)`, `alignas(operand...)` with `pack`, or C's `_Alignas(operand)` ([dcl.align]). */
 export class AlignasSpecifier extends AttributeSpecifier {
   static override SPEC = AlignasSpecifierSpec;
@@ -1982,7 +1983,7 @@ const GnuAttributeSpecifierSpec = {
   keyword: choice("__attribute__", "__attribute"),
   attributes: many(() => [Attribute]),
 };
-export interface GnuAttributeSpecifier extends Fields<typeof GnuAttributeSpecifierSpec> {}
+export interface GnuAttributeSpecifier extends Properties<typeof GnuAttributeSpecifierSpec> {}
 /** `__attribute__((attributes))` (GNU). */
 export class GnuAttributeSpecifier extends AttributeSpecifier {
   static override SPEC = GnuAttributeSpecifierSpec;
@@ -1992,7 +1993,7 @@ export class GnuAttributeSpecifier extends AttributeSpecifier {
 const DeclspecSpecifierSpec = {
   attributes: many(() => [Attribute]),
 };
-export interface DeclspecSpecifier extends Fields<typeof DeclspecSpecifierSpec> {}
+export interface DeclspecSpecifier extends Properties<typeof DeclspecSpecifierSpec> {}
 /** `__declspec(attributes)` (Microsoft). */
 export class DeclspecSpecifier extends AttributeSpecifier {
   static override SPEC = DeclspecSpecifierSpec;
@@ -2007,7 +2008,7 @@ const ModuleDeclarationSpec = {
   partition: optionalText(),
   attributes: many(() => [AttributeSpecifier]),
 };
-export interface ModuleDeclaration extends Fields<typeof ModuleDeclarationSpec> {}
+export interface ModuleDeclaration extends Properties<typeof ModuleDeclarationSpec> {}
 /** `export module name:partition attributes;` ([module.unit]). Names are dotted, such as `std.core`. */
 export class ModuleDeclaration extends Declaration {
   static override SPEC = ModuleDeclarationSpec;
@@ -2032,7 +2033,7 @@ const ImportDeclarationSpec = {
   system: flag(),
   attributes: many(() => [AttributeSpecifier]),
 };
-export interface ImportDeclaration extends Fields<typeof ImportDeclarationSpec> {}
+export interface ImportDeclaration extends Properties<typeof ImportDeclarationSpec> {}
 /**
  * `export import name:partition attributes;`, or `import <header>;` with `system` and `import "header";`
  * ([module.import]).
@@ -2046,7 +2047,7 @@ const ExportDeclarationSpec = {
   braced: flag(),
   items: many(() => [Declaration, Directive, Comment]),
 };
-export interface ExportDeclaration extends Fields<typeof ExportDeclarationSpec> {}
+export interface ExportDeclaration extends Properties<typeof ExportDeclarationSpec> {}
 /** `export { items }`, or without `braced` `export item` ([module.interface]). */
 export class ExportDeclaration extends Declaration {
   static override SPEC = ExportDeclarationSpec;
@@ -2058,7 +2059,7 @@ export class ExportDeclaration extends Declaration {
 const AccessSpecifierSpec = {
   access: choice(...ACCESSES),
 };
-export interface AccessSpecifier extends Fields<typeof AccessSpecifierSpec> {}
+export interface AccessSpecifier extends Properties<typeof AccessSpecifierSpec> {}
 /** `public:`, `protected:` or `private:` among a class's members ([class.access.spec]). */
 export class AccessSpecifier extends Declaration {
   static override SPEC = AccessSpecifierSpec;
@@ -2072,9 +2073,9 @@ const BaseSpecifierSpec = {
   type: one(() => [Name, DecltypeSpecifier, PackIndexingSpecifier, SpliceSpecifier]),
   pack: flag(),
 };
-export interface BaseSpecifier extends Fields<typeof BaseSpecifierSpec> {}
+export interface BaseSpecifier extends Properties<typeof BaseSpecifierSpec> {}
 /** `attributes virtual access type...` ([class.derived]). `virtual` is written before the access. */
-export class BaseSpecifier extends Node {
+export class BaseSpecifier extends SyntaxNode {
   static override SPEC = BaseSpecifierSpec;
   static override SINCE: Availability | null = cpp(1998);
   static override FEATURES: Features = { pack: [[true, cpp(2011)]], attributes: [[true, cpp(2011)]] };
@@ -2083,7 +2084,7 @@ export class BaseSpecifier extends Node {
 const FriendTypeDeclarationSpec = {
   types: many(() => [TypeId, PackExpansion]),
 };
-export interface FriendTypeDeclaration extends Fields<typeof FriendTypeDeclarationSpec> {}
+export interface FriendTypeDeclaration extends Properties<typeof FriendTypeDeclarationSpec> {}
 /** `friend types;`: befriending several types, or packs of them ([class.friend]). */
 export class FriendTypeDeclaration extends Declaration {
   static override SPEC = FriendTypeDeclarationSpec;
@@ -2097,7 +2098,7 @@ const TemplateDeclarationSpec = {
   requires: optional(() => [Expression]),
   declaration: one(() => [Declaration]),
 };
-export interface TemplateDeclaration extends Fields<typeof TemplateDeclarationSpec> {}
+export interface TemplateDeclaration extends Properties<typeof TemplateDeclarationSpec> {}
 /** `template <parameters> requires declaration` ([temp.pre]); an explicit specialization without parameters. */
 export class TemplateDeclaration extends Declaration {
   static override SPEC = TemplateDeclarationSpec;
@@ -2112,7 +2113,7 @@ const TypeParameterSpec = {
   name: optional(() => [Identifier]),
   default: optional(() => [TypeId]),
 };
-export interface TypeParameter extends Fields<typeof TypeParameterSpec> {}
+export interface TypeParameter extends Properties<typeof TypeParameterSpec> {}
 /**
  * `key ...name = default` with `key` `class` or `typename`, or the constrained `constraint ...name = default`
  * ([temp.param]).
@@ -2131,7 +2132,7 @@ const TemplateTemplateParameterSpec = {
   name: optional(() => [Identifier]),
   default: optional(() => [Name]),
 };
-export interface TemplateTemplateParameter extends Fields<typeof TemplateTemplateParameterSpec> {}
+export interface TemplateTemplateParameter extends Properties<typeof TemplateTemplateParameterSpec> {}
 /**
  * `template <parameters> requires key ...name = default` ([temp.param]); `key` is `class` or `typename`, or for
  * a concept or variable template `concept` or `auto`.
@@ -2151,7 +2152,7 @@ const ConceptDefinitionSpec = {
   attributes: many(() => [AttributeSpecifier]),
   constraint: one(() => [Expression]),
 };
-export interface ConceptDefinition extends Fields<typeof ConceptDefinitionSpec> {}
+export interface ConceptDefinition extends Properties<typeof ConceptDefinitionSpec> {}
 /** `concept name attributes = constraint;` ([temp.concept]). */
 export class ConceptDefinition extends Declaration {
   static override SPEC = ConceptDefinitionSpec;
@@ -2162,7 +2163,7 @@ const ExplicitInstantiationSpec = {
   extern: flag(),
   declaration: one(() => [Declaration]),
 };
-export interface ExplicitInstantiation extends Fields<typeof ExplicitInstantiationSpec> {}
+export interface ExplicitInstantiation extends Properties<typeof ExplicitInstantiationSpec> {}
 /** `template declaration`, or with `extern` `extern template declaration` ([temp.explicit]). */
 export class ExplicitInstantiation extends Declaration {
   static override SPEC = ExplicitInstantiationSpec;
@@ -2178,7 +2179,7 @@ const IncludeDirectiveSpec = {
   system: flag(),
   macro: optional(() => [Expression]),
 };
-export interface IncludeDirective extends Fields<typeof IncludeDirectiveSpec> {}
+export interface IncludeDirective extends Properties<typeof IncludeDirectiveSpec> {}
 /**
  * `#include <path>` with `system`, `#include "path"`, or `#include macro` ([cpp.include]); also `#include_next`
  * and `#import`, which are extensions.
@@ -2194,7 +2195,7 @@ const DefineDirectiveSpec = {
   variadic: flag(),
   replacement: optionalText(),
 };
-export interface DefineDirective extends Fields<typeof DefineDirectiveSpec> {}
+export interface DefineDirective extends Properties<typeof DefineDirectiveSpec> {}
 /**
  * `#define name replacement`, or with `function_like` `#define name(parameters, ...) replacement` ([cpp.replace]).
  * The replacement is the text of its tokens, which are not a tree until the macro is used.
@@ -2205,10 +2206,10 @@ export class DefineDirective extends Directive {
 
 const IfDirectiveSpec = {
   condition: one(() => [Expression]),
-  items: many(() => [Node]),
+  items: many(() => [SyntaxNode]),
   alternative: optional(() => [ElifDirective, ElifdefDirective, ElseDirective]),
 };
-export interface IfDirective extends Fields<typeof IfDirectiveSpec> {}
+export interface IfDirective extends Properties<typeof IfDirectiveSpec> {}
 /** `#if condition items alternative #endif` ([cpp.cond]). */
 export class IfDirective extends Directive {
   static override SPEC = IfDirectiveSpec;
@@ -2217,10 +2218,10 @@ export class IfDirective extends Directive {
 const IfdefDirectiveSpec = {
   negated: flag(),
   name: one(() => [Identifier]),
-  items: many(() => [Node]),
+  items: many(() => [SyntaxNode]),
   alternative: optional(() => [ElifDirective, ElifdefDirective, ElseDirective]),
 };
-export interface IfdefDirective extends Fields<typeof IfdefDirectiveSpec> {}
+export interface IfdefDirective extends Properties<typeof IfdefDirectiveSpec> {}
 /** `#ifdef name items alternative #endif`, or `#ifndef` with `negated` ([cpp.cond]). */
 export class IfdefDirective extends Directive {
   static override SPEC = IfdefDirectiveSpec;
@@ -2228,14 +2229,14 @@ export class IfdefDirective extends Directive {
 
 const ElifDirectiveSpec: {
   condition: ChildSpec<Expression, false, false>;
-  items: ChildSpec<Node, true, true>;
+  items: ChildSpec<SyntaxNode, true, true>;
   alternative: ChildSpec<ElifDirective | ElifdefDirective | ElseDirective, false, true>;
 } = {
   condition: one(() => [Expression]),
-  items: many(() => [Node]),
+  items: many(() => [SyntaxNode]),
   alternative: optional(() => [ElifDirective, ElifdefDirective, ElseDirective]),
 };
-export interface ElifDirective extends Fields<typeof ElifDirectiveSpec> {}
+export interface ElifDirective extends Properties<typeof ElifDirectiveSpec> {}
 /** `#elif condition items alternative` ([cpp.cond]). */
 export class ElifDirective extends Directive {
   static override SPEC = ElifDirectiveSpec;
@@ -2244,15 +2245,15 @@ export class ElifDirective extends Directive {
 const ElifdefDirectiveSpec: {
   negated: AttributeSpec<boolean, false>;
   name: ChildSpec<Identifier, false, false>;
-  items: ChildSpec<Node, true, true>;
+  items: ChildSpec<SyntaxNode, true, true>;
   alternative: ChildSpec<ElifDirective | ElifdefDirective | ElseDirective, false, true>;
 } = {
   negated: flag(),
   name: one(() => [Identifier]),
-  items: many(() => [Node]),
+  items: many(() => [SyntaxNode]),
   alternative: optional(() => [ElifDirective, ElifdefDirective, ElseDirective]),
 };
-export interface ElifdefDirective extends Fields<typeof ElifdefDirectiveSpec> {}
+export interface ElifdefDirective extends Properties<typeof ElifdefDirectiveSpec> {}
 /** `#elifdef name items alternative`, or `#elifndef` with `negated` ([cpp.cond]). */
 export class ElifdefDirective extends Directive {
   static override SPEC = ElifdefDirectiveSpec;
@@ -2260,9 +2261,9 @@ export class ElifdefDirective extends Directive {
 }
 
 const ElseDirectiveSpec = {
-  items: many(() => [Node]),
+  items: many(() => [SyntaxNode]),
 };
-export interface ElseDirective extends Fields<typeof ElseDirectiveSpec> {}
+export interface ElseDirective extends Properties<typeof ElseDirectiveSpec> {}
 /** `#else items` ([cpp.cond]). */
 export class ElseDirective extends Directive {
   static override SPEC = ElseDirectiveSpec;
@@ -2272,7 +2273,7 @@ const OtherDirectiveSpec = {
   directive: optionalText(),
   text: optionalText(),
 };
-export interface OtherDirective extends Fields<typeof OtherDirectiveSpec> {}
+export interface OtherDirective extends Properties<typeof OtherDirectiveSpec> {}
 /**
  * `#directive text` for every other directive: `#undef`, `#pragma`, `#error`, `#warning`, `#line`, `#embed`,
  * `#ident` and the null directive `#` without a name ([cpp.pre]).
@@ -2295,14 +2296,14 @@ export function binding(declarator: Declarator | null): [IdDeclarator | Structur
   let current: Declarator | null = declarator;
   while (current !== null && !(current instanceof IdDeclarator) && !(current instanceof StructuredBindingDeclarator)) {
     if (!(current instanceof ParenthesizedDeclarator)) binder = current;
-    current = current.field("declarator") as Declarator | null;
+    current = current.get("declarator") as Declarator | null;
   }
   return [current, binder];
 }
 
 // --- The language ---
 
-export const KINDS: readonly (typeof Node)[] = [
+export const KINDS: readonly (typeof SyntaxNode)[] = [
   Comment, TranslationUnit, Identifier, OperatorName, ConversionName, LiteralOperatorName, DestructorName, TemplateId,
   QualifiedName, IntegerLiteral, FloatingLiteral, CharacterLiteral, StringLiteral, RawStringLiteral,
   UserDefinedLiteral, ConcatenatedString, BooleanLiteral, NullptrLiteral, ThisExpression, ParenthesizedExpression,
@@ -2334,4 +2335,5 @@ export const KINDS: readonly (typeof Node)[] = [
   IfdefDirective, ElifDirective, ElifdefDirective, ElseDirective, OtherDirective,
 ];
 
-export const LANGUAGE = new Language("Ccpp", KINDS, { base: { [CPP]: 1998, [C]: 1989 } });
+/** The language, whose `Builders` are typed from this module's kinds. */
+export const LANGUAGE: Language<typeof Self> = new Language("Ccpp", KINDS, { base: { [CPP]: 1998, [C]: 1989 } });

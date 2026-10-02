@@ -23,9 +23,9 @@ subset of TypeScript into Python. Two equivalent implementations exist: `python3
 ## Invariants when changing code
 
 - **The two implementations are equivalent.** Change both in the same commit, with the same names, the same error
-  classes and byte-identical messages. Each language's `Syntax.ts` mirrors its `Syntax.py` kind for kind and field for
-  field, in the same order. JSON output must be byte-identical: regenerate the corpora and let CONF-02 compare them. A
-  difference not listed in `docs/EQUIVALENCE.md` is a bug.
+  classes and byte-identical messages. Each language's `Syntax.ts` mirrors its `Syntax.py` kind for kind and property
+  for property, in the same order. JSON output must be byte-identical: regenerate the corpora and let CONF-02 compare
+  them. A difference not listed in `docs/EQUIVALENCE.md` is a bug.
 - **Tests are Jupyter notebooks**, one suite per notebook, with the same case IDs in the same order in both
   languages. Each case is a markdown cell `## ID · title` followed by one code cell. Notebooks are JSON written with
   `indent=1`, `sort_keys=True` and `ensure_ascii=False`.
@@ -34,9 +34,11 @@ subset of TypeScript into Python. Two equivalent implementations exist: `python3
 - **Trees are complete.** A construct of any standard of the language is a tree of its kinds, whether or not the parser
   reads it. A new kind records where it exists (`SINCE`, `FEATURES`, or `EXTENSION`), and the printer prints it.
 - **Transpilers never touch text.** Everything a transpiler needs is on the tree, in `Framework.Syntax`'s traversals or
-  in `Definitions`; only standards parse and print. A transpiler's programs are in `conformance/transpilers/`: a
-  program's `.out` is what Node prints when it runs, and its translation (`.py`) is regenerated with the corpora. A
-  construct outside the transpiler's subset raises `TranspileError`, never translates into code that means otherwise.
+  in `Definitions`; only standards parse and print. Transpilers build syntax nodes with the target language's fluent
+  builders (`LANGUAGE.Builders.<Kind>()`), not with constructors or helpers of their own. A transpiler's programs are in
+  `conformance/transpilers/`: a program's `.out` is what Node prints when it runs, and its translation (`.py`) is
+  regenerated with the corpora. A construct outside the transpiler's subset raises `TranspileError`, never translates
+  into code that means otherwise.
 - **The parsers are pinned.** tree-sitter-cpp 0.23.4, tree-sitter-python 0.25.0 and tree-sitter-typescript 0.23.2, in
   both implementations (the Python wheels and the npm packages' wasm), so their trees are the same; both pass tree-sitter
   UTF-16, so its error recovery is the same too. Upgrading one is a change to both, and to the gaps and corrections in

@@ -3,7 +3,7 @@
  * implementation.
  *
  * All are `ValueError`s. `ParseError` locates its problem in the source text, with a 1-based line and column, and
- * `TranspileError` in the tree, with the path to its node.
+ * `TranspileError` in the tree, with the path to its syntax node.
  */
 
 import { Errors } from "@mbse/schemas/Framework";
@@ -23,7 +23,7 @@ export class PrintError extends Errors.ValueError {
 }
 
 /** A tree a transpiler cannot translate: a construct the target has no counterpart for, or one outside the transpiler's
- * subset. `path` locates its node in the source tree, as `Parents.path` does. */
+ * subset. `path` locates its syntax node in the source tree, as `Parents.path` does. */
 export class TranspileError extends Errors.ValueError {
   override name = "TranspileError";
 

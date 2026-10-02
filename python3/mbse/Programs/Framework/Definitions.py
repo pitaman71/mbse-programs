@@ -27,10 +27,10 @@ __all__ = ["Entity", "Scope", "Program"]
 
 
 class Entity:
-    """Something a program declares. `kind` names what it is in its language ('namespace', 'class', 'function',
-    ...); `name` is None for an unnamed entity. `parent` is the scope it is declared in, and `scope` its own members,
-    for an entity that has them. `declarations` are the nodes that declare it, in source order, and `definition` the
-    one that defines it, if any. `signature` tells overloaded functions apart, and `target` is what an alias names."""
+    """Something a program declares. `kind` names what it is in its language ('namespace', 'class', 'function', ...);
+    `name` is None for an unnamed entity. `parent` is the scope it is declared in, and `scope` its own members, for an
+    entity that has them. `declarations` are the syntax nodes that declare it, in source order, and `definition` the one
+    that defines it, if any. `signature` tells overloaded functions apart, and `target` is what an alias names."""
 
     def __init__(self, kind: str, name: str | None, parent: Scope | None):
         self.kind, self.name, self.parent = kind, name, parent
@@ -153,7 +153,7 @@ class Scope:
 
 
 class Program:
-    """What a set of trees declares: the global scope, every entity, and for each node the entity it declares and
+    """What a set of trees declares: the global scope, every entity, and for each syntax node the entity it declares and
     the scope it is in."""
 
     def __init__(self, root: Scope):
@@ -185,7 +185,7 @@ class Program:
         return self._declares.get(id(node))
 
     def scope_of(self, node: Any) -> Scope | None:
-        """The innermost scope `node` is in; None for a node outside the program's trees."""
+        """The innermost scope `node` is in; None for a syntax node outside the program's trees."""
         return self._scopes.get(id(node))
 
     def lookup(self, name: str, at: Any = None) -> list[Entity]:

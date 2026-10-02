@@ -1,21 +1,21 @@
 # Programs
 
 mbse-programs represents programs as complete abstract syntax trees: plain in-memory objects that a transpiler builds,
-reads and rewrites directly, never through source text. Each language is a set of node kinds that covers the union of
-its most recent standards, so that every construct any of them has is a tree, and each kind and feature records which
-standards have it. Standards (C++20, Python 3.14, ...) are the only place where text is involved: they parse source text
-into trees, delegating to an established parser, and print trees back into source text.
+reads and rewrites directly, never through source text. Each language is a set of syntax node kinds that covers the
+union of its most recent standards, so that every construct any of them has is a tree, and each kind and feature records
+which standards have it. Standards (C++20, Python 3.14, ...) are the only place where text is involved: they parse
+source text into trees, delegating to an established parser, and print trees back into source text.
 
-The trees are mbse-schemas data: every kind has a meta-schema and a builder, so trees are stored, sent and read back
-as JSON or YAML, byte-identical between the Python and TypeScript implementations.
+The trees are mbse-schemas data: every kind has a meta-schema and a fluent builder, so trees are built, stored, sent
+and read back as JSON or YAML, byte-identical between the Python and TypeScript implementations.
 
 ## Layers
 
 | Module | Organized | Holds |
 |---|---|---|
-| `Framework.Syntax` | by protocol | `Node`, kinds and their fields, `Language` (kinds, categories, validation, grammar), `Standard`, builders and meta-schemas, and the traversals every language shares: `children`, `walk`, `fold`, `same`, `copy`, `Parents`, `Visitor`, `Transformer` |
+| `Framework.Syntax` | by protocol | `SyntaxNode`, kinds and their properties, `Language` (kinds, categories, validation, grammar), `Standard`, builders and meta-schemas, and the traversals every language shares: `children`, `walk`, `fold`, `same`, `copy`, `Parents`, `Visitor`, `Transformer` |
 | `Framework.Definitions` | by meaning | `Entity`, `Scope` and `Program`: what a program declares, and lookup |
-| `Framework.Errors` | | `ParseError` (with line and column), `PrintError` and `TranspileError` (with the node's path) |
+| `Framework.Errors` | | `ParseError` (with line and column), `PrintError` and `TranspileError` (with the syntax node's path) |
 | `<Language>.Syntax` | lexically, as the standard's grammar | the language's kinds and categories, with their availability |
 | `<Language>.Definitions` | semantically, as the standard's scopes | `define(unit)`, which builds a `Program` from a tree, and `referents` |
 | `<Language>.<Standard>` | | `STANDARD`, `parse`, `print` and `check` for one standard |
@@ -31,22 +31,24 @@ The languages so far:
 
 ## Trees
 
-- **Kinds.** A kind is a class. Its fields are declared once: in Python as typed annotations, in TypeScript as a
-  `SPEC` of field constructors (`text()`, `choice(...)`, `one(() => [...])`, `many(...)`, ...). A field holding a
-  native (`str`, `bool`, `int`, or a choice among strings) is an *attribute*; a field holding a node, an optional
-  node or a list of nodes is a *child*. Every child field names the categories (or kinds) it accepts.
+- **Kinds.** A kind is a class. Its properties are declared once: in Python as typed annotations, in TypeScript as a
+  `SPEC` of property constructors (`text()`, `choice(...)`, `one(() => [...])`, `many(...)`, ...). A property holding a
+  native (`str`, `bool`, `int`, or a choice among strings) is an *attribute*; a property holding a syntax node, an
+  optional syntax node or a list of syntax nodes is a *child*. Every child property names the categories (or kinds) it
+  accepts.
 - **Categories.** Each kind belongs to one category, an abstract kind such as `Expression`, `Statement` or
   `Declaration`, by subclassing it. Ccpp has 171 kinds in 17 categories.
-- **Nodes are plain and mutable.** They are constructed from their fields (`S.IntegerLiteral(spelling="1")`, `new
-  S.IntegerLiteral({ spelling: "1" })`), unset fields take their empty value (None/`null`, `False`, `[]`), and they are
-  compared by identity; `same` compares trees by structure.
-- **Trees.** A node has at most one parent. `Language.validate` reports what is wrong with a tree, by path: required
-  fields that are unset, children of a category the field does not accept, attributes of the wrong type, choices out
-  of range, a node shared by two parents, cycles, and each kind's own checks (an `Identifier`'s spelling).
+- **Syntax nodes are plain and mutable.** They are constructed from their properties (`S.IntegerLiteral(spelling="1")`,
+  `new S.IntegerLiteral({ spelling: "1" })`), unset properties take their empty value (None/`null`, `False`, `[]`), and they
+  are compared by identity; `same` compares trees by structure.
+- **Trees.** A syntax node has at most one parent. `Language.validate` reports what is wrong with a tree, by path:
+  required properties that are unset, children of a category the property does not accept, attributes of the wrong type,
+  choices out of range, a syntax node shared by two parents, cycles, and each kind's own checks (an `Identifier`'s
+  spelling).
 - **Serialization.** Each kind has a meta-schema: an mbse-schemas reference-object schema tagged `kind`, with one
   property per attribute. Children are entries of the adjacency `children` to the shared relation `Programs.Children`,
-  which links a `parent` to a `child` with the child's `field` and, in a list, its `index`. `Language.grammar()` writes
-  every kind, its category, fields and availability as data.
+  which links a `parent` to a `child` with the child's `property` and, in a list, its `index`. `Language.grammar()` writes
+  every kind, its category, properties and availability as data.
 
 ## Standards
 
@@ -57,8 +59,8 @@ is 312, 5.9 is 509), and a standard's `label(version)` names it ("C++20", "Pytho
 Kinds without `SINCE` exist since the language's base (C++98, C89, Python 3.0, ES2015 and TypeScript 1.0), and kinds
 marked `EXTENSION` are outside every family: GNU and Microsoft extensions that real code depends on, which every
 standard accepts, and JSX, which the TypeScript language's standards accept when made with `jsx`.
-Features that depend on a field's value (`<=>` in a `BinaryExpression`, several indices in a `SubscriptExpression`)
-are recorded as `FEATURES`, or by a kind's own `features()` where they depend on several fields.
+Features that depend on a property's value (`<=>` in a `BinaryExpression`, several indices in a `SubscriptExpression`)
+are recorded as `FEATURES`, or by a kind's own `features()` where they depend on several properties.
 
 A `Standard` checks a tree against its availability (`check(node)` lists every problem, by path, such as
 `"items[2].condition: BinaryExpression.operator '<=>' needs C++20"`), parses source text into a tree, raising
@@ -74,13 +76,14 @@ the grammar only spells, and concrete where a transpiler needs to see what was w
 
 - Every binary operator is a `BinaryExpression`; parentheses written in the source are kept as
   `ParenthesizedExpression`, and printing adds those a hand-built tree needs.
-- Names are nodes wherever they occur, so one traversal finds every use and declaration of a name.
-- Specifiers stay in source order, one node per keyword. Declarators nest inside out, as the grammar defines them.
+- Names are syntax nodes wherever they occur, so one traversal finds every use and declaration of a name.
+- Specifiers stay in source order, one syntax node per keyword. Declarators nest inside out, as the grammar defines
+  them.
 - Literals keep their spelling: digits, separators and suffixes, and the characters between the quotes, escapes
   included.
 - Comments and preprocessing directives are kept where declarations, statements, members and enumerators are listed,
   with conditional branches (`#if`, `#ifdef`, ...) as trees; elsewhere comments are dropped.
-- Field names avoid both languages' reserved words: an `IfStatement` has a `consequence` and an `alternative`.
+- Property names avoid both languages' reserved words: an `IfStatement` has a `consequence` and an `alternative`.
 
 ### Parsing
 
@@ -139,14 +142,14 @@ tree that parses (PRS-01, CONF-03).
 `Ccpp.Definitions.define(unit)` reads a translation unit into a `Program` of entities and scopes:
 
 - Entity kinds: namespace, namespace alias, class (also structs and unions), enumeration, enumerator, function (one per
-  signature), variable, field, parameter, template parameter, type alias, concept, label and macro.
+  signature), variable, field (a data member), parameter, template parameter, type alias, concept, label and macro.
 - Scope kinds: namespace (also the global scope), class, enumeration, function, block, template, lambda and requires.
 - Each entity records its declarations and its definition. Reopened namespaces are one entity; out-of-line
   definitions (`int A::f() { ... }`, `int S::count = 0;`) join the member they define, by name and signature.
 - Inline and unnamed namespaces, unscoped enumerations and anonymous unions are transparent to their enclosing scope,
   using-directives and `using enum` are followed, and a class looks names up in its bases.
-- `Program.lookup(name, at)` resolves a qualified or unqualified name from a node, and `referents(program, name)` the
-  entities a name in the tree refers to.
+- `Program.lookup(name, at)` resolves a qualified or unqualified name from a syntax node, and `referents(program, name)`
+  the entities a name in the tree refers to.
 
 It does not evaluate preprocessing conditions (every branch's declarations are declared), choose among overloads,
 resolve names that depend on types (members after `.` and `->` are left unresolved), tell specializations from their
@@ -154,12 +157,12 @@ primary template, or declare what a friend declaration declares.
 
 ## Python
 
-The kinds follow Python's own abstract syntax, the `ast` module, through Python 3.15: the same kinds and field names,
+The kinds follow Python's own abstract syntax, the `ast` module, through Python 3.15: the same kinds and property names,
 capitalized where `ast`'s are lowercase (`Arg`, `Keyword`, `Alias`, `WithItem`, `MatchCase`, `Comprehension`), with
-fields in source order. A Python programmer who knows `ast` knows the tree; where it departs from `ast`, it is to keep
-what `ast` drops:
+properties in source order. A Python programmer who knows `ast` knows the tree; where it departs from `ast`, it is to
+keep what `ast` drops:
 
-- Names are `Identifier` nodes wherever `ast` has a string, and a module's dotted name is a `DottedName`.
+- Names are `Identifier` syntax nodes wherever `ast` has a string, and a module's dotted name is a `DottedName`.
 - `Constant.spelling` is the literal as written (`0x_FF`, `rb'\d'`, a triple-quoted string). f-strings and t-strings
   keep their prefix and quotes, the text between replacement fields as written, and each field's own text (`{x = }`),
   which a self-documenting field writes into the string and a t-string records as the expression.
@@ -236,11 +239,11 @@ scope's `separator`. Attributes, keyword arguments, imported modules' members an
 TypeScript and JavaScript are one tree language, as C and C++ are: JavaScript's standards are the editions of
 ECMAScript, which have none of TypeScript's own syntax. The kinds follow
 [typescript-estree](https://typescript-eslint.io/packages/typescript-estree/) (TSESTree), the ESTree of TypeScript that
-ESLint and its tools read: the same kinds, field names and fields, in source order. A programmer who knows TSESTree
-knows the tree; where it departs from TSESTree, it is to keep a name both implementations can use or what TSESTree
-drops:
+ESLint and its tools read: the same kinds, property names and properties, in source order. A programmer who knows
+TSESTree knows the tree; where it departs from TSESTree, it is to keep a name both implementations can use or what
+TSESTree drops:
 
-- Fields whose names are keywords of Python, or clash with the framework's tag `kind`, are renamed: `kind` is
+- Properties whose names are keywords of Python, or clash with the framework's tag `kind`, are renamed: `kind` is
   `declarationKind`, `methodKind`, `propertyKind` or `moduleKind`, and `async`, `await`, `in` and `out` are `isAsync`,
   `isAwait`, `isIn` and `isOut`.
 - `Literal.raw` is the literal as written (`0x_FF`, `1_000n`, `/a/v`), and a template's parts are their raw text.
@@ -325,14 +328,32 @@ modules' members and libraries' globals are not resolved.
 
 ## Transpiling
 
-A transpiler reads a tree with `walk` or a `Visitor`, finds where a node is with `Parents` (its parent, field, index
-and path), and changes the tree in place: by assigning fields, with `Parents.replace` and `Parents.remove`, or with a
-`Transformer`, whose `visit_<Kind>` methods return what replaces each node. `copy` duplicates a subtree, and `check`
-tells which standard the result needs. Nothing in this path parses or prints a string.
+A transpiler reads a tree with `walk` or a `Visitor`, finds where a syntax node is with `Parents` (its parent, property,
+index and path), and changes the tree in place: by assigning properties, with `Parents.replace` and `Parents.remove`, or
+with a `Transformer`, whose `visit_<Kind>` methods return what replaces each syntax node. `copy` duplicates a subtree,
+and `check` tells which standard the result needs. Nothing in this path parses or prints a string.
 
-A transpiler between two languages builds the target's tree from the source's, and raises `TranspileError` at the
-first node it cannot translate, with that node's path. Its programs are in `conformance/transpilers/<transpiler>/`: for
-each program, the source, what it prints when it runs (`.out`), and its translation as both implementations write it.
+Trees are built with each language's fluent builders, `LANGUAGE.Builders.<Kind>()`, which have one setter per property
+and finish with `create()` (or `clone()` and `update()` from an existing syntax node). A child's setter takes a syntax
+node, a builder, or a function that makes one: the function is passed the builder of the property's kind where the
+property holds one kind, and the language's `Builders` otherwise, so that it names the kind. A property of one kind
+whose only property is an attribute also takes that attribute's value, so an `Identifier` child takes its spelling. A
+list's setter takes a list, and `add_<property>` appends to it; a setter whose name the builder already has for a method
+takes a trailing `_` (TypeScript's `ForStatement.update_`). In TypeScript the builders are typed from the language's
+module, so a wrong property or a wrong kind of child does not compile:
+
+```python
+from mbse.Programs.Python import Syntax as P
+
+Py = P.LANGUAGE.Builders
+call = (Py.Call().func(lambda b: b.Attribute().value(lambda b: b.Name().id("math")).attr("floor"))
+        .add_args(lambda b: b.Name().id("x")).create())   # math.floor(x)
+```
+
+A transpiler between two languages builds the target's tree from the source's, and raises `TranspileError` at the first
+syntax node it cannot translate, with that syntax node's path. Its programs are in
+`conformance/transpilers/<transpiler>/`: for each program, the source, what it prints when it runs (`.out`), and its
+translation as both implementations write it.
 
 ### TypeScript to Python
 
@@ -370,12 +391,13 @@ The first transpiler was written to test the framework, and found:
 - **Definitions are enough for names.** Telling a global from a declared name, finding a `catch` parameter, and finding
   the names a function assigns in an enclosing scope all come from `define` and `referents`.
 - **Paths locate errors.** `Parents.path` gives every error a place in the source tree, without positions.
-- **A node has one place.** A tree that holds one node twice is invalid, so a translation that repeats a value (the
-  subject of a `switch`, an imported module's name) copies it with `copy`.
-- **Related kinds have different fields.** An arrow function has no `generator`, so code that reads functions of every
-  kind checks which fields a node has.
-- **Building trees is verbose.** A name, a call or an attribute is a node and an `Identifier` within it; the transpiler
-  needs a dozen small builders, which belong with the language.
+- **A syntax node has one place.** A tree that holds one syntax node twice is invalid, so a translation that repeats a
+  value (the subject of a `switch`, an imported module's name) copies it with `copy`.
+- **Related kinds have different properties.** An arrow function has no `generator`, so code that reads functions of
+  every kind checks which properties a syntax node has.
+- **Building trees needs fluent builders.** A name, a call or an attribute is a syntax node and an `Identifier` within
+  it; built with constructors, the first version needed a dozen helpers of its own. It now builds every syntax node with
+  the language's fluent builders, which also check, in TypeScript, that each child is of a kind its property holds.
 - **Without types, methods map by name.** `x.length` is `len(x)` whatever `x` is; only a member the program declares
   stops the mapping.
 
@@ -383,7 +405,7 @@ The first transpiler was written to test the framework, and found:
 
 - **Value objects in lists.** Children are linked through the relation `Programs.Children` rather than as nested value
   objects in an indexed list, which mbse-schemas now has (`as_indexed`). Linking keeps parity with mbse-expressions'
-  arguments, and gives every node an identity; nesting would make snapshots smaller and their order explicit.
+  arguments, and gives every syntax node an identity; nesting would make snapshots smaller and their order explicit.
 - **A parser that covers C++23 and C++26.** tree-sitter-cpp 0.23 lacks the constructs listed above. A later release,
   or a second parser (Clang through libclang), would close the gap; the converter is the only part that would change.
 - **Comments everywhere.** Comments inside expressions and declarators are dropped. Keeping them needs a place on every
@@ -400,13 +422,15 @@ The first transpiler was written to test the framework, and found:
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
 - **More languages.** Verilog is planned as a further language over the same framework.
-- **Builders for target trees.** Each transpiler writes its own builders of names, calls and attributes; each language
-  could provide them.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from
   a checker run on the source, or from definitions that resolve members.
 
 ## Resolved
 
+- The vocabulary is shared with mbse-schemas and mbse-expressions: a kind's named members are *properties* (attributes
+  and children, declared in `PROPERTIES`), and a tree's elements are *syntax nodes* (`SyntaxNode`), never bare nodes.
+  "Field" means only what the host language means by it: a class's field in TypeScript or C++, or an f-string's
+  replacement field. Snapshots record which property a child fills as the entry's `property`.
 - One repository, `mbse-programs`, holds the framework and every language, each language a package beside it
   (`mbse.Programs.Ccpp`, `@mbse/programs/Ccpp`).
 - Kinds are mbse-schemas schemas: each has a registered meta-schema tagged `kind` and a builder, and children are
@@ -434,7 +458,12 @@ The first transpiler was written to test the framework, and found:
   conformance sources against it.
 - TypeScript's definitions keep a name's meaning (value, type or namespace) where it is written, and look up only the
   entities with that meaning.
-- Transpilers map trees to trees, in `Transpilers`, and raise `TranspileError`, a `ValueError` with the node's path, at
-  what they do not cover. They keep what code means where the languages agree, and do not emulate where they differ.
+- Every kind's builder is fluent, in the style of mbse-schemas: one setter per property, taking a `Spec` (a syntax node,
+  a builder, or a function that makes one), and `LANGUAGE.Builders.<Kind>()` beside the registered names. A function for
+  a property of one kind gets that kind's builder; for a property of categories it gets the language's `Builders` and
+  names the kind. Transpilers build with them, never with helpers of their own.
+- Transpilers map trees to trees, in `Transpilers`, and raise `TranspileError`, a `ValueError` with the syntax node's
+  path, at what they do not cover. They keep what code means where the languages agree, and do not emulate where they
+  differ.
 - A `break` or `continue` outside a loop, which the parser accepts, fails to transpile rather than translating into
   invalid Python.

@@ -35,7 +35,7 @@
  */
 
 import { Entity, Program, Scope } from "../Framework/Definitions.js";
-import { children, type Node, walk } from "../Framework/Syntax.js";
+import { children, type SyntaxNode, walk } from "../Framework/Syntax.js";
 import * as S from "./Syntax.js";
 
 const meanings = (...spaces: string[]): ReadonlySet<string> => new Set(spaces);
@@ -52,7 +52,7 @@ export const MEANINGS: Readonly<Record<string, ReadonlySet<string>>> = {
 const NAMES: Function[] = [S.Identifier, S.PrivateIdentifier, S.JSXIdentifier];
 /** Scopes where `var` binds. */
 const VAR_SCOPES = new Set(["module", "function", "static block", "namespace"]);
-/** Kinds whose nodes open a scope of types. */
+/** Kinds whose syntax nodes open a scope of types. */
 const TYPES: Function[] = [S.TypeNode, S.TSTypeAnnotation, S.TSTypeParameterInstantiation, S.TSInterfaceHeritage,
   S.TSClassImplements];
 
@@ -76,7 +76,7 @@ export class TypeScriptProgram extends Program {
 
 type Handler = (self: Definer, node: any, scope: Scope, space: string) => void;
 
-/** Declares what a program binds, visiting each node with its scope and the meaning a name has there. */
+/** Declares what a program binds, visiting each syntax node with its scope and the meaning a name has there. */
 class Definer {
   static HANDLERS = new Map<Function, Handler>();
   readonly program: TypeScriptProgram;
@@ -546,16 +546,16 @@ export function define(program: S.Program): TypeScriptProgram {
     }
     entity.target = found[0] ?? null;
   }
-  const stack: [Node, Scope][] = [[program, out.root]];
+  const stack: [SyntaxNode, Scope][] = [[program, out.root]];
   while (stack.length > 0) { // every other node is in its parent's scope, but for the names of properties and members
-    const [node, scope] = stack.pop() as [Node, Scope];
+    const [node, scope] = stack.pop() as [SyntaxNode, Scope];
     const found = out.scope_of(node);
     if (found === null && !is(NAMES, node)) out.located(node, scope);
-    stack.push(...children(node).map(([, , child]): [Node, Scope] => [child, found ?? scope]));
+    stack.push(...children(node).map(([, , child]): [SyntaxNode, Scope] => [child, found ?? scope]));
   }
   const order = new Map<unknown, number>();
   let i = 0;
-  for (const node of walk(program)) order.set(node, i++); // fields are in source order
+  for (const node of walk(program)) order.set(node, i++); // properties are in source order
   for (const entity of out.entities()) {
     entity.declarations.sort((a, b) => (order.get(a) as number) - (order.get(b) as number));
     entity.definition = entity.declarations.find((d) => !signature(d)) ?? null;
