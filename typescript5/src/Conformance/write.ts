@@ -43,7 +43,7 @@ export function render(sources: string = join(ROOT, "sources")): Map<string, str
     const [standard, root] = STANDARDS[suffix] as [Standard, SyntaxNodeClass];
     const unit = standard.parse(readFileSync(join(sources, name), "utf8"));
     const stem = name.slice(0, -suffix.length);
-    files.set(`${stem}.json`, SchemaJSON.ToJSON.Reachable(root.Schema, unit, { indent: 2 }) + "\n");
+    files.set(`${stem}.json`, SchemaJSON.ToJSON(root.LANGUAGE.Builders).Reachable(root.Schema, unit, { indent: 2 }) + "\n");
     files.set(`${stem}${suffix}`, standard.print(unit));
   }
   return files;

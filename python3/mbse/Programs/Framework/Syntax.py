@@ -30,11 +30,11 @@ from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Literal, Union
 
-from mbse.Schemas.Framework import Proxies, Schemas, Visitors
+from mbse.Schemas.Framework import Schemas, Stores, Visitors
 from mbse.Schemas.Framework.Visitors import Native
 
 __all__ = [
-    "Attribute", "Child", "Property", "Availability", "SyntaxNode", "Builder", "Registry", "Language", "Standard",
+    "Attribute", "Child", "Property", "Availability", "SyntaxNode", "Builder", "OfStore", "Language", "Standard",
     "CHILDREN", "Children", "label", "children", "walk", "fold", "same", "copy", "Parents", "Visitor", "Transformer",
 ]
 
@@ -398,6 +398,7 @@ class Builder:
         if instance is not None and type(instance) is not self._kind:
             raise TypeError(f"expected {_article(self._kind.KIND)} to build from, got {_type_name(instance)}")
         self._source = instance
+        self._store: OfStore | None = None  # set by the store that made this builder, whose extents take what it makes
         self._values: dict[str, Any] = {}
         self._entries: list[_Entry] = []
         if instance is not None:
@@ -467,12 +468,12 @@ class Builder:
     def create(self) -> Any:
         if self._source is not None:
             raise ValueError("create() is only valid without a source instance; use clone() or update()")
-        return self._make()
+        return self._made(self._make())
 
     def clone(self) -> Any:
         if self._source is None:
             raise ValueError("clone() is only valid with a source instance")
-        return self._make()
+        return self._made(self._make())
 
     def update(self) -> Any:
         if self._source is None:
@@ -481,6 +482,11 @@ class Builder:
         for prop in self._kind.PROPERTIES:
             setattr(self._source, prop.name, getattr(made, prop.name))
         return self._source
+
+    def _made(self, node: Any) -> Any:
+        if self._store is not None:
+            self._store._extents.setdefault(self._kind.NAME, []).append(node)
+        return node
 
     def _make(self) -> Any:
         kind = self._kind
@@ -591,7 +597,7 @@ def _setters(kind: type[SyntaxNode]) -> dict[str, Callable[..., Any]]:
     return out
 
 
-# --- Meta-schemas and the registry ---
+# --- Meta-schemas and the store ---
 
 
 def _native(name: str, native: type) -> Callable[[Any], Any]:
@@ -602,7 +608,6 @@ Children = (
     Schemas.OfRelation.Builder().links("parent", "child").properties(_native("property", str), _native("index", int))
     .unique("child").create()
 )
-Proxies.register(CHILDREN, Children)
 _CHILDREN = lambda r: r.name("children").of(Children).me("parent")  # noqa: E731
 _PARENT = lambda r: r.name("parent").of(Children).me("child")  # noqa: E731
 
@@ -616,42 +621,46 @@ def _schema(kind: type[SyntaxNode]) -> Schemas.OfObject.Data:
             .create())
 
 
-class Registry:
-    """Builds a language's syntax nodes from snapshots: `getattr(registry, 'Programs.Ccpp.Identifier')(instance)`
-    returns a builder, as `Plain.FromPlain` expects, and so does the kind's own name: `registry.Identifier(instance)`.
-    `schema` and `name_of` look the meta-schemas up."""
+class OfStore(Stores.Catalog):
+    """A store of a language's syntax nodes (see mbse-schemas' `Stores`): its meta-schemas by name, and a builder for each
+    kind by the meta-schema's name or the kind's own (`store.builder('Programs.Ccpp.Identifier', instance)`,
+    `store.Identifier(instance)`), as `Plain.FromPlain` expects. The nodes the store's builders create or clone are in
+    its extents."""
 
     def __init__(self, schemas: Mapping[str, Any], builders: Mapping[str, type]):
-        self._schemas = {**schemas, CHILDREN: Children}
+        super().__init__()
+        self._factories: dict[str, type] = {}
+        self._extents: dict[str, list[Any]] = {}
+        for name, schema in {**schemas, CHILDREN: Children}.items():
+            self.register(name, schema)
         for name, builder in builders.items():
-            setattr(self, name, builder)
-            setattr(self, builder._kind.KIND, builder)  # type: ignore[attr-defined]
+            for alias in (name, builder._kind.KIND):  # type: ignore[attr-defined]
+                self._factories[alias] = builder
+                setattr(self, alias, lambda instance=None, alias=alias: self.builder(alias, instance))
 
-    def schema(self, name: str) -> Schemas.OfObject.Data:
-        if name == CHILDREN:
-            raise TypeError(f"{name!r} is a relation; no relation builder is exposed")
-        if name not in self._schemas:
-            raise AttributeError(f"no schema registered as {name!r}")
-        return self._schemas[name]
-
-    def name_of(self, schema: Any) -> str:
-        for name, registered in self._schemas.items():
-            if registered is schema:
-                return name
-        raise LookupError("schema is not registered")
+    def builder(self, name: str, instance: Any = None) -> Builder:
+        if name not in self._factories:
+            self.schema(name)  # raises for an unknown name or a relation
+        builder = self._factories[name](instance)
+        builder._store = self
+        return builder  # type: ignore[no-any-return]
 
     def member(self, instance: Any, name: str) -> Any:
         """The value a syntax node holds in its attribute `name`."""
         return getattr(instance, name)
+
+    def extent(self, name: str) -> tuple[Any, ...]:
+        self.schema(name)
+        return tuple(self._extents.get(name, ()))
 
 
 # --- Languages ---
 
 
 class Language:
-    """A language declared by its kinds, from which it derives their properties, builders, meta-schemas (registered with
-    `Proxies` as 'Programs.<name>.<Kind>'), the union `Schema` of every kind, whose branches are named by the kinds,
-    and the registry `Builders`. `BASE` is where a kind exists unless it says otherwise."""
+    """A language declared by its kinds, from which it derives their properties, builders, meta-schemas (named
+    'Programs.<name>.<Kind>'), the union `Schema` of every kind, whose branches are named by the kinds, and the store
+    `Builders` of its syntax nodes. `BASE` is where a kind exists unless it says otherwise."""
 
     def __init__(self, name: str, kinds: Sequence[type[SyntaxNode]], *, base: Availability):
         self._name, self.BASE = name, base
@@ -670,12 +679,10 @@ class Language:
             kind._BY_NAME = {f.name: f for f in kind.PROPERTIES}  # type: ignore[attr-defined]
             kind.Schema = schemas[kind.NAME] = _schema(kind)
             builders[kind.NAME] = type(f"{kind.KIND}Builder", (Builder,), {"_kind": kind, **_setters(kind)})
-        for schema_name, schema in schemas.items():
-            Proxies.register(schema_name, schema)
         self.Schema = Schemas.OfUnion.Builder().branches(
             *(lambda b, kind=kind: b.name(kind.KIND).of(kind.Schema) for kind in kinds)
         ).create()
-        self.Builders = Registry(schemas, builders)
+        self.Builders = OfStore(schemas, builders)
 
     def name(self) -> str:
         return self._name

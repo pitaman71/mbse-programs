@@ -23,7 +23,7 @@
  *   (such as C++20) checks a tree against them, parses source text into trees and prints trees into source text.
  */
 
-import { Errors, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
+import { Errors, Repr, Schemas, Stores } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 const { AttributeError, KeyError, LookupError, NotImplementedError, ValueError } = Errors;
@@ -568,12 +568,23 @@ export class Builder implements Visitors.OfObject {
     if (this.#source !== undefined) {
       throw new ValueError("create() is only valid without a source instance; use clone() or update()");
     }
-    return this.#make();
+    return this.#made(this.#make());
   }
 
   clone(): any {
     if (this.#source === undefined) throw new ValueError("clone() is only valid with a source instance");
-    return this.#make();
+    return this.#made(this.#make());
+  }
+
+  /** Set by the store that made this builder, whose extents take what it makes. */
+  _store: OfStore | null = null;
+
+  #made(node: SyntaxNode): SyntaxNode {
+    if (this._store !== null) {
+      const name = this.#kindClass.NAME;
+      this._store._extents.set(name, [...(this._store._extents.get(name) ?? []), node]);
+    }
+    return node;
   }
 
   update(): any {
@@ -742,11 +753,11 @@ export type Fluent<C, M> = C extends { SPEC: infer S } ? Builder & {
 
 /** A language's builders, typed from its module `M`: by each kind's name, a function that returns its fluent
  * builder. */
-export type Builders<M> = Registry & {
+export type Builders<M> = OfStore & {
   readonly [K in keyof M as M[K] extends KindClass ? K : never]: (instance?: SyntaxNode) => Fluent<M[K], M>;
 };
 
-// --- Meta-schemas and the registry ---
+// --- Meta-schemas and the store ---
 
 function nativeProperty(name: string, native: NativeToken) {
   return (p: Schemas.OfProperty.Builder) => p.name(name).of((t) => t.as_native(native as Schemas.OfNative.Spec));
@@ -754,7 +765,6 @@ function nativeProperty(name: string, native: NativeToken) {
 
 export const Children = new Schemas.OfRelation.Builder().links("parent", "child")
   .properties(nativeProperty("property", String), nativeProperty("index", BigInt)).unique("child").create();
-Proxies.register(CHILDREN, Children);
 const CHILDREN_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("children").of(Children).me("parent");
 const PARENT_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("parent").of(Children).me("child");
 
@@ -769,36 +779,41 @@ function schemaOf(kind: SyntaxNodeClass): Schemas.OfObject.Data {
     .relations(...relations).create();
 }
 
-/** Builds a language's syntax nodes from snapshots: `registry['Programs.Ccpp.Identifier'](instance)` returns a builder,
- * as `Plain.FromPlain` expects, and so does the kind's own name: `registry.Identifier(instance)`. `schema` and
- * `name_of` look the meta-schemas up. */
-export class Registry {
-  private readonly schemas: Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>;
+/** A store of a language's syntax nodes (see mbse-schemas' `Stores`): its meta-schemas by name, and a builder for each
+ * kind by the meta-schema's name or the kind's own (`store.builder("Programs.Ccpp.Identifier", instance)`,
+ * `store.Identifier(instance)`), as `Plain.FromPlain` expects. The nodes the store's builders create or clone are in
+ * its extents. */
+export class OfStore extends Stores.Catalog implements Stores.Store {
+  readonly _factories = new Map<string, typeof Builder>();
+  readonly _extents = new Map<string, Visitors.Visitable[]>();
   readonly [name: string]: unknown;
 
   constructor(schemas: ReadonlyMap<string, Schemas.OfObject.Data>, builders: ReadonlyMap<string, typeof Builder>) {
-    this.schemas = new Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>([...schemas, [CHILDREN, Children]]);
+    super();
+    for (const [name, schema] of [...schemas, [CHILDREN, Children] as const]) this.register(name, schema);
     for (const [name, builder] of builders) {
-      (this as Record<string, unknown>)[name] = (instance?: SyntaxNode) => new builder(instance);
-      (this as Record<string, unknown>)[builder.KIND.KIND] = (instance?: SyntaxNode) => new builder(instance);
+      for (const alias of [name, builder.KIND.KIND]) {
+        this._factories.set(alias, builder);
+        if (!(alias in this)) (this as Record<string, unknown>)[alias] = (instance?: SyntaxNode) => this.builder(alias, instance);
+      }
     }
   }
 
-  schema(name: string): Schemas.OfObject.Data {
-    if (name === CHILDREN) throw new TypeError(`${repr(name)} is a relation; no relation builder is exposed`);
-    const found = this.schemas.get(name);
-    if (found === undefined) throw new AttributeError(`no schema registered as ${repr(name)}`);
-    return found as Schemas.OfObject.Data;
-  }
-
-  name_of(schema: unknown): string {
-    for (const [name, registered] of this.schemas) if (registered === schema) return name;
-    throw new LookupError("schema is not registered");
+  builder(name: string, instance?: unknown): any {
+    if (!this._factories.has(name)) this.schema(name); // throws for an unknown name or a relation
+    const builder = new (this._factories.get(name) as typeof Builder)(instance as SyntaxNode | undefined);
+    builder._store = this;
+    return builder;
   }
 
   /** The value a syntax node holds in its attribute `name`. */
   member(instance: unknown, name: string): unknown {
     return (instance as Record<string, unknown>)[name];
+  }
+
+  extent(name: string): readonly Visitors.Visitable[] {
+    this.schema(name);
+    return [...(this._extents.get(name) ?? [])];
   }
 }
 
@@ -813,9 +828,9 @@ function ancestors(kind: Function): Function[] {
 
 type BranchBuilder = Parameters<Parameters<Schemas.OfUnion.Builder["branches"]>[0]>[0];
 
-/** A language declared by its kinds, from which it derives their properties, builders, meta-schemas (registered with
- * `Proxies` as 'Programs.<name>.<Kind>'), the union `Schema` of every kind, whose branches are named by the kinds,
- * and the registry `Builders`. `BASE` is where a kind exists unless it says otherwise. */
+/** A language declared by its kinds, from which it derives their properties, builders, meta-schemas (named
+ * 'Programs.<name>.<Kind>'), the union `Schema` of every kind, whose branches are named by the kinds,
+ * and the store `Builders` of its syntax nodes. `BASE` is where a kind exists unless it says otherwise. */
 export class Language<M = {}> {
   readonly BASE: Availability;
   readonly classes: readonly SyntaxNodeClass[];
@@ -847,10 +862,9 @@ export class Language<M = {}> {
       Object.assign(built.prototype, setters(kind));
       builders.set(kind.NAME, built);
     }
-    for (const [schemaName, schema] of schemas) Proxies.register(schemaName, schema);
     this.Schema = new Schemas.OfUnion.Builder().branches(
       ...kinds.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema))).create();
-    this.Builders = new Registry(schemas, builders) as Builders<M>;
+    this.Builders = new OfStore(schemas, builders) as Builders<M>;
   }
 
   name(): string {

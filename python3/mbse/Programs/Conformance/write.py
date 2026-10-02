@@ -40,7 +40,7 @@ def render(sources: Path = ROOT / "sources") -> dict[str, str]:
     for source in sorted(sources.iterdir()):
         standard, root = STANDARDS[source.suffix]
         unit = standard.parse(source.read_text(encoding="utf-8"))
-        files[f"{source.stem}.json"] = JSON.ToJSON.Reachable(root.Schema, unit, indent=2) + "\n"
+        files[f"{source.stem}.json"] = JSON.ToJSON(root.LANGUAGE.Builders).Reachable(root.Schema, unit, indent=2) + "\n"
         files[f"{source.stem}{source.suffix}"] = standard.print(unit)
     return files
 
