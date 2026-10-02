@@ -1,11 +1,13 @@
-"""Errors: the exceptions parsing and printing raise beyond mbse-schemas' own, named the same in every implementation.
+"""Errors: the exceptions parsing, printing and transpiling raise beyond mbse-schemas' own, named the same in every
+implementation.
 
-Both are `ValueError`s. `ParseError` locates its problem in the source text, with a 1-based line and column.
+All are `ValueError`s. `ParseError` locates its problem in the source text, with a 1-based line and column, and
+`TranspileError` in the tree, with the path to its node.
 """
 
 from __future__ import annotations
 
-__all__ = ["ParseError", "PrintError"]
+__all__ = ["ParseError", "PrintError", "TranspileError"]
 
 
 class ParseError(ValueError):
@@ -18,3 +20,12 @@ class ParseError(ValueError):
 
 class PrintError(ValueError):
     """A tree the standard cannot print: it is invalid, or uses a construct the standard lacks."""
+
+
+class TranspileError(ValueError):
+    """A tree a transpiler cannot translate: a construct the target has no counterpart for, or one outside the
+    transpiler's subset. `path` locates its node in the source tree, as `Parents.path` does."""
+
+    def __init__(self, message: str, path: str):
+        super().__init__(f"{path}: {message}" if path else message)
+        self.path = path

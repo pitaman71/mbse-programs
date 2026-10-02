@@ -16,6 +16,11 @@
 | `typescript59.ts` | every kind of the TypeScript language but JSX's, parsed as TypeScript 5.9: imports and exports of every form, with attributes, `import defer` and import equals, every literal, statement and expression, destructuring, generators and async functions, overloads and assertion signatures, decorated and abstract classes with every kind of member, interfaces, every type form, enums, namespaces, ambient modules and `declare global`, `using`, and comments |
 | `typescript59-jsx.tsx` | JSX's kinds, parsed as TypeScript 5.9 with JSX: elements, fragments, attributes and spread attributes, namespaced and member names, text with character references, expressions and spread children, and a generic arrow function |
 
+`transpilers/<transpiler>/` holds the programs of each transpiler (`typescript-to-python/` so far): for each program,
+the source (`<program>.ts`), what it prints when it runs (`<program>.out`, from Node), and its translation
+(`<program>.py`), which both implementations write identically. The TRN suite checks that the translations are current,
+and that they print what the programs print.
+
 The CONF test suite in each implementation checks that its own files are current, that they are byte-identical to
 every other implementation's, and that every implementation's snapshots read back into valid trees that print the same
 text and parse back to the same tree.

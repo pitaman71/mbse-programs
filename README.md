@@ -11,7 +11,8 @@ The languages are Ccpp, C and C++ as one tree language, with C++17 and C++20 par
 module through Python 3.15, with Python 3.12 and 3.14 parsed by
 [tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python); and TypeScript, TypeScript and JavaScript as
 one tree language whose kinds follow typescript-estree, with TypeScript 5.0 and 5.9 and ES2020 and ES2025, each with
-JSX or without, parsed by [tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript).
+JSX or without, parsed by [tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript). A first
+transpiler translates a subset of TypeScript into Python, tree to tree.
 
 ```python
 from mbse.Programs.Ccpp import Ccpp17, Ccpp20, Syntax as S
@@ -104,20 +105,21 @@ npm test                       # type-check and run the test suites
 
 | Read | For |
 |---|---|
-| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, and open questions |
+| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, transpiling, and open questions |
 | [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [`AGENTS.md`](AGENTS.md), [`llms.txt`](llms.txt) | Guidance for AI agents |
 | [`python3/tests/TestPlan.md`](python3/tests/TestPlan.md), [`typescript5/tests/TestPlan.md`](typescript5/tests/TestPlan.md) | The test suites |
-| [`conformance/`](conformance/README.md) | The shared corpus both implementations must parse, write and print identically |
+| [`conformance/`](conformance/README.md) | The shared corpus both implementations must parse, write and print identically, and the transpilers' programs |
 
 ## Repository layout
 
 ```
 submodules/mbse-schemas/  the framework trees are serialized with
 docs/                     the design (PROGRAMS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
-python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, TypeScript, Conformance) and tests
-typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, TypeScript, Conformance) and tests
-conformance/              the corpus's sources, and the files each implementation writes from them
+python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, TypeScript, Transpilers, Conformance) and tests
+typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, TypeScript, Transpilers, Conformance) and tests
+conformance/              the corpus's sources, the files each implementation writes from them, and the transpilers'
+                          programs
 ```
 
 ## Status
@@ -135,7 +137,11 @@ in-place rewriting, and definitions with lookup), and three languages:
   through tree-sitter-typescript 0.23.2 with corrections of its grammar, printing, and the definitions of a program,
   which keep values, types and namespaces apart. Checked against typescript-estree on 1,857 files.
 
+And one transpiler, TypeScript to Python, over the subset of TypeScript that ordinary code is written in: statements,
+functions, classes, enums, imports and type annotations, with JavaScript's common globals and methods mapped to
+Python's. Its programs print the same in Node and, translated, in CPython.
+
 Not built yet: the constructs the parsers cannot read ([PROGRAMS.md](docs/PROGRAMS.md#parsing),
 [Parsing Python](docs/PROGRAMS.md#parsing-python), [Parsing TypeScript](docs/PROGRAMS.md#parsing-typescript)) are
 built and printed but not parsed; overloads, dependent names, attributes and properties are not resolved; further
-languages (Verilog) are planned.
+languages (Verilog) are planned, and transpilers beyond the first.

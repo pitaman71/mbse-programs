@@ -31,9 +31,11 @@ function sourceOf(cell: Cell): string {
   return Array.isArray(cell.source) ? cell.source.join("") : cell.source;
 }
 
-/** Import specifiers are written relative to the notebook's folder; the generated module lives in tests/.build. */
+/** Import specifiers are written relative to the notebook's folder; the generated module lives in tests/.build. Only
+ * the `from` of an import or export statement moves, never one within a string. */
 function relocate(source: string, folder: string): string {
-  return source.replace(/(from\s+|import\s*\(\s*)(["'])(\.\.?\/[^"']*)\2/g, (_m, lead: string, quote: string, spec: string) => {
+  const specifier = /^(\s*(?:import|export|\})[^"'\n]*\bfrom\s+)(["'])(\.\.?\/[^"']*)\2/gm;
+  return source.replace(specifier, (_m, lead: string, quote: string, spec: string) => {
     const moved = relative(build, resolve(folder, spec)).split(sep).join("/");
     return `${lead}${quote}${moved.startsWith(".") ? moved : "./" + moved}${quote}`;
   });

@@ -5,6 +5,9 @@
  * (`<source>.json`), and the text that tree prints to (`<source>.cpp`, `<source>.py`, `<source>.ts`, `<source>.tsx`);
  * and it writes each language's grammar (`<language>.grammar.json`). Every implementation must write the same bytes.
  * The default directory is `conformance/typescript5` at the repository root.
+ *
+ * It also writes, beside each program of `conformance/transpilers/typescript-to-python`, the Python it translates to
+ * (`<program>.py`), which every implementation must write alike too.
  */
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -18,6 +21,7 @@ import * as CcppSyntax from "../Ccpp/Syntax.js";
 import type { Node, NodeClass } from "../Framework/Syntax.js";
 import * as Python314 from "../Python/Python314.js";
 import * as PythonSyntax from "../Python/Syntax.js";
+import { transpile } from "../Transpilers/TypeScriptToPython.js";
 import * as TypeScriptSyntax from "../TypeScript/Syntax.js";
 import * as TypeScript59 from "../TypeScript/TypeScript59.js";
 
@@ -45,11 +49,24 @@ export function render(sources: string = join(ROOT, "sources")): Map<string, str
   return files;
 }
 
+/** File name -> text, for the Python each TypeScript program translates to. */
+export function transpiled(programs: string = join(ROOT, "transpilers", "typescript-to-python")): Map<string, string> {
+  return new Map(readdirSync(programs).filter((name) => name.endsWith(".ts")).sort().map((name) => [
+    `${name.slice(0, -3)}.py`,
+    Python314.print(transpile(TypeScript59.parse(readFileSync(join(programs, name), "utf8")))),
+  ]));
+}
+
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const directory = process.argv[2] ?? join(ROOT, "typescript5");
   mkdirSync(directory, { recursive: true });
   for (const [name, text] of render()) {
     writeFileSync(join(directory, name), text, "utf8");
     console.log("wrote", join(directory, name));
+  }
+  const programs = join(ROOT, "transpilers", "typescript-to-python");
+  for (const [name, text] of transpiled(programs)) {
+    writeFileSync(join(programs, name), text, "utf8");
+    console.log("wrote", join(programs, name));
   }
 }

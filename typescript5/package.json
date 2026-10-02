@@ -27,6 +27,8 @@
     "./Python/*": "./src/Python/*.ts",
     "./TypeScript": "./src/TypeScript/index.ts",
     "./TypeScript/*": "./src/TypeScript/*.ts",
+    "./Transpilers": "./src/Transpilers/index.ts",
+    "./Transpilers/*": "./src/Transpilers/*.ts",
     "./Conformance/*": "./src/Conformance/*.ts"
   },
   "engines": {

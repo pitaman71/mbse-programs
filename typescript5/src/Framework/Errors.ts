@@ -1,7 +1,9 @@
 /**
- * Errors: the exceptions parsing and printing raise beyond mbse-schemas' own, named the same in every implementation.
+ * Errors: the exceptions parsing, printing and transpiling raise beyond mbse-schemas' own, named the same in every
+ * implementation.
  *
- * Both are `ValueError`s. `ParseError` locates its problem in the source text, with a 1-based line and column.
+ * All are `ValueError`s. `ParseError` locates its problem in the source text, with a 1-based line and column, and
+ * `TranspileError` in the tree, with the path to its node.
  */
 
 import { Errors } from "@mbse/schemas/Framework";
@@ -18,4 +20,14 @@ export class ParseError extends Errors.ValueError {
 /** A tree the standard cannot print: it is invalid, or uses a construct the standard lacks. */
 export class PrintError extends Errors.ValueError {
   override name = "PrintError";
+}
+
+/** A tree a transpiler cannot translate: a construct the target has no counterpart for, or one outside the transpiler's
+ * subset. `path` locates its node in the source tree, as `Parents.path` does. */
+export class TranspileError extends Errors.ValueError {
+  override name = "TranspileError";
+
+  constructor(message: string, readonly path: string) {
+    super(path ? `${path}: ${message}` : message);
+  }
 }

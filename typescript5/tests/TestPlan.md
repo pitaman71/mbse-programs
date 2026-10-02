@@ -1,7 +1,7 @@
 # Test plan — typescript5
 
 Scope: everything under `typescript5/src` (the framework, and the Ccpp, Python and TypeScript languages with their standards,
-parsers, printers and definitions) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
+parsers, printers and definitions, and the transpilers) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
 Python one mirror each other case for case, with the deliberate differences of `../../docs/EQUIVALENCE.md`.
 mbse-schemas is tested in mbse-schemas.
 
@@ -30,6 +30,7 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `11_TypeScriptParse.ipynb` | TSPRS | 12 | as in Python, and TSPRS-01 also compares the conformance sources' trees, and what typescript-estree reads of their print, with typescript-estree's own, which Python cannot run |
 | `12_TypeScriptPrint.ipynb` | TSPRT | 6 | as in Python |
 | `13_TypeScriptDefinitions.ipynb` | TSDEF | 7 | as in Python |
-| `14_Conformance.ipynb` | CONF | 3 | as in Python, from this side |
+| `14_TypeScriptToPython.ipynb` | TRN | 7 | as in Python, but TRN-01 runs the TypeScript programs themselves in Node, and compares what they print with what the Python side's translations print |
+| `15_Conformance.ipynb` | CONF | 3 | as in Python, from this side |
 
-Total: 102 cases, with the same IDs in the same order in both implementations.
+Total: 109 cases, with the same IDs in the same order in both implementations.

@@ -6,4 +6,5 @@ source text. A transpiler written against these trees never parses or prints str
 https://github.com/pitaman71/mbse-programs.
 
 The framework is `mbse.Programs.Framework`, and the languages are packages beside it: `mbse.Programs.Ccpp` for C and
-C++, `mbse.Programs.Python` for Python, and `mbse.Programs.TypeScript` for TypeScript and JavaScript."""
+C++, `mbse.Programs.Python` for Python, and `mbse.Programs.TypeScript` for TypeScript and JavaScript.
+`mbse.Programs.Transpilers` translates between them."""

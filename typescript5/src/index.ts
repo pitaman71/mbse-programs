@@ -6,9 +6,11 @@
  * https://github.com/pitaman71/mbse-programs.
  *
  * The framework is `@mbse/programs/Framework`, and the languages are modules beside it: `@mbse/programs/Ccpp` for C
- * and C++, `@mbse/programs/Python` for Python, and `@mbse/programs/TypeScript` for TypeScript and JavaScript. */
+ * and C++, `@mbse/programs/Python` for Python, and `@mbse/programs/TypeScript` for TypeScript and JavaScript.
+ * `@mbse/programs/Transpilers` translates between them. */
 
 export * as Ccpp from "./Ccpp/index.js";
 export * as Framework from "./Framework/index.js";
 export * as Python from "./Python/index.js";
+export * as Transpilers from "./Transpilers/index.js";
 export * as TypeScript from "./TypeScript/index.js";

@@ -15,10 +15,11 @@ as JSON or YAML, byte-identical between the Python and TypeScript implementation
 |---|---|---|
 | `Framework.Syntax` | by protocol | `Node`, kinds and their fields, `Language` (kinds, categories, validation, grammar), `Standard`, builders and meta-schemas, and the traversals every language shares: `children`, `walk`, `fold`, `same`, `copy`, `Parents`, `Visitor`, `Transformer` |
 | `Framework.Definitions` | by meaning | `Entity`, `Scope` and `Program`: what a program declares, and lookup |
-| `Framework.Errors` | | `ParseError` (with line and column) and `PrintError` |
+| `Framework.Errors` | | `ParseError` (with line and column), `PrintError` and `TranspileError` (with the node's path) |
 | `<Language>.Syntax` | lexically, as the standard's grammar | the language's kinds and categories, with their availability |
 | `<Language>.Definitions` | semantically, as the standard's scopes | `define(unit)`, which builds a `Program` from a tree, and `referents` |
 | `<Language>.<Standard>` | | `STANDARD`, `parse`, `print` and `check` for one standard |
+| `Transpilers.<Source>To<Target>` | | `transpile(tree)`, which maps one language's tree to another's |
 
 The languages so far:
 
@@ -329,6 +330,55 @@ and path), and changes the tree in place: by assigning fields, with `Parents.rep
 `Transformer`, whose `visit_<Kind>` methods return what replaces each node. `copy` duplicates a subtree, and `check`
 tells which standard the result needs. Nothing in this path parses or prints a string.
 
+A transpiler between two languages builds the target's tree from the source's, and raises `TranspileError` at the
+first node it cannot translate, with that node's path. Its programs are in `conformance/transpilers/<transpiler>/`: for
+each program, the source, what it prints when it runs (`.out`), and its translation as both implementations write it.
+
+### TypeScript to Python
+
+`Transpilers.TypeScriptToPython.transpile(program)` translates a TypeScript `Program` into a Python `Module`, which
+`Python314` prints. It covers a subset, which the module's documentation lists: the statements, functions, classes,
+enums, imports and types that ordinary code is written with. The translation follows these patterns:
+
+| TypeScript | Python |
+|---|---|
+| `for (let i = a; i < b; i++)`, where the body does not assign `i` | `for i in range(a, b)`; any other `for` is a `while` |
+| `do body while (test)` | `while True:` with `if not test: break` after the body, which must not `continue` |
+| `switch` without fall-through | `if` and `elif` on the subject, kept in a variable unless it is a name |
+| a function that assigns a name of an enclosing function or of the module | `nonlocal` or `global`, from `Definitions` |
+| an arrow function with an expression for its body | a `lambda`, or a comprehension for `map` and `filter` |
+| a function with a body, used as a value | a function declared before the statement |
+| a class's fields and parameter properties | assigned in `__init__`, after `super().__init__` |
+| getters, setters, static and abstract methods, `toString` | `@property`, `@x.setter`, `@staticmethod`, `raise NotImplementedError`, `__str__` |
+| an enum of numbers or of strings | an `IntEnum` or a `StrEnum` |
+| an object literal | `types.SimpleNamespace` |
+| `a ?? b` | `a if a is not None else b`, through `:=` where `a` is not a name |
+| `console.log`, `Math`, `JSON`, `Object.keys`, `parseInt`, `new Error` and other globals | `print`, `math`, `json`, `vars`, `int`, `Exception` |
+| `push`, `includes`, `join`, `slice`, `length` and other methods, by name | `append`, `in`, `str.join`, slices, `len` |
+
+Globals are mapped only where `Definitions` finds no declaration of the name, and methods only where no class or
+interface of the program declares a member of that name; a call to a mapped global or method with arguments the
+mapping does not take fails. What the two languages do differently is not emulated: `%` of a negative number, the
+truthiness of empty arrays and objects, `==` between values of different types, how numbers print (`6 / 2` prints `3.0`)
+and integers beyond 2 ** 53 behave as Python's do. The programs in `conformance/transpilers/typescript-to-python` print
+the same in Node and, translated, in CPython.
+
+### What transpiling showed about the framework
+
+The first transpiler was written to test the framework, and found:
+
+- **Definitions are enough for names.** Telling a global from a declared name, finding a `catch` parameter, and finding
+  the names a function assigns in an enclosing scope all come from `define` and `referents`.
+- **Paths locate errors.** `Parents.path` gives every error a place in the source tree, without positions.
+- **A node has one place.** A tree that holds one node twice is invalid, so a translation that repeats a value (the
+  subject of a `switch`, an imported module's name) copies it with `copy`.
+- **Related kinds have different fields.** An arrow function has no `generator`, so code that reads functions of every
+  kind checks which fields a node has.
+- **Building trees is verbose.** A name, a call or an attribute is a node and an `Identifier` within it; the transpiler
+  needs a dozen small builders, which belong with the language.
+- **Without types, methods map by name.** `x.length` is `len(x)` whatever `x` is; only a member the program declares
+  stops the mapping.
+
 ## Open questions
 
 - **Value objects in lists.** Children are linked through the relation `Programs.Children` rather than as nested value
@@ -350,6 +400,10 @@ tells which standard the result needs. Nothing in this path parses or prints a s
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
 - **More languages.** Verilog is planned as a further language over the same framework.
+- **Builders for target trees.** Each transpiler writes its own builders of names, calls and attributes; each language
+  could provide them.
+- **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from
+  a checker run on the source, or from definitions that resolve members.
 
 ## Resolved
 
@@ -380,3 +434,7 @@ tells which standard the result needs. Nothing in this path parses or prints a s
   conformance sources against it.
 - TypeScript's definitions keep a name's meaning (value, type or namespace) where it is written, and look up only the
   entities with that meaning.
+- Transpilers map trees to trees, in `Transpilers`, and raise `TranspileError`, a `ValueError` with the node's path, at
+  what they do not cover. They keep what code means where the languages agree, and do not emulate where they differ.
+- A `break` or `continue` outside a loop, which the parser accepts, fails to transpile rather than translating into
+  invalid Python.

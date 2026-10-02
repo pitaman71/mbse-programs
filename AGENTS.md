@@ -6,8 +6,8 @@ rewrites without parsing or printing strings, each language covering the union o
 parse and print source text by delegating to an established parser. The languages are Ccpp (C and C++, with C++17 and
 C++20, parsed by tree-sitter-cpp), Python (kinds following `ast`, with Python 3.12 and 3.14, parsed by
 tree-sitter-python) and TypeScript (TypeScript and JavaScript, kinds following typescript-estree, with TypeScript 5.0
-and 5.9 and ES2020 and ES2025, with JSX or without, parsed by tree-sitter-typescript). Two equivalent implementations
-exist: `python3/` and `typescript5/`.
+and 5.9 and ES2020 and ES2025, with JSX or without, parsed by tree-sitter-typescript). A first transpiler translates a
+subset of TypeScript into Python. Two equivalent implementations exist: `python3/` and `typescript5/`.
 
 ## Start here
 
@@ -16,6 +16,7 @@ exist: `python3/` and `typescript5/`.
 | Use the library: parse, build, rewrite or print trees | [README.md](README.md), then the module docstrings of `Framework/Syntax` and of each language's `Syntax` and `Definitions` |
 | Understand a design rule, a known gap or an open question | [docs/PROGRAMS.md](docs/PROGRAMS.md), by section |
 | Change the framework, a kind, the parser or the printer | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
+| Change or add a transpiler | [docs/PROGRAMS.md, Transpiling](docs/PROGRAMS.md#transpiling), then the transpiler's module docstring |
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
 | Model the data trees are stored with | [mbse-schemas' AGENTS.md](submodules/mbse-schemas/AGENTS.md), in the submodule |
 
@@ -33,7 +34,9 @@ exist: `python3/` and `typescript5/`.
 - **Trees are complete.** A construct of any standard of the language is a tree of its kinds, whether or not the parser
   reads it. A new kind records where it exists (`SINCE`, `FEATURES`, or `EXTENSION`), and the printer prints it.
 - **Transpilers never touch text.** Everything a transpiler needs is on the tree, in `Framework.Syntax`'s traversals or
-  in `Definitions`; only standards parse and print.
+  in `Definitions`; only standards parse and print. A transpiler's programs are in `conformance/transpilers/`: a
+  program's `.out` is what Node prints when it runs, and its translation (`.py`) is regenerated with the corpora. A
+  construct outside the transpiler's subset raises `TranspileError`, never translates into code that means otherwise.
 - **The parsers are pinned.** tree-sitter-cpp 0.23.4, tree-sitter-python 0.25.0 and tree-sitter-typescript 0.23.2, in
   both implementations (the Python wheels and the npm packages' wasm), so their trees are the same; both pass tree-sitter
   UTF-16, so its error recovery is the same too. Upgrading one is a change to both, and to the gaps and corrections in

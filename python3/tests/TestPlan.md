@@ -1,7 +1,7 @@
 # Test plan — python3
 
 Scope: everything under `python3/mbse/Programs` (the framework, and the Ccpp, Python and TypeScript languages with their standards,
-parsers, printers and definitions) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
+parsers, printers and definitions, and the transpilers) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
 TypeScript one mirror each other case for case, with the deliberate differences of `../../docs/EQUIVALENCE.md`.
 mbse-schemas is tested in mbse-schemas.
 
@@ -30,6 +30,7 @@ uv run python -m mbse.Programs.Conformance.write   # regenerate ../conformance/p
 | `11_TypeScriptParse.ipynb` | TSPRS | 12 | The conformance sources parse, print and parse back the same, and hold every kind; literals' spellings and templates; expressions, with the corrections of tree-sitter-typescript's grouping of `as`, `satisfies` and `!`; statements; functions, classes and their members; modules, imports and exports, namespaces and ambient declarations; types, with the corrections of `readonly`; JSX; comments; the pre-pass; JavaScript through the editions of ECMAScript; errors with line and column |
 | `12_TypeScriptPrint.ipynb` | TSPRT | 6 | Precedence of expressions; where an expression starts a statement, an arrow's body, a `for` or a default export; types' parentheses; every kind printed alone; layout and comments; printing validates and checks the standard, and JSX's `<T,>` |
 | `13_TypeScriptDefinitions.ipynb` | TSDEF | 7 | What declares and what merges; `var` and block scopes; class and interface members and parameter properties; meanings (value, type, namespace) and what names refer to; namespaces, ambient modules and `import a = b.c`; types' own scopes and JSX's components; every entity of the conformance source |
-| `14_Conformance.ipynb` | CONF | 3 | This implementation's corpus files are current, for every language; every other implementation wrote the same bytes; every snapshot reads back into a valid tree that prints the same text |
+| `14_TypeScriptToPython.ipynb` | TRN | 7 | The transpiler from TypeScript to Python: its programs' translations are current, and print what the programs print, run in CPython; statements, loops counted as `range`, `do ... while` and `switch`; functions, lambdas, hoisted functions, `global` and `nonlocal`; classes, their fields, constructors, accessors and static and abstract members; expressions, `??`, objects, and the globals and methods mapped by name; types as annotations, enums and imports; what is not supported, failing at the node's path |
+| `15_Conformance.ipynb` | CONF | 3 | This implementation's corpus files are current, for every language; every other implementation wrote the same bytes; every snapshot reads back into a valid tree that prints the same text |
 
-Total: 102 cases, with the same IDs in the same order in both implementations.
+Total: 109 cases, with the same IDs in the same order in both implementations.

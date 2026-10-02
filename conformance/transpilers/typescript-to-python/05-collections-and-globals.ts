@@ -1,0 +1,11 @@
+const values = [5, 3, 8, 1];
+const doubled = values.map(v => v * 2);
+const big = values.filter(v => v > 2);
+const sum = values.reduce((a, b) => a + b, 0);
+values.push(9);
+const word = "  Hello World  ";
+const point = { x: 3, y: 4, label: "p" };
+console.log(doubled.join(" "), big.length, sum, values.length, values.includes(8) ? "has 8" : "no 8");
+console.log(word.trim().toUpperCase(), word.trim().toLowerCase(), "abc".slice(1), word.trim().startsWith("Hello") ? 1 : 0);
+console.log(point.x + point.y, point.label, Object.keys(point).join(","), Math.floor(7.8), Math.max(3, 9, 2), Math.pow(2, 10));
+console.log(JSON.stringify([1, 2, 3]), parseInt("42") + 1, String(12) + "!", Math.abs(-4));

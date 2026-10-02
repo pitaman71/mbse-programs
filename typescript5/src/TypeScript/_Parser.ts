@@ -149,7 +149,8 @@ function prepare(text: string, root: TS, source: Source): [string, Prepared] {
     } else if (word === "type" && before === "export" && after === "*") {
       blank(start, end);
       found.typeExports.add(source.offset((list[i - 1] as Token)[0]));
-    } else if (word === "abstract" && [":", "?", "("].includes(after) && [";", "{", ",", "readonly"].includes(before)) {
+    } else if (word === "abstract" && [":", "?", "("].includes(after)
+      && [";", "{", "}", ",", "readonly"].includes(before)) {
       units[start] = "_"; // a member named `abstract`
       found.names.set(source.offset(start), word);
     } else if (word === "using" && (before === "(" || before === "await") && i + 2 < list.length

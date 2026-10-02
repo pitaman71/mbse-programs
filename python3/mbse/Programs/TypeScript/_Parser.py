@@ -145,7 +145,7 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
         elif word == "type" and before == "export" and after == "*":
             blank(start, end)
             found.type_exports.add(tokens[i - 1][0])
-        elif word == "abstract" and after in (":", "?", "(") and before in (";", "{", ",", "readonly"):
+        elif word == "abstract" and after in (":", "?", "(") and before in (";", "{", "}", ",", "readonly"):
             chars[start] = "_"  # a member named `abstract`
             found.names[start] = word
         elif word == "using" and before in ("(", "await") and i + 2 < len(tokens) and tokens[i + 2][2] == "of" and (
