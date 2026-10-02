@@ -30,11 +30,16 @@ sibling too. A release of a sibling is the tag `v<version>`.
                                                    lands a workspace's change: each worktree on a branch is
                                                    fast-forwarded into its repository's checkout, siblings before their
                                                    dependents; each new version is tagged v<version>; then the
-                                                   workspace is removed. It refuses, before changing anything, a
-                                                   worktree with changes, a checkout that is not clean on a branch, a
-                                                   branch that does not fast-forward it, or a pin of an edited sibling
-                                                   that is not that sibling's branch. --push also pushes each
-                                                   repository's branch and new tag; without it, the pushes are printed
+                                                   workspace and its merged branches are removed. It refuses, before
+                                                   changing anything, a worktree with changes, a checkout that is not
+                                                   clean on a branch, a branch that does not fast-forward it, or a pin
+                                                   of an edited sibling that is not that sibling's branch. --push then
+                                                   pushes, as push does
+    python3 scripts/siblings.py push               pushes this repository and its siblings, siblings first: each one's
+                                                   branch, if it is ahead of the remote, and its version's tag, if the
+                                                   remote lacks it. It refuses, before pushing anything, a checkout not
+                                                   on a branch, a branch behind its upstream, or a pin of a commit that
+                                                   the sibling's branch does not contain. Rerunning it is safe
     python3 scripts/siblings.py remove DIR [--force]
                                                    removes a workspace's worktrees, refusing one with uncommitted
                                                    changes unless --force; branches are kept
@@ -276,26 +281,68 @@ def land(directory: Path, push: bool) -> int:
                                 f"{branches[sibling]}; run pin and commit")
     if problems:
         raise SystemExit("nothing landed:\n" + "\n".join(f"  {p}" for p in problems))
-    pushes = []
     for name in landing:
         checkout, target = targets[name]
         subprocess.run(["git", "-C", str(checkout), "merge", "--quiet", "--ff-only", branches[name]], check=True)
-        tag, refs = f"v{version_of(trees[name])}", [target]
+        tag, at = f"v{version_of(trees[name])}", git(checkout, "rev-parse", "--short", "HEAD")
         if git(checkout, "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"):
-            print(f"{name}: {target} at {git(checkout, 'rev-parse', '--short', 'HEAD')}; {tag} exists, so no release")
+            print(f"{name}: {target} at {at}; {tag} exists, so no release")
         else:
             subprocess.run(["git", "-C", str(checkout), "tag", "--annotate", tag, "--message", f"Release {tag[1:]}"],
                            check=True)
-            refs.append(tag)
-            print(f"{name}: {target} at {git(checkout, 'rev-parse', '--short', 'HEAD')}, tagged {tag}")
-        pushes.append((name, checkout, refs))
-    for name, checkout, refs in pushes:  # siblings first, so that what a dependent pins is pushed before it
-        if push:
-            subprocess.run(["git", "-C", str(checkout), "push", "--quiet", "origin", *refs], check=True)
-            print(f"{name}: pushed {' '.join(refs)}")
-        else:
-            print(f"to push: git -C {checkout} push origin {' '.join(refs)}")
-    return remove(directory, False)
+            print(f"{name}: {target} at {at}, tagged {tag}")
+    remove(directory, False)
+    for name in landing:  # merged, so deleting them loses nothing
+        subprocess.run(["git", "-C", str(targets[name][0]), "branch", "--quiet", "--delete", branches[name]],
+                       check=True)
+        print(f"{name}: deleted the branch {branches[name]}")
+    if not push:
+        print("next: python3 scripts/siblings.py push")
+        return 0
+    return publish({name: targets[name][0] for name in landing})
+
+
+def publish(checkouts: dict[str, Path]) -> int:
+    """Pushes each checkout's branch and its version's tag, siblings first, after checking that every push can land."""
+    order = dependency_order(checkouts)
+    problems, plans = [], []
+    for name in order:
+        checkout = checkouts[name]
+        branch = git(checkout, "symbolic-ref", "--quiet", "--short", "HEAD")
+        if not branch:
+            problems.append(f"{name}: the checkout {checkout} is not on a branch")
+            continue
+        upstream = git(checkout, "rev-parse", "--abbrev-ref", "--quiet", f"{branch}@{{upstream}}")
+        behind = upstream and git(checkout, "rev-list", "--count", f"{branch}..{upstream}") != "0"
+        if behind:
+            problems.append(f"{name}: {branch} is behind {upstream}; pull, retest and re-pin")
+        for sibling, entry in pins(checkout).items():
+            commit = entry.get("commit")
+            if sibling not in checkouts:
+                continue
+            contains = ["git", "-C", str(checkouts[sibling]), "merge-base", "--is-ancestor", str(commit), "HEAD"]
+            if commit is None or subprocess.run(contains, capture_output=True).returncode:
+                problems.append(f"{name}: pins {sibling} at {str(commit)[:7]}, which {sibling}'s branch does not "
+                                "contain; run pin and commit")
+        ahead = not upstream or git(checkout, "rev-list", "--count", f"{upstream}..{branch}") != "0"
+        tag = f"v{version_of(checkout)}"
+        tagged = git(checkout, "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}")
+        released = git(checkout, "ls-remote", "--tags", "origin", f"refs/tags/{tag}")
+        plans.append((name, checkout, [branch] if ahead else [], [tag] if tagged and not released else []))
+    if problems:
+        raise SystemExit("nothing pushed:\n" + "\n".join(f"  {p}" for p in problems))
+    for name, checkout, branch, tag in plans:  # siblings first, so that what a dependent pins is there before it
+        if not branch + tag:
+            print(f"{name}: up to date")
+            continue
+        subprocess.run(["git", "-C", str(checkout), "push", "--quiet", *(["--set-upstream"] if branch else []),
+                        "origin", *branch, *tag], check=True)
+        print(f"{name}: pushed {' '.join(branch + tag)}")
+    return 0
+
+
+def push() -> int:
+    return publish({**{name: ROOT.parent / name for name in json.loads(CONFIG.read_text())}, ROOT.name: ROOT})
 
 
 def option(name: str) -> list[str]:
@@ -315,8 +362,8 @@ if __name__ == "__main__":
     command = sys.argv[1] if len(sys.argv) > 1 else "check"
     if command == "check":
         sys.exit(check("--strict" in sys.argv[2:]))
-    if command in ("clone", "pin"):
-        sys.exit(clone() if command == "clone" else pin())
+    if command in ("clone", "pin", "push"):
+        sys.exit({"clone": clone, "pin": pin, "push": push}[command]())
     if command in ("workspace", "remove", "land") and len(sys.argv) > 2 and not sys.argv[2].startswith("--"):
         directory = Path(sys.argv[2]).resolve()
         if command == "remove":

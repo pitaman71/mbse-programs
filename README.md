@@ -105,13 +105,16 @@ half-finished changes. A worktree of this repository alone does not work, since 
 python3 scripts/siblings.py workspace ../worktrees/a --branch a                     # this repository on a
 python3 scripts/siblings.py workspace ../worktrees/b --branch b --edit mbse-schemas # and mbse-schemas too
 python3 scripts/siblings.py land ../worktrees/b                                     # once done: merged, tagged, removed
+python3 scripts/siblings.py push                                                    # then published, siblings first
 python3 scripts/siblings.py remove ../worktrees/a                                   # or abandoned (branches are kept)
 ```
 
 `land` fast-forwards each repository's checkout to its workspace branch, siblings before their dependents, tags each
-new version `v<version>`, and removes the workspace. It refuses, before changing anything, a branch that does not
-fast-forward, or a dependent that pins an edited sibling at another commit than its branch, so that the pinned commits
-are the ones landed. It prints the pushes, siblings first; `land --push` makes them.
+new version `v<version>`, and removes the workspace and its merged branches. It refuses, before changing anything, a
+branch that does not fast-forward, or a dependent that pins an edited sibling at another commit than its branch, so
+that the pinned commits are the ones landed. `push` then pushes this repository and its siblings, siblings first, so
+that every pinned commit is on its remote before the pin is; it pushes only what the remote lacks, so it is safe to
+rerun. `land --push` does both.
 
 Python (3.11+, managed with [uv](https://docs.astral.sh/uv/)); the siblings are installed from their checkouts:
 

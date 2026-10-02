@@ -127,13 +127,72 @@ class Workspaces(unittest.TestCase):
             self.assertEqual(run(remote, "rev-parse", "main"), branch[name])
             self.assertEqual(run(remote, "rev-parse", f"{tag}^{{commit}}"), branch[name])
         self.assertFalse(self.workspace.exists())
+        self.assertEqual([run(self.repos / name, "branch", "--list", "change") for name in NAMES], ["", "", ""])
 
-    def test_without_push_prints_the_pushes(self) -> None:
+    def test_without_push_names_the_next_step(self) -> None:
         self.changed()
         self.call(siblings.land, self.workspace, False)
-        self.assertIn(f"to push: git -C {self.repos / 'lower'} push origin main v0.2.0", self.output)
+        self.assertIn("lower: deleted the branch change", self.output)
+        self.assertTrue(self.output.endswith("next: python3 scripts/siblings.py push\n"))
         self.assertEqual(run(self.root / "remotes" / "lower.git", "rev-parse", "main"),
                          run(self.repos / "lower", "rev-parse", "HEAD~1"))  # nothing pushed
+
+    def remote(self, name: str, ref: str) -> str:
+        return run(self.root / "remotes" / f"{name}.git", "rev-parse", "--verify", "--quiet", ref)
+
+    def test_push_after_landing_pushes_siblings_first_and_reruns_safely(self) -> None:
+        self.changed()
+        self.call(siblings.land, self.workspace, False)
+        self.assertEqual(self.call(siblings.push), 0)
+        self.assertEqual(self.output.splitlines(), ["lower: pushed main v0.2.0", "middle: pushed main v0.2.0",
+                                                    "upper: pushed main"])
+        for name in NAMES:
+            self.assertEqual(self.remote(name, "main"), run(self.repos / name, "rev-parse", "HEAD"))
+        self.assertEqual(self.remote("lower", "v0.2.0^{commit}"), run(self.repos / "lower", "rev-parse", "HEAD"))
+        self.call(siblings.push)
+        self.assertEqual(self.output.splitlines(), [f"{name}: up to date" for name in NAMES])
+
+    def test_push_sets_the_upstream_of_a_new_branch(self) -> None:
+        run(self.repos / "lower", "switch", "--quiet", "--create", "topic")
+        self.call(siblings.push)
+        self.assertIn("lower: pushed topic", self.output)
+        self.assertEqual(run(self.repos / "lower", "rev-parse", "--abbrev-ref", "topic@{upstream}"), "origin/topic")
+
+    def push_refused(self, *messages: str) -> None:
+        before = {name: self.remote(name, "main") for name in NAMES}
+        with self.assertRaises(SystemExit) as raised:
+            self.call(siblings.push)
+        self.assertIn("nothing pushed", str(raised.exception))
+        for message in messages:
+            self.assertIn(message, str(raised.exception))
+        self.assertEqual({name: self.remote(name, "main") for name in NAMES}, before)
+
+    def test_push_refuses_a_branch_behind_its_upstream(self) -> None:
+        self.changed()
+        self.call(siblings.land, self.workspace, False)
+        self.moved("middle")
+        self.push_refused("middle: main is behind origin/main; pull, retest and re-pin")
+
+    def test_push_refuses_a_pin_the_sibling_does_not_contain(self) -> None:
+        pinned = json.loads((self.repos / "upper" / "siblings.json").read_text())
+        pinned["lower"]["commit"] = "0" * 40
+        del pinned["middle"]["commit"]
+        (self.repos / "upper" / "siblings.json").write_text(json.dumps(pinned))
+        self.push_refused("upper: pins lower at 0000000, which lower's branch does not contain; run pin and commit",
+                          "upper: pins middle at None")
+
+    def test_push_refuses_a_checkout_not_on_a_branch(self) -> None:
+        run(self.repos / "middle", "checkout", "--quiet", "--detach")
+        self.push_refused(f"middle: the checkout {self.repos / 'middle'} is not on a branch")
+
+    def test_land_and_push_only_this_repository(self) -> None:
+        alone = self.root / "worktrees" / "alone"
+        self.call(siblings.workspace, alone, "alone", [])  # the siblings detached, so only upper lands
+        (alone / "upper" / "NOTE").write_text("upper alone")
+        run(alone / "upper", "add", "-A")
+        run(alone / "upper", "commit", "--quiet", "-m", "alone")
+        self.call(siblings.land, alone, True)
+        self.assertEqual([line for line in self.output.splitlines() if "pushed" in line], ["upper: pushed main"])
 
     def test_refuses_a_branch_that_does_not_fast_forward(self) -> None:
         self.changed()
@@ -142,15 +201,19 @@ class Workspaces(unittest.TestCase):
         run(self.repos / "lower", "commit", "--quiet", "-m", "parallel")
         self.refused("lower: change does not fast-forward main")
 
-    def test_refuses_when_the_remote_moved(self) -> None:
-        self.changed()
+    def moved(self, name: str) -> None:
+        """A commit pushed to `name`'s remote from elsewhere, and fetched."""
         other = self.root / "other"
-        subprocess.run(["git", "clone", "--quiet", str(self.root / "remotes" / "middle.git"), str(other)], check=True)
+        subprocess.run(["git", "clone", "--quiet", str(self.root / "remotes" / f"{name}.git"), str(other)], check=True)
         (other / "OTHER").write_text("pushed elsewhere")
         run(other, "add", "-A")
         run(other, "commit", "--quiet", "-m", "elsewhere")
         run(other, "push", "--quiet")
-        run(self.repos / "middle", "fetch", "--quiet")
+        run(self.repos / name, "fetch", "--quiet")
+
+    def test_refuses_when_the_remote_moved(self) -> None:
+        self.changed()
+        self.moved("middle")
         self.refused("middle: change does not fast-forward origin/main")
 
     def test_refuses_a_stale_pin(self) -> None:
