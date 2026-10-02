@@ -95,7 +95,9 @@ cd mbse-programs
 `clone` skips a sibling that is already there, so repositories cloned side by side by hand are used as they are.
 A sibling it clones is checked out at its pinned commit, in detached HEAD; to change it, switch to a branch first
 (`git -C ../mbse-schemas switch main`). `python3 scripts/siblings.py check` reports when it has moved past its
-pinned commit, which is expected while developing; see `scripts/siblings.py` for `check --strict` and `pin`.
+pinned commit, which is expected while developing; see `scripts/siblings.py help` for `check --strict` and `pin`.
+`scripts/siblings.py` runs the tool kept in mbse-schemas (`../mbse-schemas/scripts/siblings.py`), cloning
+mbse-schemas first if it is missing.
 
 For parallel work (several agents, or several tasks at once), give each its own workspace: worktrees of this
 repository and of its siblings, side by side, so that each installs its own siblings and none sees another's
