@@ -57,7 +57,7 @@ trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
 ## Commands
 
 ```sh
-python3 scripts/siblings.py clone            # mbse-schemas and mbse-expressions, beside this repository, at their tags
+python3 scripts/siblings.py clone            # the siblings, beside this repository, at their pinned commits
 python3 scripts/siblings.py check            # the siblings are present and compatible with siblings.json
 cd python3 && uv sync --all-extras           # Python: use uv, never pip
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
@@ -71,7 +71,7 @@ npm run conformance
 ## Related repositories
 
 - [mbse-schemas](https://github.com/pitaman71/mbse-schemas): the schemas trees are serialized with. It is a
-  sibling checkout, `../mbse-schemas`, pinned by version in `siblings.json` (see `scripts/siblings.py`).
+  sibling checkout, `../mbse-schemas`, pinned by version and commit in `siblings.json` (see `scripts/siblings.py`).
 - [mbse-expressions](https://github.com/pitaman71/mbse-expressions): expressions as data, whose dialects the bridges
   (`Bridges`) carry to and from the languages' trees. It is a sibling checkout, `../mbse-expressions`, pinned in
   `siblings.json`, and this repository's conventions follow it.

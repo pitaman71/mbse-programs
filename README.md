@@ -84,18 +84,18 @@ package), TypeScript from `@mbse/programs` (next to `@mbse/schemas`).
 
 mbse-programs depends on [mbse-schemas](https://github.com/pitaman71/mbse-schemas) and
 [mbse-expressions](https://github.com/pitaman71/mbse-expressions), which live beside it as sibling checkouts. Clone this
-repository, then the siblings at the versions it pins (`siblings.json`):
+repository, then the siblings at the commits it pins (`siblings.json`):
 
 ```sh
 git clone git@github.com:pitaman71/mbse-programs.git
-python3 mbse-programs/scripts/siblings.py clone   # mbse-schemas and mbse-expressions, beside it, at their pinned tags
+python3 mbse-programs/scripts/siblings.py clone   # mbse-schemas and mbse-expressions, at their pinned commits
 cd mbse-programs
 ```
 
 `clone` skips a sibling that is already there, so repositories cloned side by side by hand are used as they are.
-A sibling it clones is checked out at its tag, in detached HEAD; to change it, switch to a branch first
+A sibling it clones is checked out at its pinned commit, in detached HEAD; to change it, switch to a branch first
 (`git -C ../mbse-schemas switch main`). `python3 scripts/siblings.py check` reports when it has moved past its
-pinned tag, which is expected while developing; see `scripts/siblings.py` for `check --strict` and `pin`.
+pinned commit, which is expected while developing; see `scripts/siblings.py` for `check --strict` and `pin`.
 
 For parallel work (several agents, or several tasks at once), give each its own workspace: worktrees of this
 repository and of its siblings, side by side, so that each installs its own siblings and none sees another's

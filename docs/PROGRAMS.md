@@ -479,9 +479,10 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   writes what the dialect's `render` writes.
 - The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as
   they are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by
-  the others, and pins the versions it was tested with in `siblings.json`: a sibling is compatible at the same minor
-  version below 1.0 and no older, `pyproject.toml` requires that range, and a release is the tag `v<version>`.
-  `scripts/siblings.py` checks the siblings, clones those missing at their pinned tags, and pins new versions.
+  the others, and pins the version and commit of each it was tested with in `siblings.json`: a sibling is compatible
+  at the same minor version below 1.0 and no older, and `pyproject.toml` requires that range; the commit reproduces
+  the checkout, since the lock files record siblings by path, without a hash, and a release is the tag `v<version>`.
+  `scripts/siblings.py` checks the siblings, clones those missing at their pinned commits, and pins new ones.
 - The vocabulary is shared with mbse-schemas and mbse-expressions: a kind's named members are *properties* (attributes
   and children, declared in `PROPERTIES`), and a tree's elements are *syntax nodes* (`SyntaxNode`), never bare nodes.
   "Field" means only what the host language means by it: a class's field in TypeScript or C++, or an f-string's

@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """The mbse repositories this one depends on, which live beside it as sibling checkouts.
 
-`siblings.json`, at the repository's root, names each sibling with the version this repository was tested with:
+`siblings.json`, at the repository's root, names each sibling with the version and the commit this repository was
+tested with:
 
-    {"mbse-schemas": {"repository": "git@github.com:pitaman71/mbse-schemas.git", "version": "0.1.0"}}
+    {"mbse-schemas": {"repository": "git@github.com:pitaman71/mbse-schemas.git", "version": "0.1.0",
+                      "commit": "bbd2c1c..."}}
 
 Development uses the siblings as they are, so that a change in one is seen at once by the others: Python installs
-`../../<sibling>/python3` (`tool.uv.sources`) and TypeScript `file:../../<sibling>/typescript5`. The version is the
-contract: a sibling is compatible when it has the same major version (the same minor below 1.0) and is no older, and
-`python3/pyproject.toml` requires exactly that range, so uv refuses an incompatible sibling too. A release of a sibling
-is the tag `v<version>`.
+`../../<sibling>/python3` (`tool.uv.sources`) and TypeScript `file:../../<sibling>/typescript5`, which their lock files
+record by path, without a hash. The commit makes a checkout reproducible: `clone` checks it out, and `check --strict`
+requires it. The version is the contract: a sibling is compatible when it has the same major version (the same minor
+below 1.0) and is no older, and `python3/pyproject.toml` requires exactly that range, so uv refuses an incompatible
+sibling too. A release of a sibling is the tag `v<version>`.
 
     python3 scripts/siblings.py check [--strict]   siblings present, compatible, and required alike by pyproject.toml;
-                                                   --strict also requires each at its pinned tag, clean (for releases)
-    python3 scripts/siblings.py clone              clones each missing sibling at its pinned tag (fresh clones, CI)
-    python3 scripts/siblings.py pin                records each sibling's current version, here and in pyproject.toml
+                                                   --strict also requires each clean at its pinned commit
+    python3 scripts/siblings.py clone              clones each missing sibling at its pinned commit (fresh clones, CI)
+    python3 scripts/siblings.py pin                records each sibling's version and commit (here, and the version's
+                                                   range in pyproject.toml); a sibling with uncommitted changes cannot
+                                                   be pinned
     python3 scripts/siblings.py workspace DIR [--branch NAME] [--edit SIBLING ...]
                                                    a workspace for parallel work: git worktrees of this repository and
                                                    of its siblings, side by side in DIR, so that the relative paths to
@@ -99,17 +104,19 @@ def check(strict: bool) -> int:
         if not ranges or any(r != requirement(pinned) for r in ranges):
             print(f"{name}: pyproject.toml must require {name}{requirement(pinned)}, not {ranges}; run pin")
             failures += 1
-        at_tag = git(sibling, "rev-parse", "HEAD") == git(sibling, "rev-parse", f"v{pinned}^{{commit}}")
+        commit = entry.get("commit")
+        at_pin = commit is not None and git(sibling, "rev-parse", "HEAD") == commit
         clean = not git(sibling, "status", "--porcelain")
-        if not (at_tag and clean):
-            where = "has changes" if at_tag else f"is not at v{pinned}"
+        if not (at_pin and clean):
+            where = "has changes" if at_pin else "has no pinned commit; run pin" if commit is None else (
+                f"is not at its pinned commit {commit[:7]}")
             if strict:
-                print(f"{name}: {where}; a release is tested with its siblings at their pinned tags")
+                print(f"{name}: {where}; reproducing a checkout needs each sibling clean at its pinned commit")
                 failures += 1
             else:
                 print(f"{name}: {actual}, {where} (developing against the sibling as it is)")
         else:
-            print(f"{name}: {actual}, at v{pinned}")
+            print(f"{name}: {actual}, at its pinned commit {commit[:7]}")
     return 1 if failures else 0
 
 
@@ -119,18 +126,26 @@ def clone() -> int:
         if sibling.is_dir():
             print(f"{name}: present")
             continue
-        tag = f"v{entry['version']}"
-        subprocess.run(["git", "clone", "--branch", tag, entry["repository"], str(sibling)], check=True)
+        subprocess.run(["git", "clone", "--quiet", entry["repository"], str(sibling)], check=True)
+        target = entry.get("commit") or f"v{entry['version']}"
+        subprocess.run(["git", "-C", str(sibling), "checkout", "--quiet", "--detach", target], check=True)
+        print(f"{name}: cloned at {target[:7] if entry.get('commit') else target}")
     return 0
 
 
 def pin() -> int:
     config = json.loads(CONFIG.read_text())
     text = PYPROJECT.read_text()
+    dirty = [name for name in config if git(ROOT.parent / name, "status", "--porcelain")]
+    if dirty:
+        raise SystemExit(f"uncommitted changes in {dirty}: a pin is a commit, so commit them first")
     for name, entry in config.items():
-        entry["version"] = version_of(ROOT.parent / name)
+        sibling = ROOT.parent / name
+        entry["version"], entry["commit"] = version_of(sibling), git(sibling, "rev-parse", "HEAD")
         text = re.sub(rf'"({re.escape(name)}(?:\[[^\]]*\])?)[^"]*"', rf'"\g<1>{requirement(entry["version"])}"', text)
-        print(f"{name}: pinned {entry['version']}")
+        print(f"{name}: pinned {entry['version']} at {entry['commit'][:7]}")
+        if not git(sibling, "branch", "--remotes", "--contains", entry["commit"]):
+            print(f"{name}: {entry['commit'][:7]} is not pushed yet; clone needs it pushed")
     CONFIG.write_text(json.dumps(config, indent=2) + "\n")
     PYPROJECT.write_text(text)
     return 0
