@@ -82,12 +82,13 @@ package), TypeScript from `@mbse/programs` (next to `@mbse/schemas`).
 
 ## Getting started
 
-mbse-programs depends on [mbse-schemas](https://github.com/pitaman71/mbse-schemas), which lives beside it as a
-sibling checkout. Clone this repository, then the siblings at the versions it pins (`siblings.json`):
+mbse-programs depends on [mbse-schemas](https://github.com/pitaman71/mbse-schemas) and
+[mbse-expressions](https://github.com/pitaman71/mbse-expressions), which live beside it as sibling checkouts. Clone this
+repository, then the siblings at the versions it pins (`siblings.json`):
 
 ```sh
 git clone git@github.com:pitaman71/mbse-programs.git
-python3 mbse-programs/scripts/siblings.py clone   # mbse-schemas, beside it, at its pinned tag
+python3 mbse-programs/scripts/siblings.py clone   # mbse-schemas and mbse-expressions, beside it, at their pinned tags
 cd mbse-programs
 ```
 
@@ -106,7 +107,7 @@ python3 scripts/siblings.py workspace ../worktrees/b --branch b --edit mbse-sche
 python3 scripts/siblings.py remove ../worktrees/a                                   # once the work is merged
 ```
 
-Python (3.11+, managed with [uv](https://docs.astral.sh/uv/)); mbse-schemas is installed from the sibling:
+Python (3.11+, managed with [uv](https://docs.astral.sh/uv/)); the siblings are installed from their checkouts:
 
 ```sh
 cd python3
@@ -128,7 +129,7 @@ npm test                       # type-check and run the test suites
 
 | Read | For |
 |---|---|
-| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, transpiling, and open questions |
+| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, transpiling, bridges to mbse-expressions, and open questions |
 | [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [`AGENTS.md`](AGENTS.md), [`llms.txt`](llms.txt) | Guidance for AI agents |
 | [`python3/tests/TestPlan.md`](python3/tests/TestPlan.md), [`typescript5/tests/TestPlan.md`](typescript5/tests/TestPlan.md) | The test suites |
@@ -138,8 +139,8 @@ npm test                       # type-check and run the test suites
 
 ```
 docs/                     the design (PROGRAMS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
-python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, TypeScript, Transpilers, Conformance) and tests
-typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, TypeScript, Transpilers, Conformance) and tests
+python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, TypeScript, Transpilers, Bridges, Conformance) and tests
+typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, TypeScript, Transpilers, Bridges, Conformance) and tests
 conformance/              the corpus's sources, the files each implementation writes from them, and the transpilers'
                           programs
 ```
@@ -162,6 +163,9 @@ in-place rewriting, and definitions with lookup), and three languages:
 And one transpiler, TypeScript to Python, over the subset of TypeScript that ordinary code is written in: statements,
 functions, classes, enums, imports and type annotations, with JavaScript's common globals and methods mapped to
 Python's. Its programs print the same in Node and, translated, in CPython.
+
+And one bridge, between mbse-expressions' Python dialect and Python's syntax trees, both ways: a rule stored as data
+becomes a Python expression or function, and Python source becomes a rule, in TypeScript too.
 
 Not built yet: the constructs the parsers cannot read ([PROGRAMS.md](docs/PROGRAMS.md#parsing),
 [Parsing Python](docs/PROGRAMS.md#parsing-python), [Parsing TypeScript](docs/PROGRAMS.md#parsing-typescript)) are

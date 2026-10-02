@@ -7,8 +7,10 @@
  *
  * The framework is `@mbse/programs/Framework`, and the languages are modules beside it: `@mbse/programs/Ccpp` for C
  * and C++, `@mbse/programs/Python` for Python, and `@mbse/programs/TypeScript` for TypeScript and JavaScript.
- * `@mbse/programs/Transpilers` translates between them. */
+ * `@mbse/programs/Transpilers` translates between them, and `@mbse/programs/Bridges` between them and mbse-expressions'
+ * dialects. */
 
+export * as Bridges from "./Bridges/index.js";
 export * as Ccpp from "./Ccpp/index.js";
 export * as Framework from "./Framework/index.js";
 export * as Python from "./Python/index.js";

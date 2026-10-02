@@ -20,6 +20,7 @@ and read back as JSON or YAML, byte-identical between the Python and TypeScript 
 | `<Language>.Definitions` | semantically, as the standard's scopes | `define(unit)`, which builds a `Program` from a tree, and `referents` |
 | `<Language>.<Standard>` | | `STANDARD`, `parse`, `print` and `check` for one standard |
 | `Transpilers.<Source>To<Target>` | | `transpile(tree)`, which maps one language's tree to another's |
+| `Bridges.<Language>` | | a language's syntax nodes and the terms of an mbse-expressions dialect, both ways |
 
 The languages so far:
 
@@ -401,6 +402,50 @@ The first transpiler was written to test the framework, and found:
 - **Without types, methods map by name.** `x.length` is `len(x)` whatever `x` is; only a member the program declares
   stops the mapping.
 
+## Bridges
+
+A bridge carries expressions between one of mbse-expressions' dialects and a language's syntax trees, both ways, tree
+to tree, so that a rule stored as data becomes code, and code becomes a rule that can be stored, evaluated and
+translated to the other dialects. mbse-expressions is a sibling of this repository, as mbse-schemas is.
+
+### Python
+
+`Bridges.Python` maps the Python dialect's terms to Python syntax nodes and back:
+
+| Python dialect | Python syntax nodes |
+|---|---|
+| `constant` | the literal `repr` writes; a negative number is a negation, and a float that is not finite `float('nan')` or `float('inf')` |
+| `name`, `attribute`, `call`, `ifexp` | `Name`, `Attribute`, `Call`, `IfExp` |
+| `subscript` (a `str` key) and `index` | `Subscript`, whose slice is the key's literal or the index |
+| `compare`, `binop`, `unaryop` | `Compare` of one comparison, `BinOp`, `UnaryOp` |
+| `boolop` | `BoolOp`, whose operands nested to the left are one list: `a and b and c` |
+| `generator` | `GeneratorExp` of one `for`, over a name |
+| `let` | `(lambda name: body)(value)` |
+| `import`, `importfrom` | `Import` and `ImportFrom` statements, before the expression |
+
+- `expression(term)` gives the expression, `module(term)` the module of its imports and then the expression, and
+  `function_(name, parameters, term)` the function that returns it, its imports first. Every term has a counterpart,
+  and the printed Python is the dialect's own `render`, but for the parentheses the printer chooses.
+- `term(expression)` and `term_of_module(module)` read the other way, as the dialect's `parse` reads source: written
+  parentheses are dropped, comments skipped, and `and` and `or` of more than two operands nest to the left. Literals
+  are decoded as Python decodes them (`decode`): ints, floats, strings and bytes with their prefixes, escapes and
+  adjacent literals. What the dialect cannot hold raises `TranspileError` at its path: a comparison of more than one
+  operator, an operator outside the dialect's vocabulary (`is`, `@`), a keyword argument, a slice, any other lambda, a
+  generator of more than one `for`, `None`, `...`, an imaginary number, a `\N{...}` escape, and any other kind.
+- With the Python standards' parsers, this reads Python source into the dialect in TypeScript too, where the dialect
+  alone cannot, since its `parse` uses Python's own.
+
+```python
+from mbse.Expressions.Dialects.Python import Evaluators
+from mbse.Programs.Bridges import Python as B
+from mbse.Programs.Python import Python314
+
+rule = B.term_of_module(Python314.parse("age >= 18 and len(email) > 0"))   # source into a rule
+Evaluators.OfAny(rule, {"age": 20, "email": "a@b"})                         # True, by the dialect
+Python314.print(B.function_("is_contactable", ["age", "email"], rule))
+# 'def is_contactable(age, email):\n    return age >= 18 and len(email) > 0'
+```
+
 ## Open questions
 
 - **Value objects in lists.** Children are linked through the relation `Programs.Children` rather than as nested value
@@ -422,11 +467,16 @@ The first transpiler was written to test the framework, and found:
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
 - **More languages.** Verilog is planned as a further language over the same framework.
+- **More bridges.** Ccpp, TypeScript and, once the language exists here, SystemVerilog have dialects in
+  mbse-expressions; each would have a bridge as Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from
   a checker run on the source, or from definitions that resolve members.
 
 ## Resolved
 
+- Bridges between mbse-expressions' dialects and the languages live here, in `Bridges`, so that mbse-expressions
+  depends only on mbse-schemas and keeps no parser. A bridge reads source as the dialect's own `parse` does, and
+  writes what the dialect's `render` writes.
 - The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as
   they are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by
   the others, and pins the versions it was tested with in `siblings.json`: a sibling is compatible at the same minor

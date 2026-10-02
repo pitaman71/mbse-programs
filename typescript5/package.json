@@ -27,6 +27,8 @@
     "./Python/*": "./src/Python/*.ts",
     "./TypeScript": "./src/TypeScript/index.ts",
     "./TypeScript/*": "./src/TypeScript/*.ts",
+    "./Bridges": "./src/Bridges/index.ts",
+    "./Bridges/*": "./src/Bridges/*.ts",
     "./Transpilers": "./src/Transpilers/index.ts",
     "./Transpilers/*": "./src/Transpilers/*.ts",
     "./Conformance/*": "./src/Conformance/*.ts"
@@ -35,7 +37,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "postinstall": "python3 ../scripts/siblings.py check && npm --prefix ../../mbse-schemas/typescript5 install --no-audit --no-fund",
+    "postinstall": "python3 ../scripts/siblings.py check && npm --prefix ../../mbse-expressions/typescript5 install --no-audit --no-fund && npm --prefix ../../mbse-schemas/typescript5 install --no-audit --no-fund",
     "typecheck": "tsc --noEmit",
     "test": "tsx tests/run-notebooks.ts --typecheck",
     "conformance": "tsx src/Conformance/write.ts",
@@ -49,6 +51,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@mbse/expressions": "file:../../mbse-expressions/typescript5",
     "@mbse/schemas": "file:../../mbse-schemas/typescript5",
     "tree-sitter-cpp": "0.23.4",
     "tree-sitter-python": "0.25.0",

@@ -7,7 +7,8 @@ parse and print source text by delegating to an established parser. The language
 C++20, parsed by tree-sitter-cpp), Python (kinds following `ast`, with Python 3.12 and 3.14, parsed by
 tree-sitter-python) and TypeScript (TypeScript and JavaScript, kinds following typescript-estree, with TypeScript 5.0
 and 5.9 and ES2020 and ES2025, with JSX or without, parsed by tree-sitter-typescript). A first transpiler translates a
-subset of TypeScript into Python. Two equivalent implementations exist: `python3/` and `typescript5/`.
+subset of TypeScript into Python, and a bridge carries expressions between mbse-expressions' Python dialect and Python's
+trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
 
 ## Start here
 
@@ -56,7 +57,7 @@ subset of TypeScript into Python. Two equivalent implementations exist: `python3
 ## Commands
 
 ```sh
-python3 scripts/siblings.py clone            # mbse-schemas, beside this repository, at its pinned tag
+python3 scripts/siblings.py clone            # mbse-schemas and mbse-expressions, beside this repository, at their tags
 python3 scripts/siblings.py check            # the siblings are present and compatible with siblings.json
 cd python3 && uv sync --all-extras           # Python: use uv, never pip
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
@@ -71,5 +72,6 @@ npm run conformance
 
 - [mbse-schemas](https://github.com/pitaman71/mbse-schemas): the schemas trees are serialized with. It is a
   sibling checkout, `../mbse-schemas`, pinned by version in `siblings.json` (see `scripts/siblings.py`).
-- [mbse-expressions](https://github.com/pitaman71/mbse-expressions): expressions as data, the sibling this repository's
-  conventions follow.
+- [mbse-expressions](https://github.com/pitaman71/mbse-expressions): expressions as data, whose dialects the bridges
+  (`Bridges`) carry to and from the languages' trees. It is a sibling checkout, `../mbse-expressions`, pinned in
+  `siblings.json`, and this repository's conventions follow it.

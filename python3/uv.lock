@@ -459,10 +459,37 @@ wheels = [
 ]
 
 [[package]]
+name = "mbse-expressions"
+version = "0.1.0"
+source = { editable = "../../mbse-expressions/python3" }
+dependencies = [
+    { name = "mbse-schemas" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mbse-schemas", editable = "../../mbse-schemas/python3" },
+    { name = "mbse-schemas", extras = ["yaml"], marker = "extra == 'yaml'", editable = "../../mbse-schemas/python3" },
+    { name = "numpy", marker = "extra == 'numpy'", specifier = ">=2.4.6" },
+]
+provides-extras = ["yaml", "numpy"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "coverage", extras = ["toml"], specifier = ">=7.10" },
+    { name = "ipykernel", specifier = ">=7.3.0" },
+    { name = "nbformat", specifier = ">=5.11.1" },
+    { name = "nbmake", specifier = ">=1.5.5" },
+    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "pyyaml", specifier = ">=6" },
+]
+
+[[package]]
 name = "mbse-programs"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "mbse-expressions" },
     { name = "mbse-schemas" },
     { name = "tree-sitter" },
     { name = "tree-sitter-cpp" },
@@ -487,6 +514,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "mbse-expressions", editable = "../../mbse-expressions/python3" },
     { name = "mbse-schemas", editable = "../../mbse-schemas/python3" },
     { name = "mbse-schemas", extras = ["yaml"], marker = "extra == 'yaml'", editable = "../../mbse-schemas/python3" },
     { name = "tree-sitter", specifier = ">=0.25" },
