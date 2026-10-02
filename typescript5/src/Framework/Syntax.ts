@@ -752,7 +752,7 @@ function nativeProperty(name: string, native: NativeToken) {
   return (p: Schemas.OfProperty.Builder) => p.name(name).of((t) => t.as_native(native as Schemas.OfNative.Spec));
 }
 
-export const Children = new Schemas.OfRelation.Builder().links("parent", "child")
+export const Children = new Schemas.OfRelation.Builder().name(CHILDREN).links("parent", "child")
   .properties(nativeProperty("property", String), nativeProperty("index", BigInt)).unique("child").create();
 const CHILDREN_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("children").of(Children).me("parent");
 const PARENT_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("parent").of(Children).me("child");
@@ -764,7 +764,7 @@ function schemaOf(kind: SyntaxNodeClass): Schemas.OfObject.Data {
     .map((f) => nativeProperty(f.name, f.native));
   const relations = kind.PROPERTIES.some((f) => f instanceof Child) ? [CHILDREN_ADJACENCY, PARENT_ADJACENCY]
     : [PARENT_ADJACENCY];
-  return new Schemas.OfObject.Builder().ref().properties(nativeProperty("kind", String), ...attributes)
+  return new Schemas.OfObject.Builder().name(kind.NAME).ref().properties(nativeProperty("kind", String), ...attributes)
     .relations(...relations).create();
 }
 
@@ -778,7 +778,7 @@ export class OfStore extends Stores.Catalog implements Stores.Store {
 
   constructor(schemas: ReadonlyMap<string, Schemas.OfObject.Data>, builders: ReadonlyMap<string, typeof Builder>) {
     super();
-    for (const [name, schema] of [...schemas, [CHILDREN, Children] as const]) this.register(name, schema);
+    for (const schema of [...schemas.values(), Children]) this.register(schema);
     for (const [name, builder] of builders) {
       for (const alias of [name, builder.KIND.KIND]) {
         this._factories.set(alias, builder);

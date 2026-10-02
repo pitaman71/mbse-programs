@@ -599,8 +599,8 @@ def _native(name: str, native: type) -> Callable[[Any], Any]:
 
 
 Children = (
-    Schemas.OfRelation.Builder().links("parent", "child").properties(_native("property", str), _native("index", int))
-    .unique("child").create()
+    Schemas.OfRelation.Builder().name(CHILDREN).links("parent", "child")
+    .properties(_native("property", str), _native("index", int)).unique("child").create()
 )
 _CHILDREN = lambda r: r.name("children").of(Children).me("parent")  # noqa: E731
 _PARENT = lambda r: r.name("parent").of(Children).me("child")  # noqa: E731
@@ -611,8 +611,8 @@ def _schema(kind: type[SyntaxNode]) -> Schemas.OfObject.Data:
     properties) and `parent`."""
     attributes = [_native(f.name, f.native) for f in kind.PROPERTIES if isinstance(f, Attribute)]
     relations = [_CHILDREN, _PARENT] if any(isinstance(f, Child) for f in kind.PROPERTIES) else [_PARENT]
-    return (Schemas.OfObject.Builder().ref().properties(_native("kind", str), *attributes).relations(*relations)
-            .create())
+    return (Schemas.OfObject.Builder().name(kind.NAME).ref().properties(_native("kind", str), *attributes)
+            .relations(*relations).create())
 
 
 class OfStore(Stores.Catalog):
@@ -624,8 +624,8 @@ class OfStore(Stores.Catalog):
     def __init__(self, schemas: Mapping[str, Any], builders: Mapping[str, type]):
         super().__init__()
         self._factories: dict[str, type] = {}
-        for name, schema in {**schemas, CHILDREN: Children}.items():
-            self.register(name, schema)
+        for schema in [*schemas.values(), Children]:
+            self.register(schema)
         for name, builder in builders.items():
             for alias in (name, builder._kind.KIND):  # type: ignore[attr-defined]
                 self._factories[alias] = builder
