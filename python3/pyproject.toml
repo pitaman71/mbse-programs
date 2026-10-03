@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mbse-programs"
-version = "0.2.2"
+version = "0.2.3"
 description = "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++, Python, TypeScript and JavaScript, with their definitions, built for transpilers that never parse or print strings"
 keywords = ["ast", "abstract syntax tree", "c++", "c", "python", "typescript", "javascript", "transpiler", "mbse",
             "tree-sitter", "code generation"]
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mbse-expressions>=0.2.2,<0.3",
+    "mbse-expressions>=0.2.3,<0.3",
     "mbse-schemas>=0.4.0,<0.5",
     "tree-sitter>=0.25",
     "tree-sitter-cpp==0.23.4",
