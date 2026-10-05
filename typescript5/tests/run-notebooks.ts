@@ -7,7 +7,7 @@
  *
  *   tsx tests/run-notebooks.ts [--typecheck] [notebook ...]
  *
- * With no notebooks named, it runs every notebook in tests/.
+ * With no notebooks named, it runs every notebook in tests/ and tutorials/.
  *
  * `--typecheck` also type-checks every notebook with the project's tsconfig before running anything.
  */
@@ -77,7 +77,7 @@ const typecheck = args.includes("--typecheck");
 const requested = args.filter((a) => !a.startsWith("--"));
 const notebooks = requested.length > 0
   ? requested.map((n) => resolve(n))
-  : [here].flatMap((folder) =>
+  : [here, join(here, "../tutorials")].flatMap((folder) =>
       readdirSync(folder).filter((n) => n.endsWith(".ipynb")).sort().map((n) => join(folder, n)));
 
 rmSync(build, { recursive: true, force: true });

@@ -5,3 +5,4 @@ export * as Definitions from "./Definitions.js";
 export * as Python312 from "./Python312.js";
 export * as Python314 from "./Python314.js";
 export * as Syntax from "./Syntax.js";
+export { PythonStandard } from "./_Standard.js";

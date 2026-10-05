@@ -1,0 +1,25 @@
+{
+  "//": "For running the sources under Deno, e.g. the Deno Jupyter kernel for the tutorials: imports are written for Node ('./X.js' for X.ts), and the parsers' grammars load from node_modules.",
+  "unstable": [
+    "sloppy-imports"
+  ],
+  "nodeModulesDir": "manual",
+  "imports": {
+    "@mbse/schemas/Framework": "../../mbse-schemas/typescript5/src/Framework/index.ts",
+    "@mbse/schemas/Framework/": "../../mbse-schemas/typescript5/src/Framework/",
+    "@mbse/expressions": "../../mbse-expressions/typescript5/src/index.ts",
+    "@mbse/expressions/Framework": "../../mbse-expressions/typescript5/src/Framework/index.ts",
+    "@mbse/expressions/Framework/": "../../mbse-expressions/typescript5/src/Framework/",
+    "@mbse/expressions/Translators": "../../mbse-expressions/typescript5/src/Translators/index.ts",
+    "@mbse/expressions/Dialects/Python": "../../mbse-expressions/typescript5/src/Dialects/Python/index.ts",
+    "@mbse/programs": "./src/index.ts",
+    "@mbse/programs/Framework": "./src/Framework/index.ts",
+    "@mbse/programs/Framework/": "./src/Framework/",
+    "@mbse/programs/Ccpp": "./src/Ccpp/index.ts",
+    "@mbse/programs/Python": "./src/Python/index.ts",
+    "@mbse/programs/TypeScript": "./src/TypeScript/index.ts",
+    "@mbse/programs/Bridges": "./src/Bridges/index.ts",
+    "@mbse/programs/Transpilers": "./src/Transpilers/index.ts",
+    "@mbse/expressions/Dialects/Excel": "../../mbse-expressions/typescript5/src/Dialects/Excel/index.ts"
+  }
+}

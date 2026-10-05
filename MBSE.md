@@ -1,5 +1,5 @@
 <!-- nav -->
-[← mbse-programs](README.md) · [Programs design →](docs/PROGRAMS.md)
+[← mbse-programs](README.md) · [Python tutorial →](python3/tutorials/README.md)
 
 # Why the mbse repositories exist
 
@@ -25,4 +25,4 @@ for the AI agents that work in it. Each builds on mbse-schemas, and lives beside
 ---
 
 <!-- nav -->
-[← mbse-programs](README.md) · [Programs design →](docs/PROGRAMS.md)
+[← mbse-programs](README.md) · [Python tutorial →](python3/tutorials/README.md)

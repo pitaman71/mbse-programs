@@ -8,3 +8,4 @@ export * as ECMAScript2025 from "./ECMAScript2025.js";
 export * as Syntax from "./Syntax.js";
 export * as TypeScript50 from "./TypeScript50.js";
 export * as TypeScript59 from "./TypeScript59.js";
+export { TypeScriptStandard, ECMAScriptStandard } from "./_Standard.js";

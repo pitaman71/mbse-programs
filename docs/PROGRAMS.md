@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Why the mbse repositories exist](../MBSE.md) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+[← 8 · From rules to code (TypeScript)](../typescript5/tutorials/08_From_Rules_To_Code.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
 
 # Programs
 
@@ -531,4 +531,4 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 ---
 
 <!-- nav -->
-[← Why the mbse repositories exist](../MBSE.md) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+[← 8 · From rules to code (TypeScript)](../typescript5/tutorials/08_From_Rules_To_Code.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)

@@ -64,6 +64,14 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Clearing a property with a fluent setter | `None` | `null` | each language's empty value | SYN-04 |
 | Checking the Python bridge against Python | BRG-03 checks each source's term against the dialect's `parse`, BRG-04 each literal against `ast.literal_eval`, and BRG-05 runs the function the bridge writes | none | the dialect's `parse` and Python's literals and execution exist only in Python | BRG-03, BRG-04, BRG-05 |
 
+## Tutorials
+
+`python3/tutorials/` and `typescript5/tutorials/` are the same eight case studies, with the same answers; case study 6
+prints the same digest of a snapshot in both. TypeScript narrows syntax nodes' types with `as` and `instanceof`, makes
+other versions' standards with `new`, and, since it can't run Python, shows the generated Python where Python runs it:
+case study 8 evaluates the generated functions' expressions with mbse-expressions' model of Python's rules instead.
+Both are run as tests and committed with outputs (Python's from its kernel, TypeScript's from Deno's Jupyter kernel).
+
 ---
 
 <!-- nav -->

@@ -11,7 +11,7 @@ mbse-schemas is tested in mbse-schemas.
 ## Running
 
 ```sh
-uv run pytest                 # every notebook under tests/
+uv run pytest                 # every notebook under tests/ and tutorials/
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report   # fails below 100%
 uv run python -m mbse.Programs.Conformance.write   # regenerate ../conformance/python3
 ```

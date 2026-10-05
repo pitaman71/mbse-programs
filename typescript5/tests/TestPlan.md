@@ -11,7 +11,7 @@ mbse-schemas is tested in mbse-schemas.
 ## Running
 
 ```sh
-npm test                      # type-check, then every notebook under tests/
+npm test                      # type-check, then every notebook under tests/ and tutorials/
 npm run coverage              # fails below 100% statements, branches, functions or lines
 npm run conformance           # regenerate ../conformance/typescript5
 ```

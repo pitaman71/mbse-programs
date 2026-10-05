@@ -14,6 +14,7 @@ trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
 
 | You want to | Read |
 |---|---|
+| Learn it by example, from code as text to code generated from rules | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
 | Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
 | Use the library: parse, build, rewrite or print trees | [README.md](README.md), then the module docstrings of `Framework/Syntax` and of each language's `Syntax` and `Definitions` |
 | Understand a design rule, a known gap or an open question | [docs/PROGRAMS.md](docs/PROGRAMS.md), by section |
@@ -35,6 +36,9 @@ trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
   classes and byte-identical messages. Each language's `Syntax.ts` mirrors its `Syntax.py` kind for kind and property
   for property, in the same order. JSON output must be byte-identical: regenerate the corpora and let CONF-02 compare
   them. A difference not listed in `docs/EQUIVALENCE.md` is a bug.
+- **Tutorials are tested too.** `pytest` and `npm test` run `tutorials/` beside `tests/`; the two languages tell the
+  same case studies with the same answers. Re-execute a tutorial after a change that alters its output, and commit it
+  with its outputs.
 - **Tests are Jupyter notebooks**, one suite per notebook, with the same case IDs in the same order in both
   languages. Each case is a markdown cell `## ID · title` followed by one code cell. Notebooks are JSON written with
   `indent=1`, `sort_keys=True` and `ensure_ascii=False`.
