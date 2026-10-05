@@ -1,6 +1,6 @@
 {
   "name": "@mbse/programs",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++, Python, TypeScript and JavaScript, with their definitions, built for transpilers that never parse or print strings (TypeScript implementation)",
   "keywords": [
     "ast",
