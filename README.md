@@ -1,5 +1,9 @@
 # mbse-programs
 
+`mbse-programs` is where executable specifications become production source code: each target language's complete
+syntax tree is data, so generators build and rewrite real programs, not text templates, and print them through each
+language's established tooling. It is the code layer of the mbse repositories' [executable specifications](MBSE.md).
+
 Programs as language-neutral data: complete abstract syntax trees, which a transpiler builds, reads and rewrites in
 memory without ever parsing or printing a string. Each language's trees cover the union of its most recent standards,
 every detail included, and record which standard has each construct. Standards parse source text into trees, delegating

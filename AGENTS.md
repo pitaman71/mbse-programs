@@ -14,6 +14,7 @@ trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
 
 | You want to | Read |
 |---|---|
+| Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
 | Use the library: parse, build, rewrite or print trees | [README.md](README.md), then the module docstrings of `Framework/Syntax` and of each language's `Syntax` and `Definitions` |
 | Understand a design rule, a known gap or an open question | [docs/PROGRAMS.md](docs/PROGRAMS.md), by section |
 | Change the framework, a kind, the parser or the printer | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |

@@ -4,6 +4,10 @@
 
 Trees are plain mutable objects with typed properties; every kind has an mbse-schemas meta-schema, so trees serialize as JSON or YAML. `Definitions` gives the entities a program declares and resolves names from where they are written.
 
+## Why
+
+- [MBSE.md](https://github.com/pitaman71/mbse-programs/blob/main/MBSE.md): executable specifications, and each mbse repository's part in them
+
 ## Using it
 
 - [README](https://github.com/pitaman71/mbse-programs/blob/main/README.md): a complete example in each language
