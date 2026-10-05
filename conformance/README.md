@@ -1,3 +1,6 @@
+<!-- nav -->
+[← Equivalence of the implementations](../docs/EQUIVALENCE.md) · [Home](../README.md) · [Python test plan →](../python3/tests/TestPlan.md)
+
 # Conformance corpus
 
 `sources/` holds source files. Each implementation parses them and commits what it writes here, under
@@ -31,3 +34,8 @@ Regenerate:
 (cd python3 && uv run python -m mbse.Programs.Conformance.write)
 (cd typescript5 && npm run conformance)
 ```
+
+---
+
+<!-- nav -->
+[← Equivalence of the implementations](../docs/EQUIVALENCE.md) · [Home](../README.md) · [Python test plan →](../python3/tests/TestPlan.md)

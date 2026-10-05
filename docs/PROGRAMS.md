@@ -1,3 +1,6 @@
+<!-- nav -->
+[← Why the mbse repositories exist](../MBSE.md) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+
 # Programs
 
 mbse-programs represents programs as complete abstract syntax trees: plain in-memory objects that a transpiler builds,
@@ -524,3 +527,8 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   differ.
 - A `break` or `continue` outside a loop, which the parser accepts, fails to transpile rather than translating into
   invalid Python.
+
+---
+
+<!-- nav -->
+[← Why the mbse repositories exist](../MBSE.md) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)

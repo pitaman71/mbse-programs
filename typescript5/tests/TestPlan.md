@@ -1,3 +1,6 @@
+<!-- nav -->
+[← Python test plan](../../python3/tests/TestPlan.md) · [Home](../../README.md)
+
 # Test plan — typescript5
 
 Scope: everything under `typescript5/src` (the framework, and the Ccpp, Python and TypeScript languages with their standards,
@@ -35,3 +38,8 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `16_Conformance.ipynb` | CONF | 3 | as in Python, from this side |
 
 Total: 115 cases, with the same IDs in the same order in both implementations.
+
+---
+
+<!-- nav -->
+[← Python test plan](../../python3/tests/TestPlan.md) · [Home](../../README.md)

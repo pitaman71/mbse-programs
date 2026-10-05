@@ -460,7 +460,7 @@ wheels = [
 
 [[package]]
 name = "mbse-expressions"
-version = "0.2.4"
+version = "0.2.5"
 source = { editable = "../../mbse-expressions/python3" }
 dependencies = [
     { name = "mbse-schemas" },

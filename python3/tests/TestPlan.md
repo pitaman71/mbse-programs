@@ -1,3 +1,6 @@
+<!-- nav -->
+[← Conformance corpus](../../conformance/README.md) · [Home](../../README.md) · [TypeScript test plan →](../../typescript5/tests/TestPlan.md)
+
 # Test plan — python3
 
 Scope: everything under `python3/mbse/Programs` (the framework, and the Ccpp, Python and TypeScript languages with their standards,
@@ -35,3 +38,8 @@ uv run python -m mbse.Programs.Conformance.write   # regenerate ../conformance/p
 | `16_Conformance.ipynb` | CONF | 3 | This implementation's corpus files are current, for every language; every other implementation wrote the same bytes; every snapshot reads back into a valid tree that prints the same text |
 
 Total: 115 cases, with the same IDs in the same order in both implementations.
+
+---
+
+<!-- nav -->
+[← Conformance corpus](../../conformance/README.md) · [Home](../../README.md) · [TypeScript test plan →](../../typescript5/tests/TestPlan.md)

@@ -1,3 +1,6 @@
+<!-- nav -->
+[Why the mbse repositories exist →](MBSE.md)
+
 # mbse-programs
 
 `mbse-programs` is where executable specifications become production source code: each target language's complete
@@ -144,11 +147,11 @@ npm test                       # type-check and run the test suites
 
 | Read | For |
 |---|---|
-| [`docs/PROGRAMS.md`](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, transpiling, bridges to mbse-expressions, and open questions |
-| [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
-| [`AGENTS.md`](AGENTS.md), [`llms.txt`](llms.txt) | Guidance for AI agents |
-| [`python3/tests/TestPlan.md`](python3/tests/TestPlan.md), [`typescript5/tests/TestPlan.md`](typescript5/tests/TestPlan.md) | The test suites |
-| [`conformance/`](conformance/README.md) | The shared corpus both implementations must parse, write and print identically, and the transpilers' programs |
+| [Programs design](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, transpiling, bridges to mbse-expressions, and open questions |
+| [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
+| [Guide for AI agents](AGENTS.md), [Summary for LLMs](llms.txt) | Guidance for AI agents |
+| [Python test plan](python3/tests/TestPlan.md), [TypeScript test plan](typescript5/tests/TestPlan.md) | The test suites |
+| [Conformance corpus](conformance/README.md) | The shared corpus both implementations must parse, write and print identically, and the transpilers' programs |
 
 ## Repository layout
 
@@ -182,7 +185,12 @@ Python's. Its programs print the same in Node and, translated, in CPython.
 And one bridge, between mbse-expressions' Python dialect and Python's syntax trees, both ways: a rule stored as data
 becomes a Python expression or function, and Python source becomes a rule, in TypeScript too.
 
-Not built yet: the constructs the parsers cannot read ([PROGRAMS.md](docs/PROGRAMS.md#parsing),
+Not built yet: the constructs the parsers cannot read ([Parsing, in the design](docs/PROGRAMS.md#parsing),
 [Parsing Python](docs/PROGRAMS.md#parsing-python), [Parsing TypeScript](docs/PROGRAMS.md#parsing-typescript)) are
 built and printed but not parsed; overloads, dependent names, attributes and properties are not resolved; further
 languages (Verilog) are planned, and transpilers beyond the first.
+
+---
+
+<!-- nav -->
+[Why the mbse repositories exist →](MBSE.md)

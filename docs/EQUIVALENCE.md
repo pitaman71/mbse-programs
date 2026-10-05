@@ -1,7 +1,10 @@
+<!-- nav -->
+[← Programs design](PROGRAMS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+
 # Equivalence of the implementations
 
 `python3/` and `typescript5/` implement the same package, and follow mbse-schemas' rules for equivalence
-([`EQUIVALENCE.md`](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
+([mbse-schemas' equivalence](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
 specific to this package: the framework, the Ccpp, Python and TypeScript languages with their standards, and the
 transpilers.
@@ -60,3 +63,8 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Fluent builders' types | setters are generated, and `LANGUAGE.Builders` is untyped | setters are generated, and typed from the language's module: `LANGUAGE` is a `Language<typeof Syntax>`, whose `Builders` give each kind a `Fluent` builder whose setters take only the kinds their properties hold | TypeScript checks a tree's shape when it compiles; Python has no such check | SYN-04 |
 | Clearing a property with a fluent setter | `None` | `null` | each language's empty value | SYN-04 |
 | Checking the Python bridge against Python | BRG-03 checks each source's term against the dialect's `parse`, BRG-04 each literal against `ast.literal_eval`, and BRG-05 runs the function the bridge writes | none | the dialect's `parse` and Python's literals and execution exist only in Python | BRG-03, BRG-04, BRG-05 |
+
+---
+
+<!-- nav -->
+[← Programs design](PROGRAMS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
