@@ -7,4 +7,8 @@ https://github.com/pitaman71/mbse-programs.
 
 The framework is `mbse.Programs.Framework`, and the languages are packages beside it: `mbse.Programs.Ccpp` for C and
 C++, `mbse.Programs.Python` for Python, and `mbse.Programs.TypeScript` for TypeScript and JavaScript.
-`mbse.Programs.Transpilers` translates between them."""
+`mbse.Programs.Transpilers` translates between them, and `mbse.Programs.Bridges` between them and mbse-expressions'
+dialects.
+
+For AI agents: read `skill/SKILL.md` next to this file first. It says when to use this package, the rules that prevent
+most mistakes, and which reference to load for a task."""

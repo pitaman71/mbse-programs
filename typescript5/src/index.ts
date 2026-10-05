@@ -8,7 +8,10 @@
  * The framework is `@mbse/programs/Framework`, and the languages are modules beside it: `@mbse/programs/Ccpp` for C
  * and C++, `@mbse/programs/Python` for Python, and `@mbse/programs/TypeScript` for TypeScript and JavaScript.
  * `@mbse/programs/Transpilers` translates between them, and `@mbse/programs/Bridges` between them and mbse-expressions'
- * dialects. */
+ * dialects.
+ *
+ * For AI agents: read `skill/SKILL.md` at the root of this package first. It says when to use this package, the rules
+ * that prevent most mistakes, and which reference to load for a task. */
 
 export * as Bridges from "./Bridges/index.js";
 export * as Ccpp from "./Ccpp/index.js";

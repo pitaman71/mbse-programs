@@ -14,6 +14,9 @@ Trees are plain mutable objects with typed properties; every kind has an mbse-sc
 
 ## Using it
 
+- [Agent skill](https://github.com/pitaman71/mbse-programs/blob/main/skills/mbse-programs/SKILL.md): when to use it, the rules that prevent most mistakes, and references loaded per task
+- [Python](https://github.com/pitaman71/mbse-programs/blob/main/skills/mbse-programs/references/python.md) and [TypeScript](https://github.com/pitaman71/mbse-programs/blob/main/skills/mbse-programs/references/typescript.md): a complete program, cheat sheet and traps
+- [Languages](https://github.com/pitaman71/mbse-programs/blob/main/skills/mbse-programs/references/languages.md) and [transpiling](https://github.com/pitaman71/mbse-programs/blob/main/skills/mbse-programs/references/transpiling.md): each language's kinds, standards and gaps; rewriting, transpilers and bridges
 - [README](https://github.com/pitaman71/mbse-programs/blob/main/README.md): a complete example in each language
 - [PROGRAMS.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md): trees, standards, Ccpp, Python and TypeScript, parsing and its known gaps, printing, definitions, transpiling, bridges, and open questions
 

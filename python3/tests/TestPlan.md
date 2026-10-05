@@ -36,8 +36,9 @@ uv run python -m mbse.Programs.Conformance.write   # regenerate ../conformance/p
 | `14_TypeScriptToPython.ipynb` | TRN | 7 | The transpiler from TypeScript to Python: its programs' translations are current, and print what the programs print, run in CPython; statements, loops counted as `range`, `do ... while` and `switch`; functions, lambdas, hoisted functions, `global` and `nonlocal`; classes, their fields, constructors, accessors and static and abstract members; expressions, `??`, objects, and the globals and methods mapped by name; types as annotations, enums and imports; what is not supported, failing at the syntax node's path |
 | `15_PythonBridge.ipynb` | BRG | 6 | The bridge between mbse-expressions' Python dialect and Python's trees: every term writes what the dialect renders and reads back; constants as literals and negations; source read as the dialect's own `parse` reads it (checked against it); literals decoded as Python decodes them (checked against `ast.literal_eval`); a rule written as a function, run by Python and evaluated by the dialect alike; what the dialect cannot hold, at its path |
 | `16_Conformance.ipynb` | CONF | 3 | This implementation's corpus files are current, for every language; every other implementation wrote the same bytes; every snapshot reads back into a valid tree that prints the same text |
+| `17_Skill.ipynb` | SKL | 3 | The agent guides stay true: the packaged copy of the skill matches `skills/mbse-programs/`; the skill's complete Python program runs; every link in `AGENTS.md`, `llms.txt` and the skill resolves, anchors included |
 
-Total: 115 cases, with the same IDs in the same order in both implementations.
+Total: 118 cases, with the same IDs in the same order in both implementations.
 
 ---
 

@@ -16,7 +16,7 @@ trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
 |---|---|
 | Learn it by example, from code as text to code generated from rules | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
 | Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
-| Use the library: parse, build, rewrite or print trees | [README.md](README.md), then the module docstrings of `Framework/Syntax` and of each language's `Syntax` and `Definitions` |
+| Use the library: parse, build, rewrite, check, print, transpile or bridge trees | [skills/mbse-programs/SKILL.md](skills/mbse-programs/SKILL.md), a skill. It loads its references only as needed |
 | Understand a design rule, a known gap or an open question | [docs/PROGRAMS.md](docs/PROGRAMS.md), by section |
 | Change the framework, a kind, the parser or the printer | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Change or add a transpiler | [docs/PROGRAMS.md, Transpiling](docs/PROGRAMS.md#transpiling), then the transpiler's module docstring |
@@ -39,6 +39,10 @@ trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
 - **Tutorials are tested too.** `pytest` and `npm test` run `tutorials/` beside `tests/`; the two languages tell the
   same case studies with the same answers. Re-execute a tutorial after a change that alters its output, and commit it
   with its outputs.
+- **The skill is packaged with each implementation.** After editing `skills/mbse-programs/`, run `skills/sync.sh`;
+  SKL-01 fails until the copies match. Every fenced block tagged `python` or `typescript` in the skill is a complete
+  program that SKL-02 runs; tag fragments `python fragment` or `typescript fragment`. SKL-03 checks every link in this
+  file, `llms.txt` and the skill.
 - **Tests are Jupyter notebooks**, one suite per notebook, with the same case IDs in the same order in both
   languages. Each case is a markdown cell `## ID · title` followed by one code cell. Notebooks are JSON written with
   `indent=1`, `sort_keys=True` and `ensure_ascii=False`.

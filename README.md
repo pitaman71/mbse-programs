@@ -150,7 +150,7 @@ npm test                       # type-check and run the test suites and the tuto
 | [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Eight case studies, from code as text to code generated from rules: trees, rewriting, standards, names, three languages, snapshots, transpiling and bridges. Start here. |
 | [Programs design](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, transpiling, bridges to mbse-expressions, and open questions |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
-| [Guide for AI agents](AGENTS.md), [Summary for LLMs](llms.txt) | Guidance for AI agents |
+| [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-programs/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
 | [Python test plan](python3/tests/TestPlan.md), [TypeScript test plan](typescript5/tests/TestPlan.md) | The test suites |
 | [Conformance corpus](conformance/README.md) | The shared corpus both implementations must parse, write and print identically, and the transpilers' programs |
 
@@ -160,6 +160,7 @@ npm test                       # type-check and run the test suites and the tuto
 docs/                     the design (PROGRAMS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
 python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, TypeScript, Transpilers, Bridges, Conformance), tests and tutorials
 typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, TypeScript, Transpilers, Bridges, Conformance), tests and tutorials
+skills/                   the agent skill (SKILL.md plus per-task references); skills/sync.sh copies it into both packages
 conformance/              the corpus's sources, the files each implementation writes from them, and the transpilers'
                           programs
 ```
