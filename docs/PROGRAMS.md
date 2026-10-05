@@ -452,6 +452,11 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 
 ## Open questions
 
+- **Moving to reference front ends.** Each language moves from tree-sitter to its own reference front end (see
+  Resolved), one at a time: SystemVerilog first, as a new language on slang, then Python, TypeScript and Ccpp. Until a
+  language moves, its tree-sitter parser stays, with the pre-pass and gaps described above. Open: how the TypeScript
+  implementation obtains trees from front ends that run in Python (a subprocess exchanging JSON snapshots, or another
+  channel), and whether printing can move to the front ends' own printers where they print trees, not only text.
 - **Value objects in lists.** Children are linked through the relation `Programs.Children` rather than as nested value
   objects in an indexed list, which mbse-schemas now has (`as_indexed`). Linking keeps parity with mbse-expressions'
   arguments, and gives every syntax node an identity; nesting would make snapshots smaller and their order explicit.
@@ -470,7 +475,7 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **More languages.** Verilog is planned as a further language over the same framework.
+- **More languages.** Verilog and SystemVerilog are in progress, as one tree language on slang (see above).
 - **More bridges.** Ccpp, TypeScript and, once the language exists here, SystemVerilog have dialects in
   mbse-expressions; each would have a bridge as Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from
@@ -478,6 +483,21 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 
 ## Resolved
 
+- tree-sitter was a bootstrap, not the foundation. It is an editor's parser: it approximates each grammar, lags the
+  standards, and only reads. Each language moves to its reference front end, parsing in the runtime that has it, and
+  the implementations exchange trees as JSON snapshots, which are byte-identical: SystemVerilog on slang (`pyslang`),
+  Python on CPython's `ast`, TypeScript and JavaScript on the TypeScript compiler API, and C and C++ on Clang
+  (`clang.cindex`). New languages are built on their front end directly, never on tree-sitter.
+- Ccpp reads with `clang.cindex` given the code's real compile flags (from `compile_commands.json`: include paths and
+  `-std`), and refuses to parse when Clang reports an error, so that nothing is dropped silently: probed with libclang
+  18.1.1, Clang drops declarations and statements that name undeclared things, whatever recovery flags it is given.
+  Spec fidelity and compilable code come first; fragments and code without its headers are out of scope.
+- Text pre-passes, which rewrite source text before a parser reads it, are bugs: they hide a parser's gaps instead of
+  reporting them. They go when each language moves to its front end, not separately. Corrections of how a parser
+  groups or reads a tree, made on the tree, are kept, and so are converters from a parser's tree to the language's
+  kinds.
+- Printers stay hand-written for now. slang's `SyntaxPrinter` writes tokens and trivia only (no parentheses, no
+  layout); `ast.unparse` and the TypeScript compiler's printer print fully; nothing prints C++ from a tree.
 - Bridges between mbse-expressions' dialects and the languages live here, in `Bridges`, so that mbse-expressions
   depends only on mbse-schemas and keeps no parser. A bridge reads source as the dialect's own `parse` does, and
   writes what the dialect's `render` writes.
