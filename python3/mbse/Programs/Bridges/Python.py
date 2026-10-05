@@ -8,9 +8,9 @@ number a negation, and a float that is not finite `float('nan')` or `float('inf'
 
 From syntax nodes to terms: `term(expression)` and `term_of_module(module)`, which reads a module of imports, then one
 expression (comments are skipped), as the dialect's `parse` reads source. They raise `TranspileError` at the first
-syntax node the dialect cannot hold, with its path: a comparison of more than one operator, a keyword argument, a
-slice, a lambda other than `(lambda name: body)(value)` (a let), a generator of more than one `for`, and any other kind
-of expression. `and` and `or` of more than two operands nest to the left. Literals are decoded as Python decodes them:
+syntax node the dialect cannot hold, with its path: a keyword argument, a slice, a lambda other than `(lambda name: body)(value)` (a let), a generator of more than one `for`, and any other kind
+of expression. `and` and `or` of more than two operands nest to the left, and a chained comparison (`a < b < c`) is
+`and` of comparisons that share their middle operands. Literals are decoded as Python decodes them:
 ints, floats, strings and bytes (with their prefixes, escapes and adjacent literals joined), and `True` and `False`;
 `None`, `...`, imaginary numbers and `\\N{...}` escapes have no counterpart.
 """
@@ -199,12 +199,15 @@ class _Reader:
                                *(self.term(c) for c in clause.ifs))
         if isinstance(node, P.Call):
             return self.call(node)
-        if isinstance(node, P.Compare):
-            if len(node.comparisons) != 1:
-                raise self.error(node, "a comparison has one operator")
-            comparison = node.comparisons[0]
-            self.operator(comparison, comparison.op, Domains.COMPARE)
-            return E.compare(comparison.op, self.term(node.left), self.term(comparison.comparator))
+        if isinstance(node, P.Compare):  # a chain a < b < c is a < b and b < c, the middle operand shared
+            left, result = self.term(node.left), None
+            for comparison in node.comparisons:
+                self.operator(comparison, comparison.op, Domains.COMPARE)
+                right = self.term(comparison.comparator)
+                compare = E.compare(comparison.op, left, right)
+                result = compare if result is None else E.boolop("and", result, compare)
+                left = right
+            return result
         if isinstance(node, P.BoolOp):
             result = self.term(node.values[0])
             for value in node.values[1:]:

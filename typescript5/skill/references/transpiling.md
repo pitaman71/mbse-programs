@@ -55,8 +55,8 @@ Bridge.function_("in_range", ["this"], term)  # def in_range(this): return ...
 Bridge.term(expression_node)                  # Python syntax node -> dialect term; Bridge.term_of_module(module)
 ```
 
-What the dialect can't hold raises `TranspileError` at its path: more than one comparison operator in a comparison,
-`is`, `@`, keyword arguments, slices, other lambdas, generators of more than one `for`, `None`, `...`, imaginary numbers.
+A chained comparison reads as `and` of comparisons sharing their middle operands, as the dialect's own `FromText`
+reads it. What the dialect can't hold raises `TranspileError` at its path: `is`, `@`, keyword arguments, slices, other lambdas, generators of more than one `for`, `None`, `...`, imaginary numbers.
 In TypeScript the bridge reads Python source into rules too, through the Python standards' parsers.
 
 ## Writing a transpiler

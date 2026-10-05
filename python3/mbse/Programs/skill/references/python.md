@@ -120,8 +120,7 @@ JSON.ToJSON(P.LANGUAGE.Builders).Reachable(P.Module.Schema, tree)           # fr
   ones precedence needs when printed.
 - `define` doesn't resolve attributes, keyword arguments, imported modules' members or builtins: they refer to nothing.
 - A transpiled program keeps what code means where the languages agree; it does not emulate where they differ.
-- The bridge holds only what mbse-expressions' Python dialect can: one comparison operator per comparison, no `is`,
-  no keyword arguments, no slices.
+- The bridge holds only what mbse-expressions' Python dialect can: no `is`, no keyword arguments, no slices.
 
 ## Go deeper
 

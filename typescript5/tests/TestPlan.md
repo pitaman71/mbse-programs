@@ -34,11 +34,11 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `12_TypeScriptPrint.ipynb` | TSPRT | 6 | as in Python |
 | `13_TypeScriptDefinitions.ipynb` | TSDEF | 7 | as in Python |
 | `14_TypeScriptToPython.ipynb` | TRN | 7 | as in Python, but TRN-01 runs the TypeScript programs themselves in Node, and compares what they print with what the Python side's translations print |
-| `15_PythonBridge.ipynb` | BRG | 6 | as in Python, but for the checks against the dialect's `parse`, `ast.literal_eval` and running the function, which need Python |
+| `15_PythonBridge.ipynb` | BRG | 7 | as in Python, but for the checks against the dialect's `parse`, `ast.literal_eval` and running the function, which need Python |
 | `16_Conformance.ipynb` | CONF | 3 | as in Python, from this side |
 | `17_Skill.ipynb` | SKL | 3 | as in Python; SKL-02 type-checks the skill's TypeScript program strictly, then runs it |
 
-Total: 118 cases, with the same IDs in the same order in both implementations.
+Total: 119 cases, with the same IDs in the same order in both implementations.
 
 ---
 

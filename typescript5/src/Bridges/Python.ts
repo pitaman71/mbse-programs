@@ -9,9 +9,9 @@
  *
  * From syntax nodes to terms: `term(expression)` and `term_of_module(module)`, which reads a module of imports, then
  * one expression (comments are skipped), as the dialect's `parse` reads source in Python. They throw `TranspileError`
- * at the first syntax node the dialect cannot hold, with its path: a comparison of more than one operator, a keyword
- * argument, a slice, a lambda other than `(lambda name: body)(value)` (a let), a generator of more than one `for`, and
- * any other kind of expression. `and` and `or` of more than two operands nest to the left. Literals are decoded as
+ * at the first syntax node the dialect cannot hold, with its path: a keyword argument, a slice, a lambda other than `(lambda name: body)(value)` (a let), a generator of more than one `for`, and
+ * any other kind of expression. `and` and `or` of more than two operands nest to the left, and a chained comparison
+ * (`a < b < c`) is `and` of comparisons that share their middle operands. Literals are decoded as
  * Python decodes them: ints, floats, strings and bytes (with their prefixes, escapes and adjacent literals joined), and
  * `True` and `False`; `None`, `...`, imaginary numbers and `\N{...}` escapes have no counterpart. With the Python
  * standards' parsers, this reads Python source into the dialect, which the dialect alone does only in Python.
@@ -212,12 +212,17 @@ class Reader {
         this.term(node.elt as SyntaxNode), ...clause.ifs.map((c) => this.term(c)));
     }
     if (node instanceof P.Call) return this.call(node);
-    if (node instanceof P.Compare) {
-      if (node.comparisons.length !== 1) throw this.error(node, "a comparison has one operator");
-      const comparison = node.comparisons[0] as P.Comparison;
-      this.operator(comparison, comparison.op as string, Domains.COMPARE);
-      return E.compare(comparison.op as string, this.term(node.left as SyntaxNode),
-        this.term(comparison.comparator as SyntaxNode));
+    if (node instanceof P.Compare) { // a chain a < b < c is a < b and b < c, the middle operand shared
+      let left = this.term(node.left as SyntaxNode);
+      let result: Term | null = null;
+      for (const comparison of node.comparisons) {
+        this.operator(comparison, comparison.op as string, Domains.COMPARE);
+        const right = this.term(comparison.comparator as SyntaxNode);
+        const compare = E.compare(comparison.op as string, left, right);
+        result = result === null ? compare : E.boolop("and", result, compare);
+        left = right;
+      }
+      return result as Term;
     }
     if (node instanceof P.BoolOp) {
       let result = this.term(node.values[0] as SyntaxNode);

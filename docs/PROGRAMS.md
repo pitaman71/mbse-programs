@@ -430,10 +430,11 @@ translated to the other dialects. mbse-expressions is a sibling of this reposito
   `function_(name, parameters, term)` the function that returns it, its imports first. Every term has a counterpart,
   and the printed Python is the dialect's own `render`, but for the parentheses the printer chooses.
 - `term(expression)` and `term_of_module(module)` read the other way, as the dialect's `parse` reads source: written
-  parentheses are dropped, comments skipped, and `and` and `or` of more than two operands nest to the left. Literals
+  parentheses are dropped, comments skipped, `and` and `or` of more than two operands nest to the left, and a chained
+  comparison is `and` of comparisons sharing their middle operands (`a < b < c` is `a < b and b < c`). Literals
   are decoded as Python decodes them (`decode`): ints, floats, strings and bytes with their prefixes, escapes and
-  adjacent literals. What the dialect cannot hold raises `TranspileError` at its path: a comparison of more than one
-  operator, an operator outside the dialect's vocabulary (`is`, `@`), a keyword argument, a slice, any other lambda, a
+  adjacent literals. What the dialect cannot hold raises `TranspileError` at its path: an
+  operator outside the dialect's vocabulary (`is`, `@`), a keyword argument, a slice, any other lambda, a
   generator of more than one `for`, `None`, `...`, an imaginary number, a `\N{...}` escape, and any other kind.
 - With the Python standards' parsers, this reads Python source into the dialect in TypeScript too, where the dialect
   alone cannot, since its `parse` uses Python's own.
