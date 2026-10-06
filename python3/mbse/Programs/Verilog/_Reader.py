@@ -354,26 +354,35 @@ class _Reader:
         return out
 
     def design_unit(self, node: Any) -> Any:
-        header = node.header
-        kind = node.kind.name
-        if kind == "PackageDeclaration":
+        out = self.unit_header(node.header)
+        out.labeled = node.blockName is not None
+        out.items = self.items(_nodes(node.members), node.endmodule)
+        return out
+
+    def extern_unit(self, node: Any) -> Any:
+        out = self.unit_header(node.header)
+        out.extern = True
+        return out
+
+    def unit_header(self, header: Any) -> Any:
+        """A design unit as its header declares it."""
+        kind = header.kind.name
+        if kind == "PackageHeader":
             out: Any = S.PackageDeclaration()
-        elif kind == "InterfaceDeclaration":
+        elif kind == "InterfaceHeader":
             out = S.InterfaceDeclaration()
-        elif kind == "ProgramDeclaration":
+        elif kind == "ProgramHeader":
             out = S.ProgramDeclaration()
         else:
             out = S.ModuleDeclaration(keyword=header.moduleKeyword.rawText)
         out.lifetime = _text(header.lifetime) or None
         out.name = self.identifier(header.name)
-        if kind != "PackageDeclaration":
+        if kind != "PackageHeader":
             out.imports = [self.made(i, self.import_declaration(i)) for i in _nodes(header.imports)]
             if header.parameters is not None:
                 out.parameters = self.parameter_ports(header.parameters)
             if header.ports is not None:
                 out.ports = self.ports(header.ports)
-        out.labeled = node.blockName is not None
-        out.items = self.items(_nodes(node.members), node.endmodule)
         return out
 
     def parameter_ports(self, node: Any) -> list[Any]:
@@ -384,7 +393,7 @@ class _Reader:
 
     def ports(self, node: Any) -> list[S.Port]:
         if node.kind.name == "WildcardPortList":
-            raise self.unsupported(node)
+            return [self.made(node, S.WildcardPort())]
         out: list[S.Port] = []
         for port in _nodes(node.ports):
             kind = port.kind.name
@@ -643,6 +652,25 @@ class _Reader:
         if node.withFunction is not None:
             out.function = self.name(node.withFunction.name)
         return out
+
+    def dpi_import(self, node: Any) -> S.DpiImport:
+        out = S.DpiImport(spec=node.specString.rawText[1:-1], property=_text(node.property) or None,
+                          prototype=self.made(node.method, self.prototype(node.method)))
+        if node.c_identifier:
+            out.c_name = self.made(node.c_identifier, S.Identifier(spelling=node.c_identifier.rawText))
+        return out
+
+    def dpi_export(self, node: Any) -> S.DpiExport:
+        out = S.DpiExport(spec=node.specString.rawText[1:-1], keyword=node.functionOrTask.rawText,
+                          name=self.identifier(node.name))
+        if node.c_identifier:
+            out.c_name = self.made(node.c_identifier, S.Identifier(spelling=node.c_identifier.rawText))
+        return out
+
+    def bind(self, node: Any) -> S.BindDirective:
+        return S.BindDirective(target=self.expression(node.target),
+                               instances=[self.expression(i) for i in _nodes(node.targetInstances or [])],
+                               instantiation=self.made(node.instantiation, self.instantiation(node.instantiation)))
 
     def elaboration_task(self, node: Any) -> S.ElaborationTask:
         out = S.ElaborationTask(name=node.name.rawText)
@@ -1823,7 +1851,8 @@ class _Reader:
         "DefaultClockingReference": default_clocking, "DefaultDisableDeclaration": default_disable,
         "CovergroupDeclaration": covergroup, "NetTypeDeclaration": net_type_declaration, "NetAlias": net_alias,
         "DefParam": defparam, "TimeUnitsDeclaration": time_units, "EmptyMember": empty_member,
-        "ElabSystemTask": elaboration_task,
+        "ElabSystemTask": elaboration_task, "ExternModuleDecl": extern_unit, "DPIImport": dpi_import,
+        "DPIExport": dpi_export, "BindDirective": bind,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,

@@ -40,6 +40,9 @@ package logger_pkg;
         return drivers[0] + drivers[1];
     endfunction
     nettype real current_t with sum_currents;
+    export "DPI-C" sum_c = function sum_currents;
+    import "DPI-C" pure function real c_sqrt(input real x);
+    import "DPI-C" context task c_log(input string message);
     nettype logic [1:0] level_t;
 
     function automatic void tally(const ref int total, ref static int seen);
@@ -283,6 +286,17 @@ module counter #(parameter WIDTH = 4, STEP = 1) (clk, rst_n, count);
         if (rst_n == 1'b0) count = 0;
         else count = #1 count + STEP;
 endmodule
+
+// The watchdog, declared before its body, whose ports its declaration gives.
+extern module watchdog #(parameter int LIMIT = 8) (input logic clk, output logic bark);
+
+module watchdog (.*);
+    assign bark = clk;
+endmodule
+
+// A tap on every sampler, and on its counter.
+bind sampler probe_tap tap (.level());
+bind sampler: u_counter watchdog #(.LIMIT(4)) dog (.clk(clk), .bark());
 
 // A probe's halves, wired by name, and its tap.
 module probe_pair (.halves({lo, hi}), .first(lo[0]), .pair(hi[1:0]), , .unused());

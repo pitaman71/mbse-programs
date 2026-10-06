@@ -339,9 +339,19 @@
      "true": {
       "SystemVerilog": 2005
      }
+    },
+    "extern": {
+     "true": {
+      "SystemVerilog": 2005
+     }
     }
    },
    "properties": [
+    {
+     "name": "extern",
+     "type": "bool",
+     "optional": false
+    },
     {
      "name": "keyword",
      "type": "str",
@@ -426,6 +436,11 @@
    },
    "properties": [
     {
+     "name": "extern",
+     "type": "bool",
+     "optional": false
+    },
+    {
      "name": "lifetime",
      "type": "str",
      "optional": true,
@@ -499,6 +514,11 @@
     }
    },
    "properties": [
+    {
+     "name": "extern",
+     "type": "bool",
+     "optional": false
+    },
     {
      "name": "lifetime",
      "type": "str",
@@ -825,6 +845,16 @@
      "many": false
     }
    ]
+  },
+  {
+   "kind": "WildcardPort",
+   "category": "Port",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
   },
   {
    "kind": "EmptyPort",
@@ -1974,6 +2004,144 @@
    "extension": false,
    "features": {},
    "properties": []
+  },
+  {
+   "kind": "DpiImport",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "spec": {
+     "DPI-C": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "spec",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "DPI-C",
+      "DPI"
+     ]
+    },
+    {
+     "name": "property",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "context",
+      "pure"
+     ]
+    },
+    {
+     "name": "c_name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "prototype",
+     "type": [
+      "FunctionDeclaration",
+      "TaskDeclaration"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DpiExport",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "spec": {
+     "DPI-C": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "spec",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "DPI-C",
+      "DPI"
+     ]
+    },
+    {
+     "name": "c_name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "function",
+      "task"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BindDirective",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "instances",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "instantiation",
+     "type": [
+      "ModuleInstantiation"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
   },
   {
    "kind": "ElaborationTask",

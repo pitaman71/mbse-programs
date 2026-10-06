@@ -39,7 +39,7 @@ const RIGHT = new Set<number>([IMPLY, CONDITIONAL, THROUGHOUT, IFF, UNTIL, IMPLI
 const isAny = (node: unknown, kinds: Function[]) => kinds.some((k) => node instanceof k);
 /** `foreach`'s variables, of which a skipped one is empty. */
 const loopVariables = (variables: any[]) => variables.map((v) => (v instanceof S.EmptyArgument ? "" : v.spelling)).join(", ");
-const NON_ANSI = [S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort];
+const NON_ANSI = [S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort, S.WildcardPort];
 const joined = (parts: (string | null | undefined)[], separator = " ") => parts.filter((p) => p).join(separator);
 
 function precedence(node: unknown): number {
@@ -194,7 +194,8 @@ export class Printer {
       ? "interface" : node instanceof S.ProgramDeclaration ? "program" : "package";
     const end = { module: "endmodule", macromodule: "endmodule", interface: "endinterface", program: "endprogram",
       package: "endpackage" }[keyword as string] as string;
-    let head = `${p}${keyword}${node.lifetime ? ` ${node.lifetime}` : ""} ${node.name.spelling}`;
+    const extern = node.extern === true;
+    let head = `${p}${extern ? "extern " : ""}${keyword}${node.lifetime ? ` ${node.lifetime}` : ""} ${node.name.spelling}`;
     const lines: string[] = [];
     const imports: any[] = node.imports ?? [];
     if (imports.length > 0) {
@@ -213,6 +214,7 @@ export class Printer {
     if (ports.length > 0 && ports.every((q) => isAny(q, NON_ANSI))) { // a non-ANSI header's ports, on one line
       const names = ports.map((q) => this.port(q)).join(", ");
       lines.push((head.trim() ? head + " (" : head + "(") + names + ");");
+      if (extern) return lines; // a header alone
       lines.push(...this.items(node.items, level + 1, lines));
       lines.push(tail);
       return lines;
@@ -223,6 +225,7 @@ export class Printer {
       head = p + ")";
     }
     lines.push(head + ";");
+    if (extern) return lines;
     lines.push(...this.items(node.items, level + 1, lines));
     lines.push(tail);
     return lines;
@@ -237,6 +240,7 @@ export class Printer {
     }
     if (node instanceof S.PortConcatenation) return "{" + node.references.map((r) => this.port(r)).join(", ") + "}";
     if (node instanceof S.EmptyPort) return "";
+    if (node instanceof S.WildcardPort) return ".*";
     if (isAny(node, [S.ExplicitPort, S.ExplicitAnsiPort])) {
       const value = node.value === null ? "" : node instanceof S.ExplicitPort ? this.port(node.value) : this.text(node.value);
       const direction = node instanceof S.ExplicitAnsiPort && node.direction ? `${node.direction} ` : "";
@@ -413,6 +417,21 @@ export class Printer {
   modport(node: any, level: number): string[] {
     const items = node.items.map((i: any) => `${i.name.spelling} (${i.ports.map((p: any) => this.modportPort(p)).join(", ")})`);
     return [`${pad(level)}modport ${items.join(", ")};`];
+  }
+
+  dpiImport(node: any, level: number): string[] {
+    const cName = node.c_name !== null ? `${node.c_name.spelling} = ` : "";
+    return [pad(level) + joined(["import", `"${node.spec}"`, node.property, cName + this.subroutineHead(node.prototype)]) + ";"];
+  }
+
+  dpiExport(node: any, level: number): string[] {
+    const cName = node.c_name !== null ? `${node.c_name.spelling} = ` : "";
+    return [`${pad(level)}export "${node.spec}" ${cName}${node.keyword} ${node.name.spelling};`];
+  }
+
+  bind(node: any, level: number): string[] {
+    const instances = node.instances.length > 0 ? `: ${node.instances.map((i: any) => this.text(i)).join(", ")}` : "";
+    return [`${pad(level)}bind ${this.text(node.target)}${instances} ` + this.instantiation(node.instantiation, 0)[0]];
   }
 
   elaborationTask(node: any, level: number): string[] {
@@ -1338,6 +1357,9 @@ const items: [Function[], Method][] = [
   [[S.TimeUnitsDeclaration], (s, n, l) => s.timeUnits(n, l)],
   [[S.EmptyItem], (_s, _n, l) => [`${pad(l)};`]],
   [[S.ElaborationTask], (s, n, l) => s.elaborationTask(n, l)],
+  [[S.DpiImport], (s, n, l) => s.dpiImport(n, l)],
+  [[S.DpiExport], (s, n, l) => s.dpiExport(n, l)],
+  [[S.BindDirective], (s, n, l) => s.bind(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [

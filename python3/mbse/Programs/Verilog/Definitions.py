@@ -10,6 +10,9 @@
   'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does;
   a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal numbers).
   A `nettype` declares a 'type'.
+- An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
+  and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
+  is, and its instances and connections in the target; what it instantiates is declared nowhere.
 - A non-ANSI port is one entity, which the header names and a port declaration declares. An explicit port's own name
   (`.p(x)`) is outside the module: what it connects is found inside.
 - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
@@ -54,6 +57,8 @@ class _Definer:
         self.imports: list[tuple[Entity, S.ImportItem, Scope]] = []
         self.wildcards: list[tuple[Scope, S.ImportItem]] = []
         self.classes: list[tuple[Scope, S.ClassDeclaration]] = []
+        self.binds: list[tuple[Scope, S.BindDirective]] = []
+        self.externs = {item.name.spelling: item for item in unit.items if getattr(item, "extern", False) is True}
 
     def entity(self, scope: Scope, kind: str, name: S.Identifier, node: Any, spelling: str | None = None) -> Entity:
         """The entity `name` declares in `scope`, as `spelling` if it is given: a new one, or for a port or an argument
@@ -101,12 +106,19 @@ class _Definer:
     # Design units
 
     def design_unit(self, node: Any, scope: Scope) -> None:
+        if getattr(node, "extern", False) is True:  # a header alone: the unit of its name declares
+            self.locate(node, scope)
+            return
         kind = _UNITS[type(node)]
         inner = self.scoped(scope, kind, node.name, node, kind, "::" if kind == "package" else ".")
         self.program.located(node.name, scope)
         for item in getattr(node, "imports", []):
             self.visit(item, inner)
-        for item in [*getattr(node, "parameters", []), *getattr(node, "ports", []), *node.items]:
+        parameters, ports = getattr(node, "parameters", []), getattr(node, "ports", [])
+        extern = self.externs.get(node.name.spelling)
+        if any(isinstance(p, S.WildcardPort) for p in ports) and extern is not None:  # `.*`: the extern's ports
+            parameters, ports = parameters or extern.parameters, extern.ports
+        for item in [*parameters, *ports, *node.items]:
             self.visit(item, inner)
 
     def import_declaration(self, node: S.ImportDeclaration, scope: Scope) -> None:
@@ -412,6 +424,25 @@ class _Definer:
         self.visit_all([*node.items, *getattr(node, "alternative", []),
                         *[i for b in getattr(node, "branches", []) for i in b.items]], scope)
 
+    def dpi_import(self, node: S.DpiImport, scope: Scope) -> None:
+        self.visit(node.prototype, scope)  # its C name is not looked up
+
+    def dpi_export(self, node: S.DpiExport, scope: Scope) -> None:
+        self.program.located(node.name, scope)
+
+    def bind(self, node: S.BindDirective, scope: Scope) -> None:
+        """`bind target ...`: the target is found where the directive is; its instances and connections, once the
+        target is known, in the target."""
+        self.visit(node.target, scope)
+        self.binds.append((scope, node))
+
+    def resolve_binds(self) -> None:
+        for scope, node in self.binds:
+            targets = [e for e in referents(self.program, node.target) if e.scope is not None]
+            inner = targets[0].scope if targets else scope
+            for part in [*node.instances, node.instantiation]:
+                self.locate(part, inner)
+
     def interface_type(self, node: S.InterfaceTypeName, scope: Scope) -> None:
         """`bus.t`: `bus` is found where the name is; `t`, in the interface, is not."""
         self.program.located(node.interface, scope)
@@ -421,7 +452,7 @@ class _Definer:
         S.PackageDeclaration: design_unit, S.ImportDeclaration: import_declaration, S.ParameterDeclaration: parameter,
         S.TypeParameterDeclaration: parameter, S.AnsiPort: port, S.InterfacePort: port, S.PortReference: port,
         S.ExplicitPort: explicit_port, S.ExplicitAnsiPort: explicit_port, S.IfdefDirective: ifdef,
-        S.InterfaceTypeName: interface_type,
+        S.InterfaceTypeName: interface_type, S.DpiImport: dpi_import, S.DpiExport: dpi_export, S.BindDirective: bind,
         S.NetDeclaration: net, S.VariableDeclaration: variable, S.PortDeclaration: port_declaration,
         S.TypedefDeclaration: typedef, S.NetTypeDeclaration: net_type, S.EnumType: enum, S.GenvarDeclaration: genvar,
         S.ModportDeclaration: modport,
@@ -468,6 +499,7 @@ def define(unit: S.SourceText) -> Program:
         definer.visit(item, definer.root)
     definer.resolve_imports()
     definer.resolve_bases()
+    definer.resolve_binds()
     return definer.program
 
 

@@ -173,6 +173,12 @@ export const RELEASE_KEYWORDS = ["release", "deassign"] as const;
 export type ReleaseKeyword = (typeof RELEASE_KEYWORDS)[number];
 export const ELABORATION_TASK_NAMES = ["$fatal", "$error", "$warning", "$info"] as const;
 export type ElaborationTaskName = (typeof ELABORATION_TASK_NAMES)[number];
+export const DPI_SPECS = ["DPI-C", "DPI"] as const;
+export type DpiSpec = (typeof DPI_SPECS)[number];
+export const DPI_PROPERTYS = ["context", "pure"] as const;
+export type DpiProperty = (typeof DPI_PROPERTYS)[number];
+export const SUBROUTINE_KEYWORDS = ["function", "task"] as const;
+export type SubroutineKeyword = (typeof SUBROUTINE_KEYWORDS)[number];
 export const DEFAULT_NETTYPES = [
   "wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"
 ] as const;
@@ -393,6 +399,7 @@ export class SourceText extends SyntaxNode {
 }
 
 const ModuleDeclarationSpec = {
+  extern: flag(),
   keyword: choice(...MODULE_KEYWORDS),
   lifetime: optionalChoice(...LIFETIMES),
   name: one(() => [Identifier]),
@@ -406,7 +413,8 @@ export interface ModuleDeclaration extends Properties<typeof ModuleDeclarationSp
 /**
  * `module name #(parameters) (ports); items endmodule` (23.2). Parameters in the header are listed even when
  * empty; ports are `AnsiPort`s or `InterfacePort`s, or for a non-ANSI header `PortReference`s, which `PortDeclaration`
- * items declare. `labeled` repeats the name after `endmodule`.
+ * items declare. `labeled` repeats the name after `endmodule`. An `extern` one is a header alone, which the module
+ * of its name, with `.*` for its ports, defines (23.2.1).
  */
 export class ModuleDeclaration extends Item {
   static override SPEC = ModuleDeclarationSpec;
@@ -414,10 +422,15 @@ export class ModuleDeclaration extends Item {
     lifetime: [[true, verilog(2001)]],
     imports: [[true, sv(2009)]],
     labeled: [[true, sv()]],
+    extern: [[true, sv()]],
   };
+  override check(): string[] {
+    return unitProblems(this);
+  }
 }
 
 const InterfaceDeclarationSpec = {
+  extern: flag(),
   lifetime: optionalChoice(...LIFETIMES),
   name: one(() => [Identifier]),
   imports: many(() => [ImportDeclaration]),
@@ -427,14 +440,18 @@ const InterfaceDeclarationSpec = {
   labeled: flag(),
 };
 export interface InterfaceDeclaration extends Properties<typeof InterfaceDeclarationSpec> {}
-/** `interface name #(parameters) (ports); items endinterface` (25.3). */
+/** `interface name #(parameters) (ports); items endinterface` (25.3), or an `extern` header alone. */
 export class InterfaceDeclaration extends Item {
   static override SPEC = InterfaceDeclarationSpec;
   static override SINCE: Availability | null = sv();
   static override FEATURES: Features = { imports: [[true, sv(2009)]] };
+  override check(): string[] {
+    return unitProblems(this);
+  }
 }
 
 const ProgramDeclarationSpec = {
+  extern: flag(),
   lifetime: optionalChoice(...LIFETIMES),
   name: one(() => [Identifier]),
   imports: many(() => [ImportDeclaration]),
@@ -444,11 +461,14 @@ const ProgramDeclarationSpec = {
   labeled: flag(),
 };
 export interface ProgramDeclaration extends Properties<typeof ProgramDeclarationSpec> {}
-/** `program name #(parameters) (ports); items endprogram` (24.3). */
+/** `program name #(parameters) (ports); items endprogram` (24.3), or an `extern` header alone. */
 export class ProgramDeclaration extends Item {
   static override SPEC = ProgramDeclarationSpec;
   static override SINCE: Availability | null = sv();
   static override FEATURES: Features = { imports: [[true, sv(2009)]] };
+  override check(): string[] {
+    return unitProblems(this);
+  }
 }
 
 const PackageDeclarationSpec = {
@@ -543,6 +563,14 @@ export interface ExplicitPort extends Properties<typeof ExplicitPortSpec> {}
  */
 export class ExplicitPort extends Port {
   static override SPEC = ExplicitPortSpec;
+}
+
+const WildcardPortSpec = {};
+export interface WildcardPort extends Properties<typeof WildcardPortSpec> {}
+/** `.*`, a header's ports as the `extern` declaration of its name gives them (23.2.1). */
+export class WildcardPort extends Port {
+  static override SPEC = WildcardPortSpec;
+  static override SINCE: Availability | null = sv();
 }
 
 const EmptyPortSpec = {};
@@ -969,6 +997,55 @@ export interface EmptyItem extends Properties<typeof EmptyItemSpec> {}
 /** `;` alone, where items are listed (A.1.4, A.1.9). */
 export class EmptyItem extends Item {
   static override SPEC = EmptyItemSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const DpiImportSpec = {
+  spec: choice(...DPI_SPECS),
+  property: optionalChoice(...DPI_PROPERTYS),
+  c_name: optional(() => [Identifier]),
+  prototype: one(() => [FunctionDeclaration, TaskDeclaration]),
+};
+export interface DpiImport extends Properties<typeof DpiImportSpec> {}
+/**
+ * `import "DPI-C" property c_name = prototype;`: a C function or task, `context` or a `pure` function, which
+ * SystemVerilog calls by the prototype's name (35.5.4).
+ */
+export class DpiImport extends Item {
+  static override SPEC = DpiImportSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { spec: [["DPI-C", sv(2009)]] };
+  override check(): string[] {
+    return this.property === "pure" && this.prototype instanceof TaskDeclaration ? ["a pure DpiImport is a function"] : [];
+  }
+}
+
+const DpiExportSpec = {
+  spec: choice(...DPI_SPECS),
+  c_name: optional(() => [Identifier]),
+  keyword: choice(...SUBROUTINE_KEYWORDS),
+  name: one(() => [Identifier]),
+};
+export interface DpiExport extends Properties<typeof DpiExportSpec> {}
+/** `export "DPI-C" c_name = function name;`: a function or task C calls (35.5.4). */
+export class DpiExport extends Item {
+  static override SPEC = DpiExportSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { spec: [["DPI-C", sv(2009)]] };
+}
+
+const BindDirectiveSpec = {
+  target: one(() => [Expression]),
+  instances: many(() => [Expression]),
+  instantiation: one(() => [ModuleInstantiation]),
+};
+export interface BindDirective extends Properties<typeof BindDirectiveSpec> {}
+/**
+ * `bind target: instances instantiation;`: an instantiation into a module, an interface or a checker, or into
+ * some of its instances, without changing its source (23.11).
+ */
+export class BindDirective extends Item {
+  static override SPEC = BindDirectiveSpec;
   static override SINCE: Availability | null = sv();
 }
 
@@ -3374,6 +3451,14 @@ function methodProblems(method: FunctionDeclaration | TaskDeclaration): string[]
   return [];
 }
 
+/** An `extern` design unit is a header alone, and `.*` is a header's only port. */
+function unitProblems(unit: ModuleDeclaration | InterfaceDeclaration | ProgramDeclaration): string[] {
+  const kind = unit.kind().KIND;
+  if (unit.extern === true && (unit.items.length > 0 || unit.labeled === true)) return [`an extern ${kind} has no items`];
+  if (unit.ports.some((p) => p instanceof WildcardPort) && unit.ports.length > 1) return [`a ${kind}'s .* is its only port`];
+  return [];
+}
+
 /** A directive has a name or a condition, and a condition only macros' names and `!`, `&&`, `||`, `->`, `<->`. */
 function conditionProblems(directive: IfdefDirective | ElsifDirective): string[] {
   const kind = directive.kind().KIND;
@@ -3403,40 +3488,40 @@ function conditionProblems(directive: IfdefDirective | ElsifDirective): string[]
 export const KINDS = [
   Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
   AttributedStatement, AttributedPort, SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration,
-  PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort, EmptyPort,
-  ExplicitAnsiPort, PortDeclaration, ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment,
-  IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType,
-  StructType, StructMember, EnumType, EnumMember, RangeDimension, SizeDimension, UnsizedDimension,
+  PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort, WildcardPort,
+  EmptyPort, ExplicitAnsiPort, PortDeclaration, ParameterDeclaration, ParamAssignment, TypeParameterDeclaration,
+  TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType,
+  ImplicitType, StructType, StructMember, EnumType, EnumMember, RangeDimension, SizeDimension, UnsizedDimension,
   AssociativeDimension, QueueDimension, NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration,
-  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, ElaborationTask, GenvarDeclaration,
-  ImportDeclaration, ImportItem, NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration,
-  ModportDeclaration, ModportItem, ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct,
-  InitialConstruct, FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion,
-  GenerateFor, GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection,
-  WildcardConnection, AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement,
-  CaseStatement, CaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement,
-  ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger,
-  DisableStatement, ForceStatement, ReleaseStatement, WaitForkStatement, WaitOrderStatement, ImmediateAssertion,
-  DelayControl, RepeatEventControl, EventControl, EventExpression, NameExpression, MemberExpression, IndexExpression,
-  RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression,
-  IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange,
-  Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression,
-  ParenthesizedExpression, MacroUsage, DollarExpression, StreamingConcatenation, StreamItem, MinTypMaxExpression,
-  EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression,
-  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
-  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
-  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
-  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
-  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
-  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
-  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
-  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
-  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
-  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
-  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
-  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
-  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
-  ElsifDirective, DisabledText, OtherDirective,
+  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, DpiImport, DpiExport, BindDirective,
+  ElaborationTask, GenvarDeclaration, ImportDeclaration, ImportItem, NetTypeDeclaration, NetAlias, DefParam,
+  DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem, ModportPort, ModportSubroutine,
+  ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct, FinalConstruct, FunctionDeclaration,
+  TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
+  ModuleInstantiation, Instance, NamedConnection, WildcardConnection, AssignmentStatement, ExpressionStatement,
+  NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem, ForStatement, WhileStatement,
+  DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement, ContinueStatement,
+  ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement, ReleaseStatement,
+  WaitForkStatement, WaitOrderStatement, ImmediateAssertion, DelayControl, RepeatEventControl, EventControl,
+  EventExpression, NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral,
+  TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression,
+  AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication,
+  AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage,
+  DollarExpression, StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression,
+  EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression,
+  NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem,
+  LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
+  ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
+  RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem,
+  PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep,
+  CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence,
+  ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty,
+  CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew,
+  ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration,
+  SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence,
+  TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect,
+  ParenthesizedBinsSelect, FilteredBinsSelect, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective,
+  DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

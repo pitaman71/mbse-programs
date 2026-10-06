@@ -68,7 +68,7 @@ def _loop_variables(variables: list[Any]) -> str:
     return ", ".join("" if isinstance(v, S.EmptyArgument) else v.spelling for v in variables)
 
 
-_NON_ANSI = (S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort)
+_NON_ANSI = (S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort, S.WildcardPort)
 
 
 def _prototype(node: Any) -> bool:
@@ -211,7 +211,9 @@ class Printer:
                    S.ProgramDeclaration: "program", S.PackageDeclaration: "package"}[type(node)]
         end = {"module": "endmodule", "macromodule": "endmodule", "interface": "endinterface", "program": "endprogram",
                "package": "endpackage"}[keyword]
-        head = f"{pad}{keyword}{f' {node.lifetime}' if node.lifetime else ''} {node.name.spelling}"
+        extern = getattr(node, "extern", False)
+        lifetime = f" {node.lifetime}" if node.lifetime else ""
+        head = f"{pad}{'extern ' if extern else ''}{keyword}{lifetime} {node.name.spelling}"
         lines: list[str] = []
         imports = getattr(node, "imports", [])
         if imports:
@@ -228,6 +230,8 @@ class Printer:
         if ports and all(isinstance(p, _NON_ANSI) for p in ports):  # a non-ANSI header's ports, on one line
             names = ", ".join(self.port(p) for p in ports)
             lines.append((head + " (" if head.strip() else head + "(") + names + ");")
+            if extern:  # a header alone
+                return lines
             lines.extend(self.items(node.items, level + 1, after=lines))
             lines.append(f"{pad}{end}" + (f" : {node.name.spelling}" if node.labeled else ""))
             return lines
@@ -237,6 +241,8 @@ class Printer:
                          for i, p in enumerate(ports))
             head = pad + ")"
         lines.append(head + ";")
+        if extern:
+            return lines
         lines.extend(self.items(node.items, level + 1, after=lines))
         lines.append(f"{pad}{end}" + (f" : {node.name.spelling}" if node.labeled else ""))
         return lines
@@ -252,6 +258,8 @@ class Printer:
             return "{" + ", ".join(self.port(r) for r in node.references) + "}"
         if isinstance(node, S.EmptyPort):
             return ""
+        if isinstance(node, S.WildcardPort):
+            return ".*"
         if isinstance(node, (S.ExplicitPort, S.ExplicitAnsiPort)):
             value = "" if node.value is None else self.port(node.value) if isinstance(node, S.ExplicitPort) \
                 else self.text(node.value)
@@ -447,6 +455,20 @@ class Printer:
     def net_type_declaration(self, node: S.NetTypeDeclaration, level: int) -> list[str]:
         function = f" with {self.name(node.function)}" if node.function is not None else ""
         return [f"{_INDENT * level}nettype {self.type_text(node.type)} {node.name.spelling}{function};"]
+
+    def dpi_import(self, node: S.DpiImport, level: int) -> list[str]:
+        c_name = f"{node.c_name.spelling} = " if node.c_name is not None else ""
+        words = ["import", f'"{node.spec}"', node.property, c_name + self.subroutine_head(node.prototype)]
+        return [_INDENT * level + " ".join(w for w in words if w) + ";"]
+
+    def dpi_export(self, node: S.DpiExport, level: int) -> list[str]:
+        c_name = f"{node.c_name.spelling} = " if node.c_name is not None else ""
+        return [f'{_INDENT * level}export "{node.spec}" {c_name}{node.keyword} {node.name.spelling};']
+
+    def bind(self, node: S.BindDirective, level: int) -> list[str]:
+        instances = f": {', '.join(self.text(i) for i in node.instances)}" if node.instances else ""
+        return [f"{_INDENT * level}bind {self.text(node.target)}{instances} "
+                + self.instantiation(node.instantiation, 0)[0]]
 
     def elaboration_task(self, node: S.ElaborationTask, level: int) -> list[str]:
         arguments = f"({', '.join(self.type_or_text(a) for a in node.arguments)})" if node.arguments else ""
@@ -1304,7 +1326,7 @@ class Printer:
         S.CoverageBins: coverage_bins, S.CoverCross: cover_cross, S.BinsSelection: bins_selection,
         S.AttributedItem: attributed, S.NetTypeDeclaration: net_type_declaration, S.NetAlias: net_alias,
         S.DefParam: defparam, S.TimeUnitsDeclaration: time_units, S.EmptyItem: empty_item,
-        S.ElaborationTask: elaboration_task,
+        S.ElaborationTask: elaboration_task, S.DpiImport: dpi_import, S.DpiExport: dpi_export, S.BindDirective: bind,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,

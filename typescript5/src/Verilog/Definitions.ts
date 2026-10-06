@@ -11,6 +11,9 @@
  *   'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog
  *   does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal
  *   numbers). A `nettype` declares a 'type'.
+ * - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
+ *   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
+ *   is, and its instances and connections in the target; what it instantiates is declared nowhere.
  * - A non-ANSI port is one entity, which the header names and a port declaration declares. An explicit port's own name
  *   (`.p(x)`) is outside the module: what it connects is found inside.
  * - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
@@ -50,10 +53,13 @@ class Definer {
   readonly imports: [Entity, S.ImportItem][] = [];
   readonly wildcards: [Scope, S.ImportItem][] = [];
   readonly classes: [Scope, S.ClassDeclaration][] = [];
+  readonly binds: [Scope, S.BindDirective][] = [];
+  readonly externs = new Map<string, any>();
 
   constructor(unit: S.SourceText) {
     this.root = new Scope("compilation unit", null, null, unit, ".");
     this.program = new Program(this.root);
+    for (const item of unit.items as any[]) if (item.extern === true) this.externs.set(item.name.spelling, item);
   }
 
   /** The entity `name` declares in `scope`, as `spelling` if it is given: a new one, or for a port or an argument
@@ -104,11 +110,22 @@ class Definer {
   // Design units
 
   designUnit(node: any, scope: Scope): void {
+    if (node.extern === true) { // a header alone: the unit of its name declares
+      this.locate(node, scope);
+      return;
+    }
     const kind = UNITS.get(node.constructor) as string;
     const inner = this.scoped(scope, kind, node.name, node, kind, kind === "package" ? "::" : ".");
     this.program.located(node.name, scope);
     for (const item of node.imports ?? []) this.visit(item, inner);
-    for (const item of [...(node.parameters ?? []), ...(node.ports ?? []), ...node.items]) this.visit(item, inner);
+    let parameters: any[] = node.parameters ?? [];
+    let ports: any[] = node.ports ?? [];
+    const extern = this.externs.get(node.name.spelling);
+    if (ports.some((p) => p instanceof S.WildcardPort) && extern !== undefined) { // `.*`: the extern's ports
+      parameters = parameters.length > 0 ? parameters : extern.parameters;
+      ports = extern.ports;
+    }
+    for (const item of [...parameters, ...ports, ...node.items]) this.visit(item, inner);
   }
 
   importDeclaration(node: any, scope: Scope): void {
@@ -431,6 +448,29 @@ class Definer {
   }
 
   /** `bus.t`: `bus` is found where the name is; `t`, in the interface, is not. */
+  dpiImport(node: any, scope: Scope): void {
+    this.visit(node.prototype, scope); // its C name is not looked up
+  }
+
+  dpiExport(node: any, scope: Scope): void {
+    this.program.located(node.name, scope);
+  }
+
+  /** `bind target ...`: the target is found where the directive is; its instances and connections, once the target is
+   * known, in the target. */
+  bind(node: any, scope: Scope): void {
+    this.visit(node.target, scope);
+    this.binds.push([scope, node]);
+  }
+
+  resolveBinds(): void {
+    for (const [scope, node] of this.binds) {
+      const targets = referents(this.program, node.target).filter((e) => e.scope !== null);
+      const inner = targets.length > 0 ? targets[0]?.scope as Scope : scope;
+      for (const part of [...node.instances, node.instantiation]) this.locate(part as SyntaxNode, inner);
+    }
+  }
+
   interfaceType(node: any, scope: Scope): void {
     this.program.located(node.interface, scope);
   }
@@ -470,6 +510,9 @@ const methods: [Function[], Method][] = [
   [[S.ExplicitPort, S.ExplicitAnsiPort], (d, n, s) => d.explicitPort(n, s)],
   [[S.IfdefDirective], (d, n, s) => d.ifdef(n, s)],
   [[S.InterfaceTypeName], (d, n, s) => d.interfaceType(n, s)],
+  [[S.DpiImport], (d, n, s) => d.dpiImport(n, s)],
+  [[S.DpiExport], (d, n, s) => d.dpiExport(n, s)],
+  [[S.BindDirective], (d, n, s) => d.bind(n, s)],
   [[S.NetDeclaration], (d, n, s) => d.declarators(n, s, "net")],
   [[S.VariableDeclaration], (d, n, s) => d.declarators(n, s, "variable")],
   [[S.PortDeclaration], (d, n, s) => d.declarators(n, s, "port")],
@@ -508,6 +551,7 @@ export function define(unit: S.SourceText): Program {
   for (const item of unit.items) definer.visit(item, definer.root);
   definer.resolveImports();
   definer.resolveBases();
+  definer.resolveBinds();
   return definer.program;
 }
 

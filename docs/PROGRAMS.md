@@ -388,6 +388,10 @@ The tree is abstract where the grammar only spells:
   fork` is a `WaitForkStatement` and `wait_order` a `WaitOrderStatement` with its actions; `->>` may wait (`->> #1 e`);
   `repeat (n) @(e)` before an assignment's value is a `RepeatEventControl`. `$fatal`, `$error`, `$warning` and `$info`
   among items are `ElaborationTask`s.
+- `import "DPI-C" ...` is a `DpiImport` of a function's or a task's prototype, `export "DPI-C" ...` a `DpiExport`;
+  `bind` is a `BindDirective` of a target, its instances and a `ModuleInstantiation`. An `extern` module, interface or
+  program is its declaration with `extern` set and no items, and `.*` in the header of the unit that defines it is a
+  `WildcardPort`.
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
@@ -446,7 +450,8 @@ clocking block one where its signals are clockvars; a label names a 'label'. A c
 `option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration
 is. A non-ANSI port is one entity, which the header names and a port declaration declares. `import p::x` declares an
 entity whose `target` is `p::x`, and `import p::*` makes the package's names visible where nothing nearer declares them;
-A macro's name in an `` `ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x`
+An `extern` unit declares nothing: the unit of its name does, with its ports for `.*`. `bind`'s instances and
+connections are found in its target. A macro's name in an `` `ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x`
 in the compilation unit. An explicit port's own name (`.p(x)`) is not looked up: what it connects is. An enumeration's
 member `name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A
 package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a

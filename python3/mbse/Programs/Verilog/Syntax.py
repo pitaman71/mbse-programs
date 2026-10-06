@@ -104,6 +104,9 @@ OverrideSpecifier = Choice["initial", "extends"]
 ForceKeyword = Choice["force", "assign"]
 ReleaseKeyword = Choice["release", "deassign"]
 ElaborationTaskName = Choice["$fatal", "$error", "$warning", "$info"]
+DpiSpec = Choice["DPI-C", "DPI"]
+DpiProperty = Choice["context", "pure"]
+SubroutineKeyword = Choice["function", "task"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -290,8 +293,10 @@ class SourceText(SyntaxNode):
 class ModuleDeclaration(Item):
     """`module name #(parameters) (ports); items endmodule` (23.2). Parameters in the header are listed even when
     empty; ports are `AnsiPort`s or `InterfacePort`s, or for a non-ANSI header `PortReference`s, which `PortDeclaration`
-    items declare. `labeled` repeats the name after `endmodule`."""
+    items declare. `labeled` repeats the name after `endmodule`. An `extern` one is a header alone, which the module
+    of its name, with `.*` for its ports, defines (23.2.1)."""
 
+    extern: bool
     keyword: ModuleKeyword
     lifetime: Lifetime | None
     name: Identifier
@@ -300,12 +305,17 @@ class ModuleDeclaration(Item):
     ports: list[Port]
     items: list[Item | Directive | Comment]
     labeled: bool
-    FEATURES = {"lifetime": {True: verilog(2001)}, "imports": {True: sv(2009)}, "labeled": {True: sv()}}
+    FEATURES = {"lifetime": {True: verilog(2001)}, "imports": {True: sv(2009)}, "labeled": {True: sv()},
+                "extern": {True: sv()}}
+
+    def check(self) -> list[str]:
+        return _unit_problems(self)
 
 
 class InterfaceDeclaration(Item):
-    """`interface name #(parameters) (ports); items endinterface` (25.3)."""
+    """`interface name #(parameters) (ports); items endinterface` (25.3), or an `extern` header alone."""
 
+    extern: bool
     lifetime: Lifetime | None
     name: Identifier
     imports: list[ImportDeclaration]
@@ -315,11 +325,15 @@ class InterfaceDeclaration(Item):
     labeled: bool
     SINCE = sv()
     FEATURES = {"imports": {True: sv(2009)}}
+
+    def check(self) -> list[str]:
+        return _unit_problems(self)
 
 
 class ProgramDeclaration(Item):
-    """`program name #(parameters) (ports); items endprogram` (24.3)."""
+    """`program name #(parameters) (ports); items endprogram` (24.3), or an `extern` header alone."""
 
+    extern: bool
     lifetime: Lifetime | None
     name: Identifier
     imports: list[ImportDeclaration]
@@ -329,6 +343,19 @@ class ProgramDeclaration(Item):
     labeled: bool
     SINCE = sv()
     FEATURES = {"imports": {True: sv(2009)}}
+
+    def check(self) -> list[str]:
+        return _unit_problems(self)
+
+
+def _unit_problems(unit: ModuleDeclaration | InterfaceDeclaration | ProgramDeclaration) -> list[str]:
+    """An `extern` design unit is a header alone, and `.*` is a header's only port."""
+    kind = type(unit).__name__
+    if unit.extern is True and (unit.items or unit.labeled is True):
+        return [f"an extern {kind} has no items"]
+    if any(isinstance(p, WildcardPort) for p in unit.ports) and len(unit.ports) > 1:
+        return [f"a {kind}'s .* is its only port"]
+    return []
 
 
 class PackageDeclaration(Item):
@@ -397,6 +424,12 @@ class ExplicitPort(Port):
 
     name: Identifier
     value: PortReference | PortConcatenation | None
+
+
+class WildcardPort(Port):
+    """`.*`, a header's ports as the `extern` declaration of its name gives them (23.2.1)."""
+
+    SINCE = sv()
 
 
 class EmptyPort(Port):
@@ -697,6 +730,44 @@ class TypedefDeclaration(Item):
 class EmptyItem(Item):
     """`;` alone, where items are listed (A.1.4, A.1.9)."""
 
+    SINCE = sv()
+
+
+class DpiImport(Item):
+    """`import "DPI-C" property c_name = prototype;`: a C function or task, `context` or a `pure` function, which
+    SystemVerilog calls by the prototype's name (35.5.4)."""
+
+    spec: DpiSpec
+    property: DpiProperty | None
+    c_name: Identifier | None
+    prototype: FunctionDeclaration | TaskDeclaration
+    SINCE = sv()
+    FEATURES = {"spec": {"DPI-C": sv(2009)}}
+
+    def check(self) -> list[str]:
+        if self.property == "pure" and isinstance(self.prototype, TaskDeclaration):
+            return ["a pure DpiImport is a function"]
+        return []
+
+
+class DpiExport(Item):
+    """`export "DPI-C" c_name = function name;`: a function or task C calls (35.5.4)."""
+
+    spec: DpiSpec
+    c_name: Identifier | None
+    keyword: SubroutineKeyword
+    name: Identifier
+    SINCE = sv()
+    FEATURES = {"spec": {"DPI-C": sv(2009)}}
+
+
+class BindDirective(Item):
+    """`bind target: instances instantiation;`: an instantiation into a module, an interface or a checker, or into
+    some of its instances, without changing its source (23.11)."""
+
+    target: Expression
+    instances: list[Expression]
+    instantiation: ModuleInstantiation
     SINCE = sv()
 
 
@@ -2464,7 +2535,7 @@ KINDS: list[type[SyntaxNode]] = [
     Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
     AttributedStatement, AttributedPort,
     SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration, PackageDeclaration,
-    AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort, EmptyPort, ExplicitAnsiPort,
+    AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort, WildcardPort, EmptyPort, ExplicitAnsiPort,
     PortDeclaration,
     ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment,
     IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType,
@@ -2472,7 +2543,8 @@ KINDS: list[type[SyntaxNode]] = [
     EnumType, EnumMember,
     RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension,
     NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration, VariableDeclarator,
-    ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, ElaborationTask, GenvarDeclaration, ImportDeclaration,
+    ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, DpiImport, DpiExport, BindDirective,
+    ElaborationTask, GenvarDeclaration, ImportDeclaration,
     ImportItem,
     NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem,
     ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,

@@ -10,7 +10,7 @@ category, property and availability as data: read it rather than guessing a prop
 | Ccpp: C and C++ | 171, through C++26 and C23 | `Ccpp17`, `Ccpp20`, `CcppStandard(year, "C++" or "C")` | the C++ grammar: specifiers, declarators, statements |
 | Python | 86, Python 3.0 to 3.15 | `Python312`, `Python314`, `PythonStandard(major, minor)` | Python's `ast`, names as `Identifier`s |
 | TypeScript: TypeScript and JavaScript | 163, through TypeScript 5.9 and ES2025, with JSX | `TypeScript50`, `TypeScript59`, `ECMAScript2020`, `ECMAScript2025`, each with `.JSX`; `TypeScriptStandard(major, minor, jsx)`, `ECMAScriptStandard(year, jsx)` | typescript-estree (TSESTree) |
-| Verilog: Verilog and SystemVerilog | 231, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
+| Verilog: Verilog and SystemVerilog | 235, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
 
 ## Ccpp
 
@@ -113,6 +113,8 @@ Definitions.define(unit).lookup("logger_pkg::FIELDS")           # packages quali
 - Ports: non-ANSI `PortReference` (with a select: `w[1:0]`), `PortConcatenation`, `ExplicitPort` (`.p(x)`),
   `EmptyPort`; ANSI `ExplicitAnsiPort` (`input .p(x + 1)`). Modports: `ModportPort` (`explicit`: `input .a(b)`),
   `ModportSubroutine` (`import f`, or a prototype), `ModportClocking`.
+- Testbench: `DpiImport` (a prototype, `context` or `pure`, a C name), `DpiExport`, `BindDirective` (`bind m: u1
+  mon i (...)`); `extern` modules, interfaces and programs, defined with `.*` ports (`WildcardPort`).
 - Procedures: `ForceStatement` (`force`, procedural `assign`), `ReleaseStatement` (`release`, `deassign`),
   `WaitForkStatement`, `WaitOrderStatement`, `EventTrigger`'s `timing` (`->> #1 e`), `RepeatEventControl` (`a <= repeat
   (2) @(e) b`); `ElaborationTask` (`$error(...)` among items).
@@ -125,7 +127,8 @@ Definitions.define(unit).lookup("logger_pkg::FIELDS")           # packages quali
 - Definitions: packages, design units, classes, functions and tasks, and blocks as scopes; a class's lookup goes on to
   its base; a method or constraint defined outside its class (`c::f`) is its prototype's entity; an array method's
   iterator (`item`, or its argument's name) is a variable of its `with`; `import p::x` aliases, `import
-  p::*` is found where nothing nearer is; `$unit::x` in the compilation unit; `A[1:3]` declares `A1` to `A3`; members after `.` and instances'
+  p::*` is found where nothing nearer is; `$unit::x` in the compilation unit; `.*` takes an `extern` unit's ports; `bind`'s connections are found in its
+  target; `A[1:3]` declares `A1` to `A3`; members after `.` and instances'
   contents unresolved.
 
 ## Printing
