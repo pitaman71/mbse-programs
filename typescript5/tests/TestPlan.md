@@ -41,8 +41,9 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `19_VerilogRead.ipynb` | VLGRD | 31 | as in Python, reading through the Python implementation; VLGRD-13 reads through it directly, and fails clearly when its interpreter cannot run |
 | `20_VerilogPrint.ipynb` | VLGPRT | 25 | as in Python |
 | `21_VerilogDefinitions.ipynb` | VLGDEF | 20 | as in Python |
+| `22_VerilogBridge.ipynb` | BRV | 7 | as in Python, reading through the Python implementation |
 
-Total: 217 cases, with the same IDs in the same order in both implementations.
+Total: 224 cases, with the same IDs in the same order in both implementations.
 
 ---
 

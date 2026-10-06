@@ -59,6 +59,26 @@ A chained comparison reads as `and` of comparisons sharing their middle operands
 reads it. What the dialect can't hold raises `TranspileError` at its path: `is`, `@`, keyword arguments, slices, other lambdas, generators of more than one `for`, `None`, `...`, imaginary numbers.
 In TypeScript the bridge reads Python source into rules too, through the Python standards' parsers.
 
+## Bridging rules and SystemVerilog code
+
+A second bridge maps mbse-expressions' SystemVerilog dialect to Verilog's trees and back. From a Basic rule, translate
+to the SystemVerilog dialect first (`Translators.between(E.DIALECT, SvDialect.DIALECT)`); `this` stays `this`, the
+object a class's method runs on.
+
+```python fragment
+from mbse.Programs.Bridges import Verilog as Bridge
+Bridge.expression(term)                                   # a SystemVerilog expression syntax node
+Bridge.function_("in_range", [("real", "celsius")], term) # function automatic logic in_range(input real celsius); ...
+Bridge.constraint("c_range", term)                        # constraint c_range { ...; }
+Bridge.assertion(term, "out of range")                    # assert (...) else $error("out of range");
+Bridge.term(expression_node)                              # and term_of_function, term_of_constraint, term_of_assertion
+```
+
+Sized literals read as IEEE 1800 reads them, into the dialect's vectors (`8'hff`, `4'b10x1`). What the dialect can't
+hold raises `TranspileError` at its path: `+:` and `-:` part-selects, tolerance ranges, casts to other types, scoped
+names, attributes, unsized based literals, iterations other than a reduction over one iterator. Verilog reads through
+slang in both implementations, so TypeScript reads SystemVerilog source into rules too.
+
 ## Writing a transpiler
 
 Build the target's tree with its `LANGUAGE.Builders`, never with helpers of your own; read the source with `walk`, a

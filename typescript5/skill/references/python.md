@@ -108,6 +108,9 @@ PD.referents(program, name_node); entity.kind, entity.qualified_name(), entity.d
 from mbse.Programs.Transpilers.TypeScriptToPython import transpile          # TypeScript Program -> Python Module
 from mbse.Programs.Bridges import Python as Bridge                          # Python-dialect terms <-> Python trees
 Bridge.expression(term); Bridge.module(term); Bridge.function_("f", ["x"], term); Bridge.term(expr); Bridge.term_of_module(m)
+from mbse.Programs.Bridges import Verilog as SvBridge                       # SystemVerilog-dialect terms <-> Verilog trees
+SvBridge.function_("f", [("int", "x")], term); SvBridge.constraint("c", term); SvBridge.assertion(term, "message")
+SvBridge.term(expr); SvBridge.term_of_function(f); SvBridge.term_of_constraint(c); SvBridge.term_of_assertion(a)
 JSON.ToJSON(P.LANGUAGE.Builders).Reachable(P.Module.Schema, tree)           # from mbse.Schemas.Framework import JSON
 ```
 
@@ -121,11 +124,13 @@ JSON.ToJSON(P.LANGUAGE.Builders).Reachable(P.Module.Schema, tree)           # fr
 - `define` doesn't resolve attributes, keyword arguments, imported modules' members or builtins: they refer to nothing.
 - A transpiled program keeps what code means where the languages agree; it does not emulate where they differ.
 - The bridge holds only what mbse-expressions' Python dialect can: no `is`, no keyword arguments, no slices.
+- The Verilog bridge holds only what the SystemVerilog dialect can: no `+:` part-selects, no casts to named types, no
+  unsized based literals (`'b101`); it writes `-(-x)` where the dialect's text writes `- -x`, which is not SystemVerilog.
 
 ## Go deeper
 
 | Topic | Read |
 |---|---|
-| Learning it by example: trees, rewriting, standards, names, languages, snapshots, transpiling, bridges | [the tutorial, eight case studies](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/README.md) |
+| Learning it by example: trees, rewriting, standards, names, languages, snapshots, transpiling, bridges | [the tutorial, nine case studies](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/README.md) |
 | The design: trees, standards, each language, parsing gaps, printing, definitions, transpiling, bridges | [PROGRAMS.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-programs/blob/main/python3/tests/TestPlan.md) |

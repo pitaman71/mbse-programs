@@ -149,7 +149,7 @@ npm test                       # type-check and run the test suites and the tuto
 
 | Read | For |
 |---|---|
-| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Eight case studies, from code as text to code generated from rules: trees, rewriting, standards, names, three languages, snapshots, transpiling and bridges. Start here. |
+| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Nine case studies, from code as text to code generated from rules: trees, rewriting, standards, names, three languages, snapshots, transpiling, and bridges into Python and into hardware. Start here. |
 | [Programs design](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, transpiling, bridges to mbse-expressions, and open questions |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-programs/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
@@ -197,8 +197,9 @@ And one transpiler, TypeScript to Python, over the subset of TypeScript that ord
 functions, classes, enums, imports and type annotations, with JavaScript's common globals and methods mapped to
 Python's. Its programs print the same in Node and, translated, in CPython.
 
-And one bridge, between mbse-expressions' Python dialect and Python's syntax trees, both ways: a rule stored as data
-becomes a Python expression or function, and Python source becomes a rule, in TypeScript too.
+And two bridges, between mbse-expressions' Python and SystemVerilog dialects and Python's and Verilog's syntax trees,
+both ways: a rule stored as data becomes a Python expression or function, or a SystemVerilog function, constraint or
+assertion, and source becomes a rule, in TypeScript too.
 
 Not built yet: the constructs the parsers cannot read ([Parsing, in the design](docs/PROGRAMS.md#parsing), [Parsing
 Python](docs/PROGRAMS.md#parsing-python), [Parsing TypeScript](docs/PROGRAMS.md#parsing-typescript)) are built and

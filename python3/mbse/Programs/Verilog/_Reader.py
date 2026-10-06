@@ -1950,6 +1950,8 @@ class _Reader:
             for select in _nodes(right.selectors):
                 out = self.select(select, out)
             return out
+        if right.kind.name in ("ArrayAndMethod", "ArrayOrMethod", "ArrayXorMethod", "ArrayUniqueMethod"):
+            return S.MemberExpression(value=value, member=self.identifier(right.keyword))  # `q.and()`: a keyword
         raise self.unsupported(node)
 
     def member_access(self, node: Any) -> S.MemberExpression:

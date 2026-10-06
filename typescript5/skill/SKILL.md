@@ -21,8 +21,8 @@ Python314.print(module)                                    # 'def rectangle_area
 
 The languages are Ccpp (C and C++ as one tree language), Python (whose kinds follow `ast`), TypeScript (TypeScript
 and JavaScript as one, whose kinds follow typescript-estree) and Verilog (Verilog and SystemVerilog as one, whose kinds
-follow IEEE 1800's grammar). A transpiler maps TypeScript to Python, and a bridge maps
-mbse-expressions' Python dialect to Python's trees and back, so that rules kept as data become code.
+follow IEEE 1800's grammar). A transpiler maps TypeScript to Python, and bridges map mbse-expressions' Python and
+SystemVerilog dialects to Python's and Verilog's trees and back, so that rules kept as data become code.
 
 ## When to use it
 
@@ -76,7 +76,7 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 | Know a language: its kinds, standards, parsing gaps, printing and definitions | [references/languages.md](references/languages.md) |
 | Rewrite trees, transpile between languages, or bridge rules and code | [references/transpiling.md](references/transpiling.md) |
 
-Deeper material is in the repository: `python3/tutorials/` and `typescript5/tutorials/` teach it in eight case
+Deeper material is in the repository: `python3/tutorials/` and `typescript5/tutorials/` teach it in nine case
 studies, with outputs, and `docs/PROGRAMS.md` holds the design, every parser's gaps and the open questions. Links use
 `https://github.com/pitaman71/mbse-programs/blob/main/<path>`; in a checkout, `<path>` is relative to the repository
 root.

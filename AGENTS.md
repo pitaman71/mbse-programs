@@ -8,14 +8,14 @@ C++20, parsed by tree-sitter-cpp), Python (kinds following `ast`, with Python 3.
 tree-sitter-python) and TypeScript (TypeScript and JavaScript, kinds following typescript-estree, with TypeScript 5.0
 and 5.9 and ES2020 and ES2025, with JSX or without, parsed by tree-sitter-typescript) and Verilog (Verilog and
 SystemVerilog, with Verilog-2005 and SystemVerilog 2017 and 2023, read by slang). A first transpiler translates a
-subset of TypeScript into Python, and a bridge carries expressions between mbse-expressions' Python dialect and Python's
-trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
+subset of TypeScript into Python, and bridges carry expressions between mbse-expressions' Python and SystemVerilog
+dialects and the languages' trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
 
 ## Start here
 
 | You want to | Read |
 |---|---|
-| Learn it by example, from code as text to code generated from rules | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
+| Learn it by example, from code as text to code generated from rules | [python3/tutorials/README.md](python3/tutorials/README.md), nine case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
 | Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
 | Use the library: parse, build, rewrite, check, print, transpile or bridge trees | [skills/mbse-programs/SKILL.md](skills/mbse-programs/SKILL.md), a skill. It loads its references only as needed |
 | Understand a design rule, a known gap or an open question | [docs/PROGRAMS.md](docs/PROGRAMS.md), by section |

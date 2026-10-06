@@ -10,7 +10,7 @@ Trees are plain mutable objects with typed properties; every kind has an mbse-sc
 
 ## Learning it
 
-- [Python tutorial](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/README.md) and [TypeScript tutorial](https://github.com/pitaman71/mbse-programs/blob/main/typescript5/tutorials/README.md): eight case studies, from code as text to code generated from the rules of an executable specification
+- [Python tutorial](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/README.md) and [TypeScript tutorial](https://github.com/pitaman71/mbse-programs/blob/main/typescript5/tutorials/README.md): nine case studies, from code as text to code generated from the rules of an executable specification
 
 ## Using it
 

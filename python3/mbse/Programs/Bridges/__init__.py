@@ -1,5 +1,6 @@
-"""Bridges: between mbse-expressions' dialects and the languages' syntax trees, both ways, tree to tree (`Python`)."""
+"""Bridges: between mbse-expressions' dialects and the languages' syntax trees, both ways, tree to tree
+(`Python`, `Verilog`)."""
 
-from . import Python
+from . import Python, Verilog
 
-__all__ = ["Python"]
+__all__ = ["Python", "Verilog"]

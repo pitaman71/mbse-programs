@@ -102,6 +102,6 @@ check((Translators.between(PythonDialect.Expressions.DIALECT, E.DIALECT).forward
 
 | Topic | Read |
 |---|---|
-| The Python tutorial's eight case studies, in TypeScript | [typescript5/tutorials/](https://github.com/pitaman71/mbse-programs/blob/main/typescript5/tutorials/README.md) |
+| The Python tutorial's nine case studies, in TypeScript | [typescript5/tutorials/](https://github.com/pitaman71/mbse-programs/blob/main/typescript5/tutorials/README.md) |
 | Where the implementations deliberately differ, and why | [EQUIVALENCE.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/EQUIVALENCE.md) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-programs/blob/main/typescript5/tests/TestPlan.md) |

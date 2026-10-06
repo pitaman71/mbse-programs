@@ -1,5 +1,5 @@
 <!-- nav -->
-[← 8 · From rules to code (TypeScript)](../typescript5/tutorials/08_From_Rules_To_Code.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+[← 9 · Rules in hardware (TypeScript)](../typescript5/tutorials/09_Rules_In_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
 
 # Programs
 
@@ -612,6 +612,50 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 # 'def is_contactable(age, email):\n    return age >= 18 and len(email) > 0'
 ```
 
+### Verilog
+
+`Bridges.Verilog` maps the SystemVerilog dialect's terms to Verilog syntax nodes and back:
+
+| SystemVerilog dialect | Verilog syntax nodes |
+|---|---|
+| `constant` | an unsized decimal, a real or a string literal; a negative number is a negation, and a real that is not finite `0.0 / 0.0` or `1.0 / 0.0` |
+| `vector` | a sized `IntegerLiteral` in its base, as the dialect writes it (`4'b10x1`, `8'shff`) |
+| `identifier` | `NameExpression`, or `ThisExpression` for `this`, the object a rule is about |
+| `unary`, `binary`, `conditional` | `UnaryExpression`, `BinaryExpression`, `ConditionalExpression` |
+| `concatenation`, `replication` | `Concatenation`, `Replication` of one item |
+| `select`, `range` | `IndexExpression`, `RangeSelect` with `:` |
+| `inside`, `span` | `InsideExpression`, whose spans are `ValueRange`s |
+| `cast` | `CastExpression` to a built-in type, a signedness (`ImplicitType`) or a width |
+| `member`, `call` | `MemberExpression`; `SystemCall` for a `$` name, else `CallExpression` |
+| `method`, `iterate` | `q.size()`, a call of a member; `q.sum(p) with (p > 0)`, an `ArrayMethodWithExpression` |
+
+- `expression(term)` gives the expression; a rule becomes a function that returns it (`function_(name, ports, term)`,
+  `function automatic logic name(input int x, ...)`), a constraint that holds it (`constraint(name, term)`), or an
+  immediate assertion of it (`assertion(term, message)`, `assert (...) else $error(message);`). The printed
+  SystemVerilog is the dialect's own `ToText`, but that a unary operator's unary operand is parenthesized: IEEE 1800
+  makes the operand a primary, so `- -x`, which the dialect writes, is not SystemVerilog, and the bridge's `-(-x)` is.
+- `term(expression)`, `term_of_function`, `term_of_constraint` and `term_of_assertion` read the other way: written
+  parentheses are dropped, comments skipped, and a replication of several items repeats their concatenation.
+  Literals are decoded as IEEE 1800 reads them (`decode`): a sized literal's digits are its bits, `?` is `z`, and
+  they are extended (by `x` or `z` when the first bit is one, else by `0`) or truncated to the size; a string's escapes
+  are decoded. What the dialect cannot hold raises `TranspileError` at its path: an unbased or an unsized based
+  literal, a part-select with `+:` or `-:`, a tolerance range, a cast to another type, an iteration that is not a
+  reduction over one iterator, an operator outside the dialect's vocabulary, a scoped name, attributes, and any other
+  kind.
+- Verilog reads through slang, so this reads SystemVerilog source into the dialect in both implementations, which the
+  dialect alone does in neither.
+
+```python
+from mbse.Expressions.Dialects.SystemVerilog import Evaluators
+from mbse.Programs.Bridges import Verilog as B
+from mbse.Programs.Verilog import SystemVerilog2023
+
+unit = SystemVerilog2023.parse("function automatic logic f(input int age); return age >= 18; endfunction\n")
+rule = B.term_of_function(unit.items[0])                                 # source into a rule
+Evaluators.OfAny(rule, {"age": 20})                                       # 1'b1, by the dialect
+SystemVerilog2023.print(B.constraint("c_age", rule))                    # 'constraint c_age {\n    age >= 18;\n}'
+```
+
 ## Open questions
 
 - **Moving to reference front ends.** Each language moves from tree-sitter to its own reference front end (see
@@ -638,8 +682,8 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   expressions, as in the other languages.
 - **The rest of Verilog.** Attributes on modport ports, `extern` primitives and a primitive's `.*` ports, which slang
   reads and the reader refuses, are what remains of IEEE 1800's grammar.
-- **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
-  Python's does.
+- **More bridges.** Ccpp and TypeScript have dialects in mbse-expressions; each would have a bridge as Python's and
+  SystemVerilog's do.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from
   a checker run on the source, or from definitions that resolve members.
 
@@ -665,7 +709,7 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   layout); `ast.unparse` and the TypeScript compiler's printer print fully; nothing prints C++ from a tree.
 - Bridges between mbse-expressions' dialects and the languages live here, in `Bridges`, so that mbse-expressions
   depends only on mbse-schemas and keeps no parser. A bridge reads source as the dialect's own `parse` does, and
-  writes what the dialect's `render` writes.
+  writes what the dialect's `render` writes, but where that is not the language's: SystemVerilog's `- -x` is `-(-x)`.
 - The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as
   they are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by
   the others, and pins the version and commit of each it was tested with in `siblings.json`: a sibling is compatible
@@ -717,4 +761,4 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 ---
 
 <!-- nav -->
-[← 8 · From rules to code (TypeScript)](../typescript5/tutorials/08_From_Rules_To_Code.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+[← 9 · Rules in hardware (TypeScript)](../typescript5/tutorials/09_Rules_In_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
