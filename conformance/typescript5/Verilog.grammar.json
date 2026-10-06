@@ -2752,6 +2752,14 @@
    "features": {},
    "properties": [
     {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
      "name": "direction",
      "type": "str",
      "optional": false,
@@ -2793,6 +2801,14 @@
    "features": {},
    "properties": [
     {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
      "name": "keyword",
      "type": "str",
      "optional": false,
@@ -2827,6 +2843,14 @@
    "extension": false,
    "features": {},
    "properties": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
     {
      "name": "name",
      "type": [
@@ -3116,6 +3140,11 @@
       "SystemVerilog": 2005
      }
     },
+    "forkjoin": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
     "pure": {
      "true": {
       "SystemVerilog": 2005
@@ -3150,6 +3179,11 @@
    "properties": [
     {
      "name": "extern",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "forkjoin",
      "type": "bool",
      "optional": false
     },
@@ -3929,9 +3963,19 @@
      "true": {
       "SystemVerilog": 2005
      }
+    },
+    "extern": {
+     "true": {
+      "SystemVerilog": 2005
+     }
     }
    },
    "properties": [
+    {
+     "name": "extern",
+     "type": "bool",
+     "optional": false
+    },
     {
      "name": "name",
      "type": [
@@ -3944,7 +3988,8 @@
      "name": "ports",
      "type": [
       "UdpPort",
-      "Identifier"
+      "Identifier",
+      "WildcardPort"
      ],
      "optional": true,
      "many": true
@@ -3989,6 +4034,14 @@
    "extension": false,
    "features": {},
    "properties": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
     {
      "name": "direction",
      "type": "str",
@@ -6922,6 +6975,33 @@
    "properties": [
     {
      "name": "interface",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "InterfaceMethodName",
+   "category": "Name",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "port",
      "type": [
       "Identifier"
      ],

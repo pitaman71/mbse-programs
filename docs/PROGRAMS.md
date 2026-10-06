@@ -377,7 +377,8 @@ The tree is abstract where the grammar only spells:
 - A non-ANSI header's port is a `PortReference` (a name, or a part of one: `w[1:0]`), a `PortConcatenation`
   (`{a, b}`), an `ExplicitPort` (`.p(x)`) or an `EmptyPort`; an ANSI header's `.p(expression)` is an
   `ExplicitAnsiPort`. A modport's ports are `ModportPort`s, explicit ones included (`input .a(b)`),
-  `ModportSubroutine`s (`import f`, `export task t(int a)`) and `ModportClocking`s (`clocking cb`).
+  `ModportSubroutine`s (`import f`, `export task t(int a)`) and `ModportClocking`s (`clocking cb`); attributes
+  before a group of them (`(* a *) input d, e`) are each port's.
 - A class may be `final` (`class :final c`) and pass its base its constructor's arguments (`extends b(default)`,
   `defaulted`); a method and a constraint have a `specifier` (`:initial`, `:extends`) and may be `final`. A class's
   `typedef` may be `local` or `protected`; `;` alone is an `EmptyItem`; `typedef bus.t t` names an interface's type
@@ -392,7 +393,9 @@ The tree is abstract where the grammar only spells:
 - `import "DPI-C" ...` is a `DpiImport` of a function's or a task's prototype, `export "DPI-C" ...` a `DpiExport`;
   `bind` is a `BindDirective` of a target, its instances and a `ModuleInstantiation`. An `extern` module, interface or
   program is its declaration with `extern` set and no items, and `.*` in the header of the unit that defines it is a
-  `WildcardPort`.
+  `WildcardPort`. In an interface, an `extern` task or function is its prototype with `extern` set, and an `extern
+  forkjoin` task has `forkjoin` too; a module defines it for its interface port by an `InterfaceMethodName`
+  (`task bus.probe`).
 - `randsequence` is a `RandSequenceStatement` of `Production`s, each of `ProductionRule`s (with a weight and code, or
   `rand join`) whose items are a category of their own, `ProductionItem`: calls of productions, code blocks, and their
   `if`, `repeat` and `case`. A production prints on a line, but for code that spans lines.
@@ -409,7 +412,9 @@ The tree is abstract where the grammar only spells:
 - Gates, switches and pulls are a `GateInstantiation` of `GateInstance`s (whose names may be left out), with a
   `DriveStrength` or a pull's `PullStrength`; so is a user-defined primitive's instance without a name, whose
   `primitive` is its name. A primitive is a `UdpDeclaration` of `UdpPort`s, an optional `UdpInitial`, and a table of
-  `UdpEntry`s, whose fields are kept as written (`(01) 1 : ? : -`) and checked against IEEE 1800's symbols.
+  `UdpEntry`s, whose fields are kept as written (`(01) 1 : ? : -`) and checked against IEEE 1800's symbols; an
+  `extern` one is a header alone, and a `.*` header (a `WildcardPort`) takes its ports from it. A port declaration
+  may carry attributes.
 - A specify block is a `SpecifyBlock` of `SpecparamDeclaration`s (whose `PATHPULSE$` assignments have a `limit`),
   `PathDeclaration`s (conditional or `ifnone`, with an edge, a polarity, `=>` or `*>`, and an edge-sensitive path's
   data), `TimingCheck`s whose events are `TimingCheckEvent`s, and `PulseStyleDeclaration`s. slang reads `+=>` as `+=`
@@ -435,7 +440,8 @@ The tree is abstract where the grammar only spells:
 - A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
   as written; a macro used anywhere else is refused.
 
-Attributes on modport ports, `extern` primitives and a primitive's `.*` ports are not kinds yet.
+With these, the kinds hold IEEE 1800's grammar: the reader refuses a macro used where a whole expression isn't,
+protected text, and forms slang accepts that IEEE 1800 does not.
 
 ### Reading Verilog
 
@@ -485,12 +491,14 @@ consequence, see. An enumeration's members are declared where the enumeration is
 and a named gate is an 'instance'; a `specparam` is a 'specparam'; a configuration has a scope of its localparams, and
 its cells and libraries are the libraries', not looked up. A non-ANSI port is one entity, which the header names and a
 port declaration declares; an explicit port's own name (`.p(x)`) is not looked up, but what it connects is. An `extern`
-unit declares nothing: the unit of its name does, with its ports for `.*`. `bind`'s instances and connections are found
-in its target. `import p::x` declares an entity whose `target` is `p::x`, and `import p::*` makes the package's names
-visible where nothing nearer declares them; what a package exports is not followed. `$unit::x` finds `x` in the
-compilation unit. A package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a
-design unit's and a block's with `.` (`sampler.counter.count`). A macro's name in an `` `ifdef `` condition, an
-interface's type (`bus.t`), a member after `.` and what an instance's module declares are not resolved.
+unit or primitive declares nothing: the unit or primitive of its name does, with its ports for `.*`. A task an
+interface's `extern` declares, defined for a port (`task bus.probe`), declares nothing where it is defined, and its name
+is not looked up but for the port. `bind`'s instances
+and connections are found in its target. `import p::x` declares an entity whose `target` is `p::x`, and `import p::*`
+makes the package's names visible where nothing nearer declares them; what a package exports is not followed. `$unit::x`
+finds `x` in the compilation unit. A package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`,
+`packet::new`), a design unit's and a block's with `.` (`sampler.counter.count`). A macro's name in an `` `ifdef ``
+condition, an interface's type (`bus.t`), a member after `.` and what an instance's module declares are not resolved.
 
 ## Transpiling
 
@@ -633,8 +641,7 @@ Python314.print(B.function_("is_contactable", ["age", "email"], constraint))
   term)`, `function automatic logic name(input int x, ...)`), a `constraint` block that holds it, within which
   randomization generates values (`constraint(name, term)`), or an
   immediate assertion of it (`assertion(term, message)`, `assert (...) else $error(message);`). The printed
-  SystemVerilog is the dialect's own `ToText`, but that a unary operator's unary operand is parenthesized: IEEE 1800
-  makes the operand a primary, so `- -x`, which the dialect writes, is not SystemVerilog, and the bridge's `-(-x)` is.
+  SystemVerilog is the dialect's own `ToText`.
 - `term(expression)`, `term_of_function`, `term_of_constraint` and `term_of_assertion` read the other way: written
   parentheses are dropped, comments skipped, and a replication of several items repeats their concatenation.
   Literals are decoded as IEEE 1800 reads them (`decode`): a sized literal's digits are its bits, `?` is `z`, and
@@ -681,8 +688,6 @@ SystemVerilog2023.print(B.constraint("c_age", constraint))                    # 
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **The rest of Verilog.** Attributes on modport ports, `extern` primitives and a primitive's `.*` ports, which slang
-  reads and the reader refuses, are what remains of IEEE 1800's grammar.
 - **More bridges.** Ccpp and TypeScript have dialects in mbse-expressions; each would have a bridge as Python's and
   SystemVerilog's do.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from
@@ -710,7 +715,7 @@ SystemVerilog2023.print(B.constraint("c_age", constraint))                    # 
   layout); `ast.unparse` and the TypeScript compiler's printer print fully; nothing prints C++ from a tree.
 - Bridges between mbse-expressions' dialects and the languages live here, in `Bridges`, so that mbse-expressions
   depends only on mbse-schemas and keeps no parser. A bridge reads source as the dialect's own `parse` does, and
-  writes what the dialect's `render` writes, but where that is not the language's: SystemVerilog's `- -x` is `-(-x)`.
+  writes what the dialect's `render` writes.
 - The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as
   they are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by
   the others, and pins the version and commit of each it was tested with in `siblings.json`: a sibling is compatible

@@ -70,14 +70,18 @@ interface bus_if #(parameter int W = 8) (input logic clk);
     logic [W-1:0] data;
     logic valid, ready;
     modport source (output data, output valid, input ready);
-    modport sink (input data, input valid, output ready);
+    modport sink ((* passive *) input data, input valid, output ready);
     clocking cb @(posedge clk);
         input data;
     endclocking
     task automatic pulse();
         valid = 1'b1;
     endtask
-    modport bench (clocking cb, import pulse, import task settle(int n), export probe, input .seen(valid), output .spare());
+    // The bench's tasks, which the modules on its ports define: one, or each of several.
+    extern task probe(input int count);
+    extern forkjoin task sweep();
+    modport bench (clocking cb, import pulse, import task settle(int n), export probe, export sweep, input .seen(valid),
+                   output .spare());
 endinterface
 
 module sampler
@@ -371,6 +375,22 @@ primitive parity (output p, input a, b);
     endtable
 endprimitive
 
+// The majority of three bits, declared before its body, whose ports its declaration gives.
+extern primitive majority (output m, input a, b, c);
+
+primitive majority (.*);
+    (* voted *) output m;
+    input a, b, c;
+    table
+        0 0 ? : 0;
+        0 ? 0 : 0;
+        ? 0 0 : 0;
+        1 1 ? : 1;
+        1 ? 1 : 1;
+        ? 1 1 : 1;
+    endtable
+endprimitive
+
 // The watchdog, declared before its body, whose ports its declaration gives.
 extern module watchdog #(parameter int LIMIT = 8) (input logic clk, output logic bark);
 
@@ -381,6 +401,15 @@ endmodule
 // A tap on every sampler, and on its counter.
 bind sampler probe_tap tap (.level());
 bind sampler: u_counter watchdog #(.LIMIT(4)) dog (.clk(clk), .bark());
+
+// The bench's probe and sweep, defined for the bus it is connected to.
+module bench_probe (bus_if.bench bus);
+    task bus.probe(input int count);
+        bus.pulse();
+    endtask
+    task bus.sweep();
+    endtask
+endmodule
 
 // A monitor of the bus, by a non-ANSI interface port.
 module bus_monitor (bus);

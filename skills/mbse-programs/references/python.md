@@ -125,7 +125,7 @@ JSON.ToJSON(P.LANGUAGE.Builders).Reachable(P.Module.Schema, tree)           # fr
 - A transpiled program keeps what code means where the languages agree; it does not emulate where they differ.
 - The bridge holds only what mbse-expressions' Python dialect can: no `is`, no keyword arguments, no slices.
 - The Verilog bridge holds only what the SystemVerilog dialect can: no `+:` part-selects, no casts to named types, no
-  unsized based literals (`'b101`); it writes `-(-x)` where the dialect's text writes `- -x`, which is not SystemVerilog.
+  unsized based literals (`'b101`).
 
 ## Go deeper
 

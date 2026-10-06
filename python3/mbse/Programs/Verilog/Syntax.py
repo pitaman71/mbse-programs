@@ -996,8 +996,9 @@ class ModportItem(SyntaxNode):
 
 class ModportPort(SyntaxNode):
     """`direction name` in a modport, or `explicit`ly `direction .name(value)`, a port named apart from the expression
-    it is, or that is nothing (25.5.4)."""
+    it is, or that is nothing (25.5.4). Attributes before a group of ports are each port's (A.2.9)."""
 
+    attributes: list[AttributeInstance]
     direction: Direction
     explicit: bool
     name: Identifier
@@ -1011,8 +1012,9 @@ class ModportPort(SyntaxNode):
 
 class ModportSubroutine(SyntaxNode):
     """`import name` or `export name` in a modport, or with a `prototype`, a function's or a task's without its body
-    (`import task t(int a)`) (25.7)."""
+    (`import task t(int a)`) (25.7), with its group's attributes."""
 
+    attributes: list[AttributeInstance]
     keyword: ImportExport
     name: Identifier | None
     prototype: FunctionDeclaration | TaskDeclaration | None
@@ -1024,8 +1026,9 @@ class ModportSubroutine(SyntaxNode):
 
 
 class ModportClocking(SyntaxNode):
-    """`clocking name` in a modport: a clocking block's signals, as it gives them (25.5.5)."""
+    """`clocking name` in a modport: a clocking block's signals, as it gives them (25.5.5), with its attributes."""
 
+    attributes: list[AttributeInstance]
     name: Identifier
 
 
@@ -1091,9 +1094,11 @@ class TaskDeclaration(Item):
     """`task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`,
     `virtual`, and a prototype without a body: `extern`, defined outside the class, or `pure virtual` (8.10, 8.20,
     8.24). A constructor is named `new`. A virtual method's `:initial` or `:extends` `specifier` and `:final` say
-    whether it overrides and may be overridden (8.20)."""
+    whether it overrides and may be overridden (8.20). In an interface, an `extern` prototype is a task a module exports
+    through a modport, and an `extern forkjoin` one a task several modules may export (25.7.4)."""
 
     extern: bool
+    forkjoin: bool
     pure: bool
     virtual: bool
     visibility: Visibility | None
@@ -1106,10 +1111,12 @@ class TaskDeclaration(Item):
     body: list[Item | Statement | Directive | Comment]
     labeled: bool
     FEATURES = {"lifetime": {True: verilog(2001)}, "labeled": {True: sv()}, "extern": {True: sv()},
-                "pure": {True: sv()}, "virtual": {True: sv()}, "visibility": {True: sv()}, "static": {True: sv()},
-                "specifier": {True: sv(2023)}, "final": {True: sv(2023)}}
+                "forkjoin": {True: sv()}, "pure": {True: sv()}, "virtual": {True: sv()}, "visibility": {True: sv()},
+                "static": {True: sv()}, "specifier": {True: sv(2023)}, "final": {True: sv(2023)}}
 
     def check(self) -> list[str]:
+        if self.forkjoin is True and self.extern is not True:
+            return ["a forkjoin TaskDeclaration is extern"]
         return _method_problems(self)
 
 
@@ -1396,21 +1403,34 @@ class PullStrength(SyntaxNode):
 class UdpDeclaration(Item):
     """`primitive name (ports); declarations initial table entries endtable endprimitive`, a user-defined primitive:
     its output from its inputs, and from its current state when its output is a `reg` (29). An ANSI header declares
-    its ports (`UdpPort`s); a non-ANSI one names them (`Identifier`s), and `declarations` declare them. `labeled`
-    repeats the name after `endprimitive`."""
+    its ports (`UdpPort`s); a non-ANSI one names them (`Identifier`s), and `declarations` declare them; `.*`, its only
+    port, takes them from an `extern` declaration of its name, a header alone (29.3). `labeled` repeats the name after
+    `endprimitive`."""
 
+    extern: bool
     name: Identifier
-    ports: list[UdpPort | Identifier]
+    ports: list[UdpPort | Identifier | WildcardPort]
     declarations: list[UdpPort]
     initial: UdpInitial | None
     entries: list[UdpEntry | Comment | Directive]
     labeled: bool
-    FEATURES = {"labeled": {True: sv()}}
+    FEATURES = {"labeled": {True: sv()}, "extern": {True: sv()}}
+
+    def check(self) -> list[str]:
+        wildcard = any(isinstance(p, WildcardPort) for p in self.ports)
+        if self.extern is True and (self.declarations or self.initial is not None or self.entries or self.labeled is True
+                                    or wildcard):
+            return ["an extern UdpDeclaration is a header alone, with its ports"]
+        if wildcard and len(self.ports) > 1:
+            return ["a UdpDeclaration's .* is its only port"]
+        return []
 
 
 class UdpPort(SyntaxNode):
-    """`output reg name = value`, `input names` or `reg name`: a primitive's port, or its output's state (29.3)."""
+    """`output reg name = value`, `input names` or `reg name`: a primitive's port, or its output's state (29.3), with
+    its attributes."""
 
+    attributes: list[AttributeInstance]
     direction: UdpDirection | None
     reg: bool
     names: list[Identifier]
@@ -2957,6 +2977,15 @@ class InterfaceTypeName(Name):
     SINCE = sv()
 
 
+class InterfaceMethodName(Name):
+    """`port.name`: in a module, the task or function an interface's `extern` prototype declares, defined for the
+    module's interface port `port` (25.7.4)."""
+
+    port: Identifier
+    name: Identifier
+    SINCE = sv()
+
+
 class UnitName(Name):
     """`$unit`, the compilation unit, as a scope: `$unit::name` (26.3)."""
 
@@ -3120,7 +3149,7 @@ KINDS: list[type[SyntaxNode]] = [
     TaggedExpression, MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern, TaggedPattern,
     StructurePattern, PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument,
     RootExpression, EmptyQueue,
-    InterfaceTypeName, UnitName,
+    InterfaceTypeName, InterfaceMethodName, UnitName,
     TypeReference,
     NullLiteral, ThisExpression, SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression,
     RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem, LocalName,

@@ -1355,6 +1355,7 @@ export class ModportItem extends SyntaxNode {
 }
 
 const ModportPortSpec = {
+  attributes: many(() => [AttributeInstance]),
   direction: choice(...DIRECTIONS),
   explicit: flag(),
   name: one(() => [Identifier]),
@@ -1363,7 +1364,7 @@ const ModportPortSpec = {
 export interface ModportPort extends Properties<typeof ModportPortSpec> {}
 /**
  * `direction name` in a modport, or `explicit`ly `direction .name(value)`, a port named apart from the expression
- * it is, or that is nothing (25.5.4).
+ * it is, or that is nothing (25.5.4). Attributes before a group of ports are each port's (A.2.9).
  */
 export class ModportPort extends SyntaxNode {
   static override SPEC = ModportPortSpec;
@@ -1373,6 +1374,7 @@ export class ModportPort extends SyntaxNode {
 }
 
 const ModportSubroutineSpec = {
+  attributes: many(() => [AttributeInstance]),
   keyword: choice(...IMPORT_EXPORTS),
   name: optional(() => [Identifier]),
   prototype: optional(() => [FunctionDeclaration, TaskDeclaration]),
@@ -1380,7 +1382,7 @@ const ModportSubroutineSpec = {
 export interface ModportSubroutine extends Properties<typeof ModportSubroutineSpec> {}
 /**
  * `import name` or `export name` in a modport, or with a `prototype`, a function's or a task's without its body
- * (`import task t(int a)`) (25.7).
+ * (`import task t(int a)`) (25.7), with its group's attributes.
  */
 export class ModportSubroutine extends SyntaxNode {
   static override SPEC = ModportSubroutineSpec;
@@ -1390,10 +1392,11 @@ export class ModportSubroutine extends SyntaxNode {
 }
 
 const ModportClockingSpec = {
+  attributes: many(() => [AttributeInstance]),
   name: one(() => [Identifier]),
 };
 export interface ModportClocking extends Properties<typeof ModportClockingSpec> {}
-/** `clocking name` in a modport: a clocking block's signals, as it gives them (25.5.5). */
+/** `clocking name` in a modport: a clocking block's signals, as it gives them (25.5.5), with its attributes. */
 export class ModportClocking extends SyntaxNode {
   static override SPEC = ModportClockingSpec;
 }
@@ -1484,6 +1487,7 @@ export class FunctionDeclaration extends Item {
 
 const TaskDeclarationSpec = {
   extern: flag(),
+  forkjoin: flag(),
   pure: flag(),
   virtual: flag(),
   visibility: optionalChoice(...VISIBILITYS),
@@ -1501,7 +1505,8 @@ export interface TaskDeclaration extends Properties<typeof TaskDeclarationSpec> 
  * `task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`,
  * `virtual`, and a prototype without a body: `extern`, defined outside the class, or `pure virtual` (8.10, 8.20,
  * 8.24). A constructor is named `new`. A virtual method's `:initial` or `:extends` `specifier` and `:final` say
- * whether it overrides and may be overridden (8.20).
+ * whether it overrides and may be overridden (8.20). In an interface, an `extern` prototype is a task a module exports
+ * through a modport, and an `extern forkjoin` one a task several modules may export (25.7.4).
  */
 export class TaskDeclaration extends Item {
   static override SPEC = TaskDeclarationSpec;
@@ -1509,6 +1514,7 @@ export class TaskDeclaration extends Item {
     lifetime: [[true, verilog(2001)]],
     labeled: [[true, sv()]],
     extern: [[true, sv()]],
+    forkjoin: [[true, sv()]],
     pure: [[true, sv()]],
     virtual: [[true, sv()]],
     visibility: [[true, sv()]],
@@ -1517,6 +1523,7 @@ export class TaskDeclaration extends Item {
     final: [[true, sv(2023)]],
   };
   override check(): string[] {
+    if (this.forkjoin === true && this.extern !== true) return ["a forkjoin TaskDeclaration is extern"];
     return methodProblems(this);
   }
 }
@@ -1882,8 +1889,9 @@ export class PullStrength extends SyntaxNode {
 }
 
 const UdpDeclarationSpec = {
+  extern: flag(),
   name: one(() => [Identifier]),
-  ports: many(() => [UdpPort, Identifier]),
+  ports: many(() => [UdpPort, Identifier, WildcardPort]),
   declarations: many(() => [UdpPort]),
   initial: optional(() => [UdpInitial]),
   entries: many(() => [UdpEntry, Comment, Directive]),
@@ -1893,22 +1901,36 @@ export interface UdpDeclaration extends Properties<typeof UdpDeclarationSpec> {}
 /**
  * `primitive name (ports); declarations initial table entries endtable endprimitive`, a user-defined primitive:
  * its output from its inputs, and from its current state when its output is a `reg` (29). An ANSI header declares
- * its ports (`UdpPort`s); a non-ANSI one names them (`Identifier`s), and `declarations` declare them. `labeled`
- * repeats the name after `endprimitive`.
+ * its ports (`UdpPort`s); a non-ANSI one names them (`Identifier`s), and `declarations` declare them; `.*`, its only
+ * port, takes them from an `extern` declaration of its name, a header alone (29.3). `labeled` repeats the name after
+ * `endprimitive`.
  */
 export class UdpDeclaration extends Item {
   static override SPEC = UdpDeclarationSpec;
-  static override FEATURES: Features = { labeled: [[true, sv()]] };
+  static override FEATURES: Features = { labeled: [[true, sv()]], extern: [[true, sv()]] };
+  override check(): string[] {
+    const wildcard = this.ports.some((p) => p instanceof WildcardPort);
+    if (this.extern === true && (this.declarations.length > 0 || this.initial !== null || this.entries.length > 0
+      || this.labeled === true || wildcard)) {
+      return ["an extern UdpDeclaration is a header alone, with its ports"];
+    }
+    if (wildcard && this.ports.length > 1) return ["a UdpDeclaration's .* is its only port"];
+    return [];
+  }
 }
 
 const UdpPortSpec = {
+  attributes: many(() => [AttributeInstance]),
   direction: optionalChoice(...UDP_DIRECTIONS),
   reg: flag(),
   names: many(() => [Identifier]),
   value: optional(() => [Expression]),
 };
 export interface UdpPort extends Properties<typeof UdpPortSpec> {}
-/** `output reg name = value`, `input names` or `reg name`: a primitive's port, or its output's state (29.3). */
+/**
+ * `output reg name = value`, `input names` or `reg name`: a primitive's port, or its output's state (29.3), with
+ * its attributes.
+ */
 export class UdpPort extends SyntaxNode {
   static override SPEC = UdpPortSpec;
   override check(): string[] {
@@ -4019,6 +4041,20 @@ export class InterfaceTypeName extends Name {
   static override SINCE: Availability | null = sv();
 }
 
+const InterfaceMethodNameSpec = {
+  port: one(() => [Identifier]),
+  name: one(() => [Identifier]),
+};
+export interface InterfaceMethodName extends Properties<typeof InterfaceMethodNameSpec> {}
+/**
+ * `port.name`: in a module, the task or function an interface's `extern` prototype declares, defined for the
+ * module's interface port `port` (25.7.4).
+ */
+export class InterfaceMethodName extends Name {
+  static override SPEC = InterfaceMethodNameSpec;
+  static override SINCE: Availability | null = sv();
+}
+
 const UnitNameSpec = {};
 export interface UnitName extends Properties<typeof UnitNameSpec> {}
 /** `$unit`, the compilation unit, as a scope: `$unit::name` (26.3). */
@@ -4231,7 +4267,7 @@ export const KINDS = [
   CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, TaggedExpression,
   MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern, TaggedPattern, StructurePattern,
   PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue,
-  InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression,
+  InterfaceTypeName, InterfaceMethodName, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression,
   NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem,
   LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
   ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,

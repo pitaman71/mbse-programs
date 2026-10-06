@@ -5,8 +5,7 @@
  * From terms to syntax nodes: `expression(term)` is the SystemVerilog expression a term of the dialect writes, and a
  * constraint becomes SystemVerilog as `function_(name, ports, term)`, a function that returns it, `constraint(name,
  * term)`, a `constraint` block that holds it, or `assertion(term)`, an immediate assertion of it. Every term of the
- * dialect has a counterpart, and the expression prints as the dialect renders it, but that a unary operator's unary
- * operand is parenthesized, `-(-x)`, since IEEE 1800 makes the operand a primary. A constant is an unsized decimal, a
+ * dialect has a counterpart, and the expression prints as the dialect renders it. A constant is an unsized decimal, a
  * real or a string literal, a negative number a negation, and a real that is not finite `0.0 / 0.0` or `1.0 / 0.0`; a
  * vector is a sized literal in its base, as the dialect writes it.
  *

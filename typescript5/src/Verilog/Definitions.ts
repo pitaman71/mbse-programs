@@ -12,9 +12,10 @@
  *   enumeration's members are declared where the enumeration is, as SystemVerilog does; a member `name[2]` declares
  *   `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal numbers). A `nettype` declares a
  *   'type'.
- * - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
- *   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
- *   is, and its instances and connections in the target; what it instantiates is declared nowhere.
+ * - An `extern` design unit or primitive declares nothing: the unit or primitive of its name does, and with `.*` takes
+ *   the extern's parameters and ports. A DPI import declares its function or task; a C name is not looked up. `bind`
+ *   finds its target where it is, and its instances and connections in the target; what it instantiates is declared
+ *   nowhere.
  * - A non-ANSI port is one entity, which the header names and a port declaration declares. An explicit port's own name
  *   (`.p(x)`) is outside the module: what it connects is found inside.
  * - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
@@ -243,7 +244,10 @@ class Definer {
     const kind = node instanceof S.TaskDeclaration ? "task" : "function";
     const name = node.name instanceof S.Identifier ? node.name : null;
     let inner: Scope;
-    if (name === null) {
+    if (node.name instanceof S.InterfaceMethodName) { // `port.t`: the interface's task, not looked up
+      this.locate(node.name, scope);
+      inner = new Scope(kind, null, scope, node);
+    } else if (name === null) {
       this.locate(node.name, scope);
       inner = this.outOfBlock(node, scope, kind);
     } else {
@@ -489,9 +493,18 @@ class Definer {
 
   /** A primitive has a scope where its ports are: one entity each, which its header and its declarations name. */
   udpDeclaration(node: any, scope: Scope): void {
+    if (node.extern === true) { // a header alone: the primitive of its name declares
+      this.locate(node, scope);
+      return;
+    }
     const inner = this.scoped(scope, "primitive", node.name, node, "primitive", ".");
     this.program.located(node.name, scope);
-    for (const port of [...node.ports, ...node.declarations]) {
+    let ports = node.ports;
+    if (ports.some((p: any) => p instanceof S.WildcardPort)) { // `.*`: the extern's ports, or the declarations' alone
+      for (const port of ports) this.program.located(port, inner);
+      ports = this.externs.get(node.name.spelling)?.ports ?? [];
+    }
+    for (const port of [...ports, ...node.declarations]) {
       this.program.located(port, inner);
       if (port instanceof S.Identifier) { // a non-ANSI header's name
         this.entity(inner, "port", port, port);

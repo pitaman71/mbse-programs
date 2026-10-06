@@ -10,9 +10,9 @@
   'bins', 'production', 'checker', 'primitive', 'specparam', 'config' and 'import'. An enumeration's members are
   declared where the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and
   `name[1:3]` declares `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
-- An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
-  and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
-  is, and its instances and connections in the target; what it instantiates is declared nowhere.
+- An `extern` design unit or primitive declares nothing: the unit or primitive of its name does, and with `.*` takes
+  the extern's parameters and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds
+  its target where it is, and its instances and connections in the target; what it instantiates is declared nowhere.
 - A non-ANSI port is one entity, which the header names and a port declaration declares. An explicit port's own name
   (`.p(x)`) is outside the module: what it connects is found inside.
 - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
@@ -230,7 +230,10 @@ class _Definer:
     def subroutine(self, node: Any, scope: Scope) -> None:
         kind = "task" if isinstance(node, S.TaskDeclaration) else "function"
         name = node.name if isinstance(node.name, S.Identifier) else None
-        if name is None:
+        if isinstance(node.name, S.InterfaceMethodName):  # `port.t`: the interface's task, not looked up
+            self.locate(node.name, scope)
+            inner = Scope(kind, None, scope, node)
+        elif name is None:
             self.locate(node.name, scope)
             inner = self.out_of_block(node, scope, kind)
         else:
@@ -489,9 +492,18 @@ class _Definer:
 
     def udp_declaration(self, node: S.UdpDeclaration, scope: Scope) -> None:
         """A primitive has a scope where its ports are: one entity each, which its header and its declarations name."""
+        if node.extern is True:  # a header alone: the primitive of its name declares
+            self.locate(node, scope)
+            return
         inner = self.scoped(scope, "primitive", node.name, node, "primitive", ".")
         self.program.located(node.name, scope)
-        for port in [*node.ports, *node.declarations]:
+        ports = node.ports
+        extern = self.externs.get(node.name.spelling)
+        if any(isinstance(p, S.WildcardPort) for p in ports):  # `.*`: the extern's ports, or the declarations' alone
+            for port in ports:
+                self.program.located(port, inner)
+            ports = extern.ports if extern is not None else []
+        for port in [*ports, *node.declarations]:
             self.program.located(port, inner)
             if isinstance(port, S.Identifier):  # a non-ANSI header's name
                 self.entity(inner, "port", port, port)

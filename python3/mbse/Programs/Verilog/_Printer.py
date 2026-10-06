@@ -369,6 +369,8 @@ class Printer:
             return "$unit"
         if isinstance(node, S.InterfaceTypeName):
             return f"{node.interface.spelling}.{node.name.spelling}"
+        if isinstance(node, S.InterfaceMethodName):
+            return f"{node.port.spelling}.{node.name.spelling}"
         if isinstance(node, S.ParameterizedName):
             return node.name.spelling + self.parameter_values(node.parameters)
         return node.spelling
@@ -458,6 +460,11 @@ class Printer:
         return [f"{_INDENT * level}modport {items};"]
 
     def modport_port(self, node: Any) -> str:
+        if node.attributes:  # each port's own group: `(* a *) input d, (* a *) input e`
+            return f"{self.attribute_text(node.attributes)} {self.modport_port_text(node)}"
+        return self.modport_port_text(node)
+
+    def modport_port_text(self, node: Any) -> str:
         if isinstance(node, S.ModportClocking):
             return f"clocking {node.name.spelling}"
         if isinstance(node, S.ModportSubroutine):
@@ -516,7 +523,8 @@ class Printer:
     def subroutine_head(self, node: Any) -> str:
         """A function's or a task's header, without its `;`."""
         task = isinstance(node, S.TaskDeclaration)
-        parts = ["extern" if node.extern else None, "pure" if node.pure else None, "virtual" if node.virtual else None,
+        parts = ["extern" if node.extern else None, "forkjoin" if task and node.forkjoin else None,
+                 "pure" if node.pure else None, "virtual" if node.virtual else None,
                  node.visibility, "static" if node.static else None, "task" if task else "function",
                  self.specifier_text(node), node.lifetime]
         if not task and node.type is not None:
@@ -723,7 +731,10 @@ class Printer:
 
     def udp_declaration(self, node: S.UdpDeclaration, level: int) -> list[str]:
         pad = _INDENT * level
-        ports = ", ".join(p.spelling if isinstance(p, S.Identifier) else self.udp_port(p) for p in node.ports)
+        ports = ", ".join(p.spelling if isinstance(p, S.Identifier) else ".*" if isinstance(p, S.WildcardPort)
+                          else self.udp_port(p) for p in node.ports)
+        if node.extern:
+            return [f"{pad}extern primitive {node.name.spelling} ({ports});"]
         lines = [f"{pad}primitive {node.name.spelling} ({ports});"]
         lines.extend(f"{pad}{_INDENT}{self.udp_port(d)};" for d in node.declarations)
         if node.initial is not None:
@@ -735,7 +746,8 @@ class Printer:
         return lines
 
     def udp_port(self, node: S.UdpPort) -> str:
-        head = " ".join(p for p in (node.direction, "reg" if node.reg else None) if p)
+        head = " ".join(p for p in (self.attribute_text(node.attributes) if node.attributes else None, node.direction,
+                                    "reg" if node.reg else None) if p)
         value = f" = {self.text(node.value)}" if node.value is not None else ""
         return f"{head} {', '.join(n.spelling for n in node.names)}{value}"
 

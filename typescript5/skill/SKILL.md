@@ -62,8 +62,9 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    don't approximate. What the languages do differently (`%` of negatives, truthiness, number printing) is not
    emulated.
 9. **Parsers have documented gaps** (some C++23/26, Python 3.13+ and TypeScript 5.x constructs): such trees build and
-   print but don't parse. Verilog's reader refuses what its kinds don't hold (attributes on modport ports, `extern` primitives), by name. In
-   TypeScript, Verilog parses through the Python implementation, so it needs `python3/`'s environment. Check [languages.md](references/languages.md) before relying on one.
+   print but don't parse. Verilog's reader refuses what its kinds don't hold (a macro used where a whole expression
+   isn't), by name. In TypeScript, Verilog parses through the Python implementation, so it needs `python3/`'s
+   environment. Check [languages.md](references/languages.md) before relying on one.
 10. **In TypeScript**, narrow syntax nodes with `instanceof` and `as`, make other versions with `new`, and expect
    strict null checks on optional children (`node.id!`).
 

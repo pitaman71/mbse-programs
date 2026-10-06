@@ -10,6 +10,8 @@ text attached to the tokens that follow them. `_Reader` rewrites slang's syntax 
   skipped keeps its text, as `DisabledText`. A directive anywhere else is refused.
 - A macro use that expands to a whole expression becomes a `MacroUsage`; any other macro use is refused.
 - What an included file contributes is not part of the including file's tree.
+- Every item slang reads, and every place it reads attributes, has a kind (slang 12): a newer slang must be checked
+  against the kinds, which hold all of IEEE 1800's grammar.
 
 Any error slang reports is a `ParseError`. Positions are counted in characters (code points), never bytes, so that every
 implementation reports the same line and column.
@@ -106,7 +108,6 @@ class _Reader:
         self.macros: set[int] = set()  # tokens read as part of a macro use
         self.expansions: dict[int, int] = {}  # the number of tokens of each macro use, by its offset
         self.start: Any = None  # the location of the file's first token
-        self.attributes_read: set[int] = set()  # the attribute instances converted, by their offset
 
     # Positions and errors
 
@@ -334,10 +335,7 @@ class _Reader:
 
     def item(self, node: Any) -> Any:
         """An item, with its attributes."""
-        method = self.ITEMS.get(node.kind.name)
-        if method is None:
-            raise self.unsupported(node)
-        out = self.made(node, method(self, node))
+        out = self.made(node, self.ITEMS[node.kind.name](self, node))
         attributes = self.attributes(node)
         return self.made(node, S.AttributedItem(attributes=attributes, item=out)) if attributes else out
 
@@ -345,7 +343,6 @@ class _Reader:
         """The attribute instances before a syntax node, `(* name = value, ... *)`, each recorded as read."""
         out = []
         for instance in getattr(node, "attributes", None) or []:
-            self.attributes_read.add(instance.sourceRange.start.offset)
             specs = []
             for spec in _nodes(instance.specs):
                 item = S.AttributeSpec(name=self.identifier(spec.name))
@@ -691,14 +688,27 @@ class _Reader:
             out.instances.append(self.made(instance, gate))
         return out
 
-    def udp_declaration(self, node: Any) -> S.UdpDeclaration:
-        ports = node.portList
+    def udp_ports(self, ports: Any) -> list[S.UdpPort | S.Identifier | S.WildcardPort]:
         if ports.kind.name == "WildcardUdpPortList":
-            raise self.unsupported(ports)
+            return [self.made(ports, S.WildcardPort())]
+        return [self.identifier(p.identifier) if p.kind.name == "IdentifierName" else self.udp_port(p)
+                for p in _nodes(ports.ports)]
+
+    def extern_method(self, node: Any) -> Any:
+        """An interface's `extern` or `extern forkjoin` task, or `extern` function: its prototype (25.7.4)."""
+        out = self.prototype(node.prototype)
+        out.extern = True
+        if node.forkJoin:
+            out.forkjoin = True
+        return out
+
+    def extern_udp(self, node: Any) -> S.UdpDeclaration:
+        return S.UdpDeclaration(extern=True, name=self.identifier(node.name), ports=self.udp_ports(node.portList))
+
+    def udp_declaration(self, node: Any) -> S.UdpDeclaration:
         body = node.body
         out = S.UdpDeclaration(name=self.identifier(node.name), labeled=node.endBlockName is not None,
-                               ports=[self.identifier(p.identifier) if p.kind.name == "IdentifierName"
-                                      else self.udp_port(p) for p in _nodes(ports.ports)],
+                               ports=self.udp_ports(node.portList),
                                declarations=[self.udp_port(p) for p in _nodes(body.portDecls)],
                                entries=self.items(_nodes(body.entries), body.endtable, convert=self.udp_entry))
         if body.initialStmt is not None:
@@ -709,10 +719,11 @@ class _Reader:
 
     def udp_port(self, node: Any) -> S.UdpPort:
         if node.kind.name == "UdpInputPortDecl":
-            out = S.UdpPort(direction="input", names=[self.identifier(n.identifier) for n in _nodes(node.names)])
+            out = S.UdpPort(attributes=self.attributes(node), direction="input",
+                            names=[self.identifier(n.identifier) for n in _nodes(node.names)])
         else:  # a UdpOutputPortDecl, or `reg name;`
-            out = S.UdpPort(direction=_text(node.keyword) or None, reg=bool(node.reg),
-                            names=[self.identifier(node.name)])
+            out = S.UdpPort(attributes=self.attributes(node), direction=_text(node.keyword) or None,
+                            reg=bool(node.reg), names=[self.identifier(node.name)])
             if node.initializer is not None:
                 out.value = self.expression(node.initializer.expr)
         return self.made(node, out)
@@ -900,11 +911,12 @@ class _Reader:
             for group in _nodes(item.ports.ports):
                 kind = group.kind.name
                 if kind == "ModportClockingPort":
-                    out.ports.append(self.made(group, S.ModportClocking(name=self.identifier(group.name))))
+                    out.ports.append(self.made(group, S.ModportClocking(attributes=self.attributes(group),
+                                                                        name=self.identifier(group.name))))
                 elif kind == "ModportSubroutinePortList":
                     keyword = group.importExport.rawText
                     for port in _nodes(group.ports):
-                        subroutine = S.ModportSubroutine(keyword=keyword)
+                        subroutine = S.ModportSubroutine(attributes=self.attributes(group), keyword=keyword)
                         if port.kind.name == "ModportNamedPort":
                             subroutine.name = self.identifier(port.name)
                         else:  # a ModportSubroutinePort
@@ -914,8 +926,8 @@ class _Reader:
                     direction = group.direction.rawText
                     for port in _nodes(group.ports):
                         explicit = port.kind.name == "ModportExplicitPort"
-                        modport_port = S.ModportPort(direction=direction, explicit=explicit,
-                                                     name=self.identifier(port.name))
+                        modport_port = S.ModportPort(attributes=self.attributes(group), direction=direction,
+                                                     explicit=explicit, name=self.identifier(port.name))
                         if modport_port.explicit and port.expr is not None:
                             modport_port.value = self.expression(port.expr)
                         out.ports.append(self.made(port, modport_port))
@@ -950,7 +962,12 @@ class _Reader:
         out: Any = S.TaskDeclaration() if task else S.FunctionDeclaration(type=self.data_type(prototype.returnType))
         self.specifiers(out, prototype.specifiers)
         out.lifetime = _text(prototype.lifetime) or None
-        out.name = self.name(prototype.name)
+        name = prototype.name
+        if name.kind.name == "ScopedName" and name.separator.rawText == "." and name.left.kind.name == "IdentifierName":
+            out.name = self.made(name, S.InterfaceMethodName(port=self.identifier(name.left.identifier),
+                                                             name=self.identifier(name.right.identifier)))
+        else:
+            out.name = self.name(name)
         if prototype.portList is not None:
             out.ports = [self.made(p, self.tf_port(p)) for p in _nodes(prototype.portList.ports)]
         return out
@@ -2151,8 +2168,8 @@ class _Reader:
         "CheckerDeclaration": checker_declaration, "CheckerDataDeclaration": checker_data,
         "PackageExportDeclaration": export_declaration, "PackageExportAllDeclaration": export_declaration,
         "UserDefinedNetDeclaration": user_net, "PrimitiveInstantiation": gate_instantiation,
-        "UdpDeclaration": udp_declaration, "ConfigDeclaration": config_declaration, "SpecifyBlock": specify_block,
-        "SpecparamDeclaration": specparam,
+        "UdpDeclaration": udp_declaration, "ExternUdpDecl": extern_udp, "ExternInterfaceMethod": extern_method, "ConfigDeclaration": config_declaration,
+        "SpecifyBlock": specify_block, "SpecparamDeclaration": specparam,
         "PathDeclaration": path, "ConditionalPathDeclaration": path, "IfNonePathDeclaration": path,
         "SystemTimingCheck": timing_check, "PulseStyleDeclaration": pulse_style,
     }
@@ -2217,12 +2234,6 @@ def parse(text: str, include_paths: Sequence[str] = (),
             offset = reader.location(token).offset
             reader.expansions[offset] = reader.expansions.get(offset, 0) + 1
     unit = reader.unit(tree.root)
-    unread: list[Any] = []  # attributes where the kinds hold none are refused, not dropped
-    tree.root.visit(lambda n: unread.append(n) if isinstance(n, syntax.SyntaxNode)
-                    and n.kind.name == "AttributeInstance" and reader.main(n.getFirstToken().location)
-                    and n.sourceRange.start.offset not in reader.attributes_read else None)
-    if unread:
-        raise reader.unsupported(unread[0])
     return unit, reader.positions, source
 
 

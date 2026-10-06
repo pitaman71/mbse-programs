@@ -343,6 +343,7 @@ export class Printer {
     if (node instanceof S.LocalName) return `local::${node.name?.spelling}`;
     if (node instanceof S.UnitName) return "$unit";
     if (node instanceof S.InterfaceTypeName) return `${node.interface?.spelling}.${node.name?.spelling}`;
+    if (node instanceof S.InterfaceMethodName) return `${(node.port as S.Identifier).spelling}.${(node.name as S.Identifier).spelling}`;
     if (node instanceof S.ParameterizedName) return node.name?.spelling + this.parameterValues(node.parameters);
     return node.spelling;
   }
@@ -455,6 +456,11 @@ export class Printer {
   }
 
   modportPort(node: any): string {
+    if (node.attributes.length > 0) return `${this.attributeText(node.attributes)} ${this.modportPortText(node)}`; // each port's own group
+    return this.modportPortText(node);
+  }
+
+  modportPortText(node: any): string {
     if (node instanceof S.ModportClocking) return `clocking ${node.name?.spelling}`;
     if (node instanceof S.ModportSubroutine) {
       return `${node.keyword} ` + (node.name !== null ? node.name.spelling : this.subroutineHead(node.prototype));
@@ -496,7 +502,7 @@ export class Printer {
   /** A function's or a task's header, without its `;`. */
   subroutineHead(node: any): string {
     const task = node instanceof S.TaskDeclaration;
-    const parts = [node.extern ? "extern" : null, node.pure ? "pure" : null, node.virtual ? "virtual" : null,
+    const parts = [node.extern ? "extern" : null, task && node.forkjoin ? "forkjoin" : null, node.pure ? "pure" : null, node.virtual ? "virtual" : null,
       node.visibility, node.static ? "static" : null, task ? "task" : "function", this.specifierText(node), node.lifetime];
     if (!task && node.type !== null) parts.push(this.typeText(node.type));
     let head = joined(parts) + " " + this.name(node.name);
@@ -721,7 +727,9 @@ export class Printer {
 
   udpDeclaration(node: any, level: number): string[] {
     const p = pad(level);
-    const ports = node.ports.map((q: any) => (q instanceof S.Identifier ? q.spelling : this.udpPort(q))).join(", ");
+    const ports = node.ports.map((q: any) => (q instanceof S.Identifier ? q.spelling
+      : q instanceof S.WildcardPort ? ".*" : this.udpPort(q))).join(", ");
+    if (node.extern) return [`${p}extern primitive ${node.name.spelling} (${ports});`];
     const lines = [`${p}primitive ${node.name.spelling} (${ports});`];
     lines.push(...node.declarations.map((d: any) => `${p}${INDENT}${this.udpPort(d)};`));
     if (node.initial !== null) lines.push(`${p}${INDENT}initial ${node.initial.name.spelling} = ${this.text(node.initial.value)};`);
@@ -733,7 +741,7 @@ export class Printer {
   }
 
   udpPort(node: any): string {
-    const head = joined([node.direction, node.reg ? "reg" : null]);
+    const head = joined([node.attributes.length > 0 ? this.attributeText(node.attributes) : null, node.direction, node.reg ? "reg" : null]);
     const value = node.value !== null ? ` = ${this.text(node.value)}` : "";
     return `${head} ${node.names.map((n: any) => n.spelling).join(", ")}${value}`;
   }
