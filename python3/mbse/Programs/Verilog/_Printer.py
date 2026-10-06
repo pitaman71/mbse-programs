@@ -43,11 +43,18 @@ def _precedence(node: Any) -> int:
     return PRIMARY
 
 
+def _prototype(node: Any) -> bool:
+    """Whether a function or task is a prototype, without a body: `extern` or `pure`."""
+    return node.extern or node.pure
+
+
 def _multiline(node: Any) -> bool:
+    if isinstance(node, (S.FunctionDeclaration, S.TaskDeclaration)):
+        return not _prototype(node)
     return isinstance(node, (S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-                             S.FunctionDeclaration, S.TaskDeclaration, S.AlwaysConstruct, S.InitialConstruct,
-                             S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf, S.GenerateCase,
-                             S.GenerateBlock, S.IfdefDirective))
+                             S.ClassDeclaration, S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct,
+                             S.GenerateRegion, S.GenerateFor, S.GenerateIf, S.GenerateCase, S.GenerateBlock,
+                             S.IfdefDirective))
 
 
 class Printer:
@@ -208,11 +215,11 @@ class Printer:
         if isinstance(node, S.TypeParameterDeclaration):
             assignments = ", ".join(a.name.spelling + (f" = {self.type_text(a.type)}" if a.type is not None else "")
                                     for a in node.assignments)
-            return f"{node.keyword} type {assignments}"
-        kind = f" {self.type_text(node.type)}" if node.type is not None else ""
+            return " ".join(p for p in (node.keyword, "type", assignments) if p)
         assignments = ", ".join(a.name.spelling + "".join(self.dimension(d) for d in a.dimensions)
                                 + (f" = {self.text(a.value)}" if a.value is not None else "") for a in node.assignments)
-        return f"{node.keyword}{kind} {assignments}"
+        return " ".join(p for p in (node.keyword, self.type_text(node.type) if node.type is not None else None,
+                                    assignments) if p)
 
     def parameter(self, node: Any, level: int) -> list[str]:
         return [_INDENT * level + self.parameter_text(node) + ";"]
@@ -229,6 +236,10 @@ class Printer:
             return node.keyword
         if isinstance(node, S.NamedType):
             return self.name(node.name) + (f" {dimensions}" if dimensions else "")
+        if isinstance(node, S.VirtualInterfaceType):
+            head = "virtual interface" if node.interface_keyword else "virtual"
+            modport = f".{node.modport.spelling}" if node.modport is not None else ""
+            return f"{head} {node.interface.spelling}{self.parameter_values(node.parameters)}{modport}"
         if isinstance(node, S.ImplicitType):
             return " ".join(p for p in (node.signing, dimensions) if p)
         if isinstance(node, S.StructType):
@@ -252,8 +263,14 @@ class Printer:
 
     def name(self, node: Any) -> str:
         if isinstance(node, S.ScopedName):
-            return f"{node.scope.spelling}::{self.name(node.name)}"
+            return f"{self.name(node.scope)}::{self.name(node.name)}"
+        if isinstance(node, S.ParameterizedName):
+            return node.name.spelling + self.parameter_values(node.parameters)
         return node.spelling
+
+    def parameter_values(self, parameters: list[Any]) -> str:
+        """` #(values)`, or nothing without values."""
+        return " #(" + ", ".join(self.connection(p) for p in parameters) + ")" if parameters else ""
 
     def dimension(self, node: Any) -> str:
         if isinstance(node, S.RangeDimension):
@@ -278,18 +295,20 @@ class Printer:
             parts = [node.net_type, self.type_text(node.type) if node.type is not None else None,
                      self.timing_text(node.delay) if node.delay is not None else None]
         else:
-            parts = ["const" if node.const else None, "var" if node.var else None, node.lifetime,
-                     self.type_text(node.type) if node.type is not None else None]
+            parts = [self.variable_prefix(node), self.type_text(node.type) if node.type is not None else None]
         return " ".join(p for p in parts if p)
+
+    def variable_prefix(self, node: Any) -> str:
+        """What a variable declaration says before its type: `local rand const var static`."""
+        return " ".join(p for p in (node.visibility, node.random, "const" if node.const else None,
+                                    "var" if node.var else None, node.lifetime) if p)
 
     def declaration(self, node: Any, level: int) -> list[str]:
         pad = _INDENT * level
         kind = getattr(node, "type", None)
         if isinstance(kind, S.StructType) and len(kind.members) > 1:
             lines = self.struct_lines(kind, level)
-            prefix = " ".join(p for p in ("const" if getattr(node, "const", False) else None,
-                                           "var" if getattr(node, "var", False) else None,
-                                           getattr(node, "lifetime", None)) if p)
+            prefix = self.variable_prefix(node) if isinstance(node, S.VariableDeclaration) else node.net_type
             lines[0] = pad + (prefix + " " if prefix else "") + lines[0]
             lines[-1] += " " + self.declarators(node.declarators) + ";"
             return lines
@@ -332,17 +351,45 @@ class Printer:
     def subroutine(self, node: Any, level: int) -> list[str]:
         pad = _INDENT * level
         task = isinstance(node, S.TaskDeclaration)
-        parts = ["task" if task else "function", node.lifetime]
+        parts = ["extern" if node.extern else None, "pure" if node.pure else None, "virtual" if node.virtual else None,
+                 node.visibility, "static" if node.static else None, "task" if task else "function", node.lifetime]
         if not task and node.type is not None:
             parts.append(self.type_text(node.type))
         head = " ".join(p for p in parts if p) + " " + self.name(node.name)
         if node.ports:
             head += "(" + ", ".join(self.tf_port(p) for p in node.ports) + ")"
         lines = [pad + head + ";"]
+        if _prototype(node):
+            return lines
         lines.extend(self.items(node.body, level + 1, after=lines))
         end = "endtask" if task else "endfunction"
         lines.append(pad + end + (f" : {self.name(node.name)}" if node.labeled else ""))
         return lines
+
+    def class_declaration(self, node: S.ClassDeclaration, level: int) -> list[str]:
+        pad = _INDENT * level
+        keyword = "virtual class" if node.virtual else "interface class" if node.interface else "class"
+        head = f"{pad}{keyword} {node.name.spelling}"
+        lines: list[str] = []
+        if node.parameters:
+            lines.append(head + " #(")
+            lines.extend(f"{pad}{_INDENT}{self.parameter_text(p)}{',' if i < len(node.parameters) - 1 else ''}"
+                         for i, p in enumerate(node.parameters))
+            head = pad + ")"
+        if node.base is not None:
+            arguments = f"({', '.join(self.connection(a) for a in node.arguments)})" if node.arguments else ""
+            head += f" extends {self.type_text(node.base)}{arguments}"
+        if node.interfaces:
+            head += f" {'extends' if node.interface else 'implements'} " + ", ".join(self.type_text(i)
+                                                                                     for i in node.interfaces)
+        lines.append(head + ";")
+        lines.extend(self.items(node.items, level + 1, after=lines))
+        lines.append(f"{pad}endclass" + (f" : {node.name.spelling}" if node.labeled else ""))
+        return lines
+
+    def forward_typedef(self, node: S.ForwardTypedefDeclaration, level: int) -> list[str]:
+        keyword = f"{node.keyword} " if node.keyword else ""
+        return [f"{_INDENT * level}typedef {keyword}{node.name.spelling};"]
 
     def tf_port(self, node: S.TfPort) -> str:
         parts = [node.direction, "var" if node.var else None, self.type_text(node.type) if node.type is not None
@@ -404,9 +451,7 @@ class Printer:
     # Instantiation
 
     def instantiation(self, node: S.ModuleInstantiation, level: int) -> list[str]:
-        parameters = ""
-        if node.parameters:
-            parameters = " #(" + ", ".join(self.connection(p) for p in node.parameters) + ")"
+        parameters = self.parameter_values(node.parameters)
         instances = ", ".join(
             i.name.spelling + "".join(self.dimension(d) for d in i.dimensions)
             + " (" + ", ".join(self.connection(c) for c in i.connections) + ")" for i in node.instances)
@@ -672,6 +717,25 @@ class Printer:
             return f"`{node.name.spelling}" + (f"({node.arguments})" if node.arguments is not None else "")
         if isinstance(node, S.DollarExpression):
             return "$"
+        if isinstance(node, S.NullLiteral):
+            return "null"
+        if isinstance(node, S.ThisExpression):
+            return "this"
+        if isinstance(node, S.SuperExpression):
+            return "super"
+        if isinstance(node, S.NewExpression):
+            scope = ""
+            if isinstance(node.scope, S.SuperExpression):
+                scope = "super."
+            elif node.scope is not None:
+                scope = self.name(node.scope) + "::"
+            arguments = f"({', '.join(self.connection(a) for a in node.arguments)})" if node.arguments else ""
+            return f"{scope}new{arguments}"
+        if isinstance(node, S.NewCopyExpression):
+            return f"new {self.operand(node.value, PRIMARY)}"
+        if isinstance(node, S.NewArrayExpression):
+            value = f"({self.text(node.value)})" if node.value is not None else ""
+            return f"new[{self.text(node.size)}]{value}"
         return self.port(node) if isinstance(node, S.Port) else self.dimension(node) if isinstance(node, S.Dimension) \
             else self.type_text(node)
 
@@ -692,7 +756,8 @@ class Printer:
         S.InitialConstruct: procedural, S.FinalConstruct: procedural, S.FunctionDeclaration: subroutine,
         S.TaskDeclaration: subroutine, S.GenerateRegion: generate_region, S.GenerateFor: generate_for,
         S.GenerateIf: generate_if, S.GenerateCase: generate_case, S.GenerateBlock: generate_block,
-        S.ModuleInstantiation: instantiation,
+        S.ModuleInstantiation: instantiation, S.ClassDeclaration: class_declaration,
+        S.ForwardTypedefDeclaration: forward_typedef,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,

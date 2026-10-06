@@ -3,19 +3,23 @@
  * 26.3).
  *
  * - Scopes: the compilation unit (where design units, packages and `$unit`'s declarations are), each package, module,
- *   interface and program, each function and task, and each block: `begin`/`fork` blocks, generate blocks and `for`
- *   loops, named or not.
+ *   interface, program and class, each function and task, and each block: `begin`/`fork` blocks, generate blocks and
+ *   `for` loops, named or not.
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
- *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block'
- *   and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
+ *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
+ *   'class' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
  * - A non-ANSI port is one entity, which the header names and a port declaration declares.
  * - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
  *   where nothing nearer declares them, as wildcard imports do.
- * - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's names are qualified
- *   with `::` (`logger_pkg::FIELDS`), a design unit's and a block's with `.` (`sampler.counter.count`).
+ * - A class's members are found in it, then in its base class (`extends`), or for an interface class in the interface
+ *   classes it extends. A method defined outside its class (`function void c::f()`) is the entity its prototype
+ *   declares, and its body sees the class's members.
+ * - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
+ *   are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
+ *   (`sampler.counter.count`).
  *
- * Not resolved: a member after `.` (of a structure, an interface port or a hierarchical path), and what an instance's
- * module declares.
+ * Not resolved: a member after `.` (of a structure, an object, an interface port or a hierarchical path), what an
+ * instance's module declares, and a forward `typedef` (the declaration it announces is the entity).
  */
 
 import { Entity, Program, Scope } from "../Framework/Definitions.js";
@@ -33,15 +37,18 @@ class Definer {
   readonly program: Program;
   readonly imports: [Entity, S.ImportItem][] = [];
   readonly wildcards: [Scope, S.ImportItem][] = [];
+  readonly classes: [Scope, S.ClassDeclaration][] = [];
 
   constructor(unit: S.SourceText) {
     this.root = new Scope("compilation unit", null, null, unit, ".");
     this.program = new Program(this.root);
   }
 
-  /** The entity `name` declares in `scope`: a new one, or for a port declared twice the one already there. */
+  /** The entity `name` declares in `scope`: a new one, or for a port or an argument declared twice (a non-ANSI port; a
+   * method's prototype and its definition) the one already there. */
   entity(scope: Scope, kind: string, name: any, node: unknown): Entity {
-    const existing = (scope.names.get(name.spelling) ?? []).filter((e) => e.kind === kind && kind === "port");
+    const existing = (scope.names.get(name.spelling) ?? []).filter((e) => e.kind === kind
+      && (kind === "port" || kind === "argument"));
     const entity = existing[0] ?? this.program.add(new Entity(kind, name.spelling, scope));
     scope.declare(entity);
     entity.declarations.push(node);
@@ -171,9 +178,14 @@ class Definer {
   subroutine(node: any, scope: Scope): void {
     const kind = node instanceof S.TaskDeclaration ? "task" : "function";
     const name = node.name instanceof S.Identifier ? node.name : null;
-    if (name === null) this.locate(node.name, scope); // `p::f`, an out-of-block definition: not resolved
-    const inner = this.scoped(scope, kind, name, node, kind);
-    if (name !== null) this.program.located(name, scope);
+    let inner: Scope;
+    if (name === null) {
+      this.locate(node.name, scope);
+      inner = this.outOfBlock(node, scope, kind);
+    } else {
+      inner = this.scoped(scope, kind, name, node, kind);
+      this.program.located(name, scope);
+    }
     if (node instanceof S.FunctionDeclaration && node.type !== null) this.visit(node.type, scope);
     for (const port of node.ports as any[]) {
       this.visitAll([...(port.type !== null ? [port.type] : []), ...port.dimensions,
@@ -183,6 +195,32 @@ class Definer {
       this.entity(inner, "argument", port.name, port);
     }
     this.visitAll(node.body, inner);
+  }
+
+  /** The scope of a method defined outside its class, `c::f`: in the class's scope, and the entity of the prototype
+   * the class declares. Any other qualified name is not resolved. */
+  outOfBlock(node: any, scope: Scope, kind: string): Scope {
+    const qualified = node.name;
+    const classes = qualified.scope instanceof S.Identifier && qualified.name instanceof S.Identifier
+      ? scope.resolve(qualified.scope.spelling as string).filter((e) => e.kind === "class") : [];
+    const owner = classes[0];
+    if (owner === undefined) return new Scope(kind, null, scope, node);
+    const members = (owner.scope as Scope).lookup(qualified.name.spelling);
+    const entity = members[0] !== undefined && members[0].kind === kind ? members[0] : null;
+    if (entity === null) return new Scope(kind, null, owner.scope, node);
+    entity.declarations.push(node);
+    entity.definition = node;
+    this.program.declares(qualified.name, entity);
+    this.program.declares(node, entity);
+    return entity.scope as Scope; // the prototype's, where the definition's arguments are its arguments
+  }
+
+  classDeclaration(node: any, scope: Scope): void {
+    const inner = this.scoped(scope, "class", node.name, node, "class", "::");
+    this.program.located(node.name, scope);
+    this.visitAll([...(node.base !== null ? [node.base] : []), ...node.arguments, ...node.interfaces], scope);
+    this.visitAll([...node.parameters, ...node.items], inner);
+    this.classes.push([inner, node]);
   }
 
   instance(node: any, scope: Scope): void {
@@ -244,6 +282,17 @@ class Definer {
       if (pkg !== undefined && !scope.using.includes(pkg.scope as Scope)) scope.using.push(pkg.scope as Scope);
     }
   }
+
+  /** Each class's base, or an interface class's interfaces, as the scopes its lookup goes on to. */
+  resolveBases(): void {
+    for (const [inner, node] of this.classes) {
+      const bases = node.base !== null ? [node.base] : node.interface ? node.interfaces : [];
+      for (const base of bases) {
+        const found = lookup(inner.parent as Scope, base.name).filter((e) => e.kind === "class");
+        if (found[0] !== undefined) inner.bases.push(found[0].scope as Scope);
+      }
+    }
+  }
 }
 
 const methods: [Function[], Method][] = [
@@ -265,6 +314,7 @@ const methods: [Function[], Method][] = [
   [[S.GenerateFor], (d, n, s) => d.generateFor(n, s)],
   [[S.ForStatement], (d, n, s) => d.forStatement(n, s)],
   [[S.ForeachStatement], (d, n, s) => d.foreach(n, s)],
+  [[S.ClassDeclaration], (d, n, s) => d.classDeclaration(n, s)],
 ];
 for (const [kinds, method] of methods) for (const kind of kinds) Definer.METHODS.set(kind, method);
 
@@ -274,19 +324,36 @@ export function define(unit: S.SourceText): Program {
   definer.program.located(unit, definer.root);
   for (const item of unit.items) definer.visit(item, definer.root);
   definer.resolveImports();
+  definer.resolveBases();
   return definer.program;
 }
 
+/** The spelling of an identifier, or of a parameterized class's name. */
+function spelling(name: any): string {
+  return name instanceof S.ParameterizedName ? name.name?.spelling as string : name.spelling;
+}
+
+/** The entities a name finds from `scope`: an identifier or a parameterized class as lookup resolves it, and
+ * `p::c::x` as `x` in `c` in the package or class `p` that `p` resolves to. */
+function lookup(scope: Scope, name: any): Entity[] {
+  if (!(name instanceof S.ScopedName)) return scope.resolve(spelling(name));
+  let found = scope.resolve(spelling(name.scope));
+  for (;;) { // each scope, a package or a class, in the one before it
+    const holder = found.find((e) => e.kind === "package" || e.kind === "class");
+    if (holder === undefined) return [];
+    const inner = holder.scope as Scope; // a package or a class always has its scope
+    if (!(name.name instanceof S.ScopedName)) return inner.lookup(spelling(name.name));
+    name = name.name;
+    found = inner.lookup(spelling(name.scope));
+  }
+}
+
 /** The entities a `NameExpression`, an `Identifier` or a `ScopedName` of the program refers to, looked up from where it
- * is: an identifier that declares an entity refers to it; a `p::x` to `x` in package `p`. */
+ * is: an identifier that declares an entity refers to it; `p::x` to `x` in the package or class `p`, found from where
+ * the name is, and `p::c::x` to `x` in `c` in `p`. */
 export function referents(program: Program, name: any): Entity[] {
   if (name instanceof S.NameExpression) name = name.name;
-  if (name instanceof S.ScopedName) {
-    const packages = program.root.lookup(name.scope?.spelling as string).filter((e) => e.kind === "package");
-    const pkg = packages[0];
-    if (pkg === undefined || pkg.scope === null || !(name.name instanceof S.Identifier)) return [];
-    return pkg.scope.lookup(name.name.spelling as string);
-  }
+  if (name instanceof S.ScopedName) return lookup(program.scope_of(name) ?? program.root, name);
   const scope = program.scope_of(name);
   if (scope === null) return [];
   const entity = program.entity_of(name);

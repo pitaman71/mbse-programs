@@ -1,4 +1,5 @@
-// A cold-chain logger's datapath: every construct of the design subset of SystemVerilog, in IEEE 1800-2023.
+// A cold-chain logger's datapath and its testbench: every construct of the design subset of SystemVerilog and of its
+// classes, in IEEE 1800-2023.
 `resetall
 `timescale 1ns / 1ps
 `default_nettype none
@@ -186,3 +187,52 @@ program automatic test_program (input logic clk);
         $display("time %t", $time);
     end
 endprogram
+
+// The testbench's transactions and drivers.
+package logger_tb_pkg;
+    import logger_pkg::*;
+    typedef class driver;
+
+    interface class sink #(type T = reading_t);
+        pure virtual function void put(T item);
+    endclass
+
+    virtual class transaction #(int W = 16) implements sink #(reading_t);
+        rand bit [W-1:0] raw;
+        randc logic [7:0] status;
+        local static int count = 0;
+        protected int id;
+        extern function new(int id = 0);
+        pure virtual function transaction #(W) copy();
+        virtual function void put(reading_t item);
+            raw = item.raw;
+        endfunction
+    endclass : transaction
+
+    function transaction::new(int id = 0);
+        this.id = id;
+        count++;
+    endfunction
+
+    class sample extends transaction #(16);
+        byte history[];
+        function new(int id);
+            super.new(id);
+            history = new[4];
+        endfunction
+        virtual function transaction #(16) copy();
+            sample other = new this;
+            other.history = new[8](history);
+            return other;
+        endfunction
+    endclass
+
+    class driver;
+        virtual bus_if.source bus;
+        sample current = null;
+        function new(virtual bus_if.source bus);
+            this.bus = bus;
+            current = logger_tb_pkg::sample::new(1);
+        endfunction
+    endclass
+endpackage

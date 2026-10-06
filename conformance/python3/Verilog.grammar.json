@@ -105,7 +105,8 @@
     {
      "name": "scope",
      "type": [
-      "Identifier"
+      "Identifier",
+      "ParameterizedName"
      ],
      "optional": false,
      "many": false
@@ -117,6 +118,35 @@
      ],
      "optional": false,
      "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParameterizedName",
+   "category": "Name",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "Expression",
+      "DataType",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
     }
    ]
   },
@@ -667,7 +697,7 @@
     {
      "name": "keyword",
      "type": "str",
-     "optional": false,
+     "optional": true,
      "choices": [
       "parameter",
       "localparam"
@@ -736,7 +766,7 @@
     {
      "name": "keyword",
      "type": "str",
-     "optional": false,
+     "optional": true,
      "choices": [
       "parameter",
       "localparam"
@@ -963,6 +993,48 @@
      ],
      "optional": true,
      "many": true
+    }
+   ]
+  },
+  {
+   "kind": "VirtualInterfaceType",
+   "category": "DataType",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "interface_keyword",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "interface",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "Expression",
+      "DataType",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "modport",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
     }
    ]
   },
@@ -1312,9 +1384,37 @@
      "true": {
       "SystemVerilog": 2005
      }
+    },
+    "visibility": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "random": {
+     "true": {
+      "SystemVerilog": 2005
+     }
     }
    },
    "properties": [
+    {
+     "name": "visibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "local",
+      "protected"
+     ]
+    },
+    {
+     "name": "random",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "rand",
+      "randc"
+     ]
+    },
     {
      "name": "const",
      "type": "bool",
@@ -1381,6 +1481,43 @@
       "Expression"
      ],
      "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForwardTypedefDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "keyword": {
+     "interface class": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "enum",
+      "struct",
+      "union",
+      "class",
+      "interface class"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
      "many": false
     }
    ]
@@ -1673,9 +1810,63 @@
      "true": {
       "SystemVerilog": 2005
      }
+    },
+    "extern": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "pure": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "virtual": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "visibility": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "static": {
+     "true": {
+      "SystemVerilog": 2005
+     }
     }
    },
    "properties": [
+    {
+     "name": "extern",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "pure",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "virtual",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "visibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "local",
+      "protected"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
     {
      "name": "lifetime",
      "type": "str",
@@ -1743,9 +1934,63 @@
      "true": {
       "SystemVerilog": 2005
      }
+    },
+    "extern": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "pure": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "virtual": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "visibility": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "static": {
+     "true": {
+      "SystemVerilog": 2005
+     }
     }
    },
    "properties": [
+    {
+     "name": "extern",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "pure",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "virtual",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "visibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "local",
+      "protected"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
     {
      "name": "lifetime",
      "type": "str",
@@ -1862,6 +2107,95 @@
      ],
      "optional": true,
      "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ClassDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "interface": {
+     "true": {
+      "SystemVerilog": 2012
+     }
+    },
+    "interfaces": {
+     "true": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "virtual",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "interface",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "ParameterDeclaration",
+      "TypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "base",
+     "type": [
+      "NamedType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "interfaces",
+     "type": [
+      "NamedType"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
     }
    ]
   },
@@ -3746,6 +4080,111 @@
    "extension": false,
    "features": {},
    "properties": []
+  },
+  {
+   "kind": "NullLiteral",
+   "category": "Literal",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "ThisExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "SuperExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "NewExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "scope",
+     "type": [
+      "Name",
+      "SuperExpression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "NewCopyExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NewArrayExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "size",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
   },
   {
    "kind": "IncludeDirective",

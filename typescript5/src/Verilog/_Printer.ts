@@ -38,10 +38,16 @@ function precedence(node: unknown): number {
   return PRIMARY;
 }
 
+/** Whether a function or task is a prototype, without a body: `extern` or `pure`. */
+function prototype(node: any): boolean {
+  return node.extern || node.pure;
+}
+
 function multiline(node: unknown): boolean {
+  if (isAny(node, [S.FunctionDeclaration, S.TaskDeclaration])) return !prototype(node);
   return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-    S.FunctionDeclaration, S.TaskDeclaration, S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct,
-    S.GenerateRegion, S.GenerateFor, S.GenerateIf, S.GenerateCase, S.GenerateBlock, S.IfdefDirective]);
+    S.ClassDeclaration, S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
+    S.GenerateIf, S.GenerateCase, S.GenerateBlock, S.IfdefDirective]);
 }
 
 type Method = (self: Printer, node: any, level: number) => string[];
@@ -204,12 +210,11 @@ export class Printer {
   parameterText(node: any): string {
     if (node instanceof S.TypeParameterDeclaration) {
       const assignments = node.assignments.map((a) => a.name?.spelling + (a.type !== null ? ` = ${this.typeText(a.type)}` : ""));
-      return `${node.keyword} type ${assignments.join(", ")}`;
+      return joined([node.keyword, "type", assignments.join(", ")]);
     }
-    const kind = node.type !== null ? ` ${this.typeText(node.type)}` : "";
     const assignments = node.assignments.map((a: any) => a.name.spelling
       + a.dimensions.map((d: any) => this.dimension(d)).join("") + (a.value !== null ? ` = ${this.text(a.value)}` : ""));
-    return `${node.keyword}${kind} ${assignments.join(", ")}`;
+    return joined([node.keyword, node.type !== null ? this.typeText(node.type) : null, assignments.join(", ")]);
   }
 
   parameter(node: any, level: number): string[] {
@@ -225,6 +230,11 @@ export class Printer {
     if (node instanceof S.IntegerAtomType) return joined([node.keyword, node.signing]);
     if (node instanceof S.NonIntegerType || node instanceof S.KeywordType) return node.keyword as string;
     if (node instanceof S.NamedType) return withDimensions(this.name(node.name));
+    if (node instanceof S.VirtualInterfaceType) {
+      const modport = node.modport !== null ? `.${node.modport.spelling}` : "";
+      return `${node.interface_keyword ? "virtual interface" : "virtual"} ${node.interface?.spelling}`
+        + `${this.parameterValues(node.parameters)}${modport}`;
+    }
     if (node instanceof S.ImplicitType) return joined([node.signing, dimensions]);
     if (node instanceof S.StructType) {
       const head = joined([node.keyword, node.packed ? "packed" : null, node.signing]);
@@ -248,8 +258,14 @@ export class Printer {
   }
 
   name(node: any): string {
-    if (node instanceof S.ScopedName) return `${node.scope?.spelling}::${this.name(node.name)}`;
+    if (node instanceof S.ScopedName) return `${this.name(node.scope)}::${this.name(node.name)}`;
+    if (node instanceof S.ParameterizedName) return node.name?.spelling + this.parameterValues(node.parameters);
     return node.spelling;
+  }
+
+  /** ` #(values)`, or nothing without values. */
+  parameterValues(parameters: readonly any[]): string {
+    return parameters.length > 0 ? " #(" + parameters.map((p) => this.connection(p)).join(", ") + ")" : "";
   }
 
   dimension(node: any): string {
@@ -272,8 +288,12 @@ export class Printer {
       return joined([node.net_type, node.type !== null ? this.typeText(node.type) : null,
         node.delay !== null ? this.timingText(node.delay) : null]);
     }
-    return joined([node.const ? "const" : null, node.var ? "var" : null, node.lifetime,
-      node.type !== null ? this.typeText(node.type) : null]);
+    return joined([this.variablePrefix(node), node.type !== null ? this.typeText(node.type) : null]);
+  }
+
+  /** What a variable declaration says before its type: `local rand const var static`. */
+  variablePrefix(node: any): string {
+    return joined([node.visibility, node.random, node.const ? "const" : null, node.var ? "var" : null, node.lifetime]);
   }
 
   declaration(node: any, level: number): string[] {
@@ -281,7 +301,7 @@ export class Printer {
     const kind = node.type;
     if (kind instanceof S.StructType && kind.members.length > 1) {
       const lines = this.structLines(kind, level);
-      const prefix = joined([node.const ? "const" : null, node.var ? "var" : null, node.lifetime]);
+      const prefix = node instanceof S.VariableDeclaration ? this.variablePrefix(node) : node.net_type;
       lines[0] = p + (prefix ? prefix + " " : "") + lines[0];
       lines[lines.length - 1] += " " + this.declarators(node.declarators) + ";";
       return lines;
@@ -331,14 +351,44 @@ export class Printer {
   subroutine(node: any, level: number): string[] {
     const p = pad(level);
     const task = node instanceof S.TaskDeclaration;
-    const parts = [task ? "task" : "function", node.lifetime];
+    const parts = [node.extern ? "extern" : null, node.pure ? "pure" : null, node.virtual ? "virtual" : null,
+      node.visibility, node.static ? "static" : null, task ? "task" : "function", node.lifetime];
     if (!task && node.type !== null) parts.push(this.typeText(node.type));
     let head = joined(parts) + " " + this.name(node.name);
     if (node.ports.length > 0) head += "(" + node.ports.map((q: any) => this.tfPort(q)).join(", ") + ")";
     const lines = [p + head + ";"];
+    if (prototype(node)) return lines;
     lines.push(...this.items(node.body, level + 1, lines));
     lines.push(p + (task ? "endtask" : "endfunction") + (node.labeled ? ` : ${this.name(node.name)}` : ""));
     return lines;
+  }
+
+  classDeclaration(node: any, level: number): string[] {
+    const p = pad(level);
+    const keyword = node.virtual ? "virtual class" : node.interface ? "interface class" : "class";
+    let head = `${p}${keyword} ${node.name.spelling}`;
+    const lines: string[] = [];
+    if (node.parameters.length > 0) {
+      lines.push(head + " #(");
+      lines.push(...node.parameters.map((q: any, i: number) =>
+        `${p}${INDENT}${this.parameterText(q)}${i < node.parameters.length - 1 ? "," : ""}`));
+      head = p + ")";
+    }
+    if (node.base !== null) {
+      const args = node.arguments.length > 0 ? `(${node.arguments.map((a: any) => this.connection(a)).join(", ")})` : "";
+      head += ` extends ${this.typeText(node.base)}${args}`;
+    }
+    if (node.interfaces.length > 0) {
+      head += ` ${node.interface ? "extends" : "implements"} ` + node.interfaces.map((i: any) => this.typeText(i)).join(", ");
+    }
+    lines.push(head + ";");
+    lines.push(...this.items(node.items, level + 1, lines));
+    lines.push(`${p}endclass` + (node.labeled ? ` : ${node.name.spelling}` : ""));
+    return lines;
+  }
+
+  forwardTypedef(node: any, level: number): string[] {
+    return [`${pad(level)}typedef ${node.keyword ? `${node.keyword} ` : ""}${node.name.spelling};`];
   }
 
   tfPort(node: any): string {
@@ -408,8 +458,7 @@ export class Printer {
   // Instantiation
 
   instantiation(node: any, level: number): string[] {
-    const parameters = node.parameters.length > 0
-      ? " #(" + node.parameters.map((p: any) => this.connection(p)).join(", ") + ")" : "";
+    const parameters = this.parameterValues(node.parameters);
     const instances = node.instances.map((i: any) => i.name.spelling + i.dimensions.map((d: any) => this.dimension(d)).join("")
       + " (" + i.connections.map((c: any) => this.connection(c)).join(", ") + ")").join(", ");
     return [`${pad(level)}${node.module.spelling}${parameters} ${instances};`];
@@ -676,6 +725,18 @@ export class Printer {
     if (node instanceof S.ParenthesizedExpression) return `(${this.text(node.expression)})`;
     if (node instanceof S.MacroUsage) return `\`${node.name?.spelling}` + (node.arguments !== null ? `(${node.arguments})` : "");
     if (node instanceof S.DollarExpression) return "$";
+    if (node instanceof S.NullLiteral) return "null";
+    if (node instanceof S.ThisExpression) return "this";
+    if (node instanceof S.SuperExpression) return "super";
+    if (node instanceof S.NewExpression) {
+      const scope = node.scope instanceof S.SuperExpression ? "super." : node.scope !== null ? this.name(node.scope) + "::" : "";
+      const args = node.arguments.length > 0 ? `(${node.arguments.map((a) => this.connection(a)).join(", ")})` : "";
+      return `${scope}new${args}`;
+    }
+    if (node instanceof S.NewCopyExpression) return `new ${this.operand(node.value, PRIMARY)}`;
+    if (node instanceof S.NewArrayExpression) {
+      return `new[${this.text(node.size)}]${node.value !== null ? `(${this.text(node.value)})` : ""}`;
+    }
     return node instanceof S.Port ? this.port(node) : node instanceof S.Dimension ? this.dimension(node) : this.typeText(node);
   }
 
@@ -704,6 +765,8 @@ const items: [Function[], Method][] = [
   [[S.GenerateCase], (s, n, l) => s.generateCase(n, l)],
   [[S.GenerateBlock], (s, n, l) => s.generateBlock(n, l)],
   [[S.ModuleInstantiation], (s, n, l) => s.instantiation(n, l)],
+  [[S.ClassDeclaration], (s, n, l) => s.classDeclaration(n, l)],
+  [[S.ForwardTypedefDeclaration], (s, n, l) => s.forwardTypedef(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [

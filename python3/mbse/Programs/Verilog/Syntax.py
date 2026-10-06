@@ -1,12 +1,12 @@
 """Syntax: the abstract syntax of Verilog and SystemVerilog, as one tree language (Verilog), organized as IEEE 1800's
 grammar is.
 
-The kinds cover the design subset of SystemVerilog (IEEE 1800-2023): design units, ports and parameters, data types,
-declarations, continuous assignments, procedural blocks and statements, generate constructs, instantiation, functions
-and tasks, immediate assertions and compiler directives. Verilog (IEEE 1364) is a family of its own whose standards have
-fewer of them: each kind and feature records where it exists in both families (`SINCE`, `FEATURES`), which
-`Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023` and `VerilogStandard(year, family)` check. Verification
-constructs (classes, constraints, properties and sequences, covergroups) are not kinds yet.
+The kinds cover SystemVerilog (IEEE 1800-2023)'s design subset and its classes: design units, ports and parameters,
+data types, declarations, continuous assignments, procedural blocks and statements, generate constructs, instantiation,
+functions and tasks, classes with their properties, methods and objects, immediate assertions and compiler directives.
+Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and feature records where it
+exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023` and
+`VerilogStandard(year, family)` check. Constraints, properties and sequences, and covergroups are not kinds yet.
 
 The tree is abstract where the grammar only spells and concrete where a transpiler needs to see what was written:
 
@@ -74,6 +74,9 @@ StatementAssignment = Choice["=", "<=", "+=", "-=", "*=", "/=", "%=", "&=", "|="
 SelectOperator = Choice[":", "+:", "-:"]
 UnbasedValue = Choice["0", "1", "x", "z", "X", "Z"]
 ModuleKeyword = Choice["module", "macromodule"]
+Visibility = Choice["local", "protected"]
+RandomQualifier = Choice["rand", "randc"]
+ForwardKeyword = Choice["enum", "struct", "union", "class", "interface class"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -162,10 +165,20 @@ class Identifier(Name):
 
 
 class ScopedName(Name):
-    """`scope::name`: a name in a package, or `$unit` (26.3)."""
+    """`scope::name`: a name in a package or a class, whose scope may be a parameterized class (26.3, 8.23). A name
+    of several scopes nests to the right: `p::c::x` is `p::(c::x)`."""
 
-    scope: Identifier
+    scope: Identifier | ParameterizedName
     name: Name
+    SINCE = sv()
+
+
+class ParameterizedName(Name):
+    """`name #(parameters)`: a parameterized class, as a type or as a scope (8.25). Parameters are ordered expressions
+    or types, or `NamedConnection`s."""
+
+    name: Identifier
+    parameters: list[Expression | DataType | Connection]
     SINCE = sv()
 
 
@@ -284,9 +297,10 @@ class PortDeclaration(Item):
 
 class ParameterDeclaration(Item):
     """`parameter type name = value, ...;` or `localparam ...` (6.20.1). In a header's parameter list, each is one
-    entry, and a `parameter` there may give no value."""
+    entry, which may give no keyword (it is then a `parameter`, or the keyword of the entry before it) and, as a
+    `parameter`, no value."""
 
-    keyword: ParameterKeyword
+    keyword: ParameterKeyword | None
     type: DataType | None
     assignments: list[ParamAssignment]
     FEATURES = {"keyword": {"localparam": verilog(2001)}}
@@ -301,9 +315,10 @@ class ParamAssignment(SyntaxNode):
 
 
 class TypeParameterDeclaration(Item):
-    """`parameter type name = type, ...` or `localparam type ...` (6.20.3)."""
+    """`parameter type name = type, ...` or `localparam type ...`, or in a header's parameter list `type name = type`
+    without a keyword (6.20.3)."""
 
-    keyword: ParameterKeyword
+    keyword: ParameterKeyword | None
     assignments: list[TypeAssignment]
     SINCE = sv()
 
@@ -354,6 +369,17 @@ class NamedType(DataType):
 
     name: Name
     dimensions: list[Dimension]
+    SINCE = sv()
+
+
+class VirtualInterfaceType(DataType):
+    """`virtual interface name #(parameters).modport`, a variable's type that refers to an interface instance
+    (25.9). `interface_keyword` writes the optional `interface`."""
+
+    interface_keyword: bool
+    interface: Identifier
+    parameters: list[Expression | DataType | Connection]
+    modport: Identifier | None
     SINCE = sv()
 
 
@@ -451,14 +477,18 @@ class NetDeclaration(Item):
 
 
 class VariableDeclaration(Item):
-    """`const var lifetime type declarators;` (6.8)."""
+    """`visibility random const var lifetime type declarators;` (6.8); in a class, a property, which may be `local`
+    or `protected` and `rand` or `randc`, and is `static` by its `lifetime` (8.5, 18.4)."""
 
+    visibility: Visibility | None
+    random: RandomQualifier | None
     const: bool
     var: bool
     lifetime: Lifetime | None
     type: DataType | None
     declarators: list[VariableDeclarator]
-    FEATURES = {"const": {True: sv()}, "var": {True: sv()}, "lifetime": {True: sv()}}
+    FEATURES = {"const": {True: sv()}, "var": {True: sv()}, "lifetime": {True: sv()}, "visibility": {True: sv()},
+                "random": {True: sv()}}
 
 
 class VariableDeclarator(SyntaxNode):
@@ -467,6 +497,15 @@ class VariableDeclarator(SyntaxNode):
     name: Identifier
     dimensions: list[Dimension]
     value: Expression | None
+
+
+class ForwardTypedefDeclaration(Item):
+    """`typedef keyword name;`, which declares a type before its definition (6.18)."""
+
+    keyword: ForwardKeyword | None
+    name: Identifier
+    SINCE = sv()
+    FEATURES = {"keyword": {"interface class": sv(2012)}}
 
 
 class TypedefDeclaration(Item):
@@ -550,26 +589,57 @@ class FinalConstruct(Item):
 
 class FunctionDeclaration(Item):
     """`function lifetime type name(ports); body endfunction` (13.4). The body lists declarations and statements in
-    order. Without ports in parentheses, Verilog-1995 style, `PortDeclaration`s in the body declare them."""
+    order. Without ports in parentheses, Verilog-1995 style, `PortDeclaration`s in the body declare them.
+    In a class, a method may be `local` or `protected`, `static`, `virtual`, and a prototype without a body:
+    `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24). A constructor is named `new`."""
 
+    extern: bool
+    pure: bool
+    virtual: bool
+    visibility: Visibility | None
+    static: bool
     lifetime: Lifetime | None
     type: DataType | None
     name: Name
     ports: list[TfPort]
     body: list[Item | Statement | Directive | Comment]
     labeled: bool
-    FEATURES = {"lifetime": {True: verilog(2001)}, "labeled": {True: sv()}}
+    FEATURES = {"lifetime": {True: verilog(2001)}, "labeled": {True: sv()}, "extern": {True: sv()},
+                "pure": {True: sv()}, "virtual": {True: sv()}, "visibility": {True: sv()}, "static": {True: sv()}}
+
+    def check(self) -> list[str]:
+        return _method_problems(self)
 
 
 class TaskDeclaration(Item):
-    """`task lifetime name(ports); body endtask` (13.3)."""
+    """`task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`, `virtual`, and a prototype without a body:
+    `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24). A constructor is named `new`."""
 
+    extern: bool
+    pure: bool
+    virtual: bool
+    visibility: Visibility | None
+    static: bool
     lifetime: Lifetime | None
     name: Name
     ports: list[TfPort]
     body: list[Item | Statement | Directive | Comment]
     labeled: bool
-    FEATURES = {"lifetime": {True: verilog(2001)}, "labeled": {True: sv()}}
+    FEATURES = {"lifetime": {True: verilog(2001)}, "labeled": {True: sv()}, "extern": {True: sv()},
+                "pure": {True: sv()}, "virtual": {True: sv()}, "visibility": {True: sv()}, "static": {True: sv()}}
+
+    def check(self) -> list[str]:
+        return _method_problems(self)
+
+
+def _method_problems(method: FunctionDeclaration | TaskDeclaration) -> list[str]:
+    """A `pure` method is `virtual`, and a prototype (`extern` or `pure`) has no body."""
+    kind = type(method).__name__
+    if method.pure is True and method.virtual is not True:
+        return [f"a pure {kind} is virtual"]
+    if (method.extern is True or method.pure is True) and (method.body or method.labeled is True):
+        return [f"an extern or pure {kind} has no body"]
+    return []
 
 
 class TfPort(SyntaxNode):
@@ -584,6 +654,34 @@ class TfPort(SyntaxNode):
     value: Expression | None
     SINCE = verilog(2001)
     FEATURES = {"var": {True: sv()}, "value": {True: sv()}, "direction": {"ref": sv()}}
+
+
+# --- Classes (8) ---
+
+
+class ClassDeclaration(Item):
+    """`virtual class name #(parameters) extends base(arguments) implements interfaces; items endclass`, or
+    `interface class name #(parameters) extends interfaces; items endclass` (8.3, 8.26). Its items are properties,
+    methods, parameters, types and classes. `labeled` repeats the name after `endclass`."""
+
+    virtual: bool
+    interface: bool
+    name: Identifier
+    parameters: list[ParameterDeclaration | TypeParameterDeclaration]
+    base: NamedType | None
+    arguments: list[Expression | Connection]
+    interfaces: list[NamedType]
+    items: list[Item | Directive | Comment]
+    labeled: bool
+    SINCE = sv()
+    FEATURES = {"interface": {True: sv(2012)}, "interfaces": {True: sv(2012)}}
+
+    def check(self) -> list[str]:
+        if self.interface is True and (self.virtual is True or self.base is not None or self.arguments):
+            return ["an interface ClassDeclaration has no virtual, base or arguments"]
+        if self.arguments and self.base is None:
+            return ["a ClassDeclaration with arguments has a base"]
+        return []
 
 
 # --- Generate constructs (27) ---
@@ -1042,6 +1140,49 @@ class PatternItem(SyntaxNode):
     value: Expression
 
 
+class NullLiteral(Literal):
+    """`null`, the handle of no object (8.4)."""
+
+    SINCE = sv()
+
+
+class ThisExpression(Expression):
+    """`this`, the object a method runs on (8.11)."""
+
+    SINCE = sv()
+
+
+class SuperExpression(Expression):
+    """`super`, the object a method runs on as its base class (8.15)."""
+
+    SINCE = sv()
+
+
+class NewExpression(Expression):
+    """`new(arguments)`: a new object of the class the place it is assigned to has, or with `scope` of that class
+    (`c#(8)::new`) or the base class's constructor (`super.new`) (8.7, 8.15). `new` without arguments is written
+    without parentheses."""
+
+    scope: Name | SuperExpression | None
+    arguments: list[Expression | Connection]
+    SINCE = sv()
+
+
+class NewCopyExpression(Expression):
+    """`new value`: a shallow copy of an object (8.12)."""
+
+    value: Expression
+    SINCE = sv()
+
+
+class NewArrayExpression(Expression):
+    """`new[size](value)`: a dynamic array of `size` elements, copying `value`'s first ones (7.5.1)."""
+
+    size: Expression
+    value: Expression | None
+    SINCE = sv()
+
+
 class CallExpression(Expression):
     """`callee(arguments)`: a function or method call (13.5); arguments are ordered expressions or named
     `NamedConnection`s."""
@@ -1172,16 +1313,18 @@ class OtherDirective(Directive):
 # --- The language ---
 
 KINDS: list[type[SyntaxNode]] = [
-    Comment, Identifier, ScopedName,
+    Comment, Identifier, ScopedName, ParameterizedName,
     SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration, PackageDeclaration,
     AnsiPort, InterfacePort, PortReference, PortDeclaration,
     ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment,
-    IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, ImplicitType, StructType, StructMember,
+    IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType,
+    StructType, StructMember,
     EnumType, EnumMember,
     RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension,
-    NetDeclaration, VariableDeclaration, VariableDeclarator, TypedefDeclaration, GenvarDeclaration, ImportDeclaration,
+    NetDeclaration, VariableDeclaration, VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration,
+    GenvarDeclaration, ImportDeclaration,
     ImportItem, ModportDeclaration, ModportItem, ModportPort, ContinuousAssign, AlwaysConstruct, InitialConstruct,
-    FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort,
+    FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
     GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
     ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
     AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
@@ -1193,6 +1336,7 @@ KINDS: list[type[SyntaxNode]] = [
     UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression,
     ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,
     CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression,
+    NullLiteral, ThisExpression, SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression,
     IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
     ElsifDirective, DisabledText, OtherDirective,
 ]

@@ -2,12 +2,13 @@
  * Syntax: the abstract syntax of Verilog and SystemVerilog, as one tree language (Verilog), organized as IEEE 1800's
  * grammar is.
  *
- * The kinds cover the design subset of SystemVerilog (IEEE 1800-2023): design units, ports and parameters, data types,
- * declarations, continuous assignments, procedural blocks and statements, generate constructs, instantiation, functions
- * and tasks, immediate assertions and compiler directives. Verilog (IEEE 1364) is a family of its own whose standards
- * have fewer of them: each kind and feature records where it exists in both families (`SINCE`, `FEATURES`), which
- * `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023` and `VerilogStandard(year, family)` check. Verification
- * constructs (classes, constraints, properties and sequences, covergroups) are not kinds yet.
+ * The kinds cover SystemVerilog (IEEE 1800-2023)'s design subset and its classes: design units, ports and parameters,
+ * data types, declarations, continuous assignments, procedural blocks and statements, generate constructs,
+ * instantiation, functions and tasks, classes with their properties, methods and objects, immediate assertions and
+ * compiler directives. Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and
+ * feature records where it exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`,
+ * `SystemVerilog2023` and `VerilogStandard(year, family)` check. Constraints, properties and sequences, and covergroups
+ * are not kinds yet.
  *
  * The tree is abstract where the grammar only spells and concrete where a transpiler needs to see what was written:
  *
@@ -108,6 +109,12 @@ export const UNBASED_VALUES = ["0", "1", "x", "z", "X", "Z"] as const;
 export type UnbasedValue = (typeof UNBASED_VALUES)[number];
 export const MODULE_KEYWORDS = ["module", "macromodule"] as const;
 export type ModuleKeyword = (typeof MODULE_KEYWORDS)[number];
+export const VISIBILITYS = ["local", "protected"] as const;
+export type Visibility = (typeof VISIBILITYS)[number];
+export const RANDOM_QUALIFIERS = ["rand", "randc"] as const;
+export type RandomQualifier = (typeof RANDOM_QUALIFIERS)[number];
+export const FORWARD_KEYWORDS = ["enum", "struct", "union", "class", "interface class"] as const;
+export type ForwardKeyword = (typeof FORWARD_KEYWORDS)[number];
 export const DEFAULT_NETTYPES = [
   "wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"
 ] as const;
@@ -199,13 +206,30 @@ export class Identifier extends Name {
 }
 
 const ScopedNameSpec = {
-  scope: one(() => [Identifier]),
+  scope: one(() => [Identifier, ParameterizedName]),
   name: one(() => [Name]),
 };
 export interface ScopedName extends Properties<typeof ScopedNameSpec> {}
-/** `scope::name`: a name in a package, or `$unit` (26.3). */
+/**
+ * `scope::name`: a name in a package or a class, whose scope may be a parameterized class (26.3, 8.23). A name
+ * of several scopes nests to the right: `p::c::x` is `p::(c::x)`.
+ */
 export class ScopedName extends Name {
   static override SPEC = ScopedNameSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ParameterizedNameSpec = {
+  name: one(() => [Identifier]),
+  parameters: many(() => [Expression, DataType, Connection]),
+};
+export interface ParameterizedName extends Properties<typeof ParameterizedNameSpec> {}
+/**
+ * `name #(parameters)`: a parameterized class, as a type or as a scope (8.25). Parameters are ordered expressions
+ * or types, or `NamedConnection`s.
+ */
+export class ParameterizedName extends Name {
+  static override SPEC = ParameterizedNameSpec;
   static override SINCE: Availability | null = sv();
 }
 
@@ -359,14 +383,15 @@ export class PortDeclaration extends Item {
 // === Parameters (6.20) ===
 
 const ParameterDeclarationSpec = {
-  keyword: choice(...PARAMETER_KEYWORDS),
+  keyword: optionalChoice(...PARAMETER_KEYWORDS),
   type: optional(() => [DataType]),
   assignments: many(() => [ParamAssignment]),
 };
 export interface ParameterDeclaration extends Properties<typeof ParameterDeclarationSpec> {}
 /**
  * `parameter type name = value, ...;` or `localparam ...` (6.20.1). In a header's parameter list, each is one
- * entry, and a `parameter` there may give no value.
+ * entry, which may give no keyword (it is then a `parameter`, or the keyword of the entry before it) and, as a
+ * `parameter`, no value.
  */
 export class ParameterDeclaration extends Item {
   static override SPEC = ParameterDeclarationSpec;
@@ -385,11 +410,14 @@ export class ParamAssignment extends SyntaxNode {
 }
 
 const TypeParameterDeclarationSpec = {
-  keyword: choice(...PARAMETER_KEYWORDS),
+  keyword: optionalChoice(...PARAMETER_KEYWORDS),
   assignments: many(() => [TypeAssignment]),
 };
 export interface TypeParameterDeclaration extends Properties<typeof TypeParameterDeclarationSpec> {}
-/** `parameter type name = type, ...` or `localparam type ...` (6.20.3). */
+/**
+ * `parameter type name = type, ...` or `localparam type ...`, or in a header's parameter list `type name = type`
+ * without a keyword (6.20.3).
+ */
 export class TypeParameterDeclaration extends Item {
   static override SPEC = TypeParameterDeclarationSpec;
   static override SINCE: Availability | null = sv();
@@ -464,6 +492,22 @@ export interface NamedType extends Properties<typeof NamedTypeSpec> {}
 /** A type by its name: a typedef, a type parameter or an interface's type, with packed dimensions (6.18). */
 export class NamedType extends DataType {
   static override SPEC = NamedTypeSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const VirtualInterfaceTypeSpec = {
+  interface_keyword: flag(),
+  interface: one(() => [Identifier]),
+  parameters: many(() => [Expression, DataType, Connection]),
+  modport: optional(() => [Identifier]),
+};
+export interface VirtualInterfaceType extends Properties<typeof VirtualInterfaceTypeSpec> {}
+/**
+ * `virtual interface name #(parameters).modport`, a variable's type that refers to an interface instance
+ * (25.9). `interface_keyword` writes the optional `interface`.
+ */
+export class VirtualInterfaceType extends DataType {
+  static override SPEC = VirtualInterfaceTypeSpec;
   static override SINCE: Availability | null = sv();
 }
 
@@ -593,6 +637,8 @@ export class NetDeclaration extends Item {
 }
 
 const VariableDeclarationSpec = {
+  visibility: optionalChoice(...VISIBILITYS),
+  random: optionalChoice(...RANDOM_QUALIFIERS),
   const: flag(),
   var: flag(),
   lifetime: optionalChoice(...LIFETIMES),
@@ -600,10 +646,19 @@ const VariableDeclarationSpec = {
   declarators: many(() => [VariableDeclarator]),
 };
 export interface VariableDeclaration extends Properties<typeof VariableDeclarationSpec> {}
-/** `const var lifetime type declarators;` (6.8). */
+/**
+ * `visibility random const var lifetime type declarators;` (6.8); in a class, a property, which may be `local`
+ * or `protected` and `rand` or `randc`, and is `static` by its `lifetime` (8.5, 18.4).
+ */
 export class VariableDeclaration extends Item {
   static override SPEC = VariableDeclarationSpec;
-  static override FEATURES: Features = { const: [[true, sv()]], var: [[true, sv()]], lifetime: [[true, sv()]] };
+  static override FEATURES: Features = {
+    const: [[true, sv()]],
+    var: [[true, sv()]],
+    lifetime: [[true, sv()]],
+    visibility: [[true, sv()]],
+    random: [[true, sv()]],
+  };
 }
 
 const VariableDeclaratorSpec = {
@@ -615,6 +670,18 @@ export interface VariableDeclarator extends Properties<typeof VariableDeclarator
 /** `name dimensions = value` in a net, variable, port or member declaration (A.2.3). */
 export class VariableDeclarator extends SyntaxNode {
   static override SPEC = VariableDeclaratorSpec;
+}
+
+const ForwardTypedefDeclarationSpec = {
+  keyword: optionalChoice(...FORWARD_KEYWORDS),
+  name: one(() => [Identifier]),
+};
+export interface ForwardTypedefDeclaration extends Properties<typeof ForwardTypedefDeclarationSpec> {}
+/** `typedef keyword name;`, which declares a type before its definition (6.18). */
+export class ForwardTypedefDeclaration extends Item {
+  static override SPEC = ForwardTypedefDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { keyword: [["interface class", sv(2012)]] };
 }
 
 const TypedefDeclarationSpec = {
@@ -732,6 +799,11 @@ export class FinalConstruct extends Item {
 }
 
 const FunctionDeclarationSpec = {
+  extern: flag(),
+  pure: flag(),
+  virtual: flag(),
+  visibility: optionalChoice(...VISIBILITYS),
+  static: flag(),
   lifetime: optionalChoice(...LIFETIMES),
   type: optional(() => [DataType]),
   name: one(() => [Name]),
@@ -743,13 +815,31 @@ export interface FunctionDeclaration extends Properties<typeof FunctionDeclarati
 /**
  * `function lifetime type name(ports); body endfunction` (13.4). The body lists declarations and statements in
  * order. Without ports in parentheses, Verilog-1995 style, `PortDeclaration`s in the body declare them.
+ * In a class, a method may be `local` or `protected`, `static`, `virtual`, and a prototype without a body:
+ * `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24). A constructor is named `new`.
  */
 export class FunctionDeclaration extends Item {
   static override SPEC = FunctionDeclarationSpec;
-  static override FEATURES: Features = { lifetime: [[true, verilog(2001)]], labeled: [[true, sv()]] };
+  static override FEATURES: Features = {
+    lifetime: [[true, verilog(2001)]],
+    labeled: [[true, sv()]],
+    extern: [[true, sv()]],
+    pure: [[true, sv()]],
+    virtual: [[true, sv()]],
+    visibility: [[true, sv()]],
+    static: [[true, sv()]],
+  };
+  override check(): string[] {
+    return methodProblems(this);
+  }
 }
 
 const TaskDeclarationSpec = {
+  extern: flag(),
+  pure: flag(),
+  virtual: flag(),
+  visibility: optionalChoice(...VISIBILITYS),
+  static: flag(),
   lifetime: optionalChoice(...LIFETIMES),
   name: one(() => [Name]),
   ports: many(() => [TfPort]),
@@ -757,10 +847,25 @@ const TaskDeclarationSpec = {
   labeled: flag(),
 };
 export interface TaskDeclaration extends Properties<typeof TaskDeclarationSpec> {}
-/** `task lifetime name(ports); body endtask` (13.3). */
+/**
+ * `task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`,
+ * `virtual`, and a prototype without a body: `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24).
+ * A constructor is named `new`.
+ */
 export class TaskDeclaration extends Item {
   static override SPEC = TaskDeclarationSpec;
-  static override FEATURES: Features = { lifetime: [[true, verilog(2001)]], labeled: [[true, sv()]] };
+  static override FEATURES: Features = {
+    lifetime: [[true, verilog(2001)]],
+    labeled: [[true, sv()]],
+    extern: [[true, sv()]],
+    pure: [[true, sv()]],
+    virtual: [[true, sv()]],
+    visibility: [[true, sv()]],
+    static: [[true, sv()]],
+  };
+  override check(): string[] {
+    return methodProblems(this);
+  }
 }
 
 const TfPortSpec = {
@@ -780,6 +885,38 @@ export class TfPort extends SyntaxNode {
   static override SPEC = TfPortSpec;
   static override SINCE: Availability | null = verilog(2001);
   static override FEATURES: Features = { var: [[true, sv()]], value: [[true, sv()]], direction: [["ref", sv()]] };
+}
+
+// --- Classes (8) ---
+
+const ClassDeclarationSpec = {
+  virtual: flag(),
+  interface: flag(),
+  name: one(() => [Identifier]),
+  parameters: many(() => [ParameterDeclaration, TypeParameterDeclaration]),
+  base: optional(() => [NamedType]),
+  arguments: many(() => [Expression, Connection]),
+  interfaces: many(() => [NamedType]),
+  items: many(() => [Item, Directive, Comment]),
+  labeled: flag(),
+};
+export interface ClassDeclaration extends Properties<typeof ClassDeclarationSpec> {}
+/**
+ * `virtual class name #(parameters) extends base(arguments) implements interfaces; items endclass`, or
+ * `interface class name #(parameters) extends interfaces; items endclass` (8.3, 8.26). Its items are properties,
+ * methods, parameters, types and classes. `labeled` repeats the name after `endclass`.
+ */
+export class ClassDeclaration extends Item {
+  static override SPEC = ClassDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { interface: [[true, sv(2012)]], interfaces: [[true, sv(2012)]] };
+  override check(): string[] {
+    if (this.interface === true && (this.virtual === true || this.base !== null || this.arguments.length > 0)) {
+      return ["an interface ClassDeclaration has no virtual, base or arguments"];
+    }
+    if (this.arguments.length > 0 && this.base === null) return ["a ClassDeclaration with arguments has a base"];
+    return [];
+  }
 }
 
 // --- Generate constructs (27) ---
@@ -1420,6 +1557,66 @@ export class PatternItem extends SyntaxNode {
   static override SPEC = PatternItemSpec;
 }
 
+const NullLiteralSpec = {};
+export interface NullLiteral extends Properties<typeof NullLiteralSpec> {}
+/** `null`, the handle of no object (8.4). */
+export class NullLiteral extends Literal {
+  static override SPEC = NullLiteralSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ThisExpressionSpec = {};
+export interface ThisExpression extends Properties<typeof ThisExpressionSpec> {}
+/** `this`, the object a method runs on (8.11). */
+export class ThisExpression extends Expression {
+  static override SPEC = ThisExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const SuperExpressionSpec = {};
+export interface SuperExpression extends Properties<typeof SuperExpressionSpec> {}
+/** `super`, the object a method runs on as its base class (8.15). */
+export class SuperExpression extends Expression {
+  static override SPEC = SuperExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const NewExpressionSpec = {
+  scope: optional(() => [Name, SuperExpression]),
+  arguments: many(() => [Expression, Connection]),
+};
+export interface NewExpression extends Properties<typeof NewExpressionSpec> {}
+/**
+ * `new(arguments)`: a new object of the class the place it is assigned to has, or with `scope` of that class
+ * (`c#(8)::new`) or the base class's constructor (`super.new`) (8.7, 8.15). `new` without arguments is written
+ * without parentheses.
+ */
+export class NewExpression extends Expression {
+  static override SPEC = NewExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const NewCopyExpressionSpec = {
+  value: one(() => [Expression]),
+};
+export interface NewCopyExpression extends Properties<typeof NewCopyExpressionSpec> {}
+/** `new value`: a shallow copy of an object (8.12). */
+export class NewCopyExpression extends Expression {
+  static override SPEC = NewCopyExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const NewArrayExpressionSpec = {
+  size: one(() => [Expression]),
+  value: optional(() => [Expression]),
+};
+export interface NewArrayExpression extends Properties<typeof NewArrayExpressionSpec> {}
+/** `new[size](value)`: a dynamic array of `size` elements, copying `value`'s first ones (7.5.1). */
+export class NewArrayExpression extends Expression {
+  static override SPEC = NewArrayExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
 const CallExpressionSpec = {
   callee: one(() => [Expression]),
   arguments: many(() => [Expression, Connection]),
@@ -1602,27 +1799,39 @@ export class OtherDirective extends Directive {
   static override SPEC = OtherDirectiveSpec;
 }
 
+/** A `pure` method is `virtual`, and a prototype (`extern` or `pure`) has no body. */
+function methodProblems(method: FunctionDeclaration | TaskDeclaration): string[] {
+  const kind = method.kind().KIND;
+  if (method.pure === true && method.virtual !== true) return [`a pure ${kind} is virtual`];
+  if ((method.extern === true || method.pure === true) && (method.body.length > 0 || method.labeled === true)) {
+    return [`an extern or pure ${kind} has no body`];
+  }
+  return [];
+}
+
 // --- The language ---
 
 export const KINDS = [
-  Comment, Identifier, ScopedName, SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration,
-  PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortDeclaration, ParameterDeclaration, ParamAssignment,
-  TypeParameterDeclaration, TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType,
-  NamedType, ImplicitType, StructType, StructMember, EnumType, EnumMember, RangeDimension, SizeDimension,
-  UnsizedDimension, AssociativeDimension, QueueDimension, NetDeclaration, VariableDeclaration, VariableDeclarator,
-  TypedefDeclaration, GenvarDeclaration, ImportDeclaration, ImportItem, ModportDeclaration, ModportItem, ModportPort,
-  ContinuousAssign, AlwaysConstruct, InitialConstruct, FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort,
-  GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance,
-  NamedConnection, WildcardConnection, AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock,
-  IfStatement, CaseStatement, CaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement,
-  ForeverStatement, ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement,
-  WaitStatement, EventTrigger, DisableStatement, ImmediateAssertion, DelayControl, EventControl, EventExpression,
-  NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral,
-  UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression,
-  ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,
-  CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, IncludeDirective,
-  DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective, ElsifDirective,
-  DisabledText, OtherDirective,
+  Comment, Identifier, ScopedName, ParameterizedName, SourceText, ModuleDeclaration, InterfaceDeclaration,
+  ProgramDeclaration, PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortDeclaration,
+  ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment, IntegerVectorType, IntegerAtomType,
+  NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType, StructType, StructMember, EnumType,
+  EnumMember, RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension, NetDeclaration,
+  VariableDeclaration, VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, GenvarDeclaration,
+  ImportDeclaration, ImportItem, ModportDeclaration, ModportItem, ModportPort, ContinuousAssign, AlwaysConstruct,
+  InitialConstruct, FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion,
+  GenerateFor, GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection,
+  WildcardConnection, AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement,
+  CaseStatement, CaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement,
+  ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger,
+  DisableStatement, ImmediateAssertion, DelayControl, EventControl, EventExpression, NameExpression, MemberExpression,
+  IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral, StringLiteral,
+  UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression,
+  InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression,
+  SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, NullLiteral, ThisExpression,
+  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, IncludeDirective, DefineDirective,
+  UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText,
+  OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

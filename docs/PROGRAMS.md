@@ -334,16 +334,22 @@ modules' members and libraries' globals are not resolved.
 
 Verilog and SystemVerilog are one tree language, Verilog, with two families: Verilog (IEEE 1364: 1995, 2001 and 2005)
 and SystemVerilog (IEEE 1800: 2005 to 2023). The kinds are organized as IEEE 1800's grammar is and cover its design
-subset: design units (modules, interfaces, programs and packages), ports and parameters, data types and dimensions,
-declarations, continuous assignments, procedural blocks and statements, generate constructs, instantiation, functions
-and tasks, immediate assertions, and compiler directives. Kinds and features record where they exist in both families:
+subset and its classes: design units (modules, interfaces, programs and packages), ports and parameters, data types
+and dimensions, declarations, continuous assignments, procedural blocks and statements, generate constructs,
+instantiation, functions and tasks, classes with their properties, methods and objects, immediate assertions, and
+compiler directives. Kinds and features record where they exist in both families:
 ANSI ports and `**` from Verilog-2001, `logic`, packages, interfaces and `always_ff` from SystemVerilog 2005, `unique0`
 from 2009, `final` assertions from 2012 and triple-quoted strings from 2023. Verilog has none of SystemVerilog's own.
 
 The tree is abstract where the grammar only spells:
 
 - Every binary operator is a `BinaryExpression`; parentheses written in the source stay, as `ParenthesizedExpression`.
-- Names are `Identifier`s, or `ScopedName`s (`p::x`), wherever they occur; a hierarchical name is `MemberExpression`s.
+- Names are `Identifier`s, `ScopedName`s (`p::x`) or `ParameterizedName`s (`c #(8)`), wherever they occur; a
+  hierarchical name is `MemberExpression`s. A name of several scopes nests to the right: `p::c::x` is `p::(c::x)`.
+- A class's property is a `VariableDeclaration` and its method a `FunctionDeclaration` or `TaskDeclaration`, with the
+  qualifiers a class gives them (`visibility`, `random`; `extern`, `pure`, `virtual`, `static`), written in one order
+  (`extern pure virtual local static`); a property's `static` is its `lifetime`. A constructor is a function named
+  `new`, and `new` without arguments is written without parentheses.
 - Literals keep their spelling: size, base and digits with their underscores (`8'b0000_0100`).
 - Equivalent spellings are normalized: `@*` is `@(*)`, events joined by `,` are joined by `or`, and `@e` is `@(e)`.
 - Comments and compiler directives are kept where items and statements are listed. Conditional compilation is a tree
@@ -351,8 +357,9 @@ The tree is abstract where the grammar only spells:
 - A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
   as written; a macro used anywhere else is refused.
 
-Verification constructs (classes, constraints, properties and sequences, covergroups, clocking blocks) are not kinds
-yet, and neither are specify blocks, user-defined primitives and gate instances, strengths, nor the patterns of `matches`.
+Constraints and randomization (`constraint`, `with`, `dist`), properties and sequences with concurrent assertions,
+clocking blocks, and covergroups are not kinds yet, and neither are attributes (`(* keep *)`), specify blocks,
+user-defined primitives and gate instances, strengths, nor the patterns of `matches`.
 
 ### Reading Verilog
 
@@ -362,8 +369,9 @@ end, through its Python binding `pyslang`. slang reads every text as IEEE 1800-2
 of the first syntax node that has it. An included file's items stay in their file: the tree keeps the
 `IncludeDirective`. The reader converts slang's syntax tree to the kinds, and never rewrites the text. What it reads
 and the kinds cannot hold is refused with `ParseError`, which names slang's syntax kind (`unsupported syntax:
-ClassDeclaration`) at its line and column; the first error slang reports is raised as it reports it. Positions count
-characters.
+CovergroupDeclaration`) at its line and column; the first error slang reports is raised as it reports it. Positions
+count characters. Nothing the text holds is dropped: every property of slang's syntax that the reader converts is
+read, and attributes, which the kinds do not hold yet, are refused wherever they are written.
 
 slang runs only in Python. TypeScript's standards read through the Python implementation: `parse` runs `python -m
 mbse.Programs.Verilog.read`, which takes the text, the standard and the options as JSON and answers with the tree's
@@ -381,11 +389,13 @@ IEEE 1800's Table 11-2, where `?:`, `->` and `<->` associate to the right.
 ### Verilog definitions
 
 `Verilog.Definitions.define(unit)` follows IEEE 1800's scopes: the compilation unit (design units and `$unit`'s
-declarations), each package, design unit, function and task, and each block, generate block and `for` loop, named or
-not. An enumeration's members are declared where the enumeration is. A non-ANSI port is one entity, which the header
+declarations), each package, design unit, class, function and task, and each block, generate block and `for` loop,
+named or not. A class's lookup goes on to its base class, or an interface class's to the interface classes it
+extends; a method defined outside its class (`function void c::f()`) is the entity its prototype declares, and its body
+sees the class's members. An enumeration's members are declared where the enumeration is. A non-ANSI port is one entity, which the header
 names and a port declaration declares. `import p::x` declares an entity whose `target` is `p::x`, and `import p::*`
-makes the package's names visible where nothing nearer declares them. A package's names are qualified with `::`
-(`logger_pkg::FIELDS`), a design unit's and a block's with `.` (`sampler.counter.count`). A member after `.` and what
+makes the package's names visible where nothing nearer declares them. A package's and a class's names are qualified with `::`
+(`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.` (`sampler.counter.count`). A member after `.` and what
 an instance's module declares are not resolved.
 
 ## Transpiling
@@ -532,8 +542,9 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **Verilog's verification constructs.** Classes, constraints, properties and sequences, covergroups and clocking
-  blocks, which slang reads and the reader refuses, are the next kinds of Verilog.
+- **Verilog's verification constructs.** Constraints and randomization, properties and sequences with concurrent
+  assertions and clocking blocks, and covergroups, which slang reads and the reader refuses, are the next kinds of
+  Verilog; then attributes, which every item, statement and operator may carry.
 - **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
   Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from

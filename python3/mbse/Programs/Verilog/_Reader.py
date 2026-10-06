@@ -398,7 +398,7 @@ class _Reader:
     def parameter(self, node: Any) -> Any:
         if node.kind.name == "ParameterDeclarationStatement":
             return self.parameter(node.parameter)
-        keyword = node.keyword.rawText
+        keyword = _text(node.keyword) or None  # a header's entry may have none
         if node.kind.name == "TypeParameterDeclaration":
             if node.typeRestriction is not None:
                 raise self.unsupported(node)
@@ -447,6 +447,13 @@ class _Reader:
             return self.made(node, S.KeywordType(keyword=keyword))
         if kind == "NamedType":
             return self.made(node, S.NamedType(name=self.name(node.name)))
+        if kind == "VirtualInterfaceType":
+            out = S.VirtualInterfaceType(interface_keyword=bool(node.interfaceKeyword),
+                                         interface=self.identifier(node.name),
+                                         parameters=self.parameter_values(node.parameters))
+            if node.modport is not None:
+                out.modport = self.identifier(node.modport.member)
+            return self.made(node, out)
         if kind in ("StructType", "UnionType"):
             if bool(node.taggedOrSoft):
                 raise self.unsupported(node)
@@ -473,15 +480,27 @@ class _Reader:
         raise self.unsupported(node)
 
     def name(self, node: Any) -> S.Name:
-        """A name: an identifier, or `package::name`."""
+        """A name: an identifier, a parameterized class `c #(...)`, `new`, or `scope::name`, whose scopes, which slang
+        nests to the left (`(p::c)::x`), nest to the right (`p::(c::x)`)."""
         kind = node.kind.name
         if kind == "IdentifierName":
             return self.identifier(node.identifier)
+        if kind == "ClassName":
+            return self.made(node, S.ParameterizedName(name=self.identifier(node.identifier),
+                                                       parameters=self.parameter_values(node.parameters)))
+        if kind == "ConstructorName":
+            return self.made(node, S.Identifier(spelling="new"))
         if kind == "ScopedName" and node.separator.rawText == "::":
-            left = node.left
-            if left.kind.name != "IdentifierName":
-                raise self.unsupported(node)
-            return self.made(node, S.ScopedName(scope=self.identifier(left.identifier), name=self.name(node.right)))
+            steps = []  # (the scope's syntax, the ScopedName that has it), innermost last
+            while node.kind.name == "ScopedName" and node.separator.rawText == "::":
+                steps.append(node)
+                node = node.left
+            out = self.name(steps[0].right)
+            for step, scope in zip(steps, [*(s.right for s in steps[1:]), node]):
+                if scope.kind.name not in ("IdentifierName", "ClassName"):
+                    raise self.unsupported(steps[-1])
+                out = self.made(step, S.ScopedName(scope=self.name(scope), name=out))
+            return out
         raise self.unsupported(node)
 
     def dimension(self, node: Any) -> S.Dimension:
@@ -585,15 +604,83 @@ class _Reader:
         return S.AlwaysConstruct(keyword=keyword, body=body)
 
     def subroutine(self, node: Any) -> Any:
-        prototype = node.prototype  # slang allows specifiers (`:initial`) only in a class
+        out = self.prototype(node.prototype)
+        out.labeled = node.endBlockName is not None
+        out.body = self.items(_nodes(node.items), node.end, statements=True)
+        return out
+
+    def prototype(self, prototype: Any) -> Any:
+        """A function or a task as its prototype declares it, without a body."""
+        if _nodes(prototype.specifiers):  # `:initial`, `:extends`, `:final`
+            raise self.unsupported(prototype)
         task = prototype.keyword.rawText == "task"
         out: Any = S.TaskDeclaration() if task else S.FunctionDeclaration(type=self.data_type(prototype.returnType))
         out.lifetime = _text(prototype.lifetime) or None
         out.name = self.name(prototype.name)
         if prototype.portList is not None:
             out.ports = [self.made(p, self.tf_port(p)) for p in _nodes(prototype.portList.ports)]
-        out.labeled = node.endBlockName is not None
-        out.body = self.items(_nodes(node.items), node.end, statements=True)
+        return out
+
+    # Classes
+
+    def class_declaration(self, node: Any) -> S.ClassDeclaration:
+        if node.finalSpecifier is not None:
+            raise self.unsupported(node)
+        kind = _text(node.virtualOrInterface)
+        out = S.ClassDeclaration(virtual=kind == "virtual", interface=kind == "interface", name=self.identifier(node.name),
+                                 labeled=node.endBlockName is not None)
+        if node.parameters is not None:
+            out.parameters = self.parameter_ports(node.parameters)
+        extends = node.extendsClause
+        if extends is not None:
+            if extends.defaultedArg is not None:
+                raise self.unsupported(extends)
+            out.base = self.made(extends.baseName, S.NamedType(name=self.name(extends.baseName)))
+            if extends.arguments is not None:
+                out.arguments = self.arguments(extends.arguments)
+        if node.implementsClause is not None:
+            out.interfaces = [self.made(i, S.NamedType(name=self.name(i))) for i in _nodes(node.implementsClause.interfaces)]
+        out.items = self.items(_nodes(node.items), node.endClass)
+        return out
+
+    def qualified(self, node: Any, out: Any) -> Any:
+        """`out` with a class item's qualifiers, which slang has checked are those of a property or a method."""
+        for qualifier in node.qualifiers:
+            word = qualifier.rawText
+            if word in ("local", "protected"):
+                out.visibility = word
+            elif word in ("rand", "randc"):
+                out.random = word
+            elif word == "const":
+                out.const = True
+            elif word == "static":
+                if isinstance(out, S.VariableDeclaration):
+                    out.lifetime = "static"
+                else:
+                    out.static = True
+            else:  # pure, virtual, extern
+                setattr(out, word, True)
+        return out
+
+    def class_property(self, node: Any) -> Any:
+        declaration = node.declaration
+        if declaration.kind.name != "DataDeclaration":
+            if node.qualifiers:  # a qualified typedef or parameter
+                raise self.unsupported(node)
+            return self.item(declaration)
+        return self.qualified(node, self.data_declaration(declaration))
+
+    def class_method(self, node: Any) -> Any:
+        return self.qualified(node, self.subroutine(node.declaration))
+
+    def class_prototype(self, node: Any) -> Any:
+        return self.qualified(node, self.prototype(node.prototype))
+
+    def forward_typedef(self, node: Any) -> S.ForwardTypedefDeclaration:
+        out = S.ForwardTypedefDeclaration(name=self.identifier(node.name))
+        restriction = node.typeRestriction
+        if restriction is not None:
+            out.keyword = " ".join(t.rawText for t in (restriction.keyword1, restriction.keyword2) if t)
         return out
 
     def tf_port(self, node: Any) -> S.TfPort:
@@ -648,17 +735,23 @@ class _Reader:
 
     # Instantiation
 
+    def parameter_values(self, node: Any) -> list[Any]:
+        """The values of `#(...)`: ordered expressions or types, or `NamedConnection`s; none without it."""
+        out: list[Any] = []
+        if node is None:
+            return out
+        for assignment in _nodes(node.parameters):
+            if assignment.kind.name == "OrderedParamAssignment":
+                out.append(self.expression_or_type(assignment.expr))
+            else:
+                connection = S.NamedConnection(name=self.identifier(assignment.name))
+                if assignment.expr is not None:
+                    connection.value = self.expression_or_type(assignment.expr)
+                out.append(self.made(assignment, connection))
+        return out
+
     def instantiation(self, node: Any) -> S.ModuleInstantiation:
-        out = S.ModuleInstantiation(module=self.identifier(node.type))
-        if node.parameters is not None:
-            for assignment in _nodes(node.parameters.parameters):
-                if assignment.kind.name == "OrderedParamAssignment":
-                    out.parameters.append(self.expression_or_type(assignment.expr))
-                else:
-                    connection = S.NamedConnection(name=self.identifier(assignment.name))
-                    if assignment.expr is not None:
-                        connection.value = self.expression_or_type(assignment.expr)
-                    out.parameters.append(self.made(assignment, connection))
+        out = S.ModuleInstantiation(module=self.identifier(node.type), parameters=self.parameter_values(node.parameters))
         for instance in _nodes(node.instances):
             declaration = instance.decl
             item = S.Instance(name=self.identifier(declaration.name),
@@ -949,9 +1042,7 @@ class _Reader:
             if text.startswith('"""'):
                 return S.StringLiteral(text=text[3:-3], triple=True)
             return S.StringLiteral(text=text[1:-1])
-        if kind == "WildcardLiteralExpression" and text == "$":
-            return S.DollarExpression()
-        raise self.unsupported(node)
+        return S.DollarExpression()  # a WildcardLiteralExpression, `$`: the literals' last kind
 
     def vector(self, node: Any) -> S.IntegerLiteral:
         return S.IntegerLiteral(spelling=self.spelling(node))
@@ -1077,6 +1168,32 @@ class _Reader:
         return S.CastExpression(type=self.made(node, S.ImplicitType(signing=node.signing.rawText)),
                                 value=self.expression(node.inner.expression))
 
+    def new_class(self, node: Any) -> S.NewExpression:
+        out = S.NewExpression(arguments=[] if node.argList is None else self.arguments(node.argList))
+        scoped = node.scopedNew
+        if scoped.kind.name == "ScopedName":  # `super.new` or `c::new`
+            left = scoped.left
+            out.scope = self.made(left, S.SuperExpression()) if left.kind.name == "SuperHandle" else self.name(left)
+        return out
+
+    def copy_class(self, node: Any) -> S.NewCopyExpression:
+        return S.NewCopyExpression(value=self.expression(node.expr))
+
+    def new_array(self, node: Any) -> S.NewArrayExpression:
+        out = S.NewArrayExpression(size=self.expression(node.sizeExpr))
+        if node.initializer is not None:
+            out.value = self.expression(node.initializer.expression)  # its parentheses are the expression's own
+        return out
+
+    def null(self, node: Any) -> S.NullLiteral:
+        return S.NullLiteral()
+
+    def this(self, node: Any) -> S.ThisExpression:
+        return S.ThisExpression()
+
+    def super_handle(self, node: Any) -> S.SuperExpression:
+        return S.SuperExpression()
+
     def parenthesized(self, node: Any) -> S.ParenthesizedExpression:
         return S.ParenthesizedExpression(expression=self.expression(node.expression))
 
@@ -1093,7 +1210,9 @@ class _Reader:
         "FinalBlock": procedural_block, "FunctionDeclaration": subroutine, "TaskDeclaration": subroutine,
         "GenerateRegion": generate_region, "GenerateBlock": generate_block, "LoopGenerate": loop_generate,
         "IfGenerate": if_generate, "CaseGenerate": case_generate, "HierarchyInstantiation": instantiation,
-        "PortDeclaration": port_declaration,
+        "PortDeclaration": port_declaration, "ClassDeclaration": class_declaration,
+        "ClassPropertyDeclaration": class_property, "ClassMethodDeclaration": class_method,
+        "ClassMethodPrototype": class_prototype, "ForwardTypedefDeclaration": forward_typedef,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,
@@ -1113,6 +1232,8 @@ class _Reader:
         "MultipleConcatenationExpression": replication, "AssignmentPatternExpression": pattern,
         "InvocationExpression": invocation, "SystemName": system_name,
         "CastExpression": cast, "SignedCastExpression": signed_cast, "ParenthesizedExpression": parenthesized,
+        "NewClassExpression": new_class, "CopyClassExpression": copy_class, "NewArrayExpression": new_array,
+        "NullLiteralExpression": null, "ThisHandle": this, "SuperHandle": super_handle,
     }
 
 
@@ -1142,6 +1263,11 @@ def parse(text: str, include_paths: Sequence[str] = (),
         if manager.isMacroLoc(token.location):
             offset = reader.location(token).offset
             reader.expansions[offset] = reader.expansions.get(offset, 0) + 1
+    attributes: list[Any] = []  # `(* ... *)`: not kinds yet, so refused rather than dropped
+    tree.root.visit(lambda n: attributes.append(n) if isinstance(n, syntax.SyntaxNode)
+                    and n.kind.name == "AttributeInstance" and reader.main(n.getFirstToken().location) else None)
+    if attributes:
+        raise reader.unsupported(attributes[0])
     unit = reader.unit(tree.root)
     return unit, reader.positions, source
 

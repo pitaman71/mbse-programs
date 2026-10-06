@@ -2,19 +2,23 @@
 26.3).
 
 - Scopes: the compilation unit (where design units, packages and `$unit`'s declarations are), each package, module,
-  interface and program, each function and task, and each block: `begin`/`fork` blocks, generate blocks and `for`
-  loops, named or not.
+  interface, program and class, each function and task, and each block: `begin`/`fork` blocks, generate blocks and
+  `for` loops, named or not.
 - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
-  'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block' and
-  'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
+  'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block', 'class'
+  and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
 - A non-ANSI port is one entity, which the header names and a port declaration declares.
 - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
   where nothing nearer declares them, as wildcard imports do.
-- Lookup goes outward from a block to its design unit, then to the compilation unit. A package's names are qualified
-  with `::` (`logger_pkg::FIELDS`), a design unit's and a block's with `.` (`sampler.counter.count`).
+- A class's members are found in it, then in its base class (`extends`), or for an interface class in the interface
+  classes it extends. A method defined outside its class (`function void c::f()`) is the entity its prototype
+  declares, and its body sees the class's members.
+- Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
+  are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
+  (`sampler.counter.count`).
 
-Not resolved: a member after `.` (of a structure, an interface port or a hierarchical path), and what an instance's
-module declares.
+Not resolved: a member after `.` (of a structure, an object, an interface port or a hierarchical path), what an
+instance's module declares, and a forward `typedef` (the declaration it announces is the entity).
 """
 
 from __future__ import annotations
@@ -37,10 +41,12 @@ class _Definer:
         self.program = Program(self.root)
         self.imports: list[tuple[Entity, S.ImportItem, Scope]] = []
         self.wildcards: list[tuple[Scope, S.ImportItem]] = []
+        self.classes: list[tuple[Scope, S.ClassDeclaration]] = []
 
     def entity(self, scope: Scope, kind: str, name: S.Identifier, node: Any) -> Entity:
-        """The entity `name` declares in `scope`: a new one, or for a port declared twice the one already there."""
-        existing = [e for e in scope.names.get(name.spelling, []) if e.kind == kind == "port"]
+        """The entity `name` declares in `scope`: a new one, or for a port or an argument declared twice (a non-ANSI
+        port; a method's prototype and its definition) the one already there."""
+        existing = [e for e in scope.names.get(name.spelling, []) if e.kind == kind and kind in ("port", "argument")]
         entity = existing[0] if existing else self.program.add(Entity(kind, name.spelling, scope))
         scope.declare(entity)
         entity.declarations.append(node)
@@ -172,10 +178,11 @@ class _Definer:
     def subroutine(self, node: Any, scope: Scope) -> None:
         kind = "task" if isinstance(node, S.TaskDeclaration) else "function"
         name = node.name if isinstance(node.name, S.Identifier) else None
-        if name is None:  # `p::f`, an out-of-block definition: not resolved
+        if name is None:
             self.locate(node.name, scope)
-        inner = self.scoped(scope, kind, name, node, kind)
-        if name is not None:
+            inner = self.out_of_block(node, scope, kind)
+        else:
+            inner = self.scoped(scope, kind, name, node, kind)
             self.program.located(name, scope)
         if isinstance(node, S.FunctionDeclaration) and node.type is not None:
             self.visit(node.type, scope)
@@ -186,6 +193,31 @@ class _Definer:
             self.program.located(port.name, inner)
             self.entity(inner, "argument", port.name, port)
         self.visit_all(node.body, inner)
+
+    def out_of_block(self, node: Any, scope: Scope, kind: str) -> Scope:
+        """The scope of a method defined outside its class, `c::f`: in the class's scope, and the entity of the
+        prototype the class declares. Any other qualified name is not resolved."""
+        qualified = node.name
+        classes = [e for e in scope.resolve(qualified.scope.spelling) if e.kind == "class"] \
+            if isinstance(qualified.scope, S.Identifier) and isinstance(qualified.name, S.Identifier) else []
+        if not classes:
+            return Scope(kind, None, scope, node)
+        members = classes[0].scope.lookup(qualified.name.spelling)
+        entity = members[0] if members and members[0].kind == kind else None
+        if entity is None:
+            return Scope(kind, None, classes[0].scope, node)
+        entity.declarations.append(node)
+        entity.definition = node
+        self.program.declares(qualified.name, entity)
+        self.program.declares(node, entity)
+        return entity.scope  # the prototype's, where the definition's arguments are its arguments
+
+    def class_declaration(self, node: S.ClassDeclaration, scope: Scope) -> None:
+        inner = self.scoped(scope, "class", node.name, node, "class", "::")
+        self.program.located(node.name, scope)
+        self.visit_all([*([node.base] if node.base is not None else []), *node.arguments, *node.interfaces], scope)
+        self.visit_all([*node.parameters, *node.items], inner)
+        self.classes.append((inner, node))
 
     def instance(self, node: S.ModuleInstantiation, scope: Scope) -> None:
         self.program.located(node.module, scope)
@@ -235,6 +267,7 @@ class _Definer:
         S.FunctionDeclaration: subroutine, S.TaskDeclaration: subroutine, S.ModuleInstantiation: instance,
         S.NamedConnection: connection, S.SeqBlock: block, S.ParBlock: block, S.GenerateBlock: block,
         S.GenerateFor: generate_for, S.ForStatement: for_statement, S.ForeachStatement: foreach,
+        S.ClassDeclaration: class_declaration,
     }
 
     def resolve_imports(self) -> None:
@@ -250,6 +283,14 @@ class _Definer:
             if package is not None and package.scope not in scope.using:
                 scope.using.append(package.scope)
 
+    def resolve_bases(self) -> None:
+        """Each class's base, or an interface class's interfaces, as the scopes its lookup goes on to."""
+        for inner, node in self.classes:
+            for base in [node.base] if node.base is not None else node.interfaces if node.interface else []:
+                found = [e for e in _lookup(inner.parent, base.name) if e.kind == "class"]
+                if found:
+                    inner.bases.append(found[0].scope)
+
 
 def define(unit: S.SourceText) -> Program:
     """The entities a source text declares, in their scopes."""
@@ -258,19 +299,40 @@ def define(unit: S.SourceText) -> Program:
     for item in unit.items:
         definer.visit(item, definer.root)
     definer.resolve_imports()
+    definer.resolve_bases()
     return definer.program
+
+
+def _spelling(name: Any) -> str:
+    """The spelling of an identifier, or of a parameterized class's name."""
+    return name.name.spelling if isinstance(name, S.ParameterizedName) else name.spelling
+
+
+def _lookup(scope: Scope, name: Any) -> list[Entity]:
+    """The entities a name finds from `scope`: an identifier or a parameterized class as lookup resolves it, and
+    `p::c::x` as `x` in `c` in the package or class `p` that `p` resolves to."""
+    if not isinstance(name, S.ScopedName):
+        return scope.resolve(_spelling(name))
+    found = scope.resolve(_spelling(name.scope))
+    while True:  # each scope, a package or a class, in the one before it
+        holders = [e for e in found if e.kind in ("package", "class")]
+        if not holders:
+            return []
+        inner = holders[0].scope.lookup  # a package or a class always has its scope
+        if not isinstance(name.name, S.ScopedName):
+            return inner(_spelling(name.name))
+        name = name.name
+        found = inner(_spelling(name.scope))
 
 
 def referents(program: Program, name: Any) -> list[Entity]:
     """The entities a `NameExpression`, an `Identifier` or a `ScopedName` of the program refers to, looked up from
-    where it is: an identifier that declares an entity refers to it; a `p::x` to `x` in package `p`."""
+    where it is: an identifier that declares an entity refers to it; `p::x` to `x` in the package or class `p`, found
+    from where the name is, and `p::c::x` to `x` in `c` in `p`."""
     if isinstance(name, S.NameExpression):
         name = name.name
     if isinstance(name, S.ScopedName):
-        packages = [e for e in program.root.lookup(name.scope.spelling) if e.kind == "package"]
-        if not packages or packages[0].scope is None or not isinstance(name.name, S.Identifier):
-            return []
-        return packages[0].scope.lookup(name.name.spelling)
+        return _lookup(program.scope_of(name) or program.root, name)
     scope = program.scope_of(name)
     if scope is None:
         return []
