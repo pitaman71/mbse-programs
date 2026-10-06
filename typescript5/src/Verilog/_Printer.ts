@@ -263,6 +263,10 @@ export class Printer {
     return (head ? head + " " : "") + node.name.spelling + dimensions + value;
   }
 
+  interfacePortDeclaration(node: any, level: number): string[] {
+    return [`${pad(level)}${node.interface.spelling}.${node.modport.spelling} ${this.declarators(node.declarators)};`];
+  }
+
   portDeclaration(node: any, level: number): string[] {
     const head = joined([node.direction, node.net_type, node.var ? "var" : null,
       node.type !== null ? this.typeText(node.type) : null]);
@@ -313,7 +317,8 @@ export class Printer {
 
   member(node: any): string {
     const random = node.random ? `${node.random} ` : "";
-    return `${random}${this.typeText(node.type)} ${this.declarators(node.declarators)}`;
+    const attributes = node.attributes.length > 0 ? `${this.attributeText(node.attributes)} ` : "";
+    return `${attributes}${random}${this.typeText(node.type)} ${this.declarators(node.declarators)}`;
   }
 
   enumMember(node: any): string {
@@ -636,7 +641,8 @@ export class Printer {
   }
 
   tfPort(node: any): string {
-    const text = joined([node.const ? "const" : null, node.direction, node.static ? "static" : null,
+    const text = joined([node.attributes.length > 0 ? this.attributeText(node.attributes) : null, node.const ? "const" : null,
+      node.direction, node.static ? "static" : null,
       node.var ? "var" : null, node.type !== null ? this.typeText(node.type) : null,
       node.name.spelling + node.dimensions.map((d: any) => this.dimension(d)).join("")]);
     return text + (node.value !== null ? ` = ${this.text(node.value)}` : "");
@@ -784,6 +790,7 @@ export class Printer {
   }
 
   connection(node: any): string {
+    if (node instanceof S.AttributedConnection) return `${this.attributeText(node.attributes)} ${this.connection(node.connection)}`;
     if (node instanceof S.WildcardConnection) return ".*";
     if (node instanceof S.NamedConnection) {
       if (node.implicit) return `.${node.name?.spelling}`;
@@ -1188,7 +1195,7 @@ export class Printer {
     let event = "";
     if (node.clock !== null) event = ` ${this.timingText(node.clock)}`;
     else if (node.sample !== null) event = ` with function sample(${node.sample.ports.map((q: any) => this.tfPort(q)).join(", ")})`;
-    const lines = [`${p}covergroup ${node.name.spelling}${ports}${event};`];
+    const lines = [`${p}covergroup ${node.extends ? "extends " : ""}${node.name.spelling}${ports}${event};`];
     const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
     return [...lines, ...body, `${p}endgroup` + (node.labeled ? ` : ${node.name.spelling}` : "")];
   }
@@ -1259,6 +1266,9 @@ export class Printer {
     } else if (node instanceof S.FilteredBinsSelect) {
       own = 2;
       text = `${this.select(node.select, 2)} with (${this.text(node.filter)})`;
+    } else if (node instanceof S.MatchesBinsSelect) {
+      own = 2;
+      text = `${this.select(node.select, 2)} matches ${this.text(node.count)}`;
     } else if (node instanceof S.NotBinsSelect) {
       own = 3;
       text = `!${this.select(node.operand, 3)}`;
@@ -1315,6 +1325,9 @@ export class Printer {
   // Timing controls
 
   timingText(node: any): string {
+    if (node instanceof S.BlockEventControl) {
+      return "@@(" + node.events.map((e: any) => `${e.keyword} ${this.text(e.name)}`).join(" or ") + ")";
+    }
     if (node instanceof S.RepeatEventControl) return `repeat (${this.text(node.count)}) ${this.timingText(node.event)}`;
     if (node instanceof S.DelayControl) {
       if (node.fall !== null) {
@@ -1458,7 +1471,8 @@ export class Printer {
     if (node instanceof S.SuperExpression) return "super";
     if (node instanceof S.NewExpression) {
       const scope = node.scope instanceof S.SuperExpression ? "super." : node.scope !== null ? this.name(node.scope) + "::" : "";
-      const args = node.arguments.length > 0 ? `(${node.arguments.map((a) => this.connection(a)).join(", ")})` : "";
+      const args = node.arguments.length > 0 ? `(${node.arguments.map((a) => this.connection(a)).join(", ")})`
+        : node.defaulted ? "(default)" : "";
       return `${scope}new${args}`;
     }
     if (node instanceof S.NewCopyExpression) return `new ${this.operand(node.value, PRIMARY)}`;
@@ -1485,6 +1499,7 @@ export class Printer {
 const items: [Function[], Method][] = [
   [[S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration], (s, n, l) => s.designUnit(n, l)],
   [[S.PortDeclaration], (s, n, l) => s.portDeclaration(n, l)],
+  [[S.InterfacePortDeclaration], (s, n, l) => s.interfacePortDeclaration(n, l)],
   [[S.ParameterDeclaration, S.TypeParameterDeclaration], (s, n, l) => s.parameter(n, l)],
   [[S.NetDeclaration, S.VariableDeclaration], (s, n, l) => s.declaration(n, l)],
   [[S.TypedefDeclaration], (s, n, l) => s.typedef(n, l)],

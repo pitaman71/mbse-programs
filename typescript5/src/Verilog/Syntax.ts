@@ -200,6 +200,8 @@ export const TIMING_CHECK_NAMES = [
   "$width", "$nochange"
 ] as const;
 export type TimingCheckName = (typeof TIMING_CHECK_NAMES)[number];
+export const BLOCK_EVENT_KEYWORDS = ["begin", "end"] as const;
+export type BlockEventKeyword = (typeof BLOCK_EVENT_KEYWORDS)[number];
 export const PULSE_STYLES = ["pulsestyle_onevent", "pulsestyle_ondetect", "showcancelled", "noshowcancelled"] as const;
 export type PulseStyle = (typeof PULSE_STYLES)[number];
 export const DEFAULT_NETTYPES = [
@@ -644,6 +646,21 @@ export class ExplicitAnsiPort extends Port {
   static override SINCE: Availability | null = sv();
 }
 
+const InterfacePortDeclarationSpec = {
+  interface: one(() => [Identifier]),
+  modport: one(() => [Identifier]),
+  declarators: many(() => [VariableDeclarator]),
+};
+export interface InterfacePortDeclaration extends Properties<typeof InterfacePortDeclarationSpec> {}
+/**
+ * `interface_name.modport names;`: a non-ANSI header's ports of an interface type (25.3.3); without a modport, the
+ * declaration is a variable's.
+ */
+export class InterfacePortDeclaration extends Item {
+  static override SPEC = InterfacePortDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+}
+
 const PortDeclarationSpec = {
   direction: choice(...DIRECTIONS),
   net_type: optionalChoice(...NET_TYPES),
@@ -839,6 +856,7 @@ export class StructType extends DataType {
 }
 
 const StructMemberSpec = {
+  attributes: many(() => [AttributeInstance]),
   random: optionalChoice(...RANDOM_QUALIFIERS),
   type: one(() => [DataType]),
   declarators: many(() => [VariableDeclarator]),
@@ -1420,6 +1438,7 @@ export class TaskDeclaration extends Item {
 }
 
 const TfPortSpec = {
+  attributes: many(() => [AttributeInstance]),
   const: flag(),
   direction: optionalChoice(...DIRECTIONS),
   static: flag(),
@@ -1980,9 +1999,20 @@ export class Instance extends SyntaxNode {
   static override SPEC = InstanceSpec;
 }
 
+const AttributedConnectionSpec = {
+  attributes: many(() => [AttributeInstance]),
+  connection: one(() => [Expression, Connection]),
+};
+export interface AttributedConnection extends Properties<typeof AttributedConnectionSpec> {}
+/** `(* ... *) connection`: a port connection with attributes (23.3.2). */
+export class AttributedConnection extends Connection {
+  static override SPEC = AttributedConnectionSpec;
+  static override SINCE: Availability | null = verilog(2001);
+}
+
 const NamedConnectionSpec = {
   name: one(() => [Identifier]),
-  value: optional(() => [Expression, DataType]),
+  value: optional(() => [Expression, DataType, Property]),
   implicit: flag(),
 };
 export interface NamedConnection extends Properties<typeof NamedConnectionSpec> {}
@@ -2866,7 +2896,7 @@ const ClockingDeclarationSpec = {
   scope: optionalChoice(...CLOCKING_SCOPES),
   name: optional(() => [Identifier]),
   clock: one(() => [EventControl]),
-  items: many(() => [DefaultSkew, ClockingSignals, PropertyDeclaration, SequenceDeclaration, LetDeclaration, Directive, Comment]),
+  items: many(() => [DefaultSkew, ClockingSignals, PropertyDeclaration, SequenceDeclaration, LetDeclaration, AttributedItem, Directive, Comment]),
   labeled: flag(),
 };
 export interface ClockingDeclaration extends Properties<typeof ClockingDeclarationSpec> {}
@@ -2955,23 +2985,29 @@ export class DefaultDisable extends Item {
 // === Coverage (19) ===
 
 const CovergroupDeclarationSpec = {
+  extends: flag(),
   name: one(() => [Identifier]),
   ports: many(() => [TfPort]),
-  clock: optional(() => [EventControl]),
+  clock: optional(() => [EventControl, BlockEventControl]),
   sample: optional(() => [SampleFunction]),
-  items: many(() => [CoverageOption, Coverpoint, CoverCross, Directive, Comment]),
+  items: many(() => [CoverageOption, Coverpoint, CoverCross, AttributedItem, Directive, Comment]),
   labeled: flag(),
 };
 export interface CovergroupDeclaration extends Properties<typeof CovergroupDeclarationSpec> {}
 /**
  * `covergroup name(ports) @(clock); items endgroup`, or sampled `with function sample(ports)` (19.3, 19.8.1).
- * Its items are options, coverpoints and crosses. `labeled` repeats the name after `endgroup`.
+ * Its items are options, coverpoints and crosses. `labeled` repeats the name after `endgroup`. In a derived class,
+ * `covergroup extends name` adds to its base class's covergroup of that name (19.4.1). A clock may be `@@(events)`,
+ * of blocks' starts and ends.
  */
 export class CovergroupDeclaration extends Item {
   static override SPEC = CovergroupDeclarationSpec;
   static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { extends: [[true, sv(2023)]] };
   override check(): string[] {
-    return this.clock !== null && this.sample !== null ? ["a CovergroupDeclaration has a clock or a sample, not both"] : [];
+    if (this.clock !== null && this.sample !== null) return ["a CovergroupDeclaration has a clock or a sample, not both"];
+    if (this.extends === true && this.ports.length > 0) return ["an extends CovergroupDeclaration has no ports"];
+    return [];
   }
 }
 
@@ -3001,7 +3037,7 @@ const CoverpointSpec = {
   type: optional(() => [DataType]),
   expression: one(() => [Expression]),
   condition: optional(() => [Expression]),
-  items: many(() => [CoverageBins, CoverageOption, Directive, Comment]),
+  items: many(() => [CoverageBins, CoverageOption, AttributedItem, Directive, Comment]),
 };
 export interface Coverpoint extends Properties<typeof CoverpointSpec> {}
 /**
@@ -3114,7 +3150,7 @@ const CoverCrossSpec = {
   label: optional(() => [Identifier]),
   items: many(() => [Expression]),
   condition: optional(() => [Expression]),
-  body: many(() => [BinsSelection, CoverageOption, FunctionDeclaration, Directive, Comment]),
+  body: many(() => [BinsSelection, CoverageOption, FunctionDeclaration, AttributedItem, Directive, Comment]),
 };
 export interface CoverCross extends Properties<typeof CoverCrossSpec> {}
 /**
@@ -3185,6 +3221,20 @@ export class ParenthesizedBinsSelect extends BinsSelect {
   static override SINCE: Availability | null = sv();
 }
 
+const MatchesBinsSelectSpec = {
+  select: one(() => [FilteredBinsSelect, Expression]),
+  count: one(() => [Expression]),
+};
+export interface MatchesBinsSelect extends Properties<typeof MatchesBinsSelectSpec> {}
+/**
+ * `select matches count`: the combinations a cross's name, or a filtered select, gives that `count` of its bins'
+ * tuples match (19.6.1.2).
+ */
+export class MatchesBinsSelect extends BinsSelect {
+  static override SPEC = MatchesBinsSelectSpec;
+  static override SINCE: Availability | null = sv(2012);
+}
+
 const FilteredBinsSelectSpec = {
   select: one(() => [BinsSelect, Expression]),
   filter: one(() => [Expression]),
@@ -3233,6 +3283,27 @@ export interface RepeatEventControl extends Properties<typeof RepeatEventControl
 /** `repeat (count) @(events)`, an intra-assignment event control that waits for `count` of them (9.4.5). */
 export class RepeatEventControl extends TimingControl {
   static override SPEC = RepeatEventControlSpec;
+}
+
+const BlockEventControlSpec = {
+  events: many(() => [BlockEvent]),
+};
+export interface BlockEventControl extends Properties<typeof BlockEventControlSpec> {}
+/** `@@(events)`, joined by `or`: a covergroup's clock, the starts and ends of blocks (19.3). */
+export class BlockEventControl extends TimingControl {
+  static override SPEC = BlockEventControlSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const BlockEventSpec = {
+  keyword: choice(...BLOCK_EVENT_KEYWORDS),
+  name: one(() => [Expression]),
+};
+export interface BlockEvent extends Properties<typeof BlockEventSpec> {}
+/** `begin name` or `end name`: the start or the end of a block, a function or a task (19.3). */
+export class BlockEvent extends SyntaxNode {
+  static override SPEC = BlockEventSpec;
+  static override SINCE: Availability | null = sv();
 }
 
 const EventControlSpec = {
@@ -3533,16 +3604,24 @@ export class SuperExpression extends Expression {
 const NewExpressionSpec = {
   scope: optional(() => [Name, SuperExpression]),
   arguments: many(() => [Expression, Connection]),
+  defaulted: flag(),
 };
 export interface NewExpression extends Properties<typeof NewExpressionSpec> {}
 /**
  * `new(arguments)`: a new object of the class the place it is assigned to has, or with `scope` of that class
  * (`c#(8)::new`) or the base class's constructor (`super.new`) (8.7, 8.15). `new` without arguments is written
- * without parentheses.
+ * without parentheses; `defaulted`, `super.new(default)` passes the constructor's own arguments (8.15).
  */
 export class NewExpression extends Expression {
   static override SPEC = NewExpressionSpec;
   static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { defaulted: [[true, sv(2023)]] };
+  override check(): string[] {
+    if (this.defaulted === true && (!(this.scope instanceof SuperExpression) || this.arguments.length > 0)) {
+      return ["a defaulted NewExpression is super.new(default)"];
+    }
+    return [];
+  }
 }
 
 const NewCopyExpressionSpec = {
@@ -3601,12 +3680,13 @@ export class ArrayMethodWithExpression extends Expression {
 const CallExpressionSpec = {
   callee: one(() => [Expression]),
   attributes: many(() => [AttributeInstance]),
-  arguments: many(() => [Expression, Connection]),
+  arguments: many(() => [Expression, Connection, Property]),
 };
 export interface CallExpression extends Properties<typeof CallExpressionSpec> {}
 /**
  * `callee(arguments)`: a function or method call (13.5); arguments are ordered expressions or named
- * `NamedConnection`s.
+ * `NamedConnection`s. In an instance of a property or a sequence, an argument may be a property or a sequence
+ * (16.8).
  */
 export class CallExpression extends Expression {
   static override SPEC = CallExpressionSpec;
@@ -4041,46 +4121,46 @@ function conditionProblems(directive: IfdefDirective | ElsifDirective): string[]
 export const KINDS = [
   Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
   AttributedStatement, AttributedPort, SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration,
-  CheckerDeclaration, PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort,
-  WildcardPort, EmptyPort, ExplicitAnsiPort, PortDeclaration, ParameterDeclaration, ParamAssignment,
-  TypeParameterDeclaration, TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType,
-  NamedType, VirtualInterfaceType, ImplicitType, StructType, StructMember, EnumType, EnumMember, RangeDimension,
-  SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension, NetDeclaration, DriveStrength,
-  ChargeStrength, VariableDeclaration, VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem,
-  DpiImport, DpiExport, BindDirective, ElaborationTask, GenvarDeclaration, ImportDeclaration, ExportDeclaration,
-  ImportItem, NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration,
-  ModportItem, ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
-  FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor,
-  GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
-  GateInstantiation, GateInstance, PullStrength, UdpDeclaration, UdpPort, UdpInitial, UdpEntry, SpecifyBlock,
-  SpecparamDeclaration, SpecparamAssignment, PathDeclaration, TimingCheck, TimingCheckEvent, PulseStyleDeclaration,
-  AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
-  PatternCaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement,
-  ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger,
-  DisableStatement, ForceStatement, ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement,
-  RandSequenceStatement, Production, ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat,
-  ProductionCase, ProductionCaseItem, ImmediateAssertion, DelayControl, RepeatEventControl, EventControl,
-  EventExpression, NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral,
-  TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression,
-  AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication,
-  AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage,
-  DollarExpression, TaggedExpression, MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern,
-  TaggedPattern, StructurePattern, PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression,
-  EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression,
-  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
-  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
-  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
-  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
-  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
-  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
-  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
-  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
-  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
-  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
-  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
-  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
-  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
-  ElsifDirective, DisabledText, OtherDirective,
+  CheckerDeclaration, PackageDeclaration, AnsiPort, InterfacePort, InterfacePortDeclaration, PortReference,
+  PortConcatenation, ExplicitPort, WildcardPort, EmptyPort, ExplicitAnsiPort, PortDeclaration, ParameterDeclaration,
+  ParamAssignment, TypeParameterDeclaration, TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType,
+  KeywordType, NamedType, VirtualInterfaceType, ImplicitType, StructType, StructMember, EnumType, EnumMember,
+  RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension, NetDeclaration,
+  DriveStrength, ChargeStrength, VariableDeclaration, VariableDeclarator, ForwardTypedefDeclaration,
+  TypedefDeclaration, EmptyItem, DpiImport, DpiExport, BindDirective, ElaborationTask, GenvarDeclaration,
+  ImportDeclaration, ExportDeclaration, ImportItem, NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment,
+  TimeUnitsDeclaration, ModportDeclaration, ModportItem, ModportPort, ModportSubroutine, ModportClocking,
+  ContinuousAssign, AlwaysConstruct, InitialConstruct, FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort,
+  ClassDeclaration, GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation,
+  Instance, AttributedConnection, NamedConnection, WildcardConnection, GateInstantiation, GateInstance, PullStrength,
+  UdpDeclaration, UdpPort, UdpInitial, UdpEntry, SpecifyBlock, SpecparamDeclaration, SpecparamAssignment,
+  PathDeclaration, TimingCheck, TimingCheckEvent, PulseStyleDeclaration, AssignmentStatement, ExpressionStatement,
+  NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem, PatternCaseItem, ForStatement,
+  WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
+  ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement,
+  ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production,
+  ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,
+  ImmediateAssertion, DelayControl, RepeatEventControl, BlockEventControl, BlockEvent, EventControl, EventExpression,
+  NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral,
+  UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression,
+  ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,
+  CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, TaggedExpression,
+  MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern, TaggedPattern, StructurePattern,
+  PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue,
+  InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression,
+  NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem,
+  LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
+  ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
+  RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem,
+  PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep,
+  CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence,
+  ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty,
+  CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew,
+  ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration,
+  SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence,
+  TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect,
+  ParenthesizedBinsSelect, FilteredBinsSelect, MatchesBinsSelect, IncludeDirective, DefineDirective, UndefDirective,
+  TimescaleDirective, DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

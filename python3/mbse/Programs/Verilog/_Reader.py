@@ -332,14 +332,13 @@ class _Reader:
         items = self.items(_nodes(node.members), node.endOfFile)
         return self.made(node, S.SourceText(items=items))
 
-    def item(self, node: Any, attributed: bool = True) -> Any:
-        """An item, with its attributes where `attributed` (where its place holds any item); elsewhere they stay
-        unread, and are refused."""
+    def item(self, node: Any) -> Any:
+        """An item, with its attributes."""
         method = self.ITEMS.get(node.kind.name)
         if method is None:
             raise self.unsupported(node)
         out = self.made(node, method(self, node))
-        attributes = self.attributes(node) if attributed else []
+        attributes = self.attributes(node)
         return self.made(node, S.AttributedItem(attributes=attributes, item=out)) if attributes else out
 
     def attributes(self, node: Any) -> list[S.AttributeInstance]:
@@ -456,10 +455,12 @@ class _Reader:
             out.var = bool(header.varKeyword)
         out.type = self.data_type(header.dataType)
 
-    def port_declaration(self, node: Any) -> S.PortDeclaration:
+    def port_declaration(self, node: Any) -> Any:
         header = node.header
         if header.kind.name == "InterfacePortHeader":  # `bus_if.source out;`
-            raise self.unsupported(header)
+            return S.InterfacePortDeclaration(interface=self.identifier(header.nameOrKeyword),
+                                              modport=self.identifier(header.modport.member),
+                                              declarators=self.declarators(node.declarators))
         out = S.PortDeclaration(direction=_text(header.direction))
         self.port_type(header, out)
         out.declarators = self.declarators(node.declarators)
@@ -537,7 +538,8 @@ class _Reader:
         if kind in ("StructType", "UnionType"):
             members = []
             for member in _nodes(node.members):
-                members.append(self.made(member, S.StructMember(random=_text(member.randomQualifier) or None,
+                members.append(self.made(member, S.StructMember(attributes=self.attributes(member),
+                                                                random=_text(member.randomQualifier) or None,
                                                                 type=self.data_type(member.type),
                                                                 declarators=self.declarators(member.declarators))))
             qualifier = _text(node.taggedOrSoft) or None  # a union's `tagged` or `soft`
@@ -1069,9 +1071,10 @@ class _Reader:
 
     def tf_port(self, node: Any) -> S.TfPort:
         declarator = node.declarator
-        out = S.TfPort(const=bool(node.constKeyword), direction=_text(node.direction) or None,
-                       static=bool(node.staticKeyword), var=bool(node.varKeyword),
-                       type=self.data_type(node.dataType), name=self.identifier(declarator.name),
+        out = S.TfPort(attributes=self.attributes(node), const=bool(node.constKeyword),
+                       direction=_text(node.direction) or None, static=bool(node.staticKeyword),
+                       var=bool(node.varKeyword), type=self.data_type(node.dataType),
+                       name=self.identifier(declarator.name),
                        dimensions=[self.dimension(d) for d in _nodes(declarator.dimensions)])
         if declarator.initializer is not None:
             out.value = self.expression(declarator.initializer.expr)
@@ -1144,17 +1147,20 @@ class _Reader:
             for connection in _nodes(instance.connections):
                 kind = connection.kind.name
                 if kind == "OrderedPortConnection":  # an empty one is an EmptyPortConnection
-                    item.connections.append(self.expression(connection.expr))
+                    converted: Any = self.expression(connection.expr)
                 elif kind == "NamedPortConnection":
-                    named = S.NamedConnection(name=self.identifier(connection.name),
-                                              implicit=not connection.openParen)
+                    converted = S.NamedConnection(name=self.identifier(connection.name),
+                                                  implicit=not connection.openParen)
                     if connection.expr is not None:
-                        named.value = self.expression(connection.expr)
-                    item.connections.append(self.made(connection, named))
+                        converted.value = self.expression(connection.expr)
                 elif kind == "WildcardPortConnection":
-                    item.connections.append(self.made(connection, S.WildcardConnection()))
+                    converted = S.WildcardConnection()
                 else:  # an EmptyPortConnection: slang has no other connection
-                    item.connections.append(self.made(connection, S.EmptyArgument()))
+                    converted = S.EmptyArgument()
+                converted = self.made(connection, converted)
+                attributes = self.attributes(connection)
+                item.connections.append(self.made(connection, S.AttributedConnection(
+                    attributes=attributes, connection=converted)) if attributes else converted)
             out.instances.append(self.made(instance, item))
         return out
 
@@ -1588,9 +1594,8 @@ class _Reader:
     # Coverage
 
     def covergroup(self, node: Any) -> S.CovergroupDeclaration:
-        if node.extends:  # IEEE 1800-2023's `covergroup extends`: not a kind yet
-            raise self.unsupported(node)
-        out = S.CovergroupDeclaration(name=self.identifier(node.name), labeled=node.endBlockName is not None)
+        out = S.CovergroupDeclaration(extends=bool(node.extends), name=self.identifier(node.name),
+                                      labeled=node.endBlockName is not None)
         if node.portList is not None:
             out.ports = [self.made(p, self.tf_port(p)) for p in _nodes(node.portList.ports)]
         event = node.event
@@ -1599,12 +1604,17 @@ class _Reader:
                 ports = [] if event.portList is None else [self.made(p, self.tf_port(p))
                                                            for p in _nodes(event.portList.ports)]
                 out.sample = self.made(event, S.SampleFunction(ports=ports))
-            elif event.kind.name == "BlockCoverageEvent":  # `@@(begin f)`: not a kind yet
-                raise self.unsupported(event)
+            elif event.kind.name == "BlockCoverageEvent":  # `@@(begin f or end g)`
+                out.clock = self.made(event, S.BlockEventControl(events=self.block_events(event.expr)))
             else:
                 out.clock = self.timing(event)
         out.items = self.items(_nodes(node.members), node.endgroup, convert=self.coverage_item)
         return out
+
+    def block_events(self, node: Any) -> list[S.BlockEvent]:
+        if node.kind.name == "BinaryBlockEventExpression":
+            return self.block_events(node.left) + self.block_events(node.right)
+        return [self.made(node, S.BlockEvent(keyword=node.keyword.rawText, name=self.expression(node.name)))]
 
     def coverage_item(self, node: Any) -> Any:
         """An item of a covergroup, a coverpoint or a cross: an option, a coverpoint, a cross, a bin, or a function."""
@@ -1635,9 +1645,11 @@ class _Reader:
         elif kind == "BinsSelection":
             out = S.BinsSelection(keyword=node.keyword.rawText, name=self.identifier(node.name),
                                   select=self.bins_select(node.expr), condition=self.coverage_condition(node.iff))
-        else:  # a function in a cross: its place holds no attributed item
-            return self.item(node, attributed=False)
-        return self.made(node, out)
+        else:  # a function in a cross
+            return self.item(node)
+        out = self.made(node, out)
+        attributes = self.attributes(node)
+        return self.made(node, S.AttributedItem(attributes=attributes, item=out)) if attributes else out
 
     def coverage_condition(self, node: Any) -> Any:
         return None if node is None else self.expression(node.expr)  # `iff (condition)`: its parentheses are its own
@@ -1675,9 +1687,9 @@ class _Reader:
         """A select expression, or the expression it is."""
         kind = node.kind.name
         if kind == "SimpleBinsSelectExpr":
-            if node.matchesClause is not None:  # `matches`: not a kind yet
-                raise self.unsupported(node)
-            return self.expression(node.expr)
+            name = self.expression(node.expr)
+            return name if node.matchesClause is None else self.made(node, S.MatchesBinsSelect(
+                select=name, count=self.expression(node.matchesClause.pattern.expr)))
         if kind == "BinsSelectConditionExpr":
             out: Any = S.BinsOf(target=self.expression(node.name))
             if node.intersects is not None:
@@ -1690,9 +1702,10 @@ class _Reader:
         elif kind == "ParenthesizedBinsSelectExpr":
             out = S.ParenthesizedBinsSelect(select=self.bins_select(node.expr))
         else:  # a BinSelectWithFilterExpr: slang has no other select expression
-            if node.matchesClause is not None:
-                raise self.unsupported(node)
             out = S.FilteredBinsSelect(select=self.bins_select(node.expr), filter=self.expression(node.filter))
+            if node.matchesClause is not None:  # `with (filter) matches count`
+                out = S.MatchesBinsSelect(select=self.made(node, out),
+                                          count=self.expression(node.matchesClause.pattern.expr))
         return self.made(node, out)
 
     # Clocking blocks
@@ -1720,9 +1733,11 @@ class _Reader:
                 if declaration.value is not None:
                     signal.value = self.expression(declaration.value.expr)
                 out.signals.append(self.made(declaration, signal))
-        else:  # an assertion declaration: its place holds no attributed item
-            return self.item(node, attributed=False)
-        return self.made(node, out)
+        else:  # an assertion declaration
+            return self.item(node)
+        out = self.made(node, out)
+        attributes = self.attributes(node)
+        return self.made(node, S.AttributedItem(attributes=attributes, item=out)) if attributes else out
 
     def skew(self, node: Any) -> S.ClockingSkew | None:
         if node is None:
@@ -1954,22 +1969,36 @@ class _Reader:
 
     def invocation(self, node: Any) -> S.Expression:
         left = node.left
-        arguments = [] if node.arguments is None else self.arguments(node.arguments)
-        if left.kind.name == "SystemName":
+        system = left.kind.name == "SystemName"  # a system call's arguments are expressions and types
+        arguments = [] if node.arguments is None else self.arguments(node.arguments, properties=not system)
+        if system:
             return S.SystemCall(name=self.token_text(left.systemIdentifier), attributes=self.attributes(node),
                                 arguments=arguments)
         return S.CallExpression(callee=self.expression(left), attributes=self.attributes(node), arguments=arguments)
 
-    def arguments(self, node: Any) -> list[Any]:
+    def argument(self, node: Any) -> Any:
+        """An argument: an expression or a type, or, of an instance of a property or a sequence, a property or a
+        sequence."""
+        inner = node
+        while inner.kind.name in ("SimplePropertyExpr", "SimpleSequenceExpr") \
+                and getattr(inner, "repetition", None) is None:
+            inner = inner.expr
+        if inner.kind.name.endswith(("PropertyExpr", "SequenceExpr")):
+            return self.property(node)
+        return self.expression_or_type(node)
+
+    def arguments(self, node: Any, properties: bool = False) -> list[Any]:
+        """Ordered and named arguments, which may be properties and sequences where `properties`: in a call, which may
+        be an instance of a property or a sequence."""
         out: list[Any] = []
         for argument in _nodes(node.parameters):
             kind = argument.kind.name
             if kind == "OrderedArgument":
-                out.append(self.expression_or_type(argument.expr))
+                out.append(self.argument(argument.expr) if properties else self.expression_or_type(argument.expr))
             elif kind == "NamedArgument":
                 named = S.NamedConnection(name=self.identifier(argument.name))
                 if argument.expr is not None:
-                    named.value = self.expression(argument.expr)
+                    named.value = self.argument(argument.expr) if properties else self.expression(argument.expr)
                 out.append(self.made(argument, named))
             else:  # an EmptyArgument
                 out.append(self.made(argument, S.EmptyArgument()))
@@ -1999,6 +2028,10 @@ class _Reader:
             left = scoped.left
             out.scope = self.made(left, S.SuperExpression()) if left.kind.name == "SuperHandle" else self.name(left)
         return out
+
+    def super_new_default(self, node: Any) -> S.NewExpression:
+        """`super.new(default)`: the base class's constructor, given the constructor's own arguments."""
+        return S.NewExpression(scope=self.made(node.scopedNew.left, S.SuperExpression()), defaulted=True)
 
     def copy_class(self, node: Any) -> S.NewCopyExpression:
         return S.NewCopyExpression(value=self.expression(node.expr))
@@ -2117,6 +2150,7 @@ class _Reader:
         "NullLiteralExpression": null, "ThisHandle": this, "SuperHandle": super_handle, "ExpressionOrDist": dist,
         "StreamingConcatenationExpression": streaming, "MinTypMaxExpression": min_typ_max, "RootScope": root,
         "EmptyQueueExpression": empty_queue, "TaggedUnionExpression": tagged,
+        "SuperNewDefaultedArgsExpression": super_new_default,
         "ArrayOrRandomizeMethodExpression": with_clause,
     }
 

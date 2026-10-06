@@ -26,7 +26,7 @@ package logger_pkg;
     typedef enum logic [1:0] {IDLE, SAMPLE, SEND = 2'd3} state_t;
     typedef enum {PROBE[2], BAY[1:3] = 5} source_t;
     typedef struct packed {
-        logic signed [15:0] raw;
+        (* units = "mK" *) logic signed [15:0] raw;
         logic [7:0] status;
     } reading_t;
     typedef logic [7:0] byte_t;
@@ -41,7 +41,7 @@ package logger_pkg;
     } word_t;
     typedef byte_t queue_t[$];
 
-    function automatic logic in_range(input logic signed [15:0] raw, input int lo = 200, hi = 800);
+    function automatic logic in_range((* clipped *) input logic signed [15:0] raw, input int lo = 200, hi = 800);
         return raw >= lo && raw <= hi;
     endfunction
 
@@ -212,7 +212,7 @@ module sampler
     else
         $info;
 
-    counter #(WIDTH, 1) u_counter (.clk, .rst_n(rst_n), .count());
+    counter #(WIDTH, 1) u_counter ((* sync *) .clk, .rst_n(rst_n), .count());
     checker_unit u_check (.*);
     logger_pkg::in_band band_check (average, clk);
 
@@ -332,6 +332,7 @@ module sampler
     endproperty
 
     sent_once: assert property (counts(sent(1), 16)) else $error("count did not rise");
+    assert property (counts(sent(1) ##1 burst, 16));
     assume property (@(posedge clk) stays_in_band or @(negedge clk) out.ready |-> 1);
     cover sequence (burst);
     restrict property (@(posedge clk) disable iff (!rst_n) safe);
@@ -419,6 +420,11 @@ endmodule
 bind sampler probe_tap tap (.level());
 bind sampler: u_counter watchdog #(.LIMIT(4)) dog (.clk(clk), .bark());
 
+// A monitor of the bus, by a non-ANSI interface port.
+module bus_monitor (bus);
+    bus_if.sink bus;
+endmodule
+
 // A probe's halves, wired by name, and its tap.
 module probe_pair (.halves({lo, hi}), .first(lo[0]), .pair(hi[1:0]), , .unused());
     input [3:0] lo, hi;
@@ -436,6 +442,9 @@ program automatic test_program (
     (* clock *) input logic clk
 );
     clocking tick @(posedge clk);
+        (* settled *) property ticked;
+            1'b1;
+        endproperty
     endclocking
 
     default clocking tick;
@@ -592,12 +601,14 @@ package logger_tb_pkg;
             }
 
             status_cp: coverpoint seen.status;
-            coverpoint seen.id;
+            (* identity *) coverpoint seen.id;
 
             both: cross raw_cp, status_cp iff (limit > 0) {
                 bins cold_ok = binsof(raw_cp.cold) && binsof(status_cp) intersect {[0:3]};
                 ignore_bins idle = !binsof(raw_cp) || (binsof(status_cp));
                 bins quiet = both with (status_cp < 2);
+                (* pairs *) bins paired = both matches 2;
+                bins sparse = both with (status_cp > 2) matches 1;
 
                 function int unsigned weight;
                     return limit;
@@ -610,6 +621,24 @@ package logger_tb_pkg;
         covergroup sampled with function sample(byte value);
             coverpoint value;
         endgroup
+
+        covergroup traced @@(begin record or end record);
+            coverpoint seen.status;
+        endgroup
+
+        function void record;
+        endfunction
+    endclass
+
+    // More coverage of the readings, and a constructor that takes the base's arguments.
+    class deep_coverage extends coverage;
+        covergroup extends readings;
+            coverpoint seen.raw[0];
+        endgroup
+
+        function new;
+            super.new(default);
+        endfunction
     endclass
 
     class driver;

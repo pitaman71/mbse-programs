@@ -117,6 +117,7 @@ Polarity = Choice["+", "-"]
 DataPolarity = Choice["+:", "-:", ":"]
 TimingCheckName = Choice["$setup", "$hold", "$setuphold", "$recovery", "$removal", "$recrem", "$skew", "$timeskew",
                          "$fullskew", "$period", "$width", "$nochange"]
+BlockEventKeyword = Choice["begin", "end"]
 PulseStyle = Choice["pulsestyle_onevent", "pulsestyle_ondetect", "showcancelled", "noshowcancelled"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
@@ -478,6 +479,16 @@ class ExplicitAnsiPort(Port):
     SINCE = sv()
 
 
+class InterfacePortDeclaration(Item):
+    """`interface_name.modport names;`: a non-ANSI header's ports of an interface type (25.3.3); without a modport, the
+    declaration is a variable's."""
+
+    interface: Identifier
+    modport: Identifier
+    declarators: list[VariableDeclarator]
+    SINCE = sv()
+
+
 class PortDeclaration(Item):
     """`direction net_type var type names;`, declaring non-ANSI ports in the body, or Verilog-1995 task and function
     ports (23.2.2.1)."""
@@ -617,6 +628,7 @@ class StructMember(SyntaxNode):
     """`random type declarators;` in a structure or union (7.2), `rand` or `randc` in one that is randomized
     (18.4)."""
 
+    attributes: list[AttributeInstance]
     random: RandomQualifier | None
     type: DataType
     declarators: list[VariableDeclarator]
@@ -1052,6 +1064,7 @@ class TfPort(SyntaxNode):
     direction or a type, a port inherits them from the one before it. A `ref` may be `const ref` or `ref static`
     (13.5.2)."""
 
+    attributes: list[AttributeInstance]
     const: bool
     direction: Direction | None
     static: bool
@@ -1479,12 +1492,20 @@ class Instance(SyntaxNode):
     connections: list[Expression | Connection]
 
 
+class AttributedConnection(Connection):
+    """`(* ... *) connection`: a port connection with attributes (23.3.2)."""
+
+    attributes: list[AttributeInstance]
+    connection: Expression | Connection
+    SINCE = verilog(2001)
+
+
 class NamedConnection(Connection):
     """`.name(value)`; `.name()` without a value leaves it unconnected, and an `implicit` `.name` connects it to
     what has its name (23.3.2.2, 23.3.2.3). In a call, a named argument."""
 
     name: Identifier
-    value: Expression | DataType | None
+    value: Expression | DataType | Property | None
     implicit: bool
     FEATURES = {"implicit": {True: sv()}}
 
@@ -2124,8 +2145,8 @@ class ClockingDeclaration(Item):
     scope: ClockingScope | None
     name: Identifier | None
     clock: EventControl
-    items: list[DefaultSkew | ClockingSignals | PropertyDeclaration | SequenceDeclaration | LetDeclaration | Directive
-                | Comment]
+    items: list[DefaultSkew | ClockingSignals | PropertyDeclaration | SequenceDeclaration | LetDeclaration
+                | AttributedItem | Directive | Comment]
     labeled: bool
     SINCE = sv()
     FEATURES = {"scope": {"global": sv(2009)}}
@@ -2186,19 +2207,27 @@ class DefaultDisable(Item):
 
 class CovergroupDeclaration(Item):
     """`covergroup name(ports) @(clock); items endgroup`, or sampled `with function sample(ports)` (19.3, 19.8.1).
-    Its items are options, coverpoints and crosses. `labeled` repeats the name after `endgroup`."""
+    Its items are options, coverpoints and crosses. `labeled` repeats the name after `endgroup`. In a derived class,
+    `covergroup extends name` adds to its base class's covergroup of that name (19.4.1). A clock may be `@@(events)`,
+    of blocks' starts and ends."""
 
+    extends: bool
     name: Identifier
     ports: list[TfPort]
-    clock: EventControl | None
+    clock: EventControl | BlockEventControl | None
     sample: SampleFunction | None
-    items: list[CoverageOption | Coverpoint | CoverCross | Directive | Comment]
+    items: list[CoverageOption | Coverpoint | CoverCross | AttributedItem | Directive | Comment]
     labeled: bool
     SINCE = sv()
 
+    FEATURES = {"extends": {True: sv(2023)}}
+
     def check(self) -> list[str]:
-        return ["a CovergroupDeclaration has a clock or a sample, not both"] \
-            if self.clock is not None and self.sample is not None else []
+        if self.clock is not None and self.sample is not None:
+            return ["a CovergroupDeclaration has a clock or a sample, not both"]
+        if self.extends is True and self.ports:
+            return ["an extends CovergroupDeclaration has no ports"]
+        return []
 
 
 class SampleFunction(SyntaxNode):
@@ -2225,7 +2254,7 @@ class Coverpoint(Item):
     type: DataType | None
     expression: Expression
     condition: Expression | None
-    items: list[CoverageBins | CoverageOption | Directive | Comment]
+    items: list[CoverageBins | CoverageOption | AttributedItem | Directive | Comment]
     SINCE = sv()
     FEATURES = {"type": {True: sv(2012)}}
 
@@ -2309,7 +2338,7 @@ class CoverCross(Item):
     label: Identifier | None
     items: list[Expression]
     condition: Expression | None
-    body: list[BinsSelection | CoverageOption | FunctionDeclaration | Directive | Comment]
+    body: list[BinsSelection | CoverageOption | FunctionDeclaration | AttributedItem | Directive | Comment]
     SINCE = sv()
 
 
@@ -2355,6 +2384,15 @@ class ParenthesizedBinsSelect(BinsSelect):
     SINCE = sv()
 
 
+class MatchesBinsSelect(BinsSelect):
+    """`select matches count`: the combinations a cross's name, or a filtered select, gives that `count` of its bins'
+    tuples match (19.6.1.2)."""
+
+    select: FilteredBinsSelect | Expression
+    count: Expression
+    SINCE = sv(2012)
+
+
 class FilteredBinsSelect(BinsSelect):
     """`select with (filter)`: the combinations for which `filter` holds (19.6.1.2)."""
 
@@ -2390,6 +2428,21 @@ class RepeatEventControl(TimingControl):
 
     count: Expression
     event: EventControl
+
+
+class BlockEventControl(TimingControl):
+    """`@@(events)`, joined by `or`: a covergroup's clock, the starts and ends of blocks (19.3)."""
+
+    events: list[BlockEvent]
+    SINCE = sv()
+
+
+class BlockEvent(SyntaxNode):
+    """`begin name` or `end name`: the start or the end of a block, a function or a task (19.3)."""
+
+    keyword: BlockEventKeyword
+    name: Expression
+    SINCE = sv()
 
 
 class EventControl(TimingControl):
@@ -2603,11 +2656,18 @@ class SuperExpression(Expression):
 class NewExpression(Expression):
     """`new(arguments)`: a new object of the class the place it is assigned to has, or with `scope` of that class
     (`c#(8)::new`) or the base class's constructor (`super.new`) (8.7, 8.15). `new` without arguments is written
-    without parentheses."""
+    without parentheses; `defaulted`, `super.new(default)` passes the constructor's own arguments (8.15)."""
 
     scope: Name | SuperExpression | None
     arguments: list[Expression | Connection]
+    defaulted: bool
     SINCE = sv()
+    FEATURES = {"defaulted": {True: sv(2023)}}
+
+    def check(self) -> list[str]:
+        if self.defaulted is True and (not isinstance(self.scope, SuperExpression) or self.arguments):
+            return ["a defaulted NewExpression is super.new(default)"]
+        return []
 
 
 class NewCopyExpression(Expression):
@@ -2649,11 +2709,12 @@ class ArrayMethodWithExpression(Expression):
 
 class CallExpression(Expression):
     """`callee(arguments)`: a function or method call (13.5); arguments are ordered expressions or named
-    `NamedConnection`s."""
+    `NamedConnection`s. In an instance of a property or a sequence, an argument may be a property or a sequence
+    (16.8)."""
 
     callee: Expression
     attributes: list[AttributeInstance]
-    arguments: list[Expression | Connection]
+    arguments: list[Expression | Connection | Property]
     FEATURES = {"attributes": {True: verilog(2001)}}
 
 
@@ -2958,7 +3019,8 @@ KINDS: list[type[SyntaxNode]] = [
     Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
     AttributedStatement, AttributedPort,
     SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration, CheckerDeclaration, PackageDeclaration,
-    AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort, WildcardPort, EmptyPort, ExplicitAnsiPort,
+    AnsiPort, InterfacePort, InterfacePortDeclaration, PortReference, PortConcatenation, ExplicitPort, WildcardPort,
+    EmptyPort, ExplicitAnsiPort,
     PortDeclaration,
     ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment,
     IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType,
@@ -2973,7 +3035,8 @@ KINDS: list[type[SyntaxNode]] = [
     ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
     FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
     GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
-    ModuleInstantiation, Instance, NamedConnection, WildcardConnection, GateInstantiation, GateInstance, PullStrength,
+    ModuleInstantiation, Instance, AttributedConnection, NamedConnection, WildcardConnection, GateInstantiation,
+    GateInstance, PullStrength,
     UdpDeclaration, UdpPort, UdpInitial, UdpEntry, SpecifyBlock, SpecparamDeclaration, SpecparamAssignment,
     PathDeclaration, TimingCheck, TimingCheckEvent, PulseStyleDeclaration,
     AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
@@ -2984,7 +3047,7 @@ KINDS: list[type[SyntaxNode]] = [
     Production,
     ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,
     ImmediateAssertion,
-    DelayControl, RepeatEventControl, EventControl, EventExpression,
+    DelayControl, RepeatEventControl, BlockEventControl, BlockEvent, EventControl, EventExpression,
     NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral,
     UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression,
     ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,
@@ -3007,7 +3070,7 @@ KINDS: list[type[SyntaxNode]] = [
     ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay,
     CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions,
     TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf,
-    BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
+    BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect, MatchesBinsSelect,
     IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
     ElsifDirective, DisabledText, OtherDirective,
 ]

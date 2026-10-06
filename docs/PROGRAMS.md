@@ -414,6 +414,13 @@ The tree is abstract where the grammar only spells:
   `PathDeclaration`s (conditional or `ifnone`, with an edge, a polarity, `=>` or `*>`, and an edge-sensitive path's
   data), `TimingCheck`s whose events are `TimingCheckEvent`s, and `PulseStyleDeclaration`s. slang reads `+=>` as `+=`
   and `>`; the path holds its polarity and its operator.
+- `covergroup extends` is a `CovergroupDeclaration`'s `extends`, and `@@(begin f or end g)` its clock, a
+  `BlockEventControl` of `BlockEvent`s; a cross's `x matches 2` and `... with (f) matches 2` are `MatchesBinsSelect`s.
+  `super.new(default)` is a `NewExpression` that is `defaulted`. A non-ANSI header's interface port is declared by an
+  `InterfacePortDeclaration` (`bus_if.mp a;`). Attributes on a structure's members and on a function's ports are their
+  `attributes`; on a connection, an `AttributedConnection`; on a coverage or a clocking item, an `AttributedItem`. In an
+  instance of a property or a sequence, an argument may be a sequence or a property (`p(a ##1 b)`); a system call's may
+  not.
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
@@ -425,7 +432,7 @@ The tree is abstract where the grammar only spells:
 - A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
   as written; a macro used anywhere else is refused.
 
-`covergroup extends`, `@@` block events, `super.new(default)` and configurations are not kinds yet.
+Configurations are not kinds yet, nor attributes on modport ports and on a non-ANSI header's ports.
 
 ### Reading Verilog
 
@@ -625,8 +632,8 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **The rest of Verilog.** Configurations, `covergroup extends`, `@@` block events and `super.new(default)`, which slang
-  reads and the reader refuses, are the last kinds of Verilog to add.
+- **The rest of Verilog.** Configurations, and attributes on modport ports and on a non-ANSI header's ports, which
+  slang reads and the reader refuses, are the last kinds of Verilog to add.
 - **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
   Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from

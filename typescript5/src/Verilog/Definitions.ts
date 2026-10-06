@@ -181,6 +181,17 @@ class Definer {
     }
   }
 
+  /** `bus_if.mp a;`: the interface is found where it is; its modport, the interface's, is not looked up. */
+  interfacePortDeclaration(node: any, scope: Scope): void {
+    this.program.located(node.interface, scope);
+    for (const declarator of node.declarators) {
+      this.visitAll(declarator.dimensions, scope);
+      this.program.located(declarator, scope);
+      this.program.located(declarator.name, scope);
+      this.entity(scope, "port", declarator.name, declarator);
+    }
+  }
+
   typedef(node: any, scope: Scope): void {
     this.visitAll([node.type, ...node.dimensions], scope);
     this.program.located(node.name, scope);
@@ -634,6 +645,7 @@ const methods: [Function[], Method][] = [
   [[S.VariableDeclaration], (d, n, s) => d.declarators(n, s, "variable")],
   [[S.PortDeclaration], (d, n, s) => d.declarators(n, s, "port")],
   [[S.TypedefDeclaration], (d, n, s) => d.typedef(n, s)],
+  [[S.InterfacePortDeclaration], (d, n, s) => d.interfacePortDeclaration(n, s)],
   [[S.NetTypeDeclaration], (d, n, s) => d.netType(n, s)],
   [[S.EnumType], (d, n, s) => d.enum(n, s)],
   [[S.GenvarDeclaration], (d, n, s) => d.genvar(n, s)],

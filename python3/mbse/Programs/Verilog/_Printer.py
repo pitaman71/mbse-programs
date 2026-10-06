@@ -285,6 +285,10 @@ class Printer:
         value = f" = {self.text(node.value)}" if node.value is not None else ""
         return (head + " " if head else "") + node.name.spelling + dimensions + value
 
+    def interface_port_declaration(self, node: S.InterfacePortDeclaration, level: int) -> list[str]:
+        port = f"{node.interface.spelling}.{node.modport.spelling}"
+        return [f"{_INDENT * level}{port} {self.declarators(node.declarators)};"]
+
     def port_declaration(self, node: S.PortDeclaration, level: int) -> list[str]:
         parts = [node.direction, node.net_type, "var" if node.var else None,
                  self.type_text(node.type) if node.type is not None else None]
@@ -336,7 +340,8 @@ class Printer:
 
     def member(self, node: S.StructMember) -> str:
         random = f"{node.random} " if node.random else ""
-        return f"{random}{self.type_text(node.type)} {self.declarators(node.declarators)}"
+        attributes = f"{self.attribute_text(node.attributes)} " if node.attributes else ""
+        return f"{attributes}{random}{self.type_text(node.type)} {self.declarators(node.declarators)}"
 
     def enum_member(self, node: S.EnumMember) -> str:
         numbers = ""
@@ -649,7 +654,7 @@ class Printer:
         parts = ["const" if node.const else None, node.direction, "static" if node.static else None,
                  "var" if node.var else None, self.type_text(node.type) if node.type is not None else None,
                  node.name.spelling + "".join(self.dimension(d) for d in node.dimensions)]
-        text = " ".join(p for p in parts if p)
+        text = " ".join(p for p in (self.attribute_text(node.attributes) if node.attributes else None, *parts) if p)
         return text + (f" = {self.text(node.value)}" if node.value is not None else "")
 
     # Generate constructs
@@ -783,6 +788,8 @@ class Printer:
         return [f"{_INDENT * level}{self.name(node.module)}{parameters} {instances};"]
 
     def connection(self, node: Any) -> str:
+        if isinstance(node, S.AttributedConnection):
+            return f"{self.attribute_text(node.attributes)} {self.connection(node.connection)}"
         if isinstance(node, S.WildcardConnection):
             return ".*"
         if isinstance(node, S.NamedConnection):
@@ -1177,7 +1184,8 @@ class Printer:
             event = f" {self.timing_text(node.clock)}"
         elif node.sample is not None:
             event = f" with function sample({', '.join(self.tf_port(p) for p in node.sample.ports)})"
-        lines = [f"{pad}covergroup {node.name.spelling}{ports}{event};"]
+        extends = "extends " if node.extends else ""
+        lines = [f"{pad}covergroup {extends}{node.name.spelling}{ports}{event};"]
         body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
         return [*lines, *body, f"{pad}endgroup" + (f" : {node.name.spelling}" if node.labeled else "")]
 
@@ -1237,11 +1245,13 @@ class Printer:
 
     def select(self, node: Any, level: int) -> str:
         """A select expression, in parentheses where its place binds tighter: `&&` and `||` (1, to the left), `with`
-        (2), `!` (3)."""
+        and `matches` (2), `!` (3)."""
         if isinstance(node, S.BinaryBinsSelect):
             own, text = 1, f"{self.select(node.left, 1)} {node.operator} {self.select(node.right, 2)}"
         elif isinstance(node, S.FilteredBinsSelect):
             own, text = 2, f"{self.select(node.select, 2)} with ({self.text(node.filter)})"
+        elif isinstance(node, S.MatchesBinsSelect):
+            own, text = 2, f"{self.select(node.select, 2)} matches {self.text(node.count)}"
         elif isinstance(node, S.NotBinsSelect):
             own, text = 3, f"!{self.select(node.operand, 3)}"
         elif isinstance(node, S.BinsOf):
@@ -1296,6 +1306,8 @@ class Printer:
     # Timing controls
 
     def timing_text(self, node: Any) -> str:
+        if isinstance(node, S.BlockEventControl):
+            return "@@(" + " or ".join(f"{e.keyword} {self.text(e.name)}" for e in node.events) + ")"
         if isinstance(node, S.RepeatEventControl):
             return f"repeat ({self.text(node.count)}) {self.timing_text(node.event)}"
         if isinstance(node, S.DelayControl):
@@ -1453,7 +1465,8 @@ class Printer:
                 scope = "super."
             elif node.scope is not None:
                 scope = self.name(node.scope) + "::"
-            arguments = f"({', '.join(self.connection(a) for a in node.arguments)})" if node.arguments else ""
+            arguments = f"({', '.join(self.connection(a) for a in node.arguments)})" if node.arguments else \
+                "(default)" if node.defaulted else ""
             return f"{scope}new{arguments}"
         if isinstance(node, S.NewCopyExpression):
             return f"new {self.operand(node.value, PRIMARY)}"
@@ -1480,7 +1493,8 @@ class Printer:
 
     ITEMS = {
         S.ModuleDeclaration: design_unit, S.InterfaceDeclaration: design_unit, S.ProgramDeclaration: design_unit,
-        S.PackageDeclaration: design_unit, S.PortDeclaration: port_declaration, S.ParameterDeclaration: parameter,
+        S.PackageDeclaration: design_unit, S.PortDeclaration: port_declaration,
+        S.InterfacePortDeclaration: interface_port_declaration, S.ParameterDeclaration: parameter,
         S.TypeParameterDeclaration: parameter, S.NetDeclaration: declaration, S.VariableDeclaration: declaration,
         S.TypedefDeclaration: typedef, S.GenvarDeclaration: genvar, S.ImportDeclaration: import_declaration,
         S.ModportDeclaration: modport, S.ContinuousAssign: continuous_assign, S.AlwaysConstruct: procedural,

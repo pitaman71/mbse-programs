@@ -811,6 +811,41 @@
    ]
   },
   {
+   "kind": "InterfacePortDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "interface",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "modport",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "declarators",
+     "type": [
+      "VariableDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
    "kind": "PortReference",
    "category": "Port",
    "since": null,
@@ -1520,6 +1555,14 @@
    "extension": false,
    "features": {},
    "properties": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
     {
      "name": "random",
      "type": "str",
@@ -3038,6 +3081,14 @@
    },
    "properties": [
     {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
      "name": "const",
      "type": "bool",
      "optional": false
@@ -3468,6 +3519,35 @@
    ]
   },
   {
+   "kind": "AttributedConnection",
+   "category": "Connection",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "connection",
+     "type": [
+      "Expression",
+      "Connection"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
    "kind": "NamedConnection",
    "category": "Connection",
    "since": null,
@@ -3492,7 +3572,8 @@
      "name": "value",
      "type": [
       "Expression",
-      "DataType"
+      "DataType",
+      "Property"
      ],
      "optional": true,
      "many": false
@@ -5331,6 +5412,53 @@
    ]
   },
   {
+   "kind": "BlockEventControl",
+   "category": "TimingControl",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "events",
+     "type": [
+      "BlockEvent"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "BlockEvent",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "begin",
+      "end"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
    "kind": "EventControl",
    "category": "TimingControl",
    "since": null,
@@ -6140,7 +6268,8 @@
      "name": "arguments",
      "type": [
       "Expression",
-      "Connection"
+      "Connection",
+      "Property"
      ],
      "optional": true,
      "many": true
@@ -6686,7 +6815,13 @@
     "SystemVerilog": 2005
    },
    "extension": false,
-   "features": {},
+   "features": {
+    "defaulted": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
    "properties": [
     {
      "name": "scope",
@@ -6705,6 +6840,11 @@
      ],
      "optional": true,
      "many": true
+    },
+    {
+     "name": "defaulted",
+     "type": "bool",
+     "optional": false
     }
    ]
   },
@@ -8357,6 +8497,7 @@
       "PropertyDeclaration",
       "SequenceDeclaration",
       "LetDeclaration",
+      "AttributedItem",
       "Directive",
       "Comment"
      ],
@@ -8563,8 +8704,19 @@
     "SystemVerilog": 2005
    },
    "extension": false,
-   "features": {},
+   "features": {
+    "extends": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
    "properties": [
+    {
+     "name": "extends",
+     "type": "bool",
+     "optional": false
+    },
     {
      "name": "name",
      "type": [
@@ -8584,7 +8736,8 @@
     {
      "name": "clock",
      "type": [
-      "EventControl"
+      "EventControl",
+      "BlockEventControl"
      ],
      "optional": true,
      "many": false
@@ -8603,6 +8756,7 @@
       "CoverageOption",
       "Coverpoint",
       "CoverCross",
+      "AttributedItem",
       "Directive",
       "Comment"
      ],
@@ -8714,6 +8868,7 @@
      "type": [
       "CoverageBins",
       "CoverageOption",
+      "AttributedItem",
       "Directive",
       "Comment"
      ],
@@ -8981,6 +9136,7 @@
       "BinsSelection",
       "CoverageOption",
       "FunctionDeclaration",
+      "AttributedItem",
       "Directive",
       "Comment"
      ],
@@ -9161,6 +9317,34 @@
     },
     {
      "name": "filter",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MatchesBinsSelect",
+   "category": "BinsSelect",
+   "since": {
+    "SystemVerilog": 2012
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "select",
+     "type": [
+      "FilteredBinsSelect",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "count",
      "type": [
       "Expression"
      ],

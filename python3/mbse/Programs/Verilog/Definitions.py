@@ -181,6 +181,15 @@ class _Definer:
     def port_declaration(self, node: S.PortDeclaration, scope: Scope) -> None:
         self.declarators(node, scope, "port")
 
+    def interface_port_declaration(self, node: S.InterfacePortDeclaration, scope: Scope) -> None:
+        """`bus_if.mp a;`: the interface is found where it is; its modport, the interface's, is not looked up."""
+        self.program.located(node.interface, scope)
+        for declarator in node.declarators:
+            self.visit_all(declarator.dimensions, scope)
+            self.program.located(declarator, scope)
+            self.program.located(declarator.name, scope)
+            self.entity(scope, "port", declarator.name, declarator)
+
     def typedef(self, node: S.TypedefDeclaration, scope: Scope) -> None:
         self.visit_all([node.type, *node.dimensions], scope)
         self.program.located(node.name, scope)
@@ -559,6 +568,7 @@ class _Definer:
         S.PatternCaseItem: pattern_case_item, S.VariablePattern: variable_pattern,
         S.GateInstantiation: gate_instantiation, S.UdpDeclaration: udp_declaration, S.SpecparamDeclaration: specparam,
         S.NetDeclaration: net, S.VariableDeclaration: variable, S.PortDeclaration: port_declaration,
+        S.InterfacePortDeclaration: interface_port_declaration,
         S.TypedefDeclaration: typedef, S.NetTypeDeclaration: net_type, S.EnumType: enum, S.GenvarDeclaration: genvar,
         S.ModportDeclaration: modport,
         S.FunctionDeclaration: subroutine, S.TaskDeclaration: subroutine, S.ModuleInstantiation: instance,
