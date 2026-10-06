@@ -112,6 +112,12 @@ GateKeyword = Choice["and", "nand", "or", "nor", "xor", "xnor", "buf", "not", "b
                      "notif1", "nmos", "pmos", "rnmos", "rpmos", "cmos", "rcmos", "tran", "rtran", "tranif0", "tranif1",
                      "rtranif0", "rtranif1", "pullup", "pulldown"]
 UdpDirection = Choice["output", "input"]
+PathOperator = Choice["=>", "*>"]
+Polarity = Choice["+", "-"]
+DataPolarity = Choice["+:", "-:", ":"]
+TimingCheckName = Choice["$setup", "$hold", "$setuphold", "$recovery", "$removal", "$recrem", "$skew", "$timeskew",
+                         "$fullskew", "$period", "$width", "$nochange"]
+PulseStyle = Choice["pulsestyle_onevent", "pulsestyle_ondetect", "showcancelled", "noshowcancelled"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -1375,6 +1381,84 @@ class UdpEntry(SyntaxNode):
 
 _UDP_LEVELS = {"0", "1", "x", "X", "?", "b", "B"}
 _UDP_INPUTS = _UDP_LEVELS | {"r", "R", "f", "F", "p", "P", "n", "N", "*"}
+
+
+class SpecifyBlock(Item):
+    """`specify items endspecify`: a module's paths, their delays, and its timing checks (30)."""
+
+    items: list[Item | Directive | Comment]
+
+
+class SpecparamDeclaration(Item):
+    """`specparam range assignments;`, parameters of timing and delay, in a specify block or a module (6.20.5)."""
+
+    type: DataType | None
+    assignments: list[SpecparamAssignment]
+
+
+class SpecparamAssignment(SyntaxNode):
+    """`name = value`, or `PATHPULSE$input$output = (reject, error)` with an error `limit` (30.7)."""
+
+    name: Identifier
+    value: Expression
+    limit: Expression | None
+
+
+class PathDeclaration(Item):
+    """`if (condition) (edge inputs polarity operator outputs) = delays;`, or `ifnone`: a module path and its delays
+    (30.3). `=>` is a parallel path, from one input to one output, and `*>` a full one, from each input to each output;
+    with `data`, an edge-sensitive path's outputs are `(outputs data_polarity data)`."""
+
+    condition: Expression | None
+    ifnone: bool
+    edge: Edge | None
+    inputs: list[Expression]
+    polarity: Polarity | None
+    operator: PathOperator
+    outputs: list[Expression]
+    data_polarity: DataPolarity | None
+    data: Expression | None
+    delays: list[Expression]
+
+    def check(self) -> list[str]:
+        if self.ifnone is True and self.condition is not None:
+            return ["an ifnone PathDeclaration has no condition"]
+        if (self.data is None) != (self.data_polarity is None):
+            return ["a PathDeclaration's data has a polarity, and a polarity data"]
+        if self.operator == "=>" and (len(self.inputs) != 1 or len(self.outputs) != 1):
+            return ["a parallel PathDeclaration has one input and one output"]
+        return []
+
+
+class TimingCheck(Item):
+    """`$setup(arguments);` and the other system timing checks of a specify block (31)."""
+
+    name: TimingCheckName
+    arguments: list[Expression | TimingCheckEvent | EmptyArgument]
+
+
+class TimingCheckEvent(SyntaxNode):
+    """`edge [descriptors] terminal &&& condition`, an event a timing check checks: an edge of a terminal, when a
+    condition holds; `descriptors` are an `edge`'s transitions as written (`01, 10`) (31.8)."""
+
+    edge: Edge | None
+    descriptors: str | None
+    terminal: Expression
+    condition: Expression | None
+
+    def check(self) -> list[str]:
+        if self.descriptors is not None and self.edge != "edge":
+            return ["a TimingCheckEvent's descriptors are an edge's"]
+        return []
+
+
+class PulseStyleDeclaration(Item):
+    """`pulsestyle_onevent outputs;`, `pulsestyle_ondetect`, `showcancelled` or `noshowcancelled`: how outputs show
+    pulses (30.7.4)."""
+
+    keyword: PulseStyle
+    outputs: list[Expression]
+    SINCE = verilog(2001)
 
 
 class ModuleInstantiation(Item):
@@ -2890,7 +2974,8 @@ KINDS: list[type[SyntaxNode]] = [
     FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
     GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
     ModuleInstantiation, Instance, NamedConnection, WildcardConnection, GateInstantiation, GateInstance, PullStrength,
-    UdpDeclaration, UdpPort, UdpInitial, UdpEntry,
+    UdpDeclaration, UdpPort, UdpInitial, UdpEntry, SpecifyBlock, SpecparamDeclaration, SpecparamAssignment,
+    PathDeclaration, TimingCheck, TimingCheckEvent, PulseStyleDeclaration,
     AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
     PatternCaseItem,
     ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement,

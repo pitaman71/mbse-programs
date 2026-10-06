@@ -314,6 +314,24 @@ endmodule
 module counter #(parameter WIDTH = 4, STEP = 1) (clk, rst_n, count);
     input clk, rst_n;
     output reg [WIDTH-1:0] count;
+    reg notifier;
+    specparam tStep = 1;
+
+    // The counter's paths and timing checks.
+    specify
+        specparam tClock = 2:3:4, PATHPULSE$clk$count = (1, 2);
+        (posedge clk => (count +: rst_n)) = (tClock, tClock);
+        if (rst_n) (clk *> count) = tStep;
+        ifnone (clk *> count) = 2;
+        (rst_n -*> count) = 1;
+        (clk => (count : rst_n)) = 1;
+        $setup(rst_n, posedge clk, 1);
+        $setuphold(posedge clk &&& rst_n, rst_n, 1, 1, notifier, , , , );
+        $period(edge [01, 10] clk, 10);
+        $width(negedge clk, 4);
+        pulsestyle_onevent count;
+        showcancelled count;
+    endspecify
     always @(posedge clk)
         if (rst_n == 1'b0) count = 0;
         else count = #1 count + STEP;

@@ -8,9 +8,9 @@
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
  *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance',
  *   'block', 'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup',
- *   'coverpoint', 'cross', 'bins', 'production', 'checker', 'primitive' and 'import'. An enumeration's members are
- *   declared where the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and
- *   `name[1:3]` declares `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
+ *   'coverpoint', 'cross', 'bins', 'production', 'checker', 'primitive', 'specparam' and 'import'. An enumeration's
+ *   members are declared where the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and
+ *   `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
  * - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
  *   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
  *   is, and its instances and connections in the target; what it instantiates is declared nowhere.
@@ -442,6 +442,16 @@ class Definer {
     }
   }
 
+  specparam(node: any, scope: Scope): void {
+    this.visitAll(node.type !== null ? [node.type] : [], scope);
+    for (const assignment of node.assignments) {
+      this.visitAll([assignment.value, ...(assignment.limit !== null ? [assignment.limit] : [])], scope);
+      this.program.located(assignment, scope);
+      this.program.located(assignment.name, scope);
+      this.entity(scope, "specparam", assignment.name, assignment);
+    }
+  }
+
   gateInstantiation(node: any, scope: Scope): void {
     if (node.primitive !== null) this.program.located(node.primitive, scope);
     this.visitAll([node.strength, node.delay].filter((p) => p !== null), scope);
@@ -617,6 +627,7 @@ const methods: [Function[], Method][] = [
   [[S.VariablePattern], () => undefined], // declared where its pattern's variables are
   [[S.GateInstantiation], (d, n, s) => d.gateInstantiation(n, s)],
   [[S.UdpDeclaration], (d, n, s) => d.udpDeclaration(n, s)],
+  [[S.SpecparamDeclaration], (d, n, s) => d.specparam(n, s)],
   [[S.DpiExport], (d, n, s) => d.dpiExport(n, s)],
   [[S.BindDirective], (d, n, s) => d.bind(n, s)],
   [[S.NetDeclaration], (d, n, s) => d.declarators(n, s, "net")],

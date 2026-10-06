@@ -486,7 +486,7 @@ dev = [
 
 [[package]]
 name = "mbse-programs"
-version = "0.3.14"
+version = "0.3.15"
 source = { editable = "." }
 dependencies = [
     { name = "mbse-expressions" },

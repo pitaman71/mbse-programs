@@ -3800,6 +3800,284 @@
    ]
   },
   {
+   "kind": "SpecifyBlock",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "SpecparamDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "assignments",
+     "type": [
+      "SpecparamAssignment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "SpecparamAssignment",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "limit",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PathDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "ifnone",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "edge",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "posedge",
+      "negedge",
+      "edge"
+     ]
+    },
+    {
+     "name": "inputs",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "polarity",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "+",
+      "-"
+     ]
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "=>",
+      "*>"
+     ]
+    },
+    {
+     "name": "outputs",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "data_polarity",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "+:",
+      "-:",
+      ":"
+     ]
+    },
+    {
+     "name": "data",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "delays",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TimingCheck",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "$setup",
+      "$hold",
+      "$setuphold",
+      "$recovery",
+      "$removal",
+      "$recrem",
+      "$skew",
+      "$timeskew",
+      "$fullskew",
+      "$period",
+      "$width",
+      "$nochange"
+     ]
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "TimingCheckEvent",
+      "EmptyArgument"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TimingCheckEvent",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "edge",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "posedge",
+      "negedge",
+      "edge"
+     ]
+    },
+    {
+     "name": "descriptors",
+     "type": "str",
+     "optional": true
+    },
+    {
+     "name": "terminal",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PulseStyleDeclaration",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "pulsestyle_onevent",
+      "pulsestyle_ondetect",
+      "showcancelled",
+      "noshowcancelled"
+     ]
+    },
+    {
+     "name": "outputs",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
    "kind": "AssignmentStatement",
    "category": "Statement",
    "since": null,

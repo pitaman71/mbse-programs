@@ -189,6 +189,19 @@ export const GATE_KEYWORDS = [
 export type GateKeyword = (typeof GATE_KEYWORDS)[number];
 export const UDP_DIRECTIONS = ["output", "input"] as const;
 export type UdpDirection = (typeof UDP_DIRECTIONS)[number];
+export const PATH_OPERATORS = ["=>", "*>"] as const;
+export type PathOperator = (typeof PATH_OPERATORS)[number];
+export const POLARITYS = ["+", "-"] as const;
+export type Polarity = (typeof POLARITYS)[number];
+export const DATA_POLARITYS = ["+:", "-:", ":"] as const;
+export type DataPolarity = (typeof DATA_POLARITYS)[number];
+export const TIMING_CHECK_NAMES = [
+  "$setup", "$hold", "$setuphold", "$recovery", "$removal", "$recrem", "$skew", "$timeskew", "$fullskew", "$period",
+  "$width", "$nochange"
+] as const;
+export type TimingCheckName = (typeof TIMING_CHECK_NAMES)[number];
+export const PULSE_STYLES = ["pulsestyle_onevent", "pulsestyle_ondetect", "showcancelled", "noshowcancelled"] as const;
+export type PulseStyle = (typeof PULSE_STYLES)[number];
 export const DEFAULT_NETTYPES = [
   "wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"
 ] as const;
@@ -1837,6 +1850,108 @@ export class UdpEntry extends SyntaxNode {
     }
     return [];
   }
+}
+
+const SpecifyBlockSpec = {
+  items: many(() => [Item, Directive, Comment]),
+};
+export interface SpecifyBlock extends Properties<typeof SpecifyBlockSpec> {}
+/** `specify items endspecify`: a module's paths, their delays, and its timing checks (30). */
+export class SpecifyBlock extends Item {
+  static override SPEC = SpecifyBlockSpec;
+}
+
+const SpecparamDeclarationSpec = {
+  type: optional(() => [DataType]),
+  assignments: many(() => [SpecparamAssignment]),
+};
+export interface SpecparamDeclaration extends Properties<typeof SpecparamDeclarationSpec> {}
+/** `specparam range assignments;`, parameters of timing and delay, in a specify block or a module (6.20.5). */
+export class SpecparamDeclaration extends Item {
+  static override SPEC = SpecparamDeclarationSpec;
+}
+
+const SpecparamAssignmentSpec = {
+  name: one(() => [Identifier]),
+  value: one(() => [Expression]),
+  limit: optional(() => [Expression]),
+};
+export interface SpecparamAssignment extends Properties<typeof SpecparamAssignmentSpec> {}
+/** `name = value`, or `PATHPULSE$input$output = (reject, error)` with an error `limit` (30.7). */
+export class SpecparamAssignment extends SyntaxNode {
+  static override SPEC = SpecparamAssignmentSpec;
+}
+
+const PathDeclarationSpec = {
+  condition: optional(() => [Expression]),
+  ifnone: flag(),
+  edge: optionalChoice(...EDGES),
+  inputs: many(() => [Expression]),
+  polarity: optionalChoice(...POLARITYS),
+  operator: choice(...PATH_OPERATORS),
+  outputs: many(() => [Expression]),
+  data_polarity: optionalChoice(...DATA_POLARITYS),
+  data: optional(() => [Expression]),
+  delays: many(() => [Expression]),
+};
+export interface PathDeclaration extends Properties<typeof PathDeclarationSpec> {}
+/**
+ * `if (condition) (edge inputs polarity operator outputs) = delays;`, or `ifnone`: a module path and its delays
+ * (30.3). `=>` is a parallel path, from one input to one output, and `*>` a full one, from each input to each output;
+ * with `data`, an edge-sensitive path's outputs are `(outputs data_polarity data)`.
+ */
+export class PathDeclaration extends Item {
+  static override SPEC = PathDeclarationSpec;
+  override check(): string[] {
+    if (this.ifnone === true && this.condition !== null) return ["an ifnone PathDeclaration has no condition"];
+    if ((this.data === null) !== (this.data_polarity === null)) return ["a PathDeclaration's data has a polarity, and a polarity data"];
+    if (this.operator === "=>" && (this.inputs.length !== 1 || this.outputs.length !== 1)) {
+      return ["a parallel PathDeclaration has one input and one output"];
+    }
+    return [];
+  }
+}
+
+const TimingCheckSpec = {
+  name: choice(...TIMING_CHECK_NAMES),
+  arguments: many(() => [Expression, TimingCheckEvent, EmptyArgument]),
+};
+export interface TimingCheck extends Properties<typeof TimingCheckSpec> {}
+/** `$setup(arguments);` and the other system timing checks of a specify block (31). */
+export class TimingCheck extends Item {
+  static override SPEC = TimingCheckSpec;
+}
+
+const TimingCheckEventSpec = {
+  edge: optionalChoice(...EDGES),
+  descriptors: optionalText(),
+  terminal: one(() => [Expression]),
+  condition: optional(() => [Expression]),
+};
+export interface TimingCheckEvent extends Properties<typeof TimingCheckEventSpec> {}
+/**
+ * `edge [descriptors] terminal &&& condition`, an event a timing check checks: an edge of a terminal, when a
+ * condition holds; `descriptors` are an `edge`'s transitions as written (`01, 10`) (31.8).
+ */
+export class TimingCheckEvent extends SyntaxNode {
+  static override SPEC = TimingCheckEventSpec;
+  override check(): string[] {
+    return this.descriptors !== null && this.edge !== "edge" ? ["a TimingCheckEvent's descriptors are an edge's"] : [];
+  }
+}
+
+const PulseStyleDeclarationSpec = {
+  keyword: choice(...PULSE_STYLES),
+  outputs: many(() => [Expression]),
+};
+export interface PulseStyleDeclaration extends Properties<typeof PulseStyleDeclarationSpec> {}
+/**
+ * `pulsestyle_onevent outputs;`, `pulsestyle_ondetect`, `showcancelled` or `noshowcancelled`: how outputs show
+ * pulses (30.7.4).
+ */
+export class PulseStyleDeclaration extends Item {
+  static override SPEC = PulseStyleDeclarationSpec;
+  static override SINCE: Availability | null = verilog(2001);
 }
 
 const ModuleInstantiationSpec = {
@@ -3937,33 +4052,35 @@ export const KINDS = [
   ModportItem, ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
   FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor,
   GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
-  GateInstantiation, GateInstance, PullStrength, UdpDeclaration, UdpPort, UdpInitial, UdpEntry, AssignmentStatement,
-  ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem, PatternCaseItem,
-  ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
-  ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement,
-  ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production,
-  ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,
-  ImmediateAssertion, DelayControl, RepeatEventControl, EventControl, EventExpression, NameExpression,
-  MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral,
-  StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression,
-  InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression,
-  SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, TaggedExpression,
-  MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern, TaggedPattern, StructurePattern,
-  PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue,
-  InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression,
-  NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem,
-  LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
-  ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
-  RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem,
-  PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep,
-  CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence,
-  ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty,
-  CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew,
-  ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration,
-  SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence,
-  TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect,
-  ParenthesizedBinsSelect, FilteredBinsSelect, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective,
-  DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
+  GateInstantiation, GateInstance, PullStrength, UdpDeclaration, UdpPort, UdpInitial, UdpEntry, SpecifyBlock,
+  SpecparamDeclaration, SpecparamAssignment, PathDeclaration, TimingCheck, TimingCheckEvent, PulseStyleDeclaration,
+  AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
+  PatternCaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement,
+  ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger,
+  DisableStatement, ForceStatement, ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement,
+  RandSequenceStatement, Production, ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat,
+  ProductionCase, ProductionCaseItem, ImmediateAssertion, DelayControl, RepeatEventControl, EventControl,
+  EventExpression, NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral,
+  TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression,
+  AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication,
+  AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage,
+  DollarExpression, TaggedExpression, MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern,
+  TaggedPattern, StructurePattern, PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression,
+  EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression,
+  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
+  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
+  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
+  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
+  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
+  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
+  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
+  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
+  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
+  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
+  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
+  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
+  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
+  ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

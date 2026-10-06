@@ -7,9 +7,9 @@
 - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port', 'net',
   'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block', 'class',
   'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint', 'cross',
-  'bins', 'production', 'checker', 'primitive' and 'import'. An enumeration's members are declared where the enumeration
-  is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to
-  `name3` (with decimal numbers). A `nettype` declares a 'type'.
+  'bins', 'production', 'checker', 'primitive', 'specparam' and 'import'. An enumeration's members are declared where
+  the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares
+  `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
 - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
   is, and its instances and connections in the target; what it instantiates is declared nowhere.
@@ -450,6 +450,14 @@ class _Definer:
             self.visit_all([*instance.dimensions, *instance.connections], scope)
             self.entity(scope, "instance", instance.name, instance)
 
+    def specparam(self, node: S.SpecparamDeclaration, scope: Scope) -> None:
+        self.visit_all([node.type] if node.type is not None else [], scope)
+        for assignment in node.assignments:
+            self.visit_all([assignment.value, *([assignment.limit] if assignment.limit is not None else [])], scope)
+            self.program.located(assignment, scope)
+            self.program.located(assignment.name, scope)
+            self.entity(scope, "specparam", assignment.name, assignment)
+
     def gate_instantiation(self, node: S.GateInstantiation, scope: Scope) -> None:
         if node.primitive is not None:
             self.program.located(node.primitive, scope)
@@ -549,7 +557,7 @@ class _Definer:
         S.RandSequenceStatement: randsequence, S.CheckerDeclaration: checker_declaration,
         S.ExportDeclaration: export_declaration, S.IfStatement: if_statement, S.ConditionalExpression: conditional,
         S.PatternCaseItem: pattern_case_item, S.VariablePattern: variable_pattern,
-        S.GateInstantiation: gate_instantiation, S.UdpDeclaration: udp_declaration,
+        S.GateInstantiation: gate_instantiation, S.UdpDeclaration: udp_declaration, S.SpecparamDeclaration: specparam,
         S.NetDeclaration: net, S.VariableDeclaration: variable, S.PortDeclaration: port_declaration,
         S.TypedefDeclaration: typedef, S.NetTypeDeclaration: net_type, S.EnumType: enum, S.GenvarDeclaration: genvar,
         S.ModportDeclaration: modport,

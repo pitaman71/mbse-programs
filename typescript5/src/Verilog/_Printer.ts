@@ -73,7 +73,7 @@ function multiline(node: unknown): boolean {
   if (node instanceof S.Coverpoint) return node.items.length > 0;
   if (node instanceof S.CoverCross) return node.body.length > 0;
   return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration, S.CheckerDeclaration,
-    S.UdpDeclaration,
+    S.UdpDeclaration, S.SpecifyBlock,
     S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration, S.SequenceDeclaration, S.ClockingDeclaration,
     S.CovergroupDeclaration,
     S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
@@ -735,6 +735,45 @@ export class Printer {
   udpEntry(node: any, level: number): string[] {
     const current = node.current !== null ? ` : ${node.current}` : "";
     return [`${pad(level)}${node.inputs}${current} : ${node.output};`];
+  }
+
+  specifyBlock(node: any, level: number): string[] {
+    const lines = [`${pad(level)}specify`];
+    const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+    return [...lines, ...body, `${pad(level)}endspecify`];
+  }
+
+  specparam(node: any, level: number): string[] {
+    const kind = node.type !== null ? ` ${this.typeText(node.type)}` : "";
+    const assignments = node.assignments.map((a: any) => `${a.name.spelling} = `
+      + (a.limit !== null ? `(${this.text(a.value)}, ${this.text(a.limit)})` : this.text(a.value))).join(", ");
+    return [`${pad(level)}specparam${kind} ${assignments};`];
+  }
+
+  path(node: any, level: number): string[] {
+    const head = node.condition !== null ? `if (${this.text(node.condition)}) ` : node.ifnone ? "ifnone " : "";
+    const inputs = (node.edge ? `${node.edge} ` : "") + node.inputs.map((i: any) => this.text(i)).join(", ");
+    let outputs = node.outputs.map((o: any) => this.text(o)).join(", ");
+    if (node.data !== null) outputs = `(${outputs} ${node.data_polarity} ${this.text(node.data)})`;
+    const joinedDelays = node.delays.map((d: any) => this.text(d)).join(", ");
+    const delays = node.delays.length > 1 ? `(${joinedDelays})` : joinedDelays;
+    return [`${pad(level)}${head}(${inputs} ${node.polarity ?? ""}${node.operator} ${outputs}) = ${delays};`];
+  }
+
+  timingCheck(node: any, level: number): string[] {
+    return [`${pad(level)}${node.name}(${node.arguments.map((a: any) => this.timingArgument(a)).join(", ")});`];
+  }
+
+  timingArgument(node: any): string {
+    if (!(node instanceof S.TimingCheckEvent)) return this.typeOrText(node); // an expression, or an empty argument
+    const descriptors = node.descriptors !== null ? ` [${node.descriptors}]` : "";
+    const edge = node.edge ? `${node.edge}${descriptors} ` : "";
+    const condition = node.condition !== null ? ` &&& ${this.text(node.condition)}` : "";
+    return `${edge}${this.text(node.terminal)}${condition}`;
+  }
+
+  pulseStyle(node: any, level: number): string[] {
+    return [`${pad(level)}${node.keyword} ${node.outputs.map((o: any) => this.text(o)).join(", ")};`];
   }
 
   instantiation(node: any, level: number): string[] {
@@ -1494,6 +1533,11 @@ const items: [Function[], Method][] = [
   [[S.GateInstantiation], (s, n, l) => s.gateInstantiation(n, l)],
   [[S.UdpDeclaration], (s, n, l) => s.udpDeclaration(n, l)],
   [[S.UdpEntry], (s, n, l) => s.udpEntry(n, l)],
+  [[S.SpecifyBlock], (s, n, l) => s.specifyBlock(n, l)],
+  [[S.SpecparamDeclaration], (s, n, l) => s.specparam(n, l)],
+  [[S.PathDeclaration], (s, n, l) => s.path(n, l)],
+  [[S.TimingCheck], (s, n, l) => s.timingCheck(n, l)],
+  [[S.PulseStyleDeclaration], (s, n, l) => s.pulseStyle(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [

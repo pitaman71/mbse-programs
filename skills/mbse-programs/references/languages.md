@@ -10,7 +10,7 @@ category, property and availability as data: read it rather than guessing a prop
 | Ccpp: C and C++ | 171, through C++26 and C23 | `Ccpp17`, `Ccpp20`, `CcppStandard(year, "C++" or "C")` | the C++ grammar: specifiers, declarators, statements |
 | Python | 86, Python 3.0 to 3.15 | `Python312`, `Python314`, `PythonStandard(major, minor)` | Python's `ast`, names as `Identifier`s |
 | TypeScript: TypeScript and JavaScript | 163, through TypeScript 5.9 and ES2025, with JSX | `TypeScript50`, `TypeScript59`, `ECMAScript2020`, `ECMAScript2025`, each with `.JSX`; `TypeScriptStandard(major, minor, jsx)`, `ECMAScriptStandard(year, jsx)` | typescript-estree (TSESTree) |
-| Verilog: Verilog and SystemVerilog | 263, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
+| Verilog: Verilog and SystemVerilog | 270, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
 
 ## Ccpp
 
@@ -134,8 +134,11 @@ Definitions.define(unit).lookup("logger_pkg::FIELDS")           # packages quali
 - Gates and primitives: `GateInstantiation` (a gate's `keyword`, or a `primitive`'s name for an unnamed instance;
   `DriveStrength` or `PullStrength`; `GateInstance`s), `UdpDeclaration` (`UdpPort`s, `UdpInitial`, `UdpEntry` rows kept
   as written: `inputs`, `current`, `output`).
-- Refused, by slang's kind name at its line and column (`unsupported syntax: SpecifyBlock`): specify blocks, and a
-  macro used where a whole expression isn't.
+- Specify blocks: `SpecifyBlock`, `SpecparamDeclaration` (`SpecparamAssignment`'s `limit` for `PATHPULSE$`),
+  `PathDeclaration` (`condition` or `ifnone`, `edge`, `polarity`, `operator`, `data_polarity` and `data`), `TimingCheck`
+  (`TimingCheckEvent` arguments), `PulseStyleDeclaration`.
+- Refused, by slang's kind name at its line and column (`unsupported syntax: ConfigDeclaration`): configurations,
+  `covergroup extends`, `@@` block events, `super.new(default)`, and a macro used where a whole expression isn't.
 - Definitions: packages, design units, classes, functions and tasks, and blocks as scopes; a class's lookup goes on to
   its base; a method or constraint defined outside its class (`c::f`) is its prototype's entity; an array method's
   iterator (`item`, or its argument's name) is a variable of its `with`; `import p::x` aliases, `import

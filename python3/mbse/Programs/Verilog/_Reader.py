@@ -725,6 +725,68 @@ class _Reader:
             return "(" + node.first.rawText + _text(node.second) + ")"
         return node.field.rawText
 
+    def specify_block(self, node: Any) -> S.SpecifyBlock:
+        return S.SpecifyBlock(items=self.items(_nodes(node.items), node.endspecify))
+
+    def specparam(self, node: Any) -> S.SpecparamDeclaration:
+        out = S.SpecparamDeclaration(type=self.data_type(node.type))
+        for declarator in _nodes(node.declarators):
+            assignment = S.SpecparamAssignment(name=self.identifier(declarator.name),
+                                               value=self.expression(declarator.value1))
+            if declarator.value2 is not None:
+                assignment.limit = self.expression(declarator.value2)
+            out.assignments.append(self.made(declarator, assignment))
+        return out
+
+    def path(self, node: Any) -> S.PathDeclaration:
+        """A module path, with its condition or `ifnone`."""
+        kind = node.kind.name
+        if kind != "PathDeclaration":
+            out = self.path(node.path)
+            if kind == "ConditionalPathDeclaration":
+                out.condition = self.expression(node.predicate)
+            else:  # an IfNonePathDeclaration
+                out.ifnone = True
+            return out
+        description = node.desc
+        operator, polarity = description.pathOperator.rawText, _text(description.polarityOperator)
+        if polarity:  # slang reads `+=>` as `+=` and `>`, and `-*>` as `-` and `*>`
+            operator = polarity[1:] + operator if operator == ">" else operator
+            polarity = polarity[0]
+        suffix = description.suffix
+        out = S.PathDeclaration(edge=_text(description.edgeIdentifier) or None,
+                                inputs=[self.expression(i) for i in _nodes(description.inputs)],
+                                polarity=polarity or None, operator=operator,
+                                outputs=[self.expression(o) for o in _nodes(suffix.outputs)],
+                                delays=[self.expression(d) for d in _nodes(node.delays)])
+        if suffix.kind.name == "EdgeSensitivePathSuffix":
+            out.data_polarity = _text(suffix.polarityOperator) or _text(suffix.colon)
+            out.data = self.expression(suffix.expr)
+        return out
+
+    def timing_check(self, node: Any) -> S.TimingCheck:
+        out = S.TimingCheck(name=node.name.rawText)
+        for argument in _nodes(node.args):
+            kind = argument.kind.name
+            if kind == "ExpressionTimingCheckArg":
+                out.arguments.append(self.expression(argument.expr))
+            elif kind == "EmptyTimingCheckArg":
+                out.arguments.append(self.made(argument, S.EmptyArgument()))
+            else:  # a TimingCheckEventArg
+                event = S.TimingCheckEvent(edge=_text(argument.edge) or None,
+                                           terminal=self.expression(argument.terminal))
+                if argument.controlSpecifier is not None:
+                    event.descriptors = ", ".join(_text(d.t1) + _text(d.t2)
+                                                  for d in _nodes(argument.controlSpecifier.descriptors))
+                if argument.condition is not None:
+                    event.condition = self.expression(argument.condition.expr)
+                out.arguments.append(self.made(argument, event))
+        return out
+
+    def pulse_style(self, node: Any) -> S.PulseStyleDeclaration:
+        return S.PulseStyleDeclaration(keyword=node.keyword.rawText,
+                                       outputs=[self.expression(o) for o in _nodes(node.inputs)])
+
     def checker_declaration(self, node: Any) -> S.CheckerDeclaration:
         return S.CheckerDeclaration(name=self.identifier(node.name), ports=self.assertion_ports(node.portList),
                                     items=self.items(_nodes(node.members), node.end),
@@ -2022,7 +2084,9 @@ class _Reader:
         "CheckerDeclaration": checker_declaration, "CheckerDataDeclaration": checker_data,
         "PackageExportDeclaration": export_declaration, "PackageExportAllDeclaration": export_declaration,
         "UserDefinedNetDeclaration": user_net, "PrimitiveInstantiation": gate_instantiation,
-        "UdpDeclaration": udp_declaration,
+        "UdpDeclaration": udp_declaration, "SpecifyBlock": specify_block, "SpecparamDeclaration": specparam,
+        "PathDeclaration": path, "ConditionalPathDeclaration": path, "IfNonePathDeclaration": path,
+        "SystemTimingCheck": timing_check, "PulseStyleDeclaration": pulse_style,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,

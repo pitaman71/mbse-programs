@@ -92,7 +92,7 @@ def _multiline(node: Any) -> bool:
     if isinstance(node, S.CoverCross):
         return bool(node.body)
     return isinstance(node, (S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-                             S.CheckerDeclaration, S.UdpDeclaration,
+                             S.CheckerDeclaration, S.UdpDeclaration, S.SpecifyBlock,
                              S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration,
                              S.SequenceDeclaration, S.ClockingDeclaration, S.CovergroupDeclaration, S.AlwaysConstruct,
                              S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf,
@@ -737,6 +737,43 @@ class Printer:
     def udp_entry(self, node: S.UdpEntry, level: int) -> list[str]:
         current = f" : {node.current}" if node.current is not None else ""
         return [f"{_INDENT * level}{node.inputs}{current} : {node.output};"]
+
+    def specify_block(self, node: S.SpecifyBlock, level: int) -> list[str]:
+        pad = _INDENT * level
+        lines = [f"{pad}specify"]
+        body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        return [*lines, *body, f"{pad}endspecify"]
+
+    def specparam(self, node: S.SpecparamDeclaration, level: int) -> list[str]:
+        kind = f" {self.type_text(node.type)}" if node.type is not None else ""
+        assignments = ", ".join(f"{a.name.spelling} = " + (f"({self.text(a.value)}, {self.text(a.limit)})"
+                                                          if a.limit is not None else self.text(a.value))
+                                for a in node.assignments)
+        return [f"{_INDENT * level}specparam{kind} {assignments};"]
+
+    def path(self, node: S.PathDeclaration, level: int) -> list[str]:
+        head = f"if ({self.text(node.condition)}) " if node.condition is not None else "ifnone " if node.ifnone else ""
+        inputs = (f"{node.edge} " if node.edge else "") + ", ".join(self.text(i) for i in node.inputs)
+        outputs = ", ".join(self.text(o) for o in node.outputs)
+        if node.data is not None:
+            outputs = f"({outputs} {node.data_polarity} {self.text(node.data)})"
+        delays = ", ".join(self.text(d) for d in node.delays)
+        delays = f"({delays})" if len(node.delays) > 1 else delays
+        return [f"{_INDENT * level}{head}({inputs} {node.polarity or ''}{node.operator} {outputs}) = {delays};"]
+
+    def timing_check(self, node: S.TimingCheck, level: int) -> list[str]:
+        return [f"{_INDENT * level}{node.name}({', '.join(self.timing_argument(a) for a in node.arguments)});"]
+
+    def timing_argument(self, node: Any) -> str:
+        if not isinstance(node, S.TimingCheckEvent):
+            return self.type_or_text(node)  # an expression, or an empty argument
+        descriptors = f" [{node.descriptors}]" if node.descriptors is not None else ""
+        edge = f"{node.edge}{descriptors} " if node.edge else ""
+        condition = f" &&& {self.text(node.condition)}" if node.condition is not None else ""
+        return f"{edge}{self.text(node.terminal)}{condition}"
+
+    def pulse_style(self, node: S.PulseStyleDeclaration, level: int) -> list[str]:
+        return [f"{_INDENT * level}{node.keyword} {', '.join(self.text(o) for o in node.outputs)};"]
 
     def instantiation(self, node: S.ModuleInstantiation, level: int) -> list[str]:
         parameters = self.parameter_values(node.parameters)
@@ -1463,7 +1500,8 @@ class Printer:
         S.ElaborationTask: elaboration_task, S.CheckerDeclaration: checker_declaration,
         S.ExportDeclaration: export_declaration, S.DpiImport: dpi_import, S.DpiExport: dpi_export,
         S.BindDirective: bind, S.GateInstantiation: gate_instantiation, S.UdpDeclaration: udp_declaration,
-        S.UdpEntry: udp_entry,
+        S.UdpEntry: udp_entry, S.SpecifyBlock: specify_block, S.SpecparamDeclaration: specparam,
+        S.PathDeclaration: path, S.TimingCheck: timing_check, S.PulseStyleDeclaration: pulse_style,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,
