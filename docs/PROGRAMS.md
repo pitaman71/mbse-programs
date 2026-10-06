@@ -458,21 +458,20 @@ or not. A class's lookup goes on to its base class, or an interface class's to t
 method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`) is the entity its prototype
 declares, and its body sees the class's members. A `foreach` loop's or constraint's index variables, and an array
 method's iterator (`item`, or the name its argument gives), have scopes of their own; `local::x` is `x` where
-`randomize` is called. Properties, sequences and `let`s have scopes where their ports are arguments, and a named
-clocking block one where its signals are clockvars; a label names a 'label'. A covergroup has a scope of its arguments
-(the `sample` function's too), a coverpoint and a cross scopes of their bins, and a bin's filter one where `item` is;
-`option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration
-is. A non-ANSI port is one entity, which the header names and a port declaration declares. `import p::x` declares an
-entity whose `target` is `p::x`, and `import p::*` makes the package's names visible where nothing nearer declares them;
-A pattern's variables are declared in a block that its guard and body, or its condition and consequence, see. A checker
-has a scope where its ports are arguments; what a package exports is not followed. A `randsequence`'s productions are
-entities of its scope, and a production's ports its arguments. An `extern` unit declares nothing: the unit of its name
-does, with its ports for `.*`. `bind`'s instances and connections are found in its target. A macro's name in an ``
-`ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x` in the compilation unit.
-An explicit port's own name (`.p(x)`) is not looked up: what it connects is. An enumeration's member `name[2]` declares
-`name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A package's and a class's names
-are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
-(`sampler.counter.count`). A member after `.` and what an instance's module declares are not resolved.
+`randomize` is called. Properties, sequences, `let`s, checkers and a `randsequence`'s productions have scopes where
+their ports are arguments, a `randsequence` one where its productions are, and a named clocking block one where its
+signals are clockvars; a label names a 'label'. A covergroup has a scope of its arguments (the `sample` function's too),
+a coverpoint and a cross scopes of their bins, and a bin's filter one where `item` is; `option` and `type_option` are
+built in, and not entities. A pattern's variables are declared in a block that its guard and body, or its condition and
+consequence, see. An enumeration's members are declared where the enumeration is: `name[2]` declares `name0` and
+`name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A non-ANSI port is one entity, which the
+header names and a port declaration declares; an explicit port's own name (`.p(x)`) is not looked up, but what it
+connects is. An `extern` unit declares nothing: the unit of its name does, with its ports for `.*`. `bind`'s instances
+and connections are found in its target. `import p::x` declares an entity whose `target` is `p::x`, and `import p::*`
+makes the package's names visible where nothing nearer declares them; what a package exports is not followed. `$unit::x`
+finds `x` in the compilation unit. A package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`,
+`packet::new`), a design unit's and a block's with `.` (`sampler.counter.count`). A macro's name in an `` `ifdef ``
+condition, an interface's type (`bus.t`), a member after `.` and what an instance's module declares are not resolved.
 
 ## Transpiling
 
