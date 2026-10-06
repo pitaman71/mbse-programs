@@ -50,6 +50,10 @@
    "base": "SyntaxNode"
   },
   {
+   "name": "Constraint",
+   "base": "SyntaxNode"
+  },
+  {
    "name": "Directive",
    "base": "SyntaxNode"
   }
@@ -4187,6 +4191,497 @@
    ]
   },
   {
+   "kind": "RandomizeWithExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "restricted": {
+     "true": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "call",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "restricted",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "variables",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "items",
+     "type": [
+      "Constraint",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ArrayMethodWithExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "call",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DistExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "DistItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DistItem",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression",
+      "Range"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      ":=",
+      ":/"
+     ]
+    },
+    {
+     "name": "weight",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "LocalName",
+   "category": "Name",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConstraintDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Constraint",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ConstraintPrototype",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "qualifier": {
+     "pure": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "qualifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "extern",
+      "pure"
+     ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConstraintBlock",
+   "category": "Constraint",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "Constraint",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ExpressionConstraint",
+   "category": "Constraint",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "soft": {
+     "true": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "soft",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ImplicationConstraint",
+   "category": "Constraint",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Constraint"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConditionalConstraint",
+   "category": "Constraint",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequence",
+     "type": [
+      "Constraint"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "Constraint"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForeachConstraint",
+   "category": "Constraint",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "array",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "variables",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Constraint"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SolveBeforeConstraint",
+   "category": "Constraint",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "solve",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "before",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DisableSoftConstraint",
+   "category": "Constraint",
+   "since": {
+    "SystemVerilog": 2012
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UniqueConstraint",
+   "category": "Constraint",
+   "since": {
+    "SystemVerilog": 2012
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "set",
+     "type": [
+      "Expression",
+      "Range"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "RandCaseStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "RandCaseItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "RandCaseItem",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "weight",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
    "kind": "IncludeDirective",
    "category": "Directive",
    "since": null,
@@ -4345,6 +4840,7 @@
      "type": [
       "Item",
       "Statement",
+      "Constraint",
       "Directive",
       "Comment"
      ],
@@ -4364,6 +4860,7 @@
      "type": [
       "Item",
       "Statement",
+      "Constraint",
       "Directive",
       "Comment"
      ],
@@ -4400,6 +4897,7 @@
      "type": [
       "Item",
       "Statement",
+      "Constraint",
       "Directive",
       "Comment"
      ],

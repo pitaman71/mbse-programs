@@ -5,14 +5,18 @@
   interface, program and class, each function and task, and each block: `begin`/`fork` blocks, generate blocks and
   `for` loops, named or not.
 - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
-  'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block', 'class'
-  and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
+  'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
+  'class', 'constraint' and 'import'. An enumeration's members are declared where the enumeration is, as
+  SystemVerilog does.
 - A non-ANSI port is one entity, which the header names and a port declaration declares.
 - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
   where nothing nearer declares them, as wildcard imports do.
 - A class's members are found in it, then in its base class (`extends`), or for an interface class in the interface
-  classes it extends. A method defined outside its class (`function void c::f()`) is the entity its prototype
-  declares, and its body sees the class's members.
+  classes it extends. A method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`)
+  is the entity its prototype declares, and its body sees the class's members. A `foreach` constraint's index
+  variables are its own; `local::x` in `randomize() with` is `x` where the call is.
+- An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
+  argument gives it (`find(x) with (x > 0)`), or `item`.
 - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
   are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
   (`sampler.counter.count`).
@@ -195,8 +199,8 @@ class _Definer:
         self.visit_all(node.body, inner)
 
     def out_of_block(self, node: Any, scope: Scope, kind: str) -> Scope:
-        """The scope of a method defined outside its class, `c::f`: in the class's scope, and the entity of the
-        prototype the class declares. Any other qualified name is not resolved."""
+        """The scope of a method or a constraint defined outside its class, `c::f`: in the class's scope, and the
+        entity of the prototype the class declares. Any other qualified name is not resolved."""
         qualified = node.name
         classes = [e for e in scope.resolve(qualified.scope.spelling) if e.kind == "class"] \
             if isinstance(qualified.scope, S.Identifier) and isinstance(qualified.name, S.Identifier) else []
@@ -210,7 +214,8 @@ class _Definer:
         entity.definition = node
         self.program.declares(qualified.name, entity)
         self.program.declares(node, entity)
-        return entity.scope  # the prototype's, where the definition's arguments are its arguments
+        # a method's prototype's scope, where the definition's arguments are its arguments; a constraint has none
+        return entity.scope or Scope(kind, entity, classes[0].scope, node)
 
     def class_declaration(self, node: S.ClassDeclaration, scope: Scope) -> None:
         inner = self.scoped(scope, "class", node.name, node, "class", "::")
@@ -218,6 +223,37 @@ class _Definer:
         self.visit_all([*([node.base] if node.base is not None else []), *node.arguments, *node.interfaces], scope)
         self.visit_all([*node.parameters, *node.items], inner)
         self.classes.append((inner, node))
+
+    def constraint_declaration(self, node: S.ConstraintDeclaration, scope: Scope) -> None:
+        if isinstance(node.name, S.Identifier):
+            self.program.located(node.name, scope)
+            self.entity(scope, "constraint", node.name, node)
+            inner = scope
+        else:
+            self.locate(node.name, scope)
+            inner = self.out_of_block(node, scope, "constraint")
+        self.visit_all(node.items, inner)
+
+    def array_method_with(self, node: S.ArrayMethodWithExpression, scope: Scope) -> None:
+        inner = Scope("with", None, scope, node)
+        call = node.call
+        arguments = call.arguments if isinstance(call, S.CallExpression) else []
+        if len(arguments) == 1 and isinstance(arguments[0], S.NameExpression) \
+                and isinstance(arguments[0].name, S.Identifier):  # `find(x)`: `x` names the iterator
+            self.visit(call.callee, scope)
+            self.locate(arguments[0], scope)
+            self.entity(inner, "variable", arguments[0].name, arguments[0])
+        else:
+            self.visit(call, scope)
+            iterator = self.program.add(Entity("variable", "item", inner))
+            inner.declare(iterator)
+            iterator.definition = node
+            iterator.declarations.append(node)
+        self.visit(node.expression, inner)
+
+    def constraint_prototype(self, node: S.ConstraintPrototype, scope: Scope) -> None:
+        self.program.located(node.name, scope)
+        self.entity(scope, "constraint", node.name, node)
 
     def instance(self, node: S.ModuleInstantiation, scope: Scope) -> None:
         self.program.located(node.module, scope)
@@ -250,7 +286,7 @@ class _Definer:
         self.visit_all([*node.initializers, *([node.condition] if node.condition is not None else []), *node.steps,
                         node.body], inner)
 
-    def foreach(self, node: S.ForeachStatement, scope: Scope) -> None:
+    def foreach(self, node: Any, scope: Scope) -> None:
         self.visit(node.array, scope)
         inner = Scope("block", None, scope, node)
         for variable in node.variables:
@@ -267,7 +303,9 @@ class _Definer:
         S.FunctionDeclaration: subroutine, S.TaskDeclaration: subroutine, S.ModuleInstantiation: instance,
         S.NamedConnection: connection, S.SeqBlock: block, S.ParBlock: block, S.GenerateBlock: block,
         S.GenerateFor: generate_for, S.ForStatement: for_statement, S.ForeachStatement: foreach,
-        S.ClassDeclaration: class_declaration,
+        S.ClassDeclaration: class_declaration, S.ConstraintDeclaration: constraint_declaration,
+        S.ConstraintPrototype: constraint_prototype, S.ForeachConstraint: foreach,
+        S.ArrayMethodWithExpression: array_method_with,
     }
 
     def resolve_imports(self) -> None:
@@ -330,6 +368,8 @@ def referents(program: Program, name: Any) -> list[Entity]:
     where it is: an identifier that declares an entity refers to it; `p::x` to `x` in the package or class `p`, found
     from where the name is, and `p::c::x` to `x` in `c` in `p`."""
     if isinstance(name, S.NameExpression):
+        name = name.name
+    if isinstance(name, S.LocalName):
         name = name.name
     if isinstance(name, S.ScopedName):
         return _lookup(program.scope_of(name) or program.root, name)

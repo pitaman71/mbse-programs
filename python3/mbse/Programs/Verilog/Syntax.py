@@ -3,10 +3,11 @@ grammar is.
 
 The kinds cover SystemVerilog (IEEE 1800-2023)'s design subset and its classes: design units, ports and parameters,
 data types, declarations, continuous assignments, procedural blocks and statements, generate constructs, instantiation,
-functions and tasks, classes with their properties, methods and objects, immediate assertions and compiler directives.
+functions and tasks, classes with their properties, methods and objects, constraints and randomization, immediate
+assertions and compiler directives.
 Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and feature records where it
 exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023` and
-`VerilogStandard(year, family)` check. Constraints, properties and sequences, and covergroups are not kinds yet.
+`VerilogStandard(year, family)` check. Properties and sequences, and covergroups are not kinds yet.
 
 The tree is abstract where the grammar only spells and concrete where a transpiler needs to see what was written:
 
@@ -76,6 +77,8 @@ UnbasedValue = Choice["0", "1", "x", "z", "X", "Z"]
 ModuleKeyword = Choice["module", "macromodule"]
 Visibility = Choice["local", "protected"]
 RandomQualifier = Choice["rand", "randc"]
+DistOperator = Choice[":=", ":/"]
+PrototypeQualifier = Choice["extern", "pure"]
 ForwardKeyword = Choice["enum", "struct", "union", "class", "interface class"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
@@ -134,6 +137,10 @@ class Directive(SyntaxNode):
     """A compiler directive (22), where items or statements are listed."""
 
 
+class Constraint(SyntaxNode):
+    """A constraint on random variables, in a constraint block (18.5, A.1.10)."""
+
+
 # === Lexical conventions (5) ===
 
 
@@ -171,6 +178,14 @@ class ScopedName(Name):
     scope: Identifier | ParameterizedName
     name: Name
     SINCE = sv()
+
+
+class LocalName(Name):
+    """`local::name`: in the constraints of `randomize() with`, a name in the scope that calls `randomize`, not in the
+    object (18.7.1)."""
+
+    name: Identifier
+    SINCE = sv(2009)
 
 
 class ParameterizedName(Name):
@@ -612,8 +627,9 @@ class FunctionDeclaration(Item):
 
 
 class TaskDeclaration(Item):
-    """`task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`, `virtual`, and a prototype without a body:
-    `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24). A constructor is named `new`."""
+    """`task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`,
+    `virtual`, and a prototype without a body: `extern`, defined outside the class, or `pure virtual` (8.10, 8.20,
+    8.24). A constructor is named `new`."""
 
     extern: bool
     pure: bool
@@ -681,6 +697,122 @@ class ClassDeclaration(Item):
             return ["an interface ClassDeclaration has no virtual, base or arguments"]
         if self.arguments and self.base is None:
             return ["a ClassDeclaration with arguments has a base"]
+        return []
+
+
+# --- Constraints (18) ---
+
+
+class ConstraintDeclaration(Item):
+    """`static constraint name { constraints }` in a class, or outside it with a qualified name (`constraint c::k { }`),
+    which defines a prototype (18.5)."""
+
+    static: bool
+    name: Name
+    items: list[Constraint | Directive | Comment]
+    SINCE = sv()
+
+
+class ConstraintPrototype(Item):
+    """`qualifier static constraint name;`: a constraint defined outside its class, `extern` or by default, or `pure`,
+    which derived classes define (18.5.1)."""
+
+    qualifier: PrototypeQualifier | None
+    static: bool
+    name: Identifier
+    SINCE = sv()
+    FEATURES = {"qualifier": {"pure": sv(2012)}}
+
+
+class ConstraintBlock(Constraint):
+    """`{ constraints }`, the constraints an implication, a condition or a loop applies (18.5)."""
+
+    items: list[Constraint | Directive | Comment]
+    SINCE = sv()
+
+
+class ExpressionConstraint(Constraint):
+    """`soft expression;`, an expression that must hold, or with `soft` should (18.5.14)."""
+
+    soft: bool
+    expression: Expression
+    SINCE = sv()
+    FEATURES = {"soft": {True: sv(2012)}}
+
+
+class ImplicationConstraint(Constraint):
+    """`condition -> body`: `body` holds where `condition` does (18.5.6)."""
+
+    condition: Expression
+    body: Constraint
+    SINCE = sv()
+
+
+class ConditionalConstraint(Constraint):
+    """`if (condition) consequence else alternative` (18.5.7)."""
+
+    condition: Expression
+    consequence: Constraint
+    alternative: Constraint | None
+    SINCE = sv()
+
+
+class ForeachConstraint(Constraint):
+    """`foreach (array[variables]) body`, a constraint on each element (18.5.8.1)."""
+
+    array: Expression
+    variables: list[Identifier]
+    body: Constraint
+    SINCE = sv()
+
+
+class SolveBeforeConstraint(Constraint):
+    """`solve solve before before;`, an order in which variables are chosen (18.5.10)."""
+
+    solve: list[Expression]
+    before: list[Expression]
+    SINCE = sv()
+
+
+class DisableSoftConstraint(Constraint):
+    """`disable soft target;`, which drops the soft constraints on a variable (18.5.14.2)."""
+
+    target: Expression
+    SINCE = sv(2012)
+
+
+class UniqueConstraint(Constraint):
+    """`unique { set }`: the variables and arrays of `set` have different values (18.5.5)."""
+
+    set: list[Expression | Range]
+    SINCE = sv(2012)
+
+
+class DistExpression(Expression):
+    """`value dist { items }`, a distribution of a random variable's values, in a constraint (18.5.4)."""
+
+    value: Expression
+    items: list[DistItem]
+    SINCE = sv()
+
+
+class DistItem(SyntaxNode):
+    """`value := weight` (each value of a range weighs `weight`) or `value :/ weight` (the range weighs `weight`), or
+    `default :/ weight` without a `value`; without a weight, a value weighs 1 (18.5.4)."""
+
+    value: Expression | Range | None
+    operator: DistOperator | None
+    weight: Expression | None
+    SINCE = sv()
+
+    def features(self) -> list[tuple[str, Availability]]:
+        return [("DistItem default", sv(2023))] if self.value is None else []
+
+    def check(self) -> list[str]:
+        if (self.operator is None) != (self.weight is None):
+            return ["a DistItem has both an operator and a weight, or neither"]
+        if self.value is None and self.operator != ":/":
+            return ["a default DistItem weighs its values with :/"]
         return []
 
 
@@ -944,6 +1076,21 @@ class DisableStatement(Statement):
         return [("DisableStatement fork", sv())] if self.target is None else []
 
 
+class RandCaseStatement(Statement):
+    """`randcase weight: body ... endcase`: one of the bodies, chosen at random by their weights (18.16)."""
+
+    items: list[RandCaseItem]
+    SINCE = sv()
+
+
+class RandCaseItem(SyntaxNode):
+    """`weight: body` in a `randcase` (18.16)."""
+
+    weight: Expression
+    body: Statement
+    SINCE = sv()
+
+
 class ImmediateAssertion(Statement):
     """`assert (expression) pass else fail`, or `assume` or `cover`, deferred with `#0` or `final` (16.3, 16.4).
     `cover` has no `fail`."""
@@ -1183,6 +1330,28 @@ class NewArrayExpression(Expression):
     SINCE = sv()
 
 
+class RandomizeWithExpression(Expression):
+    """`call with (variables) { constraints }`: a call of `randomize` (an object's, `std::randomize` or the class's own)
+    with inline constraints (18.7). With `restricted`, the names `variables` lists (perhaps none) are the object's, and
+    other names are looked up where the call is (18.7.1)."""
+
+    call: Expression
+    restricted: bool
+    variables: list[Identifier]
+    items: list[Constraint | Directive | Comment]
+    SINCE = sv()
+    FEATURES = {"restricted": {True: sv(2012)}}
+
+
+class ArrayMethodWithExpression(Expression):
+    """`call with (expression)`: an array manipulation method whose elements are `item`, or what its argument names,
+    in `expression` (7.12)."""
+
+    call: Expression
+    expression: Expression
+    SINCE = sv()
+
+
 class CallExpression(Expression):
     """`callee(arguments)`: a function or method call (13.5); arguments are ordered expressions or named
     `NamedConnection`s."""
@@ -1278,14 +1447,14 @@ class DefaultNettypeDirective(Directive):
 
 class IfdefDirective(Directive):
     """`` `ifdef name items `elsif name items `else items `endif ``, or `` `ifndef `` when `negated`, as a tree of its
-    branches (22.6). Branches hold what their place lists: items, or statements. A branch the reading did not take
-    ends with its text as written, a `DisabledText`."""
+    branches (22.6). Branches hold what their place lists: items, statements or constraints. A branch the reading did
+    not take ends with its text as written, a `DisabledText`."""
 
     negated: bool
     name: Identifier
-    items: list[Item | Statement | Directive | Comment]
+    items: list[Item | Statement | Constraint | Directive | Comment]
     branches: list[ElsifDirective]
-    alternative: list[Item | Statement | Directive | Comment]
+    alternative: list[Item | Statement | Constraint | Directive | Comment]
     has_else: bool
 
 
@@ -1293,7 +1462,7 @@ class ElsifDirective(Directive):
     """`` `elsif name items ``, a branch of an `IfdefDirective` (22.6)."""
 
     name: Identifier
-    items: list[Item | Statement | Directive | Comment]
+    items: list[Item | Statement | Constraint | Directive | Comment]
     SINCE = verilog(2001)
 
 
@@ -1337,6 +1506,10 @@ KINDS: list[type[SyntaxNode]] = [
     ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,
     CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression,
     NullLiteral, ThisExpression, SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression,
+    RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem, LocalName,
+    ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
+    ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
+    RandCaseStatement, RandCaseItem,
     IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
     ElsifDirective, DisabledText, OtherDirective,
 ]
@@ -1345,4 +1518,4 @@ LANGUAGE = Language("Verilog", KINDS, base={VERILOG: 1995, SV: 2005})
 
 __all__ += [k.__name__ for k in KINDS] + [
     "Name", "Expression", "Literal", "DataType", "Dimension", "Item", "Port", "Statement", "TimingControl",
-    "Connection", "Range", "Directive", "sv", "verilog", "VERILOG", "SV"]
+    "Connection", "Range", "Directive", "Constraint", "sv", "verilog", "VERILOG", "SV"]

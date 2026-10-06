@@ -200,8 +200,28 @@ package logger_tb_pkg;
     virtual class transaction #(int W = 16) implements sink #(reading_t);
         rand bit [W-1:0] raw;
         randc logic [7:0] status;
+        rand byte samples[];
         local static int count = 0;
         protected int id;
+        // Readings stay in the sensor's range, mostly near the cold chain's set point.
+        constraint plausible {
+            raw inside {[200:800]};
+            soft raw dist {[300:500] :/ 8, [200:299] := 1, default :/ 1};
+            samples.size() <= 8;
+            foreach (samples[i]) samples[i] > 0;
+            status[2] -> {
+                raw < 250;
+            }
+            if (status == 0) raw > 300; else if (status[7]) {
+                raw < 700;
+            }
+            solve status before raw;
+        }
+        extern constraint ordered;
+        pure constraint profile;
+        static constraint distinct {
+            unique {raw, status};
+        }
         extern function new(int id = 0);
         pure virtual function transaction #(W) copy();
         virtual function void put(reading_t item);
@@ -214,16 +234,31 @@ package logger_tb_pkg;
         count++;
     endfunction
 
+    constraint transaction::ordered {
+        disable soft raw;
+    }
+
     class sample extends transaction #(16);
         byte history[];
         function new(int id);
             super.new(id);
             history = new[4];
         endfunction
+        constraint profile {
+            raw < 600;
+        }
         virtual function transaction #(16) copy();
             sample other = new this;
             other.history = new[8](history);
+            void'(other.randomize() with (raw) { raw > local::id; });
             return other;
+        endfunction
+        function int peak();
+            byte high[$] = history.find(item) with (item > 8'd100);
+            randcase
+                3: peak = high.size();
+                1: peak = std::randomize(peak) with { peak < 4; };
+            endcase
         endfunction
     endclass
 

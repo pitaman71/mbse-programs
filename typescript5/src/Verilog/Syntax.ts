@@ -4,11 +4,11 @@
  *
  * The kinds cover SystemVerilog (IEEE 1800-2023)'s design subset and its classes: design units, ports and parameters,
  * data types, declarations, continuous assignments, procedural blocks and statements, generate constructs,
- * instantiation, functions and tasks, classes with their properties, methods and objects, immediate assertions and
- * compiler directives. Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and
- * feature records where it exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`,
- * `SystemVerilog2023` and `VerilogStandard(year, family)` check. Constraints, properties and sequences, and covergroups
- * are not kinds yet.
+ * instantiation, functions and tasks, classes with their properties, methods and objects, constraints and
+ * randomization, immediate assertions and compiler directives. Verilog (IEEE 1364) is a family of its own whose
+ * standards have fewer of them: each kind and feature records where it exists in both families (`SINCE`, `FEATURES`),
+ * which `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023` and `VerilogStandard(year, family)` check. Properties
+ * and sequences, and covergroups are not kinds yet.
  *
  * The tree is abstract where the grammar only spells and concrete where a transpiler needs to see what was written:
  *
@@ -113,6 +113,10 @@ export const VISIBILITYS = ["local", "protected"] as const;
 export type Visibility = (typeof VISIBILITYS)[number];
 export const RANDOM_QUALIFIERS = ["rand", "randc"] as const;
 export type RandomQualifier = (typeof RANDOM_QUALIFIERS)[number];
+export const DIST_OPERATORS = [":=", ":/"] as const;
+export type DistOperator = (typeof DIST_OPERATORS)[number];
+export const PROTOTYPE_QUALIFIERS = ["extern", "pure"] as const;
+export type PrototypeQualifier = (typeof PROTOTYPE_QUALIFIERS)[number];
 export const FORWARD_KEYWORDS = ["enum", "struct", "union", "class", "interface class"] as const;
 export type ForwardKeyword = (typeof FORWARD_KEYWORDS)[number];
 export const DEFAULT_NETTYPES = [
@@ -167,6 +171,9 @@ export abstract class Range extends SyntaxNode {}
 /** A compiler directive (22), where items or statements are listed. */
 export abstract class Directive extends SyntaxNode {}
 
+/** A constraint on random variables, in a constraint block (18.5, A.1.10). */
+export abstract class Constraint extends SyntaxNode {}
+
 // === Lexical conventions (5) ===
 
 const CommentSpec = {
@@ -217,6 +224,19 @@ export interface ScopedName extends Properties<typeof ScopedNameSpec> {}
 export class ScopedName extends Name {
   static override SPEC = ScopedNameSpec;
   static override SINCE: Availability | null = sv();
+}
+
+const LocalNameSpec = {
+  name: one(() => [Identifier]),
+};
+export interface LocalName extends Properties<typeof LocalNameSpec> {}
+/**
+ * `local::name`: in the constraints of `randomize() with`, a name in the scope that calls `randomize`, not in the
+ * object (18.7.1).
+ */
+export class LocalName extends Name {
+  static override SPEC = LocalNameSpec;
+  static override SINCE: Availability | null = sv(2009);
 }
 
 const ParameterizedNameSpec = {
@@ -849,8 +869,8 @@ const TaskDeclarationSpec = {
 export interface TaskDeclaration extends Properties<typeof TaskDeclarationSpec> {}
 /**
  * `task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`,
- * `virtual`, and a prototype without a body: `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24).
- * A constructor is named `new`.
+ * `virtual`, and a prototype without a body: `extern`, defined outside the class, or `pure virtual` (8.10, 8.20,
+ * 8.24). A constructor is named `new`.
  */
 export class TaskDeclaration extends Item {
   static override SPEC = TaskDeclarationSpec;
@@ -915,6 +935,164 @@ export class ClassDeclaration extends Item {
       return ["an interface ClassDeclaration has no virtual, base or arguments"];
     }
     if (this.arguments.length > 0 && this.base === null) return ["a ClassDeclaration with arguments has a base"];
+    return [];
+  }
+}
+
+// --- Constraints (18) ---
+
+const ConstraintDeclarationSpec = {
+  static: flag(),
+  name: one(() => [Name]),
+  items: many(() => [Constraint, Directive, Comment]),
+};
+export interface ConstraintDeclaration extends Properties<typeof ConstraintDeclarationSpec> {}
+/**
+ * `static constraint name { constraints }` in a class, or outside it with a qualified name (`constraint c::k { }`),
+ * which defines a prototype (18.5).
+ */
+export class ConstraintDeclaration extends Item {
+  static override SPEC = ConstraintDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ConstraintPrototypeSpec = {
+  qualifier: optionalChoice(...PROTOTYPE_QUALIFIERS),
+  static: flag(),
+  name: one(() => [Identifier]),
+};
+export interface ConstraintPrototype extends Properties<typeof ConstraintPrototypeSpec> {}
+/**
+ * `qualifier static constraint name;`: a constraint defined outside its class, `extern` or by default, or `pure`,
+ * which derived classes define (18.5.1).
+ */
+export class ConstraintPrototype extends Item {
+  static override SPEC = ConstraintPrototypeSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { qualifier: [["pure", sv(2012)]] };
+}
+
+const ConstraintBlockSpec = {
+  items: many(() => [Constraint, Directive, Comment]),
+};
+export interface ConstraintBlock extends Properties<typeof ConstraintBlockSpec> {}
+/** `{ constraints }`, the constraints an implication, a condition or a loop applies (18.5). */
+export class ConstraintBlock extends Constraint {
+  static override SPEC = ConstraintBlockSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ExpressionConstraintSpec = {
+  soft: flag(),
+  expression: one(() => [Expression]),
+};
+export interface ExpressionConstraint extends Properties<typeof ExpressionConstraintSpec> {}
+/** `soft expression;`, an expression that must hold, or with `soft` should (18.5.14). */
+export class ExpressionConstraint extends Constraint {
+  static override SPEC = ExpressionConstraintSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { soft: [[true, sv(2012)]] };
+}
+
+const ImplicationConstraintSpec = {
+  condition: one(() => [Expression]),
+  body: one(() => [Constraint]),
+};
+export interface ImplicationConstraint extends Properties<typeof ImplicationConstraintSpec> {}
+/** `condition -> body`: `body` holds where `condition` does (18.5.6). */
+export class ImplicationConstraint extends Constraint {
+  static override SPEC = ImplicationConstraintSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ConditionalConstraintSpec = {
+  condition: one(() => [Expression]),
+  consequence: one(() => [Constraint]),
+  alternative: optional(() => [Constraint]),
+};
+export interface ConditionalConstraint extends Properties<typeof ConditionalConstraintSpec> {}
+/** `if (condition) consequence else alternative` (18.5.7). */
+export class ConditionalConstraint extends Constraint {
+  static override SPEC = ConditionalConstraintSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ForeachConstraintSpec = {
+  array: one(() => [Expression]),
+  variables: many(() => [Identifier]),
+  body: one(() => [Constraint]),
+};
+export interface ForeachConstraint extends Properties<typeof ForeachConstraintSpec> {}
+/** `foreach (array[variables]) body`, a constraint on each element (18.5.8.1). */
+export class ForeachConstraint extends Constraint {
+  static override SPEC = ForeachConstraintSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const SolveBeforeConstraintSpec = {
+  solve: many(() => [Expression]),
+  before: many(() => [Expression]),
+};
+export interface SolveBeforeConstraint extends Properties<typeof SolveBeforeConstraintSpec> {}
+/** `solve solve before before;`, an order in which variables are chosen (18.5.10). */
+export class SolveBeforeConstraint extends Constraint {
+  static override SPEC = SolveBeforeConstraintSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const DisableSoftConstraintSpec = {
+  target: one(() => [Expression]),
+};
+export interface DisableSoftConstraint extends Properties<typeof DisableSoftConstraintSpec> {}
+/** `disable soft target;`, which drops the soft constraints on a variable (18.5.14.2). */
+export class DisableSoftConstraint extends Constraint {
+  static override SPEC = DisableSoftConstraintSpec;
+  static override SINCE: Availability | null = sv(2012);
+}
+
+const UniqueConstraintSpec = {
+  set: many(() => [Expression, Range]),
+};
+export interface UniqueConstraint extends Properties<typeof UniqueConstraintSpec> {}
+/** `unique { set }`: the variables and arrays of `set` have different values (18.5.5). */
+export class UniqueConstraint extends Constraint {
+  static override SPEC = UniqueConstraintSpec;
+  static override SINCE: Availability | null = sv(2012);
+}
+
+const DistExpressionSpec = {
+  value: one(() => [Expression]),
+  items: many(() => [DistItem]),
+};
+export interface DistExpression extends Properties<typeof DistExpressionSpec> {}
+/** `value dist { items }`, a distribution of a random variable's values, in a constraint (18.5.4). */
+export class DistExpression extends Expression {
+  static override SPEC = DistExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const DistItemSpec = {
+  value: optional(() => [Expression, Range]),
+  operator: optionalChoice(...DIST_OPERATORS),
+  weight: optional(() => [Expression]),
+};
+export interface DistItem extends Properties<typeof DistItemSpec> {}
+/**
+ * `value := weight` (each value of a range weighs `weight`) or `value :/ weight` (the range weighs `weight`), or
+ * `default :/ weight` without a `value`; without a weight, a value weighs 1 (18.5.4).
+ */
+export class DistItem extends SyntaxNode {
+  static override SPEC = DistItemSpec;
+  static override SINCE: Availability | null = sv();
+  override features(): [string, Availability][] {
+    return this.value === null ? [["DistItem default", sv(2023)]] : [];
+  }
+
+  override check(): string[] {
+    if ((this.operator === null) !== (this.weight === null)) {
+      return ["a DistItem has both an operator and a weight, or neither"];
+    }
+    if (this.value === null && this.operator !== ":/") return ["a default DistItem weighs its values with :/"];
     return [];
   }
 }
@@ -1279,6 +1457,27 @@ export class DisableStatement extends Statement {
   }
 }
 
+const RandCaseStatementSpec = {
+  items: many(() => [RandCaseItem]),
+};
+export interface RandCaseStatement extends Properties<typeof RandCaseStatementSpec> {}
+/** `randcase weight: body ... endcase`: one of the bodies, chosen at random by their weights (18.16). */
+export class RandCaseStatement extends Statement {
+  static override SPEC = RandCaseStatementSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const RandCaseItemSpec = {
+  weight: one(() => [Expression]),
+  body: one(() => [Statement]),
+};
+export interface RandCaseItem extends Properties<typeof RandCaseItemSpec> {}
+/** `weight: body` in a `randcase` (18.16). */
+export class RandCaseItem extends SyntaxNode {
+  static override SPEC = RandCaseItemSpec;
+  static override SINCE: Availability | null = sv();
+}
+
 const ImmediateAssertionSpec = {
   keyword: choice(...ASSERTION_KEYWORDS),
   deferral: optionalChoice(...DEFERRALS),
@@ -1617,6 +1816,38 @@ export class NewArrayExpression extends Expression {
   static override SINCE: Availability | null = sv();
 }
 
+const RandomizeWithExpressionSpec = {
+  call: one(() => [Expression]),
+  restricted: flag(),
+  variables: many(() => [Identifier]),
+  items: many(() => [Constraint, Directive, Comment]),
+};
+export interface RandomizeWithExpression extends Properties<typeof RandomizeWithExpressionSpec> {}
+/**
+ * `call with (variables) { constraints }`: a call of `randomize` (an object's, `std::randomize` or the class's own)
+ * with inline constraints (18.7). With `restricted`, the names `variables` lists (perhaps none) are the object's, and
+ * other names are looked up where the call is (18.7.1).
+ */
+export class RandomizeWithExpression extends Expression {
+  static override SPEC = RandomizeWithExpressionSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { restricted: [[true, sv(2012)]] };
+}
+
+const ArrayMethodWithExpressionSpec = {
+  call: one(() => [Expression]),
+  expression: one(() => [Expression]),
+};
+export interface ArrayMethodWithExpression extends Properties<typeof ArrayMethodWithExpressionSpec> {}
+/**
+ * `call with (expression)`: an array manipulation method whose elements are `item`, or what its argument names,
+ * in `expression` (7.12).
+ */
+export class ArrayMethodWithExpression extends Expression {
+  static override SPEC = ArrayMethodWithExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
 const CallExpressionSpec = {
   callee: one(() => [Expression]),
   arguments: many(() => [Expression, Connection]),
@@ -1752,16 +1983,16 @@ export class DefaultNettypeDirective extends Directive {
 const IfdefDirectiveSpec = {
   negated: flag(),
   name: one(() => [Identifier]),
-  items: many(() => [Item, Statement, Directive, Comment]),
+  items: many(() => [Item, Statement, Constraint, Directive, Comment]),
   branches: many(() => [ElsifDirective]),
-  alternative: many(() => [Item, Statement, Directive, Comment]),
+  alternative: many(() => [Item, Statement, Constraint, Directive, Comment]),
   has_else: flag(),
 };
 export interface IfdefDirective extends Properties<typeof IfdefDirectiveSpec> {}
 /**
  * `` `ifdef name items `elsif name items `else items `endif ``, or `` `ifndef `` when `negated`, as a tree of its
- * branches (22.6). Branches hold what their place lists: items, or statements. A branch the reading did not take
- * ends with its text as written, a `DisabledText`.
+ * branches (22.6). Branches hold what their place lists: items, statements or constraints. A branch the reading did
+ * not take ends with its text as written, a `DisabledText`.
  */
 export class IfdefDirective extends Directive {
   static override SPEC = IfdefDirectiveSpec;
@@ -1769,7 +2000,7 @@ export class IfdefDirective extends Directive {
 
 const ElsifDirectiveSpec = {
   name: one(() => [Identifier]),
-  items: many(() => [Item, Statement, Directive, Comment]),
+  items: many(() => [Item, Statement, Constraint, Directive, Comment]),
 };
 export interface ElsifDirective extends Properties<typeof ElsifDirectiveSpec> {}
 /** `` `elsif name items ``, a branch of an `IfdefDirective` (22.6). */
@@ -1829,9 +2060,12 @@ export const KINDS = [
   UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression,
   InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression,
   SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, NullLiteral, ThisExpression,
-  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, IncludeDirective, DefineDirective,
-  UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText,
-  OtherDirective,
+  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
+  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
+  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
+  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, IncludeDirective,
+  DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective, ElsifDirective,
+  DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

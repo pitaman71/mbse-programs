@@ -31,7 +31,7 @@ const joined = (parts: (string | null | undefined)[], separator = " ") => parts.
 
 function precedence(node: unknown): number {
   if (node instanceof S.BinaryExpression) return BINARY[node.operator as string] as number;
-  if (node instanceof S.InsideExpression) return RELATIONAL;
+  if (isAny(node, [S.InsideExpression, S.DistExpression])) return RELATIONAL;
   if (node instanceof S.ConditionalExpression) return CONDITIONAL;
   if (isAny(node, [S.UnaryExpression, S.IncrementExpression])) return UNARY;
   if (node instanceof S.AssignmentExpression) return 0;
@@ -46,7 +46,7 @@ function prototype(node: any): boolean {
 function multiline(node: unknown): boolean {
   if (isAny(node, [S.FunctionDeclaration, S.TaskDeclaration])) return !prototype(node);
   return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-    S.ClassDeclaration, S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
+    S.ClassDeclaration, S.ConstraintDeclaration, S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
     S.GenerateIf, S.GenerateCase, S.GenerateBlock, S.IfdefDirective]);
 }
 
@@ -107,6 +107,7 @@ export class Printer {
     if (node instanceof S.Comment) return this.comment(node).split("\n").map((line, i) => i === 0 ? pad(level) + line : line);
     if (node instanceof S.Directive) return this.directive(node, level);
     if (node instanceof S.Statement) return this.statement(node, level);
+    if (node instanceof S.Constraint) return this.constraint(node, level);
     return (Printer.ITEMS.get(node.constructor) as Method)(this, node, level);
   }
 
@@ -259,6 +260,7 @@ export class Printer {
 
   name(node: any): string {
     if (node instanceof S.ScopedName) return `${this.name(node.scope)}::${this.name(node.name)}`;
+    if (node instanceof S.LocalName) return `local::${node.name?.spelling}`;
     if (node instanceof S.ParameterizedName) return node.name?.spelling + this.parameterValues(node.parameters);
     return node.spelling;
   }
@@ -387,6 +389,96 @@ export class Printer {
     return lines;
   }
 
+  // Constraints
+
+  constraintDeclaration(node: any, level: number): string[] {
+    const lines = [`${pad(level)}${node.static ? "static " : ""}constraint ${this.name(node.name)} {`];
+    const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+    return [...lines, ...body, `${pad(level)}}`];
+  }
+
+  constraintPrototype(node: any, level: number): string[] {
+    return [pad(level) + joined([node.qualifier, node.static ? "static" : null, "constraint", node.name.spelling]) + ";"];
+  }
+
+  /** A constraint's lines: a block opens on its header's line, any other body goes on the next. */
+  constraint(node: any, level: number): string[] {
+    const p = pad(level);
+    if (node instanceof S.ConstraintBlock) {
+      const lines = [`${p}{`];
+      const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+      return [...lines, ...body, `${p}}`];
+    }
+    if (node instanceof S.ImplicationConstraint) {
+      return this.constraintHeaded(`${p}${this.operand(node.condition, IMPLY + 1)} ->`, node.body, level);
+    }
+    if (node instanceof S.ConditionalConstraint) {
+      const lines = this.constraintHeaded(`${p}if (${this.text(node.condition)})`, node.consequence, level);
+      if (node.alternative === null) return lines;
+      let tail: string[];
+      if (node.alternative instanceof S.ConditionalConstraint) { // else if
+        tail = this.constraint(node.alternative, level);
+        tail[0] = "else " + (tail[0] as string).trim();
+      } else {
+        tail = this.constraintHeaded("else", node.alternative, level);
+      }
+      if (node.consequence instanceof S.ConstraintBlock) {
+        lines[lines.length - 1] += " " + tail[0];
+        return [...lines, ...tail.slice(1)];
+      }
+      return [...lines, p + tail[0], ...tail.slice(1)];
+    }
+    if (node instanceof S.ForeachConstraint) {
+      const variables = node.variables.map((v) => v.spelling).join(", ");
+      return this.constraintHeaded(`${p}foreach (${this.text(node.array)}[${variables}])`, node.body, level);
+    }
+    return [p + this.constraintText(node)];
+  }
+
+  constraintHeaded(head: string, body: any, level: number): string[] {
+    if (body instanceof S.ConstraintBlock) {
+      const block = this.constraint(body, level);
+      return [head + " " + (block[0] as string).trim(), ...block.slice(1)];
+    }
+    return [head, ...this.constraint(body, level + 1)];
+  }
+
+  /** A constraint on one line, as `randomize() with` writes them. */
+  constraintText(node: any): string {
+    if (node instanceof S.ExpressionConstraint) return `${node.soft ? "soft " : ""}${this.text(node.expression)};`;
+    if (node instanceof S.ConstraintBlock) return this.inline(node.items);
+    if (node instanceof S.ImplicationConstraint) {
+      return `${this.operand(node.condition, IMPLY + 1)} -> ${this.constraintText(node.body)}`;
+    }
+    if (node instanceof S.ConditionalConstraint) {
+      const alternative = node.alternative !== null ? ` else ${this.constraintText(node.alternative)}` : "";
+      return `if (${this.text(node.condition)}) ${this.constraintText(node.consequence)}${alternative}`;
+    }
+    if (node instanceof S.ForeachConstraint) {
+      const variables = node.variables.map((v) => v.spelling).join(", ");
+      return `foreach (${this.text(node.array)}[${variables}]) ${this.constraintText(node.body)}`;
+    }
+    if (node instanceof S.SolveBeforeConstraint) {
+      return `solve ${node.solve.map((e) => this.text(e)).join(", ")} before ${node.before.map((e) => this.text(e)).join(", ")};`;
+    }
+    if (node instanceof S.DisableSoftConstraint) return `disable soft ${this.text(node.target)};`;
+    return `unique {${node.set.map((r: any) => this.rangeText(r)).join(", ")}};`; // a UniqueConstraint
+  }
+
+  /** `{ constraints }` on one line; a line comment, or a directive, ends its line. */
+  inline(items: readonly any[]): string {
+    const parts = items.map((item) => {
+      if (item instanceof S.Comment) return this.comment(item) + (item.block ? "" : "\n");
+      if (item instanceof S.Directive) return "\n" + this.directive(item, 0).join("\n") + "\n";
+      return this.constraintText(item);
+    });
+    let text = "{";
+    for (const part of [...parts, "}"]) { // a space between parts, but not at a line's end or start
+      text += text.endsWith("\n") || part.startsWith("\n") ? part : " " + part;
+    }
+    return parts.length > 0 ? text : "{}";
+  }
+
   forwardTypedef(node: any, level: number): string[] {
     return [`${pad(level)}typedef ${node.keyword ? `${node.keyword} ` : ""}${node.name.spelling};`];
   }
@@ -401,7 +493,8 @@ export class Printer {
 
   generateRegion(node: any, level: number): string[] {
     const lines = [`${pad(level)}generate`];
-    return [...lines, ...this.items(node.items, level + 1, lines), `${pad(level)}endgenerate`];
+    const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+    return [...lines, ...body, `${pad(level)}endgenerate`];
   }
 
   generateFor(node: any, level: number): string[] {
@@ -452,7 +545,8 @@ export class Printer {
     const name = node.name !== null ? ` : ${node.name.spelling}` : "";
     const end = node.labeled && node.name !== null ? ` : ${node.name.spelling}` : "";
     const lines = [`${pad(level)}begin${name}`];
-    return [...lines, ...this.items(node.items, level + 1, lines), `${pad(level)}end${end}`];
+    const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+    return [...lines, ...body, `${pad(level)}end${end}`];
   }
 
   // Instantiation
@@ -517,7 +611,8 @@ export class Printer {
     const name = node.name !== null ? ` : ${node.name.spelling}` : "";
     const end = node.labeled && node.name !== null ? ` : ${node.name.spelling}` : "";
     const lines = [`${pad(level)}${opener}${name}`];
-    return [...lines, ...this.items(node.items, level + 1, lines), `${pad(level)}${closer}${end}`];
+    const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+    return [...lines, ...body, `${pad(level)}${closer}${end}`];
   }
 
   ifStatement(node: any, level: number, head: string | null = null): string[] {
@@ -550,17 +645,24 @@ export class Printer {
     const lines = [`${p}${qualifier}${node.keyword} (${this.text(node.expression)})${node.inside ? " inside" : ""}`];
     for (const item of node.items) {
       const label = item.expressions.length > 0 ? item.expressions.map((e: any) => this.rangeText(e)).join(", ") : "default";
-      const head = `${p}${INDENT}${label}:`;
-      if (item.body instanceof S.NullStatement) {
-        lines.push(`${head} ;`);
-      } else if (isAny(item.body, [S.SeqBlock, S.ParBlock])) {
-        lines.push(...this.headed(head, item.body, level + 1));
-      } else if (item.body instanceof S.Statement && this.statement(item.body, 0).length === 1) {
-        lines.push(`${head} ${this.statement(item.body, 0)[0]}`);
-      } else {
-        lines.push(...this.headed(head, item.body, level + 1));
-      }
+      lines.push(...this.caseItem(`${p}${INDENT}${label}:`, item.body, level));
     }
+    lines.push(`${p}endcase`);
+    return lines;
+  }
+
+  /** `label: body`: a null statement, a block or a one-line statement on the label's line, else on the next. */
+  caseItem(head: string, body: any, level: number): string[] {
+    if (body instanceof S.NullStatement) return [`${head} ;`];
+    if (isAny(body, [S.SeqBlock, S.ParBlock])) return this.headed(head, body, level + 1);
+    if (body instanceof S.Statement && this.statement(body, 0).length === 1) return [`${head} ${this.statement(body, 0)[0]}`];
+    return this.headed(head, body, level + 1);
+  }
+
+  randcase(node: any, level: number): string[] {
+    const p = pad(level);
+    const lines = [`${p}randcase`];
+    for (const item of node.items) lines.push(...this.caseItem(`${p}${INDENT}${this.text(item.weight)}:`, item.body, level));
     lines.push(`${p}endcase`);
     return lines;
   }
@@ -726,6 +828,18 @@ export class Printer {
     if (node instanceof S.MacroUsage) return `\`${node.name?.spelling}` + (node.arguments !== null ? `(${node.arguments})` : "");
     if (node instanceof S.DollarExpression) return "$";
     if (node instanceof S.NullLiteral) return "null";
+    if (node instanceof S.DistExpression) {
+      const items = node.items.map((i: any) => (i.value !== null ? this.rangeText(i.value) : "default")
+        + (i.operator !== null ? ` ${i.operator} ${this.text(i.weight)}` : "")).join(", ");
+      return `${this.operand(node.value, RELATIONAL)} dist {${items}}`;
+    }
+    if (node instanceof S.RandomizeWithExpression) {
+      const variables = node.restricted ? ` (${node.variables.map((v) => v.spelling).join(", ")})` : "";
+      return `${this.operand(node.call, PRIMARY)} with${variables} ${this.inline(node.items)}`;
+    }
+    if (node instanceof S.ArrayMethodWithExpression) {
+      return `${this.operand(node.call, PRIMARY)} with (${this.text(node.expression)})`;
+    }
     if (node instanceof S.ThisExpression) return "this";
     if (node instanceof S.SuperExpression) return "super";
     if (node instanceof S.NewExpression) {
@@ -767,6 +881,8 @@ const items: [Function[], Method][] = [
   [[S.ModuleInstantiation], (s, n, l) => s.instantiation(n, l)],
   [[S.ClassDeclaration], (s, n, l) => s.classDeclaration(n, l)],
   [[S.ForwardTypedefDeclaration], (s, n, l) => s.forwardTypedef(n, l)],
+  [[S.ConstraintDeclaration], (s, n, l) => s.constraintDeclaration(n, l)],
+  [[S.ConstraintPrototype], (s, n, l) => s.constraintPrototype(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [
@@ -778,5 +894,6 @@ const statements: [Function[], Method][] = [
   [[S.TimedStatement], (s, n, l) => s.timed(n, l)],
   [[S.WaitStatement], (s, n, l) => s.wait(n, l)],
   [[S.ImmediateAssertion], (s, n, l) => s.assertion(n, l)],
+  [[S.RandCaseStatement], (s, n, l) => s.randcase(n, l)],
 ];
 for (const [kinds, method] of statements) for (const kind of kinds) Printer.STATEMENTS.set(kind, method);

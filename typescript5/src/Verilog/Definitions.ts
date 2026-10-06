@@ -7,13 +7,16 @@
  *   `for` loops, named or not.
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
  *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
- *   'class' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
+ *   'class', 'constraint' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
  * - A non-ANSI port is one entity, which the header names and a port declaration declares.
  * - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
  *   where nothing nearer declares them, as wildcard imports do.
  * - A class's members are found in it, then in its base class (`extends`), or for an interface class in the interface
- *   classes it extends. A method defined outside its class (`function void c::f()`) is the entity its prototype
- *   declares, and its body sees the class's members.
+ *   classes it extends. A method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`)
+ *   is the entity its prototype declares, and its body sees the class's members. A `foreach` constraint's index
+ *   variables are its own; `local::x` in `randomize() with` is `x` where the call is.
+ * - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
+ *   argument gives it (`find(x) with (x > 0)`), or `item`.
  * - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
  *   are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
  *   (`sampler.counter.count`).
@@ -197,8 +200,8 @@ class Definer {
     this.visitAll(node.body, inner);
   }
 
-  /** The scope of a method defined outside its class, `c::f`: in the class's scope, and the entity of the prototype
-   * the class declares. Any other qualified name is not resolved. */
+  /** The scope of a method or a constraint defined outside its class, `c::f`: in the class's scope, and the entity of
+   * the prototype the class declares. Any other qualified name is not resolved. */
   outOfBlock(node: any, scope: Scope, kind: string): Scope {
     const qualified = node.name;
     const classes = qualified.scope instanceof S.Identifier && qualified.name instanceof S.Identifier
@@ -212,7 +215,8 @@ class Definer {
     entity.definition = node;
     this.program.declares(qualified.name, entity);
     this.program.declares(node, entity);
-    return entity.scope as Scope; // the prototype's, where the definition's arguments are its arguments
+    // a method's prototype's scope, where the definition's arguments are its arguments; a constraint has none
+    return entity.scope ?? new Scope(kind, entity, owner.scope, node);
   }
 
   classDeclaration(node: any, scope: Scope): void {
@@ -221,6 +225,42 @@ class Definer {
     this.visitAll([...(node.base !== null ? [node.base] : []), ...node.arguments, ...node.interfaces], scope);
     this.visitAll([...node.parameters, ...node.items], inner);
     this.classes.push([inner, node]);
+  }
+
+  constraintDeclaration(node: any, scope: Scope): void {
+    let inner = scope;
+    if (node.name instanceof S.Identifier) {
+      this.program.located(node.name, scope);
+      this.entity(scope, "constraint", node.name, node);
+    } else {
+      this.locate(node.name, scope);
+      inner = this.outOfBlock(node, scope, "constraint");
+    }
+    this.visitAll(node.items, inner);
+  }
+
+  constraintPrototype(node: any, scope: Scope): void {
+    this.program.located(node.name, scope);
+    this.entity(scope, "constraint", node.name, node);
+  }
+
+  arrayMethodWith(node: any, scope: Scope): void {
+    const inner = new Scope("with", null, scope, node);
+    const call = node.call;
+    const args = call instanceof S.CallExpression ? call.arguments : [];
+    const iterator = args[0];
+    if (args.length === 1 && iterator instanceof S.NameExpression && iterator.name instanceof S.Identifier) {
+      this.visit(call.callee as SyntaxNode, scope); // `find(x)`: `x` names the iterator
+      this.locate(iterator, scope);
+      this.entity(inner, "variable", iterator.name, iterator);
+    } else {
+      this.visit(call, scope);
+      const item = this.program.add(new Entity("variable", "item", inner));
+      inner.declare(item);
+      item.definition = node;
+      item.declarations.push(node);
+    }
+    this.visit(node.expression, inner);
   }
 
   instance(node: any, scope: Scope): void {
@@ -315,6 +355,10 @@ const methods: [Function[], Method][] = [
   [[S.ForStatement], (d, n, s) => d.forStatement(n, s)],
   [[S.ForeachStatement], (d, n, s) => d.foreach(n, s)],
   [[S.ClassDeclaration], (d, n, s) => d.classDeclaration(n, s)],
+  [[S.ConstraintDeclaration], (d, n, s) => d.constraintDeclaration(n, s)],
+  [[S.ConstraintPrototype], (d, n, s) => d.constraintPrototype(n, s)],
+  [[S.ForeachConstraint], (d, n, s) => d.foreach(n, s)],
+  [[S.ArrayMethodWithExpression], (d, n, s) => d.arrayMethodWith(n, s)],
 ];
 for (const [kinds, method] of methods) for (const kind of kinds) Definer.METHODS.set(kind, method);
 
@@ -353,6 +397,7 @@ function lookup(scope: Scope, name: any): Entity[] {
  * the name is, and `p::c::x` to `x` in `c` in `p`. */
 export function referents(program: Program, name: any): Entity[] {
   if (name instanceof S.NameExpression) name = name.name;
+  if (name instanceof S.LocalName) name = name.name;
   if (name instanceof S.ScopedName) return lookup(program.scope_of(name) ?? program.root, name);
   const scope = program.scope_of(name);
   if (scope === null) return [];

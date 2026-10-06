@@ -17,7 +17,7 @@ implementation reports the same line and column.
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from typing import Any
 
 import pyslang
@@ -198,14 +198,17 @@ class _Reader:
         node = S.Comment(block=block, text=text[2:-2] if block else text[2:].rstrip("\r"), trailing=trailing)
         return self.made(at, node)
 
-    def items(self, members: Sequence[Any], closer: parsing.Token, statements: bool = False) -> list[Any]:
-        """The items (or with `statements`, the block items and statements) of a list, with the comments and
-        directives before each and before `closer`, conditional compilation grouped into trees."""
+    def items(self, members: Sequence[Any], closer: parsing.Token, statements: bool = False,
+              convert: Callable[[Any], Any] | None = None) -> list[Any]:
+        """The items (or with `statements`, the block items and statements; with `convert`, what it converts each
+        member to) of a list, with the comments and directives before each and before `closer`, conditional
+        compilation grouped into trees."""
         flat: list[tuple[str, Any, Any]] = []
         for member in members:
             flat.extend(self.leading(member.getFirstToken()))
             if self.main(member.getFirstToken().location):  # not what an included file contributes
-                flat.append(("item", member, self.member(member, statements)))
+                converted = convert(member) if convert is not None else self.member(member, statements)
+                flat.append(("item", member, converted))
         flat.extend(self.leading(closer))
         return self.group(flat, 0, len(flat), None)[0]
 
@@ -490,6 +493,8 @@ class _Reader:
                                                        parameters=self.parameter_values(node.parameters)))
         if kind == "ConstructorName":
             return self.made(node, S.Identifier(spelling="new"))
+        if kind == "ScopedName" and node.left.kind.name == "LocalScope" and node.right.kind.name == "IdentifierName":
+            return self.made(node, S.LocalName(name=self.identifier(node.right.identifier)))
         if kind == "ScopedName" and node.separator.rawText == "::":
             steps = []  # (the scope's syntax, the ScopedName that has it), innermost last
             while node.kind.name == "ScopedName" and node.separator.rawText == "::":
@@ -627,7 +632,8 @@ class _Reader:
         if node.finalSpecifier is not None:
             raise self.unsupported(node)
         kind = _text(node.virtualOrInterface)
-        out = S.ClassDeclaration(virtual=kind == "virtual", interface=kind == "interface", name=self.identifier(node.name),
+        out = S.ClassDeclaration(virtual=kind == "virtual", interface=kind == "interface",
+                                 name=self.identifier(node.name),
                                  labeled=node.endBlockName is not None)
         if node.parameters is not None:
             out.parameters = self.parameter_ports(node.parameters)
@@ -639,7 +645,8 @@ class _Reader:
             if extends.arguments is not None:
                 out.arguments = self.arguments(extends.arguments)
         if node.implementsClause is not None:
-            out.interfaces = [self.made(i, S.NamedType(name=self.name(i))) for i in _nodes(node.implementsClause.interfaces)]
+            out.interfaces = [self.made(i, S.NamedType(name=self.name(i)))
+                              for i in _nodes(node.implementsClause.interfaces)]
         out.items = self.items(_nodes(node.items), node.endClass)
         return out
 
@@ -675,6 +682,77 @@ class _Reader:
 
     def class_prototype(self, node: Any) -> Any:
         return self.qualified(node, self.prototype(node.prototype))
+
+    # Constraints
+
+    def constraint_declaration(self, node: Any) -> S.ConstraintDeclaration:
+        if _nodes(node.specifiers):  # `:initial`, `:extends`, `:final`
+            raise self.unsupported(node)
+        return S.ConstraintDeclaration(static=any(q.rawText == "static" for q in node.qualifiers),
+                                       name=self.name(node.name), items=self.constraint_items(node.block))
+
+    def constraint_prototype(self, node: Any) -> S.ConstraintPrototype:
+        if _nodes(node.specifiers):
+            raise self.unsupported(node)
+        words = [q.rawText for q in node.qualifiers]
+        return S.ConstraintPrototype(qualifier=next((w for w in words if w in ("extern", "pure")), None),
+                                     static="static" in words, name=self.identifier(node.name.identifier))
+
+    def constraint_items(self, block: Any) -> list[Any]:
+        """The constraints of `{ ... }`, with the comments and directives among them."""
+        return self.items(_nodes(block.items), block.closeBrace, convert=self.constraint)
+
+    def constraint(self, node: Any) -> S.Constraint:
+        kind = node.kind.name
+        if kind == "ConstraintBlock":
+            out: Any = S.ConstraintBlock(items=self.constraint_items(node))
+        elif kind == "ExpressionConstraint":
+            out = S.ExpressionConstraint(soft=bool(node.soft), expression=self.expression(node.expr))
+        elif kind == "ImplicationConstraint":
+            out = S.ImplicationConstraint(condition=self.expression(node.left), body=self.constraint(node.constraints))
+        elif kind == "ConditionalConstraint":
+            out = S.ConditionalConstraint(condition=self.expression(node.condition),
+                                          consequence=self.constraint(node.constraints))
+            if node.elseClause is not None:
+                out.alternative = self.constraint(node.elseClause.constraints)
+        elif kind == "LoopConstraint":
+            loop = node.loopList
+            out = S.ForeachConstraint(array=self.expression(loop.arrayName), variables=self.loop_variables(loop),
+                                      body=self.constraint(node.constraints))
+        elif kind == "SolveBeforeConstraint":
+            out = S.SolveBeforeConstraint(solve=[self.expression(e) for e in _nodes(node.beforeExpr)],
+                                          before=[self.expression(e) for e in _nodes(node.afterExpr)])
+        elif kind == "DisableConstraint":
+            out = S.DisableSoftConstraint(target=self.expression(node.name))
+        else:  # a UniquenessConstraint: slang has no other kind of constraint
+            out = S.UniqueConstraint(set=[self.range_or_expression(r) for r in _nodes(node.ranges.valueRanges)])
+        return self.made(node, out)
+
+    def dist(self, node: Any) -> S.DistExpression:
+        out = S.DistExpression(value=self.expression(node.expr))
+        for item in _nodes(node.distribution.items):
+            default = item.kind.name == "DefaultDistItem"
+            dist = S.DistItem(value=None if default else self.range_or_expression(item.range))
+            if item.weight is not None:
+                dist.operator = item.weight.op.rawText + _text(item.weight.extraOp)
+                dist.weight = self.expression(item.weight.expr)
+            out.items.append(self.made(item, dist))
+        return out
+
+    def with_clause(self, node: Any) -> S.Expression:
+        """`call with (...)`: with constraints, a `randomize` (whose parentheses list variables); without, an array
+        method (whose parentheses hold an expression)."""
+        call = self.expression(node.method)
+        arguments = [] if node.args is None else _nodes(node.args.expressions)
+        if node.constraints is None:
+            return S.ArrayMethodWithExpression(call=call, expression=self.expression(arguments[0]))
+        variables = []
+        for argument in arguments:
+            if argument.kind.name != "IdentifierName":
+                raise self.unsupported(argument)
+            variables.append(self.identifier(argument.identifier))
+        return S.RandomizeWithExpression(call=call, restricted=node.args is not None, variables=variables,
+                                         items=self.constraint_items(node.constraints))
 
     def forward_typedef(self, node: Any) -> S.ForwardTypedefDeclaration:
         out = S.ForwardTypedefDeclaration(name=self.identifier(node.name))
@@ -751,7 +829,8 @@ class _Reader:
         return out
 
     def instantiation(self, node: Any) -> S.ModuleInstantiation:
-        out = S.ModuleInstantiation(module=self.identifier(node.type), parameters=self.parameter_values(node.parameters))
+        out = S.ModuleInstantiation(module=self.identifier(node.type),
+                                    parameters=self.parameter_values(node.parameters))
         for instance in _nodes(node.instances):
             declaration = instance.decl
             item = S.Instance(name=self.identifier(declaration.name),
@@ -884,16 +963,30 @@ class _Reader:
         out.steps = [self.expression(s) for s in _nodes(node.steps)]
         return out
 
-    def foreach(self, node: Any) -> S.ForeachStatement:
-        loop = node.loopList
+    def loop_variables(self, loop: Any) -> list[S.Identifier]:
+        """The index variables of `foreach (array[variables])`, none of which may be skipped."""
         variables = []
         for variable in _nodes(loop.loopVariables):
             if variable.kind.name == "EmptyIdentifierName":
                 raise self.unsupported(variable)
             token = variable.identifier if hasattr(variable, "identifier") else variable.name
             variables.append(self.identifier(token))
-        return S.ForeachStatement(array=self.expression(loop.arrayName), variables=variables,
+        return variables
+
+    def foreach(self, node: Any) -> S.ForeachStatement:
+        loop = node.loopList
+        return S.ForeachStatement(array=self.expression(loop.arrayName), variables=self.loop_variables(loop),
                                   body=self.statement(node.statement))
+
+    def void_call(self, node: Any) -> S.ExpressionStatement:
+        """`void'(call);`: a function's result, discarded, as an expression statement of the cast."""
+        cast = S.CastExpression(type=self.made(node, S.KeywordType(keyword="void")), value=self.expression(node.expr))
+        return S.ExpressionStatement(expression=self.made(node, cast))
+
+    def randcase(self, node: Any) -> S.RandCaseStatement:
+        return S.RandCaseStatement(items=[self.made(i, S.RandCaseItem(weight=self.expression(i.expr),
+                                                                      body=self.statement(i.statement)))
+                                          for i in _nodes(node.items)])
 
     def jump(self, node: Any) -> S.Statement:
         return S.BreakStatement() if node.breakOrContinue.rawText == "break" else S.ContinueStatement()
@@ -1213,12 +1306,14 @@ class _Reader:
         "PortDeclaration": port_declaration, "ClassDeclaration": class_declaration,
         "ClassPropertyDeclaration": class_property, "ClassMethodDeclaration": class_method,
         "ClassMethodPrototype": class_prototype, "ForwardTypedefDeclaration": forward_typedef,
+        "ConstraintDeclaration": constraint_declaration, "ConstraintPrototype": constraint_prototype,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,
         "SequentialBlockStatement": block, "ParallelBlockStatement": block, "ConditionalStatement": conditional,
         "CaseStatement": case, "LoopStatement": loop, "DoWhileStatement": do_while, "ForeverStatement": forever,
-        "ForLoopStatement": for_loop, "ForeachLoopStatement": foreach, "JumpStatement": jump,
+        "ForLoopStatement": for_loop, "ForeachLoopStatement": foreach, "RandCaseStatement": randcase,
+        "VoidCastedCallStatement": void_call, "JumpStatement": jump,
         "ReturnStatement": return_statement, "TimingControlStatement": timing_statement, "WaitStatement": wait,
         "BlockingEventTriggerStatement": trigger, "NonblockingEventTriggerStatement": trigger,
         "DisableStatement": disable, "DisableForkStatement": disable_fork, "ImmediateAssertStatement": assertion,
@@ -1233,7 +1328,8 @@ class _Reader:
         "InvocationExpression": invocation, "SystemName": system_name,
         "CastExpression": cast, "SignedCastExpression": signed_cast, "ParenthesizedExpression": parenthesized,
         "NewClassExpression": new_class, "CopyClassExpression": copy_class, "NewArrayExpression": new_array,
-        "NullLiteralExpression": null, "ThisHandle": this, "SuperHandle": super_handle,
+        "NullLiteralExpression": null, "ThisHandle": this, "SuperHandle": super_handle, "ExpressionOrDist": dist,
+        "ArrayOrRandomizeMethodExpression": with_clause,
     }
 
 

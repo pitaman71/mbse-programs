@@ -32,7 +32,7 @@ _RIGHT = {IMPLY, CONDITIONAL}  # right-associative levels
 def _precedence(node: Any) -> int:
     if isinstance(node, S.BinaryExpression):
         return _BINARY[node.operator]
-    if isinstance(node, S.InsideExpression):
+    if isinstance(node, (S.InsideExpression, S.DistExpression)):
         return RELATIONAL
     if isinstance(node, S.ConditionalExpression):
         return CONDITIONAL
@@ -52,9 +52,9 @@ def _multiline(node: Any) -> bool:
     if isinstance(node, (S.FunctionDeclaration, S.TaskDeclaration)):
         return not _prototype(node)
     return isinstance(node, (S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-                             S.ClassDeclaration, S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct,
-                             S.GenerateRegion, S.GenerateFor, S.GenerateIf, S.GenerateCase, S.GenerateBlock,
-                             S.IfdefDirective))
+                             S.ClassDeclaration, S.ConstraintDeclaration, S.AlwaysConstruct, S.InitialConstruct,
+                             S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf, S.GenerateCase,
+                             S.GenerateBlock, S.IfdefDirective))
 
 
 class Printer:
@@ -111,6 +111,8 @@ class Printer:
             return self.directive(node, level)
         if isinstance(node, S.Statement):
             return self.statement(node, level)
+        if isinstance(node, S.Constraint):
+            return self.constraint(node, level)
         method = self.ITEMS[type(node)]
         return method(self, node, level)
 
@@ -264,6 +266,8 @@ class Printer:
     def name(self, node: Any) -> str:
         if isinstance(node, S.ScopedName):
             return f"{self.name(node.scope)}::{self.name(node.name)}"
+        if isinstance(node, S.LocalName):
+            return f"local::{node.name.spelling}"
         if isinstance(node, S.ParameterizedName):
             return node.name.spelling + self.parameter_values(node.parameters)
         return node.spelling
@@ -387,6 +391,87 @@ class Printer:
         lines.append(f"{pad}endclass" + (f" : {node.name.spelling}" if node.labeled else ""))
         return lines
 
+    # Constraints
+
+    def constraint_declaration(self, node: S.ConstraintDeclaration, level: int) -> list[str]:
+        pad = _INDENT * level
+        lines = [f"{pad}{'static ' if node.static else ''}constraint {self.name(node.name)} {{"]
+        body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        return [*lines, *body, f"{pad}}}"]
+
+    def constraint_prototype(self, node: S.ConstraintPrototype, level: int) -> list[str]:
+        words = [node.qualifier, "static" if node.static else None, "constraint", node.name.spelling]
+        return [_INDENT * level + " ".join(w for w in words if w) + ";"]
+
+    def constraint(self, node: Any, level: int) -> list[str]:
+        """A constraint's lines: a block opens on its header's line, any other body goes on the next."""
+        pad = _INDENT * level
+        if isinstance(node, S.ConstraintBlock):
+            lines = [f"{pad}{{"]
+            body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+            return [*lines, *body, f"{pad}}}"]
+        if isinstance(node, S.ImplicationConstraint):
+            return self.constraint_headed(f"{pad}{self.operand(node.condition, IMPLY + 1)} ->", node.body, level)
+        if isinstance(node, S.ConditionalConstraint):
+            lines = self.constraint_headed(f"{pad}if ({self.text(node.condition)})", node.consequence, level)
+            if node.alternative is None:
+                return lines
+            if isinstance(node.alternative, S.ConditionalConstraint):  # else if
+                tail = self.constraint(node.alternative, level)
+                tail[0] = "else " + tail[0].strip()
+            else:
+                tail = self.constraint_headed("else", node.alternative, level)
+            if isinstance(node.consequence, S.ConstraintBlock):
+                lines[-1] += " " + tail[0]
+                return lines + tail[1:]
+            return lines + [pad + tail[0], *tail[1:]]
+        if isinstance(node, S.ForeachConstraint):
+            variables = ", ".join(v.spelling for v in node.variables)
+            return self.constraint_headed(f"{pad}foreach ({self.text(node.array)}[{variables}])", node.body, level)
+        return [pad + self.constraint_text(node)]
+
+    def constraint_headed(self, head: str, body: Any, level: int) -> list[str]:
+        if isinstance(body, S.ConstraintBlock):
+            block = self.constraint(body, level)
+            return [head + " " + block[0].strip(), *block[1:]]
+        return [head, *self.constraint(body, level + 1)]
+
+    def constraint_text(self, node: Any) -> str:
+        """A constraint on one line, as `randomize() with` writes them."""
+        if isinstance(node, S.ExpressionConstraint):
+            return f"{'soft ' if node.soft else ''}{self.text(node.expression)};"
+        if isinstance(node, S.ConstraintBlock):
+            return self.inline(node.items)
+        if isinstance(node, S.ImplicationConstraint):
+            return f"{self.operand(node.condition, IMPLY + 1)} -> {self.constraint_text(node.body)}"
+        if isinstance(node, S.ConditionalConstraint):
+            alternative = f" else {self.constraint_text(node.alternative)}" if node.alternative is not None else ""
+            return f"if ({self.text(node.condition)}) {self.constraint_text(node.consequence)}{alternative}"
+        if isinstance(node, S.ForeachConstraint):
+            variables = ", ".join(v.spelling for v in node.variables)
+            return f"foreach ({self.text(node.array)}[{variables}]) {self.constraint_text(node.body)}"
+        if isinstance(node, S.SolveBeforeConstraint):
+            return (f"solve {', '.join(self.text(e) for e in node.solve)} before "
+                    f"{', '.join(self.text(e) for e in node.before)};")
+        if isinstance(node, S.DisableSoftConstraint):
+            return f"disable soft {self.text(node.target)};"
+        return f"unique {{{', '.join(self.range_text(r) for r in node.set)}}};"  # a UniqueConstraint
+
+    def inline(self, items: list[Any]) -> str:
+        """`{ constraints }` on one line; a line comment, or a directive, ends its line."""
+        parts: list[str] = []
+        for item in items:
+            if isinstance(item, S.Comment):
+                parts.append(self.comment(item) + ("" if item.block else "\n"))
+            elif isinstance(item, S.Directive):
+                parts.append("\n" + "\n".join(self.directive(item, 0)) + "\n")
+            else:
+                parts.append(self.constraint_text(item))
+        text = "{"
+        for part in [*parts, "}"]:  # a space between parts, but not at a line's end or start
+            text += part if text.endswith("\n") or part.startswith("\n") else " " + part
+        return text if parts else "{}"
+
     def forward_typedef(self, node: S.ForwardTypedefDeclaration, level: int) -> list[str]:
         keyword = f"{node.keyword} " if node.keyword else ""
         return [f"{_INDENT * level}typedef {keyword}{node.name.spelling};"]
@@ -402,7 +487,8 @@ class Printer:
     def generate_region(self, node: S.GenerateRegion, level: int) -> list[str]:
         pad = _INDENT * level
         lines = [f"{pad}generate"]
-        return [*lines, *self.items(node.items, level + 1, after=lines), f"{pad}endgenerate"]
+        body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        return [*lines, *body, f"{pad}endgenerate"]
 
     def generate_for(self, node: S.GenerateFor, level: int) -> list[str]:
         genvar = "genvar " if node.genvar else ""
@@ -446,7 +532,8 @@ class Printer:
         name = f" : {node.name.spelling}" if node.name is not None else ""
         end = f" : {node.name.spelling}" if node.labeled and node.name is not None else ""
         lines = [f"{pad}begin{name}"]
-        return [*lines, *self.items(node.items, level + 1, after=lines), f"{pad}end{end}"]
+        body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        return [*lines, *body, f"{pad}end{end}"]
 
     # Instantiation
 
@@ -513,7 +600,8 @@ class Printer:
         name = f" : {node.name.spelling}" if node.name is not None else ""
         end = f" : {node.name.spelling}" if node.labeled and node.name is not None else ""
         lines = [f"{pad}{opener}{name}"]
-        return [*lines, *self.items(node.items, level + 1, after=lines), f"{pad}{closer}{end}"]
+        body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        return [*lines, *body, f"{pad}{closer}{end}"]
 
     def if_statement(self, node: S.IfStatement, level: int, head: str | None = None) -> list[str]:
         pad = _INDENT * level
@@ -542,15 +630,25 @@ class Printer:
         lines = [f"{pad}{qualifier}{node.keyword} ({self.text(node.expression)}){' inside' if node.inside else ''}"]
         for item in node.items:
             label = ", ".join(self.range_text(e) for e in item.expressions) if item.expressions else "default"
-            head = f"{pad}{_INDENT}{label}:"
-            if isinstance(item.body, S.NullStatement):
-                lines.append(f"{head} ;")
-            elif isinstance(item.body, (S.SeqBlock, S.ParBlock)):
-                lines.extend(self.headed(head, item.body, level + 1))
-            elif isinstance(item.body, S.Statement) and len(self.statement(item.body, 0)) == 1:
-                lines.append(f"{head} {self.statement(item.body, 0)[0]}")
-            else:
-                lines.extend(self.headed(head, item.body, level + 1))
+            lines.extend(self.case_item(f"{pad}{_INDENT}{label}:", item.body, level))
+        lines.append(f"{pad}endcase")
+        return lines
+
+    def case_item(self, head: str, body: Any, level: int) -> list[str]:
+        """`label: body`: a null statement, a block or a one-line statement on the label's line, else on the next."""
+        if isinstance(body, S.NullStatement):
+            return [f"{head} ;"]
+        if isinstance(body, (S.SeqBlock, S.ParBlock)):
+            return self.headed(head, body, level + 1)
+        if isinstance(body, S.Statement) and len(self.statement(body, 0)) == 1:
+            return [f"{head} {self.statement(body, 0)[0]}"]
+        return self.headed(head, body, level + 1)
+
+    def randcase(self, node: S.RandCaseStatement, level: int) -> list[str]:
+        pad = _INDENT * level
+        lines = [f"{pad}randcase"]
+        for item in node.items:
+            lines.extend(self.case_item(f"{pad}{_INDENT}{self.text(item.weight)}:", item.body, level))
         lines.append(f"{pad}endcase")
         return lines
 
@@ -719,6 +817,16 @@ class Printer:
             return "$"
         if isinstance(node, S.NullLiteral):
             return "null"
+        if isinstance(node, S.DistExpression):
+            items = ", ".join((self.range_text(i.value) if i.value is not None else "default")
+                              + (f" {i.operator} {self.text(i.weight)}" if i.operator is not None else "")
+                              for i in node.items)
+            return f"{self.operand(node.value, RELATIONAL)} dist {{{items}}}"
+        if isinstance(node, S.RandomizeWithExpression):
+            variables = f" ({', '.join(v.spelling for v in node.variables)})" if node.restricted else ""
+            return f"{self.operand(node.call, PRIMARY)} with{variables} {self.inline(node.items)}"
+        if isinstance(node, S.ArrayMethodWithExpression):
+            return f"{self.operand(node.call, PRIMARY)} with ({self.text(node.expression)})"
         if isinstance(node, S.ThisExpression):
             return "this"
         if isinstance(node, S.SuperExpression):
@@ -757,11 +865,12 @@ class Printer:
         S.TaskDeclaration: subroutine, S.GenerateRegion: generate_region, S.GenerateFor: generate_for,
         S.GenerateIf: generate_if, S.GenerateCase: generate_case, S.GenerateBlock: generate_block,
         S.ModuleInstantiation: instantiation, S.ClassDeclaration: class_declaration,
-        S.ForwardTypedefDeclaration: forward_typedef,
+        S.ForwardTypedefDeclaration: forward_typedef, S.ConstraintDeclaration: constraint_declaration,
+        S.ConstraintPrototype: constraint_prototype,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,
         S.ForStatement: loop, S.WhileStatement: loop, S.RepeatStatement: loop, S.ForeverStatement: loop,
         S.ForeachStatement: loop, S.DoWhileStatement: loop, S.TimedStatement: timed, S.WaitStatement: wait,
-        S.ImmediateAssertion: assertion,
+        S.ImmediateAssertion: assertion, S.RandCaseStatement: randcase,
     }
