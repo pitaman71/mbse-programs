@@ -42,10 +42,10 @@ declares that member. Not emulated: `%` of negative numbers, truthiness of empty
 number printing (`6 / 2` prints `3.0`), integers beyond 2 ** 53. Labels, and anything else outside the subset, raise
 `TranspileError` with the syntax node's path.
 
-## Bridging rules and Python code
+## Bridging constraints and Python code
 
-A bridge maps mbse-expressions' Python dialect to Python's trees and back. From a Basic rule, translate to the Python
-dialect first (`mbse.Expressions.Translators.between(E.DIALECT, PythonDialect.DIALECT)`).
+A bridge maps mbse-expressions' Python dialect to Python's trees and back. From a Basic constraint, translate to the
+Python dialect first (`mbse.Expressions.Translators.between(E.DIALECT, PythonDialect.DIALECT)`).
 
 ```python fragment
 from mbse.Programs.Bridges import Python as Bridge
@@ -57,13 +57,13 @@ Bridge.term(expression_node)                  # Python syntax node -> dialect te
 
 A chained comparison reads as `and` of comparisons sharing their middle operands, as the dialect's own `FromText`
 reads it. What the dialect can't hold raises `TranspileError` at its path: `is`, `@`, keyword arguments, slices, other lambdas, generators of more than one `for`, `None`, `...`, imaginary numbers.
-In TypeScript the bridge reads Python source into rules too, through the Python standards' parsers.
+In TypeScript the bridge reads Python source into constraints too, through the Python standards' parsers.
 
-## Bridging rules and SystemVerilog code
+## Bridging constraints and SystemVerilog code
 
-A second bridge maps mbse-expressions' SystemVerilog dialect to Verilog's trees and back. From a Basic rule, translate
-to the SystemVerilog dialect first (`Translators.between(E.DIALECT, SvDialect.DIALECT)`); `this` stays `this`, the
-object a class's method runs on.
+A second bridge maps mbse-expressions' SystemVerilog dialect to Verilog's trees and back. From a Basic constraint,
+translate to the SystemVerilog dialect first (`Translators.between(E.DIALECT, SvDialect.DIALECT)`); `this` stays `this`,
+the object a class's method runs on.
 
 ```python fragment
 from mbse.Programs.Bridges import Verilog as Bridge
@@ -77,7 +77,7 @@ Bridge.term(expression_node)                              # and term_of_function
 Sized literals read as IEEE 1800 reads them, into the dialect's vectors (`8'hff`, `4'b10x1`). What the dialect can't
 hold raises `TranspileError` at its path: `+:` and `-:` part-selects, tolerance ranges, casts to other types, scoped
 names, attributes, unsized based literals, iterations other than a reduction over one iterator. Verilog reads through
-slang in both implementations, so TypeScript reads SystemVerilog source into rules too.
+slang in both implementations, so TypeScript reads SystemVerilog source into constraints too.
 
 ## Writing a transpiler
 
@@ -91,4 +91,4 @@ programs belong in `conformance/transpilers/<transpiler>/`: the source, what it 
 |---|---|
 | Transpiling and bridges, in the design | [PROGRAMS.md, Transpiling](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md#transpiling) |
 | Changing code, by example | [the tutorial's case study 2](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/02_Changing_Code_Safely.ipynb) |
-| Transpiling and bridges, by example | [case study 7](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/07_From_One_Language_To_Another.ipynb) and [case study 8](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/08_From_Rules_To_Code.ipynb) |
+| Transpiling and bridges, by example | [case study 7](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/07_From_One_Language_To_Another.ipynb) and [case study 8](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/08_From_Constraints_To_Code.ipynb) |

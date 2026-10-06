@@ -11,8 +11,8 @@
  * `@mbse/programs/Transpilers` translates between them, and `@mbse/programs/Bridges` between them and mbse-expressions'
  * dialects.
  *
- * For AI agents: read `skill/SKILL.md` at the root of this package first. It says when to use this package, the rules
- * that prevent most mistakes, and which reference to load for a task. */
+ * For AI agents: read `skill/SKILL.md` at the root of this package first. It says when to use this package, the
+ * practices that prevent most mistakes, and which reference to load for a task. */
 
 export * as Bridges from "./Bridges/index.js";
 export * as Ccpp from "./Ccpp/index.js";

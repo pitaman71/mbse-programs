@@ -4,14 +4,14 @@
 # Tutorial: programs as data, in nine case studies
 
 This tutorial teaches mbse-programs by solving real problems, one per notebook, each building on the ones before it. It
-starts where a programmer starts, with code as text, and ends with code generated from the rules of an executable
+starts where a programmer starts, with code as text, and ends with code generated from the constraints of an executable
 specification: parsed, changed, checked, resolved, shared and translated as trees along the way.
 
 It's written for Python programmers who write code that reads, changes or writes code: refactoring tools, linters,
 code generators, transpilers. A TypeScript port with the same case studies and the same answers is the
-[TypeScript tutorial](../../typescript5/tutorials/README.md). The rules of case studies 8 and 9 are mbse-expressions'; its
-[tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) explains them. The
-[design document](../../docs/PROGRAMS.md) is the reference for everything here.
+[TypeScript tutorial](../../typescript5/tutorials/README.md). The constraints of case studies 8 and 9 are
+mbse-expressions'; its [tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md)
+explains them. The [design document](../../docs/PROGRAMS.md) is the reference for everything here.
 
 ## Running the notebooks
 
@@ -36,8 +36,8 @@ line.
 | 5 | [One framework, three languages](05_One_Framework_Three_Languages.ipynb) | Firmware in C++, a dashboard in TypeScript, a pipeline in Python | Ccpp and TypeScript trees; the same tools in every language; C and C++, TypeScript and ECMAScript standards; definitions in each language |
 | 6 | [Trees on the wire](06_Trees_On_The_Wire.ipynb) | A Python analyzer and a TypeScript editor plugin sharing trees | JSON snapshots; reading them back; byte-identical across implementations; the grammar as data |
 | 7 | [From one language to another](07_From_One_Language_To_Another.ipynb) | Validation logic in TypeScript, needed in a Python batch job | Transpiling TypeScript to Python; idioms, not copies; classes, getters and enums; refusing at a path |
-| 8 | [From rules to code](08_From_Rules_To_Code.ipynb) | A rule kept as data, needed as reviewed Python code | Bridges: rules into functions and modules, code back into rules; what a rule can't hold |
-| 9 | [Rules in hardware](09_Rules_In_Hardware.ipynb) | Rules kept as data, needed in an FPGA team's SystemVerilog testbench and simulation | Verilog trees and standards; rules into constraints, functions and assertions; RTL assertions back into rules, evaluated with four states; what a rule can't hold |
+| 8 | [From constraints to code](08_From_Constraints_To_Code.ipynb) | A constraint kept as data, needed as reviewed Python code | Bridges: constraints into functions and modules, code back into constraints; what a constraint can't hold |
+| 9 | [Constraints in hardware](09_Constraints_In_Hardware.ipynb) | Constraints kept as data, needed in an FPGA team's SystemVerilog testbench and simulation | Verilog trees and standards; constraints into constraints, functions and assertions; RTL assertions back into constraints, evaluated with four states; what a constraint can't hold |
 
 ---
 

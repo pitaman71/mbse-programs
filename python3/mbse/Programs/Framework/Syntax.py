@@ -382,7 +382,7 @@ class _Adjacency:
 
 
 class Builder:
-    """Shared by every kind's builder: `create()` / `clone()` / `update()` with the rules and messages of every builder,
+    """Shared by every kind's builder: `create()` / `clone()` / `update()` with the behavior and messages of every builder,
     and `Visitors.OfObject` over the tag `kind`, the kind's attributes and its `children` entries. None of them
     validate. DSL: `.set(property, value)` sets an attribute, a child or a list of children, and `.add(property, child)`
     appends to a list.

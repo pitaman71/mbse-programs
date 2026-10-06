@@ -10,5 +10,5 @@ C++, `mbse.Programs.Python` for Python, and `mbse.Programs.TypeScript` for TypeS
 `mbse.Programs.Transpilers` translates between them, and `mbse.Programs.Bridges` between them and mbse-expressions'
 dialects.
 
-For AI agents: read `skill/SKILL.md` next to this file first. It says when to use this package, the rules that prevent
-most mistakes, and which reference to load for a task."""
+For AI agents: read `skill/SKILL.md` next to this file first. It says when to use this package, the practices that
+prevent most mistakes, and which reference to load for a task."""

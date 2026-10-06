@@ -1,5 +1,5 @@
 <!-- nav -->
-[← 9 · Rules in hardware (TypeScript)](../typescript5/tutorials/09_Rules_In_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+[← 9 · Constraints in hardware (TypeScript)](../typescript5/tutorials/09_Constraints_In_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
 
 # Programs
 
@@ -570,8 +570,8 @@ The first transpiler was written to test the framework, and found:
 ## Bridges
 
 A bridge carries expressions between one of mbse-expressions' dialects and a language's syntax trees, both ways, tree
-to tree, so that a rule stored as data becomes code, and code becomes a rule that can be stored, evaluated and
-translated to the other dialects. mbse-expressions is a sibling of this repository, as mbse-schemas is.
+to tree, so that a constraint stored as data becomes code, and code becomes a constraint that can be stored, evaluated
+and translated to the other dialects. mbse-expressions is a sibling of this repository, as mbse-schemas is.
 
 ### Python
 
@@ -606,9 +606,9 @@ from mbse.Expressions.Dialects.Python import Evaluators
 from mbse.Programs.Bridges import Python as B
 from mbse.Programs.Python import Python314
 
-rule = B.term_of_module(Python314.parse("age >= 18 and len(email) > 0"))   # source into a rule
-Evaluators.OfAny(rule, {"age": 20, "email": "a@b"})                         # True, by the dialect
-Python314.print(B.function_("is_contactable", ["age", "email"], rule))
+constraint = B.term_of_module(Python314.parse("age >= 18 and len(email) > 0"))   # source into a constraint
+Evaluators.OfAny(constraint, {"age": 20, "email": "a@b"})                         # True, by the dialect
+Python314.print(B.function_("is_contactable", ["age", "email"], constraint))
 # 'def is_contactable(age, email):\n    return age >= 18 and len(email) > 0'
 ```
 
@@ -620,7 +620,7 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 |---|---|
 | `constant` | an unsized decimal, a real or a string literal; a negative number is a negation, and a real that is not finite `0.0 / 0.0` or `1.0 / 0.0` |
 | `vector` | a sized `IntegerLiteral` in its base, as the dialect writes it (`4'b10x1`, `8'shff`) |
-| `identifier` | `NameExpression`, or `ThisExpression` for `this`, the object a rule is about |
+| `identifier` | `NameExpression`, or `ThisExpression` for `this`, the object a constraint is about |
 | `unary`, `binary`, `conditional` | `UnaryExpression`, `BinaryExpression`, `ConditionalExpression` |
 | `concatenation`, `replication` | `Concatenation`, `Replication` of one item |
 | `select`, `range` | `IndexExpression`, `RangeSelect` with `:` |
@@ -629,8 +629,9 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 | `member`, `call` | `MemberExpression`; `SystemCall` for a `$` name, else `CallExpression` |
 | `method`, `iterate` | `q.size()`, a call of a member; `q.sum(p) with (p > 0)`, an `ArrayMethodWithExpression` |
 
-- `expression(term)` gives the expression; a rule becomes a function that returns it (`function_(name, ports, term)`,
-  `function automatic logic name(input int x, ...)`), a constraint that holds it (`constraint(name, term)`), or an
+- `expression(term)` gives the expression; a constraint becomes a function that returns it (`function_(name, ports,
+  term)`, `function automatic logic name(input int x, ...)`), a `constraint` block that holds it, within which
+  randomization generates values (`constraint(name, term)`), or an
   immediate assertion of it (`assertion(term, message)`, `assert (...) else $error(message);`). The printed
   SystemVerilog is the dialect's own `ToText`, but that a unary operator's unary operand is parenthesized: IEEE 1800
   makes the operand a primary, so `- -x`, which the dialect writes, is not SystemVerilog, and the bridge's `-(-x)` is.
@@ -651,9 +652,9 @@ from mbse.Programs.Bridges import Verilog as B
 from mbse.Programs.Verilog import SystemVerilog2023
 
 unit = SystemVerilog2023.parse("function automatic logic f(input int age); return age >= 18; endfunction\n")
-rule = B.term_of_function(unit.items[0])                                 # source into a rule
-Evaluators.OfAny(rule, {"age": 20})                                       # 1'b1, by the dialect
-SystemVerilog2023.print(B.constraint("c_age", rule))                    # 'constraint c_age {\n    age >= 18;\n}'
+constraint = B.term_of_function(unit.items[0])                                 # source into a constraint
+Evaluators.OfAny(constraint, {"age": 20})                                       # 1'b1, by the dialect
+SystemVerilog2023.print(B.constraint("c_age", constraint))                    # 'constraint c_age {\n    age >= 18;\n}'
 ```
 
 ## Open questions
@@ -761,4 +762,4 @@ SystemVerilog2023.print(B.constraint("c_age", rule))                    # 'const
 ---
 
 <!-- nav -->
-[← 9 · Rules in hardware (TypeScript)](../typescript5/tutorials/09_Rules_In_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+[← 9 · Constraints in hardware (TypeScript)](../typescript5/tutorials/09_Constraints_In_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)

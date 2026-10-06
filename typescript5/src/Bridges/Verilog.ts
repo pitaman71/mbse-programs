@@ -3,12 +3,12 @@
  * tree.
  *
  * From terms to syntax nodes: `expression(term)` is the SystemVerilog expression a term of the dialect writes, and a
- * rule becomes SystemVerilog as `function_(name, ports, term)`, a function that returns it, `constraint(name, term)`,
- * a constraint that holds it, or `assertion(term)`, an immediate assertion of it. Every term of the dialect has a
- * counterpart, and the expression prints as the dialect renders it, but that a unary operator's unary operand is
- * parenthesized, `-(-x)`, since IEEE 1800 makes the operand a primary. A constant is an unsized decimal, a real or a
- * string literal, a negative number a negation, and a real that is not finite `0.0 / 0.0` or `1.0 / 0.0`; a vector is
- * a sized literal in its base, as the dialect writes it.
+ * constraint becomes SystemVerilog as `function_(name, ports, term)`, a function that returns it, `constraint(name,
+ * term)`, a `constraint` block that holds it, or `assertion(term)`, an immediate assertion of it. Every term of the
+ * dialect has a counterpart, and the expression prints as the dialect renders it, but that a unary operator's unary
+ * operand is parenthesized, `-(-x)`, since IEEE 1800 makes the operand a primary. A constant is an unsized decimal, a
+ * real or a string literal, a negative number a negation, and a real that is not finite `0.0 / 0.0` or `1.0 / 0.0`; a
+ * vector is a sized literal in its base, as the dialect writes it.
  *
  * From syntax nodes to terms: `term(expression)`, and `term_of_function`, `term_of_constraint` and `term_of_assertion`
  * for what the writers make. They throw `TranspileError` at the first syntax node the dialect cannot hold, with its
@@ -87,22 +87,22 @@ export function expression(term: Term): S.Expression {
   }
 }
 
-/** `function automatic type name(input port_type port, ...); return term; endfunction`: a rule as a function of its
- * ports, each a [type, name] of the dialect's types. */
+/** `function automatic type name(input port_type port, ...); return term; endfunction`: a constraint as a function of
+ * its ports, each a [type, name] of the dialect's types. */
 export function function_(name: string, ports: [string, string][], term: Term, type = "logic"): S.FunctionDeclaration {
   return new S.FunctionDeclaration({ lifetime: "automatic", type: keywordType(type), name: identifier(name),
     ports: ports.map(([t, n]) => new S.TfPort({ direction: "input", type: keywordType(t), name: identifier(n) })),
     body: [new S.ReturnStatement({ value: expression(term) })] });
 }
 
-/** `constraint name { term; }`: a rule that randomization keeps. */
+/** `constraint name { term; }`: a `constraint` block, within which randomization generates values. */
 export function constraint(name: string, term: Term): S.ConstraintDeclaration {
   return new S.ConstraintDeclaration({ name: identifier(name),
     items: [new S.ExpressionConstraint({ expression: expression(term) })] });
 }
 
-/** `assert (term) else $error("message");`: a rule checked where the statement runs; without a message, the simulator
- * reports its failure. */
+/** `assert (term) else $error("message");`: a constraint checked where the statement runs; without a message, the
+ * simulator reports its failure. */
 export function assertion(term: Term, message: string | null = null): S.ImmediateAssertion {
   const out = new S.ImmediateAssertion({ keyword: "assert", expression: expression(term) });
   if (message !== null) {
@@ -213,7 +213,7 @@ class Reader {
     if (node instanceof S.NameExpression && node.name instanceof S.Identifier) {
       return E.identifier(node.name.spelling as string);
     }
-    if (node instanceof S.ThisExpression) return E.identifier("this"); // the object a rule is about, as in a class's method
+    if (node instanceof S.ThisExpression) return E.identifier("this"); // the object a constraint is about, as in a class's method
     if (node instanceof S.UnaryExpression) {
       this.operator(node, node.operator as string, Domains.UNARY);
       return E.unary(node.operator as string, this.term(node.operand as SyntaxNode));

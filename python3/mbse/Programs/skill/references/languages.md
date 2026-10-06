@@ -163,5 +163,5 @@ parses.
 
 | Topic | Read |
 |---|---|
-| Every kind, standard, parsing gap and printing rule | [PROGRAMS.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md) |
+| Every kind, standard, parsing gap and printing decision | [PROGRAMS.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md) |
 | Standards, names and three languages, by example | [the tutorial](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/README.md), case studies 3 to 5 |

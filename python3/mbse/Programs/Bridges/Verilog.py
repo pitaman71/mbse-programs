@@ -1,13 +1,13 @@
 """Verilog: between mbse-expressions' SystemVerilog dialect and the Verilog language's syntax trees, both ways, tree to
 tree.
 
-From terms to syntax nodes: `expression(term)` is the SystemVerilog expression a term of the dialect writes, and a rule
-becomes SystemVerilog as `function_(name, ports, term)`, a function that returns it, `constraint(name, term)`, a
-constraint that holds it, or `assertion(term)`, an immediate assertion of it. Every term of the dialect has a
-counterpart, and the expression prints as the dialect renders it, but that a unary operator's unary operand is
-parenthesized, `-(-x)`, since IEEE 1800 makes the operand a primary. A constant is an unsized decimal, a real or a string literal,
-a negative number a negation, and a real that is not finite `0.0 / 0.0` or `1.0 / 0.0`; a vector is a sized literal in
-its base, as the dialect writes it.
+From terms to syntax nodes: `expression(term)` is the SystemVerilog expression a term of the dialect writes, and a
+constraint becomes SystemVerilog as `function_(name, ports, term)`, a function that returns it, `constraint(name,
+term)`, a `constraint` block that holds it, or `assertion(term)`, an immediate assertion of it. Every term of the
+dialect has a counterpart, and the expression prints as the dialect renders it, but that a unary operator's unary
+operand is parenthesized, `-(-x)`, since IEEE 1800 makes the operand a primary. A constant is an unsized decimal, a real
+or a string literal, a negative number a negation, and a real that is not finite `0.0 / 0.0` or `1.0 / 0.0`; a vector is
+a sized literal in its base, as the dialect writes it.
 
 From syntax nodes to terms: `term(expression)`, and `term_of_function`, `term_of_constraint` and `term_of_assertion`
 for what the writers make. They raise `TranspileError` at the first syntax node the dialect cannot hold, with its path:
@@ -88,7 +88,7 @@ def expression(term: Any) -> S.Expression:
 
 
 def function_(name: str, ports: list[tuple[str, str]], term: Any, type: str = "logic") -> S.FunctionDeclaration:
-    """`function automatic type name(input port_type port, ...); return term; endfunction`: a rule as a function of
+    """`function automatic type name(input port_type port, ...); return term; endfunction`: a constraint as a function of
     its ports, each a (type, name) of the dialect's types."""
     return S.FunctionDeclaration(lifetime="automatic", type=_keyword_type(type), name=S.Identifier(spelling=name),
                                  ports=[S.TfPort(direction="input", type=_keyword_type(t),
@@ -97,13 +97,13 @@ def function_(name: str, ports: list[tuple[str, str]], term: Any, type: str = "l
 
 
 def constraint(name: str, term: Any) -> S.ConstraintDeclaration:
-    """`constraint name { term; }`: a rule that randomization keeps."""
+    """`constraint name { term; }`: a `constraint` block, within which randomization generates values."""
     return S.ConstraintDeclaration(name=S.Identifier(spelling=name),
                                    items=[S.ExpressionConstraint(expression=expression(term))])
 
 
 def assertion(term: Any, message: str | None = None) -> S.ImmediateAssertion:
-    """`assert (term) else $error("message");`: a rule checked where the statement runs; without a message, the
+    """`assert (term) else $error("message");`: a constraint checked where the statement runs; without a message, the
     simulator reports its failure."""
     out = S.ImmediateAssertion(keyword="assert", expression=expression(term))
     if message is not None:
@@ -205,7 +205,7 @@ class _Reader:
                 raise self.error(node, str(error)) from None
         if isinstance(node, S.NameExpression) and isinstance(node.name, S.Identifier):
             return E.identifier(node.name.spelling)
-        if isinstance(node, S.ThisExpression):  # the object a rule is about, as in a class's method
+        if isinstance(node, S.ThisExpression):  # the object a constraint is about, as in a class's method
             return E.identifier("this")
         if isinstance(node, S.UnaryExpression):
             self.operator(node, node.operator, Domains.UNARY)

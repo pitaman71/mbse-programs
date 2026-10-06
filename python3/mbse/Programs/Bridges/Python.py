@@ -2,8 +2,8 @@
 
 From terms to syntax nodes: `expression(term)` is the Python expression a term of the dialect writes, `module(term)`
 the module of its imports and then the expression, and `function_(name, parameters, term)` the function that returns
-it, its imports first: a rule as code. Every term of the dialect has a counterpart, and the expression prints as the
-dialect renders it, but for the parentheses the printer chooses. A constant is the literal `repr` writes, a negative
+it, its imports first: a constraint as code. Every term of the dialect has a counterpart, and the expression prints as
+the dialect renders it, but for the parentheses the printer chooses. A constant is the literal `repr` writes, a negative
 number a negation, and a float that is not finite `float('nan')` or `float('inf')`.
 
 From syntax nodes to terms: `term(expression)` and `term_of_module(module)`, which reads a module of imports, then one

@@ -69,10 +69,10 @@ assert same(JSON.FromJSON(P.LANGUAGE.Builders).Reachable(P.Module.Schema, text),
 ts = TypeScript59.parse("for (let i = 0; i < 3; i++) {\n    console.log(i * 2);\n}\n")
 assert Python314.print(transpile(ts)) == "for i in range(0, 3):\n    print(i * 2)\n"
 
-# Bridge a rule kept as data (mbse-expressions) into a Python function, and code back into a rule.
+# Bridge a constraint kept as data (mbse-expressions) into a Python function, and code back into a constraint.
 this = E.variable("this")
-rule = E.literal(2.0).le(this.celsius).and_(this.celsius.le(8.0)).data
-term = Translators.between(E.DIALECT, PythonDialect.DIALECT).forward(rule)
+constraint = E.literal(2.0).le(this.celsius).and_(this.celsius.le(8.0)).data
+term = Translators.between(E.DIALECT, PythonDialect.DIALECT).forward(constraint)
 assert Python314.print(Bridge.function_("in_range", ["this"], term)).strip() == (
     "def in_range(this):\n    return 2.0 <= this.celsius and this.celsius <= 8.0")
 back = Bridge.term(Python314.parse("this.hours <= 48\n").body[0].value)
