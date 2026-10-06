@@ -817,6 +817,55 @@ export class Printer {
     return lines;
   }
 
+  randsequence(node: any, level: number): string[] {
+    const p = pad(level);
+    const lines = [`${p}randsequence (${node.first !== null ? node.first.spelling : ""})`];
+    for (const production of node.productions) lines.push(...this.production(production, level + 1));
+    lines.push(`${p}endsequence`);
+    return lines;
+  }
+
+  /** `type name(ports) : rules;` on a line, but for code that spans lines. */
+  production(node: any, level: number): string[] {
+    let head = joined([node.type !== null ? this.typeText(node.type) : null, node.name.spelling]);
+    if (node.ports.length > 0) head += "(" + node.ports.map((q: any) => this.tfPort(q)).join(", ") + ")";
+    const rules = node.rules.map((r: any) => this.productionRule(r, level)).join(" | ");
+    return (pad(level) + `${head} : ${rules};`).split("\n");
+  }
+
+  productionRule(node: any, level: number): string {
+    const parts: string[] = [];
+    if (node.rand_join) parts.push("rand join" + (node.bias !== null ? ` (${this.text(node.bias)})` : ""));
+    parts.push(...node.items.map((i: any) => this.productionItem(i, level)));
+    if (node.weight !== null) parts.push(`:= ${this.text(node.weight)}`);
+    if (node.code !== null) parts.push(this.productionItem(node.code, level));
+    return parts.join(" ");
+  }
+
+  /** A production item's text; code that spans lines continues on lines of its own, at `level`. */
+  productionItem(node: any, level: number): string {
+    if (node instanceof S.ProductionCall) {
+      const args = node.arguments.length > 0 ? `(${node.arguments.map((a: any) => this.connection(a)).join(", ")})` : "";
+      return node.name?.spelling + args;
+    }
+    if (node instanceof S.ProductionCode) {
+      const body = this.items(node.items, level + 1);
+      const commented = node.items.some((i: any) => isAny(i, [S.Comment, S.Directive]));
+      if (!commented && body.length === node.items.length) { // a statement on a line each, and no comment to end one
+        return body.length > 0 ? "{ " + body.map((line) => line.trim()).join(" ") + " }" : "{ }";
+      }
+      return ["{", ...body, pad(level) + "}"].join("\n");
+    }
+    if (node instanceof S.ProductionIf) {
+      const alternative = node.alternative === null ? "" : ` else ${this.productionItem(node.alternative, level)}`;
+      return `if (${this.text(node.condition)}) ${this.productionItem(node.consequence, level)}${alternative}`;
+    }
+    if (node instanceof S.ProductionRepeat) return `repeat (${this.text(node.count)}) ${this.productionItem(node.item, level)}`;
+    const items = node.items.map((i: any) => `${i.values.length > 0 ? i.values.map((v: any) => this.text(v)).join(", ") : "default"}: `
+      + `${this.productionItem(i.item, level)};`).join(" "); // a ProductionCase
+    return `case (${this.text(node.expression)}) ${items} endcase`;
+  }
+
   loop(node: any, level: number): string[] {
     const p = pad(level);
     if (node instanceof S.ForStatement) {
@@ -1377,5 +1426,6 @@ const statements: [Function[], Method][] = [
   [[S.LabeledStatement], (s, n, l) => s.labeled(n, l)],
   [[S.AttributedStatement], (s, n, l) => s.attributed(n, l)],
   [[S.WaitOrderStatement], (s, n, l) => s.waitOrder(n, l)],
+  [[S.RandSequenceStatement], (s, n, l) => s.randsequence(n, l)],
 ];
 for (const [kinds, method] of statements) for (const kind of kinds) Printer.STATEMENTS.set(kind, method);

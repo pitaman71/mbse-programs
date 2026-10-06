@@ -34,6 +34,10 @@
    "base": "SyntaxNode"
   },
   {
+   "name": "ProductionItem",
+   "base": "SyntaxNode"
+  },
+  {
    "name": "TimingControl",
    "base": "SyntaxNode"
   },
@@ -4202,6 +4206,290 @@
       "Statement"
      ],
      "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RandSequenceStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "first",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "productions",
+     "type": [
+      "Production"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Production",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "TfPort"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "rules",
+     "type": [
+      "ProductionRule"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ProductionRule",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "rand_join",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "bias",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "ProductionItem"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "weight",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "code",
+     "type": [
+      "ProductionCode"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ProductionCall",
+   "category": "ProductionItem",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ProductionCode",
+   "category": "ProductionItem",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ProductionIf",
+   "category": "ProductionItem",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequence",
+     "type": [
+      "ProductionCall"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "ProductionCall"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ProductionRepeat",
+   "category": "ProductionItem",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "count",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "item",
+     "type": [
+      "ProductionCall"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ProductionCase",
+   "category": "ProductionItem",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "ProductionCaseItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ProductionCaseItem",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "values",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "item",
+     "type": [
+      "ProductionCall"
+     ],
+     "optional": false,
      "many": false
     }
    ]

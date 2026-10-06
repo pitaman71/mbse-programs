@@ -1177,6 +1177,50 @@ class _Reader:
     def release(self, node: Any) -> S.ReleaseStatement:
         return S.ReleaseStatement(keyword=node.keyword.rawText, target=self.expression(node.variable))
 
+    def randsequence(self, node: Any) -> S.RandSequenceStatement:
+        first = self.identifier(node.firstProduction) if node.firstProduction else None
+        return S.RandSequenceStatement(first=first, productions=[self.made(p, self.production(p))
+                                                                 for p in _nodes(node.productions)])
+
+    def production(self, node: Any) -> S.Production:
+        out = S.Production(type=self.data_type(node.dataType), name=self.identifier(node.name))
+        if node.portList is not None:
+            out.ports = [self.made(p, self.tf_port(p)) for p in _nodes(node.portList.ports)]
+        for rule in _nodes(node.rules):
+            converted = S.ProductionRule(items=[self.production_item(i) for i in _nodes(rule.prods)])
+            if rule.randJoin is not None:
+                converted.rand_join = True
+                if rule.randJoin.expr is not None:  # its parentheses are the clause's own
+                    converted.bias = self.expression(rule.randJoin.expr.expression)
+            if rule.weightClause is not None:
+                converted.weight = self.expression(rule.weightClause.weight)
+                if rule.weightClause.codeBlock is not None:
+                    converted.code = self.production_item(rule.weightClause.codeBlock)
+            out.rules.append(self.made(rule, converted))
+        return out
+
+    def production_item(self, node: Any) -> Any:
+        kind = node.kind.name
+        if kind == "RsProdItem":
+            out: Any = S.ProductionCall(name=self.identifier(node.name),
+                                        arguments=self.arguments(node.argList) if node.argList is not None else [])
+        elif kind == "RsCodeBlock":
+            out = S.ProductionCode(items=self.items(_nodes(node.items), node.closeBrace, statements=True))
+        elif kind == "RsIfElse":
+            out = S.ProductionIf(condition=self.expression(node.condition),
+                                 consequence=self.production_item(node.ifItem))
+            if node.elseClause is not None:
+                out.alternative = self.production_item(node.elseClause.item)
+        elif kind == "RsRepeat":
+            out = S.ProductionRepeat(count=self.expression(node.expr), item=self.production_item(node.item))
+        else:  # an RsCase
+            out = S.ProductionCase(expression=self.expression(node.expr))
+            for item in _nodes(node.items):
+                values = [self.expression(v) for v in _nodes(getattr(item, "expressions", None) or [])]
+                out.items.append(self.made(item, S.ProductionCaseItem(values=values,
+                                                                      item=self.production_item(item.item))))
+        return self.made(node, out)
+
     def wait_fork(self, node: Any) -> S.WaitForkStatement:
         return S.WaitForkStatement()
 
@@ -1869,6 +1913,7 @@ class _Reader:
         "ImmediateAssumeStatement": assertion, "ImmediateCoverStatement": assertion,
         "ProceduralForceStatement": force, "ProceduralAssignStatement": force, "ProceduralReleaseStatement": release,
         "ProceduralDeassignStatement": release, "WaitForkStatement": wait_fork, "WaitOrderStatement": wait_order,
+        "RandSequenceStatement": randsequence,
     }
     EXPRESSIONS = {
         "IdentifierName": identifier_name, "IdentifierSelectName": identifier_select, "ScopedName": scoped,

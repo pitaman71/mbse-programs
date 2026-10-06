@@ -4,12 +4,12 @@
 - Scopes: the compilation unit (where design units, packages and `$unit`'s declarations are), each package, module,
   interface, program and class, each function and task, and each block: `begin`/`fork` blocks, generate blocks and
   `for` loops, named or not.
-- Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
-  'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
-  'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint',
-  'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does;
-  a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal numbers).
-  A `nettype` declares a 'type'.
+- Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port', 'net',
+  'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block', 'class',
+  'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint', 'cross',
+  'bins', 'production' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog
+  does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal
+  numbers). A `nettype` declares a 'type'.
 - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
   is, and its instances and connections in the target; what it instantiates is declared nowhere.
@@ -21,8 +21,9 @@
   classes it extends. A method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`)
   is the entity its prototype declares, and its body sees the class's members. A `foreach` constraint's index
   variables are its own; `local::x` in `randomize() with` is `x` where the call is.
-- A property, a sequence and a `let` have scopes of their own, where their ports are arguments; a named clocking block
-  has one, where its signals are clockvars. A statement's label, and an assertion's, names a 'label'.
+- A property, a sequence, a `let` and a `randsequence`'s production have scopes of their own, where their ports are
+  arguments, and a `randsequence` one where its productions are; a named clocking block has one, where its signals are
+  clockvars. A statement's label, and an assertion's, names a 'label'.
 - A covergroup has a scope, where its ports and its `sample` function's are arguments; a coverpoint and a cross have
   scopes, where their bins are, and a labeled one is an entity. A bin's `with (filter)` has a scope where `item` is.
 - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
@@ -348,6 +349,23 @@ class _Definer:
             node.sequence if isinstance(node, S.SequenceDeclaration) else node.value
         self.visit_all([*getattr(node, "variables", []), body], inner)
 
+    def randsequence(self, node: S.RandSequenceStatement, scope: Scope) -> None:
+        """A `randsequence` has a scope of its productions, and each production one of its ports."""
+        inner = Scope("block", None, scope, node)
+        if node.first is not None:
+            self.program.located(node.first, inner)
+        for production in node.productions:
+            self.visit_all([production.type] if production.type is not None else [], scope)
+            own = self.scoped(inner, "production", production.name, production, "production")
+            self.program.located(production.name, inner)
+            for port in production.ports:
+                self.visit_all([*([port.type] if port.type is not None else []), *port.dimensions,
+                                *([port.value] if port.value is not None else [])], own)
+                self.program.located(port, own)
+                self.program.located(port.name, own)
+                self.entity(own, "argument", port.name, port)
+            self.visit_all(production.rules, own)
+
     def clocking_declaration(self, node: S.ClockingDeclaration, scope: Scope) -> None:
         self.visit(node.clock, scope)
         inner = self.scoped(scope, "clocking", node.name, node, "clocking")
@@ -452,7 +470,8 @@ class _Definer:
         S.PackageDeclaration: design_unit, S.ImportDeclaration: import_declaration, S.ParameterDeclaration: parameter,
         S.TypeParameterDeclaration: parameter, S.AnsiPort: port, S.InterfacePort: port, S.PortReference: port,
         S.ExplicitPort: explicit_port, S.ExplicitAnsiPort: explicit_port, S.IfdefDirective: ifdef,
-        S.InterfaceTypeName: interface_type, S.DpiImport: dpi_import, S.DpiExport: dpi_export, S.BindDirective: bind,
+        S.InterfaceTypeName: interface_type, S.DpiImport: dpi_import,
+        S.RandSequenceStatement: randsequence, S.DpiExport: dpi_export, S.BindDirective: bind,
         S.NetDeclaration: net, S.VariableDeclaration: variable, S.PortDeclaration: port_declaration,
         S.TypedefDeclaration: typedef, S.NetTypeDeclaration: net_type, S.EnumType: enum, S.GenvarDeclaration: genvar,
         S.ModportDeclaration: modport,

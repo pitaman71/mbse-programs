@@ -252,6 +252,9 @@ export abstract class Sequence extends Property {}
  */
 export abstract class BinsSelect extends SyntaxNode {}
 
+/** What a `randsequence` production's rule lists: productions to generate, code, and their choices (18.17). */
+export abstract class ProductionItem extends SyntaxNode {}
+
 // === Lexical conventions (5) ===
 
 const CommentSpec = {
@@ -2014,6 +2017,124 @@ export class RandCaseItem extends SyntaxNode {
   static override SINCE: Availability | null = sv();
 }
 
+const RandSequenceStatementSpec = {
+  first: optional(() => [Identifier]),
+  productions: many(() => [Production]),
+};
+export interface RandSequenceStatement extends Properties<typeof RandSequenceStatementSpec> {}
+/**
+ * `randsequence (first) productions endsequence`: a sentence of productions, generated from `first`, or the first
+ * production (18.17).
+ */
+export class RandSequenceStatement extends Statement {
+  static override SPEC = RandSequenceStatementSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ProductionSpec = {
+  type: optional(() => [DataType]),
+  name: one(() => [Identifier]),
+  ports: many(() => [TfPort]),
+  rules: many(() => [ProductionRule]),
+};
+export interface Production extends Properties<typeof ProductionSpec> {}
+/**
+ * `type name(ports) : rules;`, a production and its rules, separated by `|`, of which one is chosen; a `void` or
+ * typed production returns a value (18.17.7).
+ */
+export class Production extends SyntaxNode {
+  static override SPEC = ProductionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ProductionRuleSpec = {
+  rand_join: flag(),
+  bias: optional(() => [Expression]),
+  items: many(() => [ProductionItem]),
+  weight: optional(() => [Expression]),
+  code: optional(() => [ProductionCode]),
+};
+export interface ProductionRule extends Properties<typeof ProductionRuleSpec> {}
+/**
+ * `items := weight { code }`: what a rule generates in order, chosen by its weight, after which its code runs;
+ * or `rand join (bias) items`, its items interleaved at random (18.17.1, 18.17.5).
+ */
+export class ProductionRule extends SyntaxNode {
+  static override SPEC = ProductionRuleSpec;
+  static override SINCE: Availability | null = sv();
+  override check(): string[] {
+    if (this.bias !== null && this.rand_join !== true) return ["a ProductionRule with a bias is a rand join"];
+    if (this.code !== null && this.weight === null) return ["a ProductionRule's code follows its weight"];
+    return [];
+  }
+}
+
+const ProductionCallSpec = {
+  name: one(() => [Identifier]),
+  arguments: many(() => [Expression, Connection]),
+};
+export interface ProductionCall extends Properties<typeof ProductionCallSpec> {}
+/** `name(arguments)`: a production to generate (18.17.7). */
+export class ProductionCall extends ProductionItem {
+  static override SPEC = ProductionCallSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ProductionCodeSpec = {
+  items: many(() => [Item, Statement, Directive, Comment]),
+};
+export interface ProductionCode extends Properties<typeof ProductionCodeSpec> {}
+/** `{ items }`: code that runs where it is in a rule (18.17.2). */
+export class ProductionCode extends ProductionItem {
+  static override SPEC = ProductionCodeSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ProductionIfSpec = {
+  condition: one(() => [Expression]),
+  consequence: one(() => [ProductionCall]),
+  alternative: optional(() => [ProductionCall]),
+};
+export interface ProductionIf extends Properties<typeof ProductionIfSpec> {}
+/** `if (condition) consequence else alternative`, a production chosen by a condition (18.17.4). */
+export class ProductionIf extends ProductionItem {
+  static override SPEC = ProductionIfSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ProductionRepeatSpec = {
+  count: one(() => [Expression]),
+  item: one(() => [ProductionCall]),
+};
+export interface ProductionRepeat extends Properties<typeof ProductionRepeatSpec> {}
+/** `repeat (count) item`, a production generated `count` times (18.17.4). */
+export class ProductionRepeat extends ProductionItem {
+  static override SPEC = ProductionRepeatSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ProductionCaseSpec = {
+  expression: one(() => [Expression]),
+  items: many(() => [ProductionCaseItem]),
+};
+export interface ProductionCase extends Properties<typeof ProductionCaseSpec> {}
+/** `case (expression) items endcase`, a production chosen by a value (18.17.4). */
+export class ProductionCase extends ProductionItem {
+  static override SPEC = ProductionCaseSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ProductionCaseItemSpec = {
+  values: many(() => [Expression]),
+  item: one(() => [ProductionCall]),
+};
+export interface ProductionCaseItem extends Properties<typeof ProductionCaseItemSpec> {}
+/** `values: item;`, or `default: item;` without values (18.17.4). */
+export class ProductionCaseItem extends SyntaxNode {
+  static override SPEC = ProductionCaseItemSpec;
+  static override SINCE: Availability | null = sv();
+}
+
 const LabeledStatementSpec = {
   label: one(() => [Identifier]),
   statement: one(() => [Statement]),
@@ -3502,26 +3623,28 @@ export const KINDS = [
   NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem, ForStatement, WhileStatement,
   DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement, ContinueStatement,
   ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement, ReleaseStatement,
-  WaitForkStatement, WaitOrderStatement, ImmediateAssertion, DelayControl, RepeatEventControl, EventControl,
-  EventExpression, NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral,
-  TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression,
-  AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication,
-  AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage,
-  DollarExpression, StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression,
-  EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression,
-  NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem,
-  LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
-  ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
-  RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem,
-  PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep,
-  CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence,
-  ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty,
-  CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew,
-  ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration,
-  SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence,
-  TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect,
-  ParenthesizedBinsSelect, FilteredBinsSelect, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective,
-  DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
+  WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production, ProductionRule, ProductionCall,
+  ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem, ImmediateAssertion,
+  DelayControl, RepeatEventControl, EventControl, EventExpression, NameExpression, MemberExpression, IndexExpression,
+  RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression,
+  IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange,
+  Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression,
+  ParenthesizedExpression, MacroUsage, DollarExpression, StreamingConcatenation, StreamItem, MinTypMaxExpression,
+  EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression,
+  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
+  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
+  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
+  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
+  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
+  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
+  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
+  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
+  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
+  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
+  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
+  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
+  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
+  ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

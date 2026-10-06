@@ -816,6 +816,54 @@ class Printer:
         lines.append(f"{pad}endcase")
         return lines
 
+    def randsequence(self, node: S.RandSequenceStatement, level: int) -> list[str]:
+        pad = _INDENT * level
+        lines = [f"{pad}randsequence ({node.first.spelling if node.first is not None else ''})"]
+        for production in node.productions:
+            lines.extend(self.production(production, level + 1))
+        lines.append(f"{pad}endsequence")
+        return lines
+
+    def production(self, node: S.Production, level: int) -> list[str]:
+        """`type name(ports) : rules;` on a line, but for code that spans lines."""
+        head = " ".join(p for p in (self.type_text(node.type) if node.type is not None else None,
+                                    node.name.spelling) if p)
+        if node.ports:
+            head += "(" + ", ".join(self.tf_port(p) for p in node.ports) + ")"
+        rules = " | ".join(self.production_rule(r, level) for r in node.rules)
+        return (_INDENT * level + f"{head} : {rules};").split("\n")
+
+    def production_rule(self, node: S.ProductionRule, level: int) -> str:
+        parts = []
+        if node.rand_join:
+            parts.append("rand join" + (f" ({self.text(node.bias)})" if node.bias is not None else ""))
+        parts.extend(self.production_item(i, level) for i in node.items)
+        if node.weight is not None:
+            parts.append(f":= {self.text(node.weight)}")
+        if node.code is not None:
+            parts.append(self.production_item(node.code, level))
+        return " ".join(parts)
+
+    def production_item(self, node: Any, level: int) -> str:
+        """A production item's text; code that spans lines continues on lines of its own, at `level`."""
+        if isinstance(node, S.ProductionCall):
+            arguments = f"({', '.join(self.connection(a) for a in node.arguments)})" if node.arguments else ""
+            return node.name.spelling + arguments
+        if isinstance(node, S.ProductionCode):
+            body = self.items(node.items, level + 1)
+            commented = any(isinstance(i, (S.Comment, S.Directive)) for i in node.items)
+            if not commented and len(body) == len(node.items):  # a statement on a line each, and no comment to end one
+                return "{ " + " ".join(line.strip() for line in body) + " }" if body else "{ }"
+            return "\n".join(["{", *body, _INDENT * level + "}"])
+        if isinstance(node, S.ProductionIf):
+            alternative = "" if node.alternative is None else f" else {self.production_item(node.alternative, level)}"
+            return f"if ({self.text(node.condition)}) {self.production_item(node.consequence, level)}{alternative}"
+        if isinstance(node, S.ProductionRepeat):
+            return f"repeat ({self.text(node.count)}) {self.production_item(node.item, level)}"
+        items = " ".join(f"{', '.join(self.text(v) for v in i.values) if i.values else 'default'}: "
+                         f"{self.production_item(i.item, level)};" for i in node.items)  # a ProductionCase
+        return f"case ({self.text(node.expression)}) {items} endcase"
+
     def loop(self, node: Any, level: int) -> list[str]:
         pad = _INDENT * level
         if isinstance(node, S.ForStatement):
@@ -1334,5 +1382,5 @@ class Printer:
         S.ForeachStatement: loop, S.DoWhileStatement: loop, S.TimedStatement: timed, S.WaitStatement: wait,
         S.ImmediateAssertion: assertion, S.RandCaseStatement: randcase, S.ConcurrentAssertion: concurrent,
         S.ExpectStatement: expect, S.LabeledStatement: labeled, S.AttributedStatement: attributed,
-        S.WaitOrderStatement: wait_order,
+        S.WaitOrderStatement: wait_order, S.RandSequenceStatement: randsequence,
     }

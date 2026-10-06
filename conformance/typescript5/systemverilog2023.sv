@@ -355,6 +355,13 @@ program automatic test_program (
         join_none
         wait fork;
         wait_order (armed, fired) $display("in order"); else $display("out of order");
+        randsequence (burst)
+            burst : ramp(2) steady | rand join (0.5) ramp(1) steady := 2 { $display("joined"); };
+            ramp(int n = 1) : repeat (n) step | if (n > 1) step else steady | case (n) 0, 1: step; default: steady; endcase;
+            step : { ##1; };
+            steady : { };
+            void done : { $display("done"); };
+        endsequence
         ##2;
         settle: ##1 $display("time %t", $time);
         expect (@(posedge clk) ##[1:5] clk) else $display("no clock");

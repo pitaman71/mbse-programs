@@ -392,6 +392,9 @@ The tree is abstract where the grammar only spells:
   `bind` is a `BindDirective` of a target, its instances and a `ModuleInstantiation`. An `extern` module, interface or
   program is its declaration with `extern` set and no items, and `.*` in the header of the unit that defines it is a
   `WildcardPort`.
+- `randsequence` is a `RandSequenceStatement` of `Production`s, each of `ProductionRule`s (with a weight and code, or
+  `rand join`) whose items are a category of their own, `ProductionItem`: calls of productions, code blocks, and their
+  `if`, `repeat` and `case`. A production prints on a line, but for code that spans lines.
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
@@ -403,7 +406,7 @@ The tree is abstract where the grammar only spells:
 - A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
   as written; a macro used anywhere else is refused.
 
-Checkers, `randsequence`, `covergroup extends` and `@@` block events are not kinds yet, and neither are specify
+Checkers, `covergroup extends` and `@@` block events are not kinds yet, and neither are specify
 blocks, user-defined primitives and gate instances, nor tagged unions and the patterns of `matches`.
 
 ### Reading Verilog
@@ -450,7 +453,8 @@ clocking block one where its signals are clockvars; a label names a 'label'. A c
 `option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration
 is. A non-ANSI port is one entity, which the header names and a port declaration declares. `import p::x` declares an
 entity whose `target` is `p::x`, and `import p::*` makes the package's names visible where nothing nearer declares them;
-An `extern` unit declares nothing: the unit of its name does, with its ports for `.*`. `bind`'s instances and
+A `randsequence`'s productions are entities of its scope, and a production's ports its arguments. An `extern` unit
+declares nothing: the unit of its name does, with its ports for `.*`. `bind`'s instances and
 connections are found in its target. A macro's name in an `` `ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x`
 in the compilation unit. An explicit port's own name (`.p(x)`) is not looked up: what it connects is. An enumeration's
 member `name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A
@@ -601,8 +605,8 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **Verilog's verification constructs.** Checkers and `randsequence`, which slang reads and the reader refuses, are the
-  next kinds of Verilog.
+- **Verilog's verification constructs.** Checkers, which slang reads and the reader refuses, are the next kinds of
+  Verilog.
 - **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
   Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from

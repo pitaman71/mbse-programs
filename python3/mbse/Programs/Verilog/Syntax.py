@@ -173,6 +173,10 @@ class Property(SyntaxNode):
     too: a position that holds a property holds a `Property` or an `Expression`."""
 
 
+class ProductionItem(SyntaxNode):
+    """What a `randsequence` production's rule lists: productions to generate, code, and their choices (18.17)."""
+
+
 class BinsSelect(SyntaxNode):
     """A select expression: which combinations of a cross's bins a bin of the cross holds (19.6.1). A cross's name, or
     an expression, is one too: a position that holds a select holds a `BinsSelect` or an `Expression`."""
@@ -1483,6 +1487,93 @@ class RandCaseItem(SyntaxNode):
     SINCE = sv()
 
 
+class RandSequenceStatement(Statement):
+    """`randsequence (first) productions endsequence`: a sentence of productions, generated from `first`, or the first
+    production (18.17)."""
+
+    first: Identifier | None
+    productions: list[Production]
+    SINCE = sv()
+
+
+class Production(SyntaxNode):
+    """`type name(ports) : rules;`, a production and its rules, separated by `|`, of which one is chosen; a `void` or
+    typed production returns a value (18.17.7)."""
+
+    type: DataType | None
+    name: Identifier
+    ports: list[TfPort]
+    rules: list[ProductionRule]
+    SINCE = sv()
+
+
+class ProductionRule(SyntaxNode):
+    """`items := weight { code }`: what a rule generates in order, chosen by its weight, after which its code runs;
+    or `rand join (bias) items`, its items interleaved at random (18.17.1, 18.17.5)."""
+
+    rand_join: bool
+    bias: Expression | None
+    items: list[ProductionItem]
+    weight: Expression | None
+    code: ProductionCode | None
+    SINCE = sv()
+
+    def check(self) -> list[str]:
+        if self.bias is not None and self.rand_join is not True:
+            return ["a ProductionRule with a bias is a rand join"]
+        if self.code is not None and self.weight is None:
+            return ["a ProductionRule's code follows its weight"]
+        return []
+
+
+class ProductionCall(ProductionItem):
+    """`name(arguments)`: a production to generate (18.17.7)."""
+
+    name: Identifier
+    arguments: list[Expression | Connection]
+    SINCE = sv()
+
+
+class ProductionCode(ProductionItem):
+    """`{ items }`: code that runs where it is in a rule (18.17.2)."""
+
+    items: list[Item | Statement | Directive | Comment]
+    SINCE = sv()
+
+
+class ProductionIf(ProductionItem):
+    """`if (condition) consequence else alternative`, a production chosen by a condition (18.17.4)."""
+
+    condition: Expression
+    consequence: ProductionCall
+    alternative: ProductionCall | None
+    SINCE = sv()
+
+
+class ProductionRepeat(ProductionItem):
+    """`repeat (count) item`, a production generated `count` times (18.17.4)."""
+
+    count: Expression
+    item: ProductionCall
+    SINCE = sv()
+
+
+class ProductionCase(ProductionItem):
+    """`case (expression) items endcase`, a production chosen by a value (18.17.4)."""
+
+    expression: Expression
+    items: list[ProductionCaseItem]
+    SINCE = sv()
+
+
+class ProductionCaseItem(SyntaxNode):
+    """`values: item;`, or `default: item;` without values (18.17.4)."""
+
+    values: list[Expression]
+    item: ProductionCall
+    SINCE = sv()
+
+
 class LabeledStatement(Statement):
     """`label: statement`, a statement named for `disable` and for its assertions' messages (9.3.5). A labeled block
     is a named one instead: `x: begin ... end` is `begin : x ... end`."""
@@ -2554,7 +2645,8 @@ KINDS: list[type[SyntaxNode]] = [
     AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
     ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement,
     BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement,
-    ForceStatement, ReleaseStatement, WaitForkStatement, WaitOrderStatement,
+    ForceStatement, ReleaseStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production,
+    ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,
     ImmediateAssertion,
     DelayControl, RepeatEventControl, EventControl, EventExpression,
     NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral,
