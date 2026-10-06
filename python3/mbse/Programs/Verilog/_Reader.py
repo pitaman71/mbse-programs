@@ -98,6 +98,7 @@ class _Reader:
         self.macros: set[int] = set()  # tokens read as part of a macro use
         self.expansions: dict[int, int] = {}  # the number of tokens of each macro use, by its offset
         self.start: Any = None  # the location of the file's first token
+        self.attributes_read: set[int] = set()  # the attribute instances converted, by their offset
 
     # Positions and errors
 
@@ -307,11 +308,29 @@ class _Reader:
         items = self.items(_nodes(node.members), node.endOfFile)
         return self.made(node, S.SourceText(items=items))
 
-    def item(self, node: Any) -> Any:
+    def item(self, node: Any, attributed: bool = True) -> Any:
+        """An item, with its attributes where `attributed` (where its place holds any item); elsewhere they stay
+        unread, and are refused."""
         method = self.ITEMS.get(node.kind.name)
         if method is None:
             raise self.unsupported(node)
-        return self.made(node, method(self, node))
+        out = self.made(node, method(self, node))
+        attributes = self.attributes(node) if attributed else []
+        return self.made(node, S.AttributedItem(attributes=attributes, item=out)) if attributes else out
+
+    def attributes(self, node: Any) -> list[S.AttributeInstance]:
+        """The attribute instances before a syntax node, `(* name = value, ... *)`, each recorded as read."""
+        out = []
+        for instance in getattr(node, "attributes", None) or []:
+            self.attributes_read.add(instance.sourceRange.start.offset)
+            specs = []
+            for spec in _nodes(instance.specs):
+                item = S.AttributeSpec(name=self.identifier(spec.name))
+                if spec.value is not None:
+                    item.value = self.expression(spec.value.expr)
+                specs.append(self.made(spec, item))
+            out.append(self.made(instance, S.AttributeInstance(specs=specs)))
+        return out
 
     def design_unit(self, node: Any) -> Any:
         header = node.header
@@ -349,7 +368,10 @@ class _Reader:
         for port in _nodes(node.ports):
             kind = port.kind.name
             if kind == "ImplicitAnsiPort":
-                out.append(self.made(port, self.ansi_port(port)))
+                converted = self.made(port, self.ansi_port(port))
+                attributes = self.attributes(port)
+                out.append(self.made(port, S.AttributedPort(attributes=attributes, port=converted))
+                           if attributes else converted)
             elif kind == "ImplicitNonAnsiPort":
                 reference = port.expr
                 if reference.kind.name != "PortReference" or reference.select is not None:
@@ -870,6 +892,9 @@ class _Reader:
         if method is None:
             raise self.unsupported(node)
         out = method(self, node)
+        attributes = self.attributes(node)
+        if attributes:
+            out = S.AttributedStatement(attributes=attributes, statement=self.made(node, out))
         if label is not None:
             if isinstance(out, (S.SeqBlock, S.ParBlock)) and out.name is None:  # `x: begin` is `begin : x`
                 out.name = self.identifier(label.name)
@@ -1235,8 +1260,8 @@ class _Reader:
         elif kind == "BinsSelection":
             out = S.BinsSelection(keyword=node.keyword.rawText, name=self.identifier(node.name),
                                   select=self.bins_select(node.expr), condition=self.coverage_condition(node.iff))
-        else:
-            return self.item(node)
+        else:  # a function in a cross: its place holds no attributed item
+            return self.item(node, attributed=False)
         return self.made(node, out)
 
     def coverage_condition(self, node: Any) -> Any:
@@ -1320,8 +1345,8 @@ class _Reader:
                 if declaration.value is not None:
                     signal.value = self.expression(declaration.value.expr)
                 out.signals.append(self.made(declaration, signal))
-        else:
-            return self.item(node)
+        else:  # an assertion declaration: its place holds no attributed item
+            return self.item(node, attributed=False)
         return self.made(node, out)
 
     def skew(self, node: Any) -> S.ClockingSkew | None:
@@ -1426,7 +1451,7 @@ class _Reader:
 
     def binary(self, node: Any) -> S.BinaryExpression:
         return S.BinaryExpression(left=self.expression(node.left), operator=self.token_text(node.operatorToken),
-                                  right=self.expression(node.right))
+                                  attributes=self.attributes(node), right=self.expression(node.right))
 
     def assignment(self, node: Any) -> S.AssignmentExpression:
         return S.AssignmentExpression(target=self.expression(node.left), operator=self.token_text(node.operatorToken),
@@ -1435,12 +1460,14 @@ class _Reader:
     def prefix(self, node: Any) -> S.Expression:
         operator = self.token_text(node.operatorToken)
         if operator in ("++", "--"):
-            return S.IncrementExpression(operator=operator, operand=self.expression(node.operand))
-        return S.UnaryExpression(operator=operator, operand=self.expression(node.operand))
+            return S.IncrementExpression(operator=operator, operand=self.expression(node.operand),
+                                         attributes=self.attributes(node))
+        return S.UnaryExpression(operator=operator, attributes=self.attributes(node),
+                                 operand=self.expression(node.operand))
 
     def postfix(self, node: Any) -> S.IncrementExpression:
         return S.IncrementExpression(operator=self.token_text(node.operatorToken), postfix=True,
-                                     operand=self.expression(node.operand))
+                                     operand=self.expression(node.operand), attributes=self.attributes(node))
 
     def literal(self, node: Any) -> S.Expression:
         kind = node.kind.name
@@ -1502,8 +1529,8 @@ class _Reader:
         return S.MemberExpression(value=self.expression(node.left), member=self.identifier(node.name))
 
     def conditional_expression(self, node: Any) -> S.ConditionalExpression:
-        return S.ConditionalExpression(condition=self.predicate(node.predicate), consequence=self.expression(node.left),
-                                       alternative=self.expression(node.right))
+        return S.ConditionalExpression(condition=self.predicate(node.predicate), attributes=self.attributes(node),
+                                       consequence=self.expression(node.left), alternative=self.expression(node.right))
 
     def inside(self, node: Any) -> S.InsideExpression:
         return S.InsideExpression(value=self.expression(node.expr),
@@ -1548,8 +1575,9 @@ class _Reader:
         left = node.left
         arguments = [] if node.arguments is None else self.arguments(node.arguments)
         if left.kind.name == "SystemName":
-            return S.SystemCall(name=self.token_text(left.systemIdentifier), arguments=arguments)
-        return S.CallExpression(callee=self.expression(left), arguments=arguments)
+            return S.SystemCall(name=self.token_text(left.systemIdentifier), attributes=self.attributes(node),
+                                arguments=arguments)
+        return S.CallExpression(callee=self.expression(left), attributes=self.attributes(node), arguments=arguments)
 
     def arguments(self, node: Any) -> list[Any]:
         out: list[Any] = []
@@ -1689,12 +1717,13 @@ def parse(text: str, include_paths: Sequence[str] = (),
         if manager.isMacroLoc(token.location):
             offset = reader.location(token).offset
             reader.expansions[offset] = reader.expansions.get(offset, 0) + 1
-    attributes: list[Any] = []  # `(* ... *)`: not kinds yet, so refused rather than dropped
-    tree.root.visit(lambda n: attributes.append(n) if isinstance(n, syntax.SyntaxNode)
-                    and n.kind.name == "AttributeInstance" and reader.main(n.getFirstToken().location) else None)
-    if attributes:
-        raise reader.unsupported(attributes[0])
     unit = reader.unit(tree.root)
+    unread: list[Any] = []  # attributes where the kinds hold none are refused, not dropped
+    tree.root.visit(lambda n: unread.append(n) if isinstance(n, syntax.SyntaxNode)
+                    and n.kind.name == "AttributeInstance" and reader.main(n.getFirstToken().location)
+                    and n.sourceRange.start.offset not in reader.attributes_read else None)
+    if unread:
+        raise reader.unsupported(unread[0])
     return unit, reader.positions, source
 
 

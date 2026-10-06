@@ -225,6 +225,48 @@ class ParameterizedName(Name):
     SINCE = sv()
 
 
+# --- Attributes (5.12) ---
+
+
+class AttributeInstance(SyntaxNode):
+    """`(* specs *)`: attributes for tools, such as `(* keep *)` or `(* full_case, parallel_case *)` (5.12)."""
+
+    specs: list[AttributeSpec]
+    SINCE = verilog(2001)
+
+
+class AttributeSpec(SyntaxNode):
+    """`name = value`, or `name` alone, in an attribute instance (5.12)."""
+
+    name: Identifier
+    value: Expression | None
+    SINCE = verilog(2001)
+
+
+class AttributedItem(Item):
+    """`(* ... *) item`: an item with its attributes (5.12)."""
+
+    attributes: list[AttributeInstance]
+    item: Item
+    SINCE = verilog(2001)
+
+
+class AttributedStatement(Statement):
+    """`(* ... *) statement`: a statement with its attributes (5.12)."""
+
+    attributes: list[AttributeInstance]
+    statement: Statement
+    SINCE = verilog(2001)
+
+
+class AttributedPort(Port):
+    """`(* ... *) port`: a port in a design unit's header with its attributes (5.12)."""
+
+    attributes: list[AttributeInstance]
+    port: Port
+    SINCE = verilog(2001)
+
+
 # === Source text (A.1) ===
 
 
@@ -1752,7 +1794,9 @@ class UnaryExpression(Expression):
     """`operator operand`, including the reductions `&`, `~&`, `|`, `~|`, `^`, `~^` (11.4)."""
 
     operator: UnaryOperator
+    attributes: list[AttributeInstance]
     operand: Expression
+    FEATURES = {"attributes": {True: verilog(2001)}}
 
 
 class IncrementExpression(Expression):
@@ -1761,6 +1805,7 @@ class IncrementExpression(Expression):
     operator: IncrementOperator
     postfix: bool
     operand: Expression
+    attributes: list[AttributeInstance]
     SINCE = sv()
 
 
@@ -1769,9 +1814,10 @@ class BinaryExpression(Expression):
 
     left: Expression
     operator: BinaryOperator
+    attributes: list[AttributeInstance]
     right: Expression
     FEATURES = {"operator": {"**": verilog(2001), "<<<": verilog(2001), ">>>": verilog(2001), "==?": sv(),
-                             "!=?": sv(), "->": sv(2009), "<->": sv(2009)}}
+                             "!=?": sv(), "->": sv(2009), "<->": sv(2009)}, "attributes": {True: verilog(2001)}}
 
 
 class AssignmentExpression(Expression):
@@ -1789,8 +1835,10 @@ class ConditionalExpression(Expression):
     """`condition ? consequence : alternative` (11.4.11)."""
 
     condition: Expression
+    attributes: list[AttributeInstance]
     consequence: Expression
     alternative: Expression
+    FEATURES = {"attributes": {True: verilog(2001)}}
 
 
 class InsideExpression(Expression):
@@ -1907,7 +1955,9 @@ class CallExpression(Expression):
     `NamedConnection`s."""
 
     callee: Expression
+    attributes: list[AttributeInstance]
     arguments: list[Expression | Connection]
+    FEATURES = {"attributes": {True: verilog(2001)}}
 
 
 class SystemCall(Expression):
@@ -1915,7 +1965,9 @@ class SystemCall(Expression):
     data type, as `$bits` takes."""
 
     name: str
+    attributes: list[AttributeInstance]
     arguments: list[Expression | DataType]
+    FEATURES = {"attributes": {True: verilog(2001)}}
 
     def check(self) -> list[str]:
         name = self.name
@@ -2032,7 +2084,8 @@ class OtherDirective(Directive):
 # --- The language ---
 
 KINDS: list[type[SyntaxNode]] = [
-    Comment, Identifier, ScopedName, ParameterizedName,
+    Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
+    AttributedStatement, AttributedPort,
     SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration, PackageDeclaration,
     AnsiPort, InterfacePort, PortReference, PortDeclaration,
     ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment,

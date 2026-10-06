@@ -338,7 +338,7 @@ subset, its classes, its randomization and its assertions: design units (modules
 ports and parameters, data types and dimensions, declarations, continuous assignments, procedural blocks and
 statements, generate constructs, instantiation, functions and tasks, classes with their properties, methods and
 objects, constraints and `randomize() with`, sequences, properties and concurrent assertions, clocking blocks, `let`,
-covergroups, immediate assertions, and compiler directives. Kinds and features record where they exist in both
+covergroups, immediate assertions, attributes, and compiler directives. Kinds and features record where they exist in both
 families: ANSI ports and `**` from Verilog-2001, `logic`, packages, interfaces and `always_ff` from SystemVerilog 2005, `unique0`
 from 2009, `final` assertions from 2012 and triple-quoted strings from 2023. Verilog has none of SystemVerilog's own.
 
@@ -364,6 +364,9 @@ The tree is abstract where the grammar only spells:
 - A covergroup's coverpoints and crosses are items of it, and their bins items of them; a bin's `initializer` is its
   values, transitions, `default` or an expression. A cross's bins select with `BinsSelect`s, grouped as slang groups
   them: `&&` and `||` alike, to the left, below `with` and `!`. An empty `{}` body is written `;`.
+- Attributes, `(* name = value *)`, wrap what they annotate where it is listed or stands alone: `AttributedItem`,
+  `AttributedStatement` and `AttributedPort`, as IEEE 1800's grammar writes `{attribute_instance} item`; an operator's
+  and a call's are its own `attributes` (`a + (* mark *) b`). Attributes anywhere else are refused.
 - Literals keep their spelling: size, base and digits with their underscores (`8'b0000_0100`).
 - Equivalent spellings are normalized: `@*` is `@(*)`, events joined by `,` are joined by `or`, and `@e` is `@(e)`.
 - Comments and compiler directives are kept where items, statements and constraints are listed. Conditional compilation is a tree
@@ -371,8 +374,8 @@ The tree is abstract where the grammar only spells:
 - A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
   as written; a macro used anywhere else is refused.
 
-Checkers, `randsequence`, `covergroup extends` and `@@` block events are not kinds yet, and neither are attributes (`(* keep *)`), specify blocks, user-defined primitives and gate instances, strengths, nor
-the patterns of `matches`.
+Checkers, `randsequence`, `covergroup extends` and `@@` block events are not kinds yet, and neither are specify
+blocks, user-defined primitives and gate instances, strengths, nor the patterns of `matches`.
 
 ### Reading Verilog
 
@@ -384,7 +387,7 @@ of the first syntax node that has it. An included file's items stay in their fil
 and the kinds cannot hold is refused with `ParseError`, which names slang's syntax kind (`unsupported syntax:
 CovergroupDeclaration`) at its line and column; the first error slang reports is raised as it reports it. Positions
 count characters. Nothing the text holds is dropped: every property of slang's syntax that the reader converts is
-read, and attributes, which the kinds do not hold yet, are refused wherever they are written.
+read, and the reader records each attribute it converts, refusing any it does not.
 
 slang runs only in Python. TypeScript's standards read through the Python implementation: `parse` runs `python -m
 mbse.Programs.Verilog.read`, which takes the text, the standard and the options as JSON and answers with the tree's
@@ -566,7 +569,7 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
 - **Verilog's verification constructs.** Checkers and `randsequence`, which slang reads and the reader refuses, are the
-  next kinds of Verilog; then attributes, which every item, statement and operator may carry.
+  next kinds of Verilog.
 - **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
   Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from

@@ -58,7 +58,7 @@ module sampler
 );
     import logger_pkg::in_range;
 
-    wire [3:0] nibble = reading.raw[3:0];
+    (* keep, max_fanout = 8 *) wire [3:0] nibble = reading.raw[3:0];
     logic [7:0] history [DEPTH];
     logic signed [WIDTH-1:0] sum;
     int unsigned samples;
@@ -105,7 +105,7 @@ module sampler
         if (out.ready) samples = samples + 1;
 
     always @(*) begin
-        priority casez (reading.status)
+        (* parallel_case *) priority casez (reading.status)
             8'b1???_????: average = real'(sum) / DEPTH;
             8'b01??_????: average = 1.5e3;
             default: ;
@@ -159,7 +159,7 @@ module sampler
         join_none
         assert (count inside {[0:15], 20}) else $error("count %0d out of range", count);
         assert #0 (state != SEND || out.ready);
-        sum = '{default: 0} == 0 ? 16'sd5 : -16'sd5;
+        sum = '{default: 0} == 0 ? (* likely *) 16'sd5 : - (* rare *) 16'sd5 + (* fold *) $bits (* folded *) (sum);
         {sum[15:8], sum[7:0]} = {8'd1, 8'd2};
         sum <<= 1;
         sum = sum >>> 1 ** 2 % 3;
@@ -214,6 +214,7 @@ module sampler
     in_range: assert #0 (count < 16);
 endmodule
 
+(* synthesis, top = 0 *)
 module counter #(parameter WIDTH = 4, STEP = 1) (clk, rst_n, count);
     input clk, rst_n;
     output reg [WIDTH-1:0] count;
@@ -222,7 +223,7 @@ module counter #(parameter WIDTH = 4, STEP = 1) (clk, rst_n, count);
         else count = #1 count + STEP;
 endmodule
 
-program automatic test_program (input logic clk);
+program automatic test_program ((* clock *) input logic clk);
     clocking tick @(posedge clk);
     endclocking
     default clocking tick;

@@ -69,6 +69,8 @@ def _prototype(node: Any) -> bool:
 
 
 def _multiline(node: Any) -> bool:
+    if isinstance(node, S.AttributedItem):
+        return _multiline(node.item)
     if isinstance(node, (S.FunctionDeclaration, S.TaskDeclaration)):
         return not _prototype(node)
     if isinstance(node, S.Coverpoint):
@@ -127,6 +129,17 @@ class Printer:
 
     def comment(self, node: S.Comment) -> str:
         return f"/*{node.text}*/" if node.block else f"//{node.text}"
+
+    def attribute_text(self, instances: list[S.AttributeInstance]) -> str:
+        """`(* name = value, ... *) (* ... *)`."""
+        return " ".join("(* " + ", ".join(s.name.spelling + (f" = {self.text(s.value)}" if s.value is not None else "")
+                                          for s in i.specs) + " *)" for i in instances)
+
+    def attributed(self, node: Any, level: int) -> list[str]:
+        """An item or a statement with its attributes, which start its first line."""
+        inner = node.item if isinstance(node, S.AttributedItem) else node.statement
+        lines = self.item(inner, level)
+        return [f"{_INDENT * level}{self.attribute_text(node.attributes)} {lines[0].strip()}", *lines[1:]]
 
     def item(self, node: Any, level: int) -> list[str]:
         pad = _INDENT * level
@@ -220,6 +233,8 @@ class Printer:
     def port(self, node: Any) -> str:
         if isinstance(node, S.PortReference):
             return node.name.spelling
+        if isinstance(node, S.AttributedPort):
+            return f"{self.attribute_text(node.attributes)} {self.port(node.port)}"
         dimensions = "".join(self.dimension(d) for d in node.dimensions)
         if isinstance(node, S.InterfacePort):
             interface = node.interface.spelling if node.interface is not None else "interface"
@@ -1043,18 +1058,27 @@ class Printer:
             operand = self.operand(node.operand, UNARY + 1)
             if isinstance(node.operand, (S.UnaryExpression, S.IncrementExpression)):
                 operand = f"({self.text(node.operand)})"
+            if node.attributes:  # `- (* a *) x`: apart, so that `(*` starts the attributes
+                return f"{node.operator} {self.attribute_text(node.attributes)} {operand}"
             return f"{node.operator}{operand}"
         if isinstance(node, S.IncrementExpression):
             operand = self.operand(node.operand, PRIMARY)
+            if node.attributes:
+                attributes = self.attribute_text(node.attributes)
+                return f"{operand} {attributes}{node.operator}" if node.postfix else \
+                    f"{node.operator} {attributes} {operand}"
             return f"{operand}{node.operator}" if node.postfix else f"{node.operator}{operand}"
         if isinstance(node, S.BinaryExpression):
             level = _BINARY[node.operator]
             left_level, right_level = (level + 1, level) if level in _RIGHT else (level, level + 1)
-            return f"{self.operand(node.left, left_level)} {node.operator} {self.operand(node.right, right_level)}"
+            attributes = f" {self.attribute_text(node.attributes)}" if node.attributes else ""
+            return (f"{self.operand(node.left, left_level)} {node.operator}{attributes} "
+                    f"{self.operand(node.right, right_level)}")
         if isinstance(node, S.AssignmentExpression):
             return f"{self.text(node.target)} {node.operator} {self.text(node.value)}"
         if isinstance(node, S.ConditionalExpression):
-            return (f"{self.operand(node.condition, CONDITIONAL + 1)} ? "
+            attributes = f"{self.attribute_text(node.attributes)} " if node.attributes else ""
+            return (f"{self.operand(node.condition, CONDITIONAL + 1)} ? {attributes}"
                     f"{self.operand(node.consequence, CONDITIONAL + 1)} : "
                     f"{self.operand(node.alternative, CONDITIONAL)}")
         if isinstance(node, S.InsideExpression):
@@ -1068,8 +1092,13 @@ class Printer:
             prefix = self.type_text(node.type) if node.type is not None else ""
             return f"{prefix}'{{{', '.join(self.pattern_item(i) for i in node.items)}}}"
         if isinstance(node, S.CallExpression):
-            return f"{self.operand(node.callee, PRIMARY)}({', '.join(self.connection(a) for a in node.arguments)})"
+            attributes = f" {self.attribute_text(node.attributes)} " if node.attributes else ""
+            return (f"{self.operand(node.callee, PRIMARY)}{attributes}"
+                    f"({', '.join(self.connection(a) for a in node.arguments)})")
         if isinstance(node, S.SystemCall):
+            if node.attributes:  # the parentheses follow the attributes even without arguments
+                return (f"{node.name} {self.attribute_text(node.attributes)} "
+                        f"({', '.join(self.type_or_text(a) for a in node.arguments)})")
             if not node.arguments:
                 return node.name
             return f"{node.name}({', '.join(self.type_or_text(a) for a in node.arguments)})"
@@ -1142,11 +1171,12 @@ class Printer:
         S.ClockingSignals: clocking_signals, S.DefaultClocking: default_clocking, S.DefaultDisable: default_disable,
         S.CovergroupDeclaration: covergroup, S.CoverageOption: coverage_option, S.Coverpoint: coverpoint,
         S.CoverageBins: coverage_bins, S.CoverCross: cover_cross, S.BinsSelection: bins_selection,
+        S.AttributedItem: attributed,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,
         S.ForStatement: loop, S.WhileStatement: loop, S.RepeatStatement: loop, S.ForeverStatement: loop,
         S.ForeachStatement: loop, S.DoWhileStatement: loop, S.TimedStatement: timed, S.WaitStatement: wait,
         S.ImmediateAssertion: assertion, S.RandCaseStatement: randcase, S.ConcurrentAssertion: concurrent,
-        S.ExpectStatement: expect, S.LabeledStatement: labeled,
+        S.ExpectStatement: expect, S.LabeledStatement: labeled, S.AttributedStatement: attributed,
     }

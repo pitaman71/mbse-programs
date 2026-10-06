@@ -29,8 +29,8 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import {
-  type AttributeSpec, type Availability, type ChildSpec, choice, type Features, flag, Language, many, one, optional,
-  optionalChoice, optionalInteger, optionalText, type Properties, SyntaxNode, text,
+  type AttributeSpec as PropertyAttribute, type Availability, type ChildSpec, choice, type Features, flag, Language, many,
+  one, optional, optionalChoice, optionalInteger, optionalText, type Properties, SyntaxNode, text,
 } from "../Framework/Syntax.js";
 import type * as Self from "./Syntax.js";
 
@@ -299,6 +299,62 @@ export interface ParameterizedName extends Properties<typeof ParameterizedNameSp
 export class ParameterizedName extends Name {
   static override SPEC = ParameterizedNameSpec;
   static override SINCE: Availability | null = sv();
+}
+
+// --- Attributes (5.12) ---
+
+const AttributeInstanceSpec = {
+  specs: many(() => [AttributeSpec]),
+};
+export interface AttributeInstance extends Properties<typeof AttributeInstanceSpec> {}
+/** `(* specs *)`: attributes for tools, such as `(* keep *)` or `(* full_case, parallel_case *)` (5.12). */
+export class AttributeInstance extends SyntaxNode {
+  static override SPEC = AttributeInstanceSpec;
+  static override SINCE: Availability | null = verilog(2001);
+}
+
+const AttributeSpecSpec = {
+  name: one(() => [Identifier]),
+  value: optional(() => [Expression]),
+};
+export interface AttributeSpec extends Properties<typeof AttributeSpecSpec> {}
+/** `name = value`, or `name` alone, in an attribute instance (5.12). */
+export class AttributeSpec extends SyntaxNode {
+  static override SPEC = AttributeSpecSpec;
+  static override SINCE: Availability | null = verilog(2001);
+}
+
+const AttributedItemSpec = {
+  attributes: many(() => [AttributeInstance]),
+  item: one(() => [Item]),
+};
+export interface AttributedItem extends Properties<typeof AttributedItemSpec> {}
+/** `(* ... *) item`: an item with its attributes (5.12). */
+export class AttributedItem extends Item {
+  static override SPEC = AttributedItemSpec;
+  static override SINCE: Availability | null = verilog(2001);
+}
+
+const AttributedStatementSpec = {
+  attributes: many(() => [AttributeInstance]),
+  statement: one(() => [Statement]),
+};
+export interface AttributedStatement extends Properties<typeof AttributedStatementSpec> {}
+/** `(* ... *) statement`: a statement with its attributes (5.12). */
+export class AttributedStatement extends Statement {
+  static override SPEC = AttributedStatementSpec;
+  static override SINCE: Availability | null = verilog(2001);
+}
+
+const AttributedPortSpec = {
+  attributes: many(() => [AttributeInstance]),
+  port: one(() => [Port]),
+};
+export interface AttributedPort extends Properties<typeof AttributedPortSpec> {}
+/** `(* ... *) port`: a port in a design unit's header with its attributes (5.12). */
+export class AttributedPort extends Port {
+  static override SPEC = AttributedPortSpec;
+  static override SINCE: Availability | null = verilog(2001);
 }
 
 // === Source text (A.1) ===
@@ -2398,18 +2454,21 @@ export class StringLiteral extends Literal {
 
 const UnaryExpressionSpec = {
   operator: choice(...UNARY_OPERATORS),
+  attributes: many(() => [AttributeInstance]),
   operand: one(() => [Expression]),
 };
 export interface UnaryExpression extends Properties<typeof UnaryExpressionSpec> {}
 /** `operator operand`, including the reductions `&`, `~&`, `|`, `~|`, `^`, `~^` (11.4). */
 export class UnaryExpression extends Expression {
   static override SPEC = UnaryExpressionSpec;
+  static override FEATURES: Features = { attributes: [[true, verilog(2001)]] };
 }
 
 const IncrementExpressionSpec = {
   operator: choice(...INCREMENT_OPERATORS),
   postfix: flag(),
   operand: one(() => [Expression]),
+  attributes: many(() => [AttributeInstance]),
 };
 export interface IncrementExpression extends Properties<typeof IncrementExpressionSpec> {}
 /** `++operand`, `--operand`, or with `postfix` `operand++`, `operand--` (11.4.2). */
@@ -2421,6 +2480,7 @@ export class IncrementExpression extends Expression {
 const BinaryExpressionSpec = {
   left: one(() => [Expression]),
   operator: choice(...BINARY_OPERATORS),
+  attributes: many(() => [AttributeInstance]),
   right: one(() => [Expression]),
 };
 export interface BinaryExpression extends Properties<typeof BinaryExpressionSpec> {}
@@ -2432,6 +2492,7 @@ export class BinaryExpression extends Expression {
       ["**", verilog(2001)], ["<<<", verilog(2001)], [">>>", verilog(2001)], ["==?", sv()], ["!=?", sv()],
       ["->", sv(2009)], ["<->", sv(2009)]
     ],
+    attributes: [[true, verilog(2001)]],
   };
 }
 
@@ -2457,6 +2518,7 @@ export class AssignmentExpression extends Expression {
 
 const ConditionalExpressionSpec = {
   condition: one(() => [Expression]),
+  attributes: many(() => [AttributeInstance]),
   consequence: one(() => [Expression]),
   alternative: one(() => [Expression]),
 };
@@ -2464,6 +2526,7 @@ export interface ConditionalExpression extends Properties<typeof ConditionalExpr
 /** `condition ? consequence : alternative` (11.4.11). */
 export class ConditionalExpression extends Expression {
   static override SPEC = ConditionalExpressionSpec;
+  static override FEATURES: Features = { attributes: [[true, verilog(2001)]] };
 }
 
 const InsideExpressionSpec = {
@@ -2622,6 +2685,7 @@ export class ArrayMethodWithExpression extends Expression {
 
 const CallExpressionSpec = {
   callee: one(() => [Expression]),
+  attributes: many(() => [AttributeInstance]),
   arguments: many(() => [Expression, Connection]),
 };
 export interface CallExpression extends Properties<typeof CallExpressionSpec> {}
@@ -2631,10 +2695,12 @@ export interface CallExpression extends Properties<typeof CallExpressionSpec> {}
  */
 export class CallExpression extends Expression {
   static override SPEC = CallExpressionSpec;
+  static override FEATURES: Features = { attributes: [[true, verilog(2001)]] };
 }
 
 const SystemCallSpec = {
   name: text(),
+  attributes: many(() => [AttributeInstance]),
   arguments: many(() => [Expression, DataType]),
 };
 export interface SystemCall extends Properties<typeof SystemCallSpec> {}
@@ -2644,6 +2710,7 @@ export interface SystemCall extends Properties<typeof SystemCallSpec> {}
  */
 export class SystemCall extends Expression {
   static override SPEC = SystemCallSpec;
+  static override FEATURES: Features = { attributes: [[true, verilog(2001)]] };
   override check(): string[] {
     const name = this.name;
     if (typeof name !== "string" || name === "") return [];
@@ -2815,37 +2882,37 @@ function methodProblems(method: FunctionDeclaration | TaskDeclaration): string[]
 // --- The language ---
 
 export const KINDS = [
-  Comment, Identifier, ScopedName, ParameterizedName, SourceText, ModuleDeclaration, InterfaceDeclaration,
-  ProgramDeclaration, PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortDeclaration,
-  ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment, IntegerVectorType, IntegerAtomType,
-  NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType, StructType, StructMember, EnumType,
-  EnumMember, RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension, NetDeclaration,
-  VariableDeclaration, VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, GenvarDeclaration,
-  ImportDeclaration, ImportItem, ModportDeclaration, ModportItem, ModportPort, ContinuousAssign, AlwaysConstruct,
-  InitialConstruct, FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion,
-  GenerateFor, GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection,
-  WildcardConnection, AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement,
-  CaseStatement, CaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement,
-  ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger,
-  DisableStatement, ImmediateAssertion, DelayControl, EventControl, EventExpression, NameExpression, MemberExpression,
-  IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral, StringLiteral,
-  UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression,
-  InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression,
-  SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, NullLiteral, ThisExpression,
-  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
-  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
-  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
-  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
-  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
-  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
-  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
-  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
-  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
-  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
-  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
-  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
-  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
-  ElsifDirective, DisabledText, OtherDirective,
+  Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
+  AttributedStatement, AttributedPort, SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration,
+  PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortDeclaration, ParameterDeclaration, ParamAssignment,
+  TypeParameterDeclaration, TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType,
+  NamedType, VirtualInterfaceType, ImplicitType, StructType, StructMember, EnumType, EnumMember, RangeDimension,
+  SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension, NetDeclaration, VariableDeclaration,
+  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, GenvarDeclaration, ImportDeclaration, ImportItem,
+  ModportDeclaration, ModportItem, ModportPort, ContinuousAssign, AlwaysConstruct, InitialConstruct, FinalConstruct,
+  FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor, GenerateIf,
+  GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
+  AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
+  ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
+  ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement,
+  ImmediateAssertion, DelayControl, EventControl, EventExpression, NameExpression, MemberExpression, IndexExpression,
+  RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression,
+  IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange,
+  Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression,
+  ParenthesizedExpression, MacroUsage, DollarExpression, NullLiteral, ThisExpression, SuperExpression, NewExpression,
+  NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem,
+  LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
+  ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
+  RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem,
+  PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep,
+  CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence,
+  ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty,
+  CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew,
+  ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration,
+  SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence,
+  TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect,
+  ParenthesizedBinsSelect, FilteredBinsSelect, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective,
+  DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

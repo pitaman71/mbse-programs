@@ -62,6 +62,7 @@ function prototype(node: any): boolean {
 }
 
 function multiline(node: unknown): boolean {
+  if (node instanceof S.AttributedItem) return multiline(node.item);
   if (isAny(node, [S.FunctionDeclaration, S.TaskDeclaration])) return !prototype(node);
   if (node instanceof S.Coverpoint) return node.items.length > 0;
   if (node instanceof S.CoverCross) return node.body.length > 0;
@@ -123,6 +124,18 @@ export class Printer {
 
   comment(node: any): string {
     return node.block ? `/*${node.text}*/` : `//${node.text}`;
+  }
+
+  /** `(* name = value, ... *) (* ... *)`. */
+  attributeText(instances: readonly any[]): string {
+    return instances.map((i) => "(* " + i.specs.map((s: any) => s.name.spelling + (s.value !== null ? ` = ${this.text(s.value)}` : ""))
+      .join(", ") + " *)").join(" ");
+  }
+
+  /** An item or a statement with its attributes, which start its first line. */
+  attributed(node: any, level: number): string[] {
+    const lines = this.item(node instanceof S.AttributedItem ? node.item : node.statement, level);
+    return [`${pad(level)}${this.attributeText(node.attributes)} ${(lines[0] as string).trim()}`, ...lines.slice(1)];
   }
 
   item(node: any, level: number): string[] {
@@ -210,6 +223,7 @@ export class Printer {
 
   port(node: any): string {
     if (node instanceof S.PortReference) return node.name?.spelling as string;
+    if (node instanceof S.AttributedPort) return `${this.attributeText(node.attributes)} ${this.port(node.port)}`;
     const dimensions = node.dimensions.map((d: any) => this.dimension(d)).join("");
     if (node instanceof S.InterfacePort) {
       const interfaceName = node.interface !== null ? node.interface.spelling : "interface";
@@ -1069,20 +1083,28 @@ export class Printer {
     if (node instanceof S.UnaryExpression) {
       let operand = this.operand(node.operand, UNARY + 1);
       if (isAny(node.operand, [S.UnaryExpression, S.IncrementExpression])) operand = `(${this.text(node.operand)})`;
+      // `- (* a *) x`: apart, so that `(*` starts the attributes
+      if (node.attributes.length > 0) return `${node.operator} ${this.attributeText(node.attributes)} ${operand}`;
       return `${node.operator}${operand}`;
     }
     if (node instanceof S.IncrementExpression) {
       const operand = this.operand(node.operand, PRIMARY);
+      if (node.attributes.length > 0) {
+        const attributes = this.attributeText(node.attributes);
+        return node.postfix ? `${operand} ${attributes}${node.operator}` : `${node.operator} ${attributes} ${operand}`;
+      }
       return node.postfix ? `${operand}${node.operator}` : `${node.operator}${operand}`;
     }
     if (node instanceof S.BinaryExpression) {
       const level = BINARY[node.operator as string] as number;
       const [left, right] = RIGHT.has(level) ? [level + 1, level] : [level, level + 1];
-      return `${this.operand(node.left, left)} ${node.operator} ${this.operand(node.right, right)}`;
+      const attributes = node.attributes.length > 0 ? ` ${this.attributeText(node.attributes)}` : "";
+      return `${this.operand(node.left, left)} ${node.operator}${attributes} ${this.operand(node.right, right)}`;
     }
     if (node instanceof S.AssignmentExpression) return `${this.text(node.target)} ${node.operator} ${this.text(node.value)}`;
     if (node instanceof S.ConditionalExpression) {
-      return `${this.operand(node.condition, CONDITIONAL + 1)} ? ${this.operand(node.consequence, CONDITIONAL + 1)}`
+      const attributes = node.attributes.length > 0 ? `${this.attributeText(node.attributes)} ` : "";
+      return `${this.operand(node.condition, CONDITIONAL + 1)} ? ${attributes}${this.operand(node.consequence, CONDITIONAL + 1)}`
         + ` : ${this.operand(node.alternative, CONDITIONAL)}`;
     }
     if (node instanceof S.InsideExpression) {
@@ -1097,9 +1119,13 @@ export class Printer {
       return `${prefix}'{${node.items.map((i) => this.patternItem(i)).join(", ")}}`;
     }
     if (node instanceof S.CallExpression) {
-      return `${this.operand(node.callee, PRIMARY)}(${node.arguments.map((a) => this.connection(a)).join(", ")})`;
+      const attributes = node.attributes.length > 0 ? ` ${this.attributeText(node.attributes)} ` : "";
+      return `${this.operand(node.callee, PRIMARY)}${attributes}(${node.arguments.map((a) => this.connection(a)).join(", ")})`;
     }
     if (node instanceof S.SystemCall) {
+      if (node.attributes.length > 0) { // the parentheses follow the attributes even without arguments
+        return `${node.name} ${this.attributeText(node.attributes)} (${node.arguments.map((a) => this.typeOrText(a)).join(", ")})`;
+      }
       if (node.arguments.length === 0) return node.name as string;
       return `${node.name}(${node.arguments.map((a) => this.typeOrText(a)).join(", ")})`;
     }
@@ -1181,6 +1207,7 @@ const items: [Function[], Method][] = [
   [[S.CoverageBins], (s, n, l) => s.coverageBins(n, l)],
   [[S.CoverCross], (s, n, l) => s.coverCross(n, l)],
   [[S.BinsSelection], (s, n, l) => s.binsSelection(n, l)],
+  [[S.AttributedItem], (s, n, l) => s.attributed(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [
@@ -1196,5 +1223,6 @@ const statements: [Function[], Method][] = [
   [[S.ConcurrentAssertion], (s, n, l) => s.concurrent(n, l)],
   [[S.ExpectStatement], (s, n, l) => s.expect(n, l)],
   [[S.LabeledStatement], (s, n, l) => s.labeled(n, l)],
+  [[S.AttributedStatement], (s, n, l) => s.attributed(n, l)],
 ];
 for (const [kinds, method] of statements) for (const kind of kinds) Printer.STATEMENTS.set(kind, method);

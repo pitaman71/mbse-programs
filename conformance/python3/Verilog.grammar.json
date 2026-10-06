@@ -14,6 +14,10 @@
    "base": "SyntaxNode"
   },
   {
+   "name": "Statement",
+   "base": "SyntaxNode"
+  },
+  {
    "name": "Port",
    "base": "SyntaxNode"
   },
@@ -27,10 +31,6 @@
   },
   {
    "name": "Connection",
-   "base": "SyntaxNode"
-  },
-  {
-   "name": "Statement",
    "base": "SyntaxNode"
   },
   {
@@ -163,6 +163,138 @@
      ],
      "optional": true,
      "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AttributeInstance",
+   "category": "SyntaxNode",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "specs",
+     "type": [
+      "AttributeSpec"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AttributeSpec",
+   "category": "SyntaxNode",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AttributedItem",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "item",
+     "type": [
+      "Item"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AttributedStatement",
+   "category": "Statement",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "statement",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AttributedPort",
+   "category": "Port",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "port",
+     "type": [
+      "Port"
+     ],
+     "optional": false,
+     "many": false
     }
    ]
   },
@@ -3564,7 +3696,14 @@
    "category": "Expression",
    "since": null,
    "extension": false,
-   "features": {},
+   "features": {
+    "attributes": {
+     "true": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    }
+   },
    "properties": [
     {
      "name": "operator",
@@ -3583,6 +3722,14 @@
       "~^",
       "^~"
      ]
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
     },
     {
      "name": "operand",
@@ -3624,6 +3771,14 @@
      ],
      "optional": false,
      "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
     }
    ]
   },
@@ -3657,6 +3812,12 @@
      },
      "<->": {
       "SystemVerilog": 2009
+     }
+    },
+    "attributes": {
+     "true": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
      }
     }
    },
@@ -3704,6 +3865,14 @@
       "->",
       "<->"
      ]
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
     },
     {
      "name": "right",
@@ -3804,7 +3973,14 @@
    "category": "Expression",
    "since": null,
    "extension": false,
-   "features": {},
+   "features": {
+    "attributes": {
+     "true": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    }
+   },
    "properties": [
     {
      "name": "condition",
@@ -3813,6 +3989,14 @@
      ],
      "optional": false,
      "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
     },
     {
      "name": "consequence",
@@ -3988,7 +4172,14 @@
    "category": "Expression",
    "since": null,
    "extension": false,
-   "features": {},
+   "features": {
+    "attributes": {
+     "true": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    }
+   },
    "properties": [
     {
      "name": "callee",
@@ -3997,6 +4188,14 @@
      ],
      "optional": false,
      "many": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
     },
     {
      "name": "arguments",
@@ -4014,12 +4213,27 @@
    "category": "Expression",
    "since": null,
    "extension": false,
-   "features": {},
+   "features": {
+    "attributes": {
+     "true": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    }
+   },
    "properties": [
     {
      "name": "name",
      "type": "str",
      "optional": false
+    },
+    {
+     "name": "attributes",
+     "type": [
+      "AttributeInstance"
+     ],
+     "optional": true,
+     "many": true
     },
     {
      "name": "arguments",
