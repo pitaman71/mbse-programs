@@ -54,6 +54,10 @@
    "base": "SyntaxNode"
   },
   {
+   "name": "Pattern",
+   "base": "SyntaxNode"
+  },
+  {
    "name": "Constraint",
    "base": "SyntaxNode"
   },
@@ -1451,7 +1455,13 @@
     "SystemVerilog": 2005
    },
    "extension": false,
-   "features": {},
+   "features": {
+    "qualifier": {
+     "soft": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
    "properties": [
     {
      "name": "keyword",
@@ -1460,6 +1470,15 @@
      "choices": [
       "struct",
       "union"
+     ]
+    },
+    {
+     "name": "qualifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "tagged",
+      "soft"
      ]
     },
     {
@@ -3785,6 +3804,11 @@
      "true": {
       "SystemVerilog": 2005
      }
+    },
+    "matches": {
+     "true": {
+      "SystemVerilog": 2005
+     }
     }
    },
    "properties": [
@@ -3822,9 +3846,15 @@
      "optional": false
     },
     {
+     "name": "matches",
+     "type": "bool",
+     "optional": false
+    },
+    {
      "name": "items",
      "type": [
-      "CaseItem"
+      "CaseItem",
+      "PatternCaseItem"
      ],
      "optional": true,
      "many": true
@@ -3852,6 +3882,42 @@
      "type": [
       "Statement",
       "Item"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PatternCaseItem",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "pattern",
+     "type": [
+      "Pattern",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "guard",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
      ],
      "optional": false,
      "many": false
@@ -5633,6 +5699,186 @@
    "extension": false,
    "features": {},
    "properties": []
+  },
+  {
+   "kind": "TaggedExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "member",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MatchesExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pattern",
+     "type": [
+      "Pattern",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PredicateExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "conditions",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "VariablePattern",
+   "category": "Pattern",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "WildcardPattern",
+   "category": "Pattern",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "TaggedPattern",
+   "category": "Pattern",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "member",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pattern",
+     "type": [
+      "Pattern",
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "StructurePattern",
+   "category": "Pattern",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "Pattern",
+      "Expression",
+      "PatternMember"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "PatternMember",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pattern",
+     "type": [
+      "Pattern",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
   },
   {
    "kind": "StreamingConcatenation",

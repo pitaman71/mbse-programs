@@ -44,7 +44,8 @@ def _precedence(node: Any) -> int:
         return CONDITIONAL
     if isinstance(node, (S.UnaryExpression, S.IncrementExpression)):
         return UNARY
-    if isinstance(node, (S.AssignmentExpression, S.MinTypMaxExpression)):
+    if isinstance(node, (S.AssignmentExpression, S.MinTypMaxExpression, S.TaggedExpression, S.MatchesExpression,
+                         S.PredicateExpression)):  # a tagged value ends where an operator follows it
         return 0
     if isinstance(node, S.RepetitionSequence):
         return REPEAT
@@ -325,7 +326,8 @@ class Printer:
         if isinstance(node, S.ImplicitType):
             return " ".join(p for p in (node.signing, dimensions) if p)
         if isinstance(node, S.StructType):
-            head = " ".join(p for p in (node.keyword, "packed" if node.packed else None, node.signing) if p)
+            head = " ".join(p for p in (node.keyword, node.qualifier, "packed" if node.packed else None, node.signing)
+                            if p)
             members = " ".join(f"{self.member(m)};" for m in node.members)
             return f"{head} {{ {members} }}" + (f" {dimensions}" if dimensions else "")
         base = f" {self.type_text(node.base)}" if node.base is not None else ""  # an EnumType
@@ -345,7 +347,8 @@ class Printer:
     def struct_lines(self, node: S.StructType, level: int) -> list[str]:
         """A structure or union over several lines, one member per line."""
         pad = _INDENT * level
-        head = " ".join(p for p in (node.keyword, "packed" if node.packed else None, node.signing) if p)
+        head = " ".join(p for p in (node.keyword, node.qualifier, "packed" if node.packed else None, node.signing)
+                            if p)
         lines = [f"{head} {{"]
         lines.extend(f"{pad}{_INDENT}{self.member(m)};" for m in node.members)
         dimensions = "".join(self.dimension(d) for d in node.dimensions)
@@ -801,12 +804,32 @@ class Printer:
     def case(self, node: S.CaseStatement, level: int) -> list[str]:
         pad = _INDENT * level
         qualifier = f"{node.qualifier} " if node.qualifier else ""
-        lines = [f"{pad}{qualifier}{node.keyword} ({self.text(node.expression)}){' inside' if node.inside else ''}"]
+        kind = " inside" if node.inside else " matches" if node.matches else ""
+        lines = [f"{pad}{qualifier}{node.keyword} ({self.text(node.expression)}){kind}"]
         for item in node.items:
+            if isinstance(item, S.PatternCaseItem):
+                guard = f" &&& {self.text(item.guard)}" if item.guard is not None else ""
+                head = f"{pad}{_INDENT}{self.pattern_text(item.pattern)}{guard}:"
+                lines.extend(self.case_item(head, item.body, level))
+                continue
             label = ", ".join(self.range_text(e) for e in item.expressions) if item.expressions else "default"
             lines.extend(self.case_item(f"{pad}{_INDENT}{label}:", item.body, level))
         lines.append(f"{pad}endcase")
         return lines
+
+    def pattern_text(self, node: Any) -> str:
+        if isinstance(node, S.VariablePattern):
+            return f".{node.name.spelling}"
+        if isinstance(node, S.WildcardPattern):
+            return ".*"
+        if isinstance(node, S.TaggedPattern):
+            pattern = f" {self.pattern_text(node.pattern)}" if node.pattern is not None else ""
+            return f"tagged {node.member.spelling}{pattern}"
+        if isinstance(node, S.StructurePattern):
+            items = [f"{i.name.spelling}: {self.pattern_text(i.pattern)}" if isinstance(i, S.PatternMember)
+                     else self.pattern_text(i) for i in node.items]
+            return "'{" + ", ".join(items) + "}"
+        return self.text(node)  # a constant pattern
 
     def case_item(self, head: str, body: Any, level: int) -> list[str]:
         """`label: body`: a null statement, a block or a one-line statement on the label's line, else on the next."""
@@ -1276,9 +1299,21 @@ class Printer:
             return f"{self.text(node.target)} {node.operator} {self.text(node.value)}"
         if isinstance(node, S.ConditionalExpression):
             attributes = f"{self.attribute_text(node.attributes)} " if node.attributes else ""
-            return (f"{self.operand(node.condition, CONDITIONAL + 1)} ? {attributes}"
+            matching = isinstance(node.condition, (S.MatchesExpression, S.PredicateExpression))  # never parenthesized
+            condition = self.text(node.condition) if matching else self.operand(node.condition, CONDITIONAL + 1)
+            return (f"{condition} ? {attributes}"
                     f"{self.operand(node.consequence, CONDITIONAL + 1)} : "
                     f"{self.operand(node.alternative, CONDITIONAL)}")
+        if isinstance(node, S.TaggedExpression):
+            if node.value is None:
+                return f"tagged {node.member.spelling}"
+            nested = isinstance(node.value, S.TaggedExpression)  # `tagged a tagged b 1` needs no parentheses
+            value = self.text(node.value) if nested else self.operand(node.value, UNARY)
+            return f"tagged {node.member.spelling} {value}"
+        if isinstance(node, S.MatchesExpression):
+            return f"{self.text(node.value)} matches {self.pattern_text(node.pattern)}"
+        if isinstance(node, S.PredicateExpression):
+            return " &&& ".join(self.text(c) for c in node.conditions)
         if isinstance(node, S.InsideExpression):
             ranges = ", ".join(self.range_text(r) for r in node.set)
             return f"{self.operand(node.value, RELATIONAL + 1)} inside {{{ranges}}}"

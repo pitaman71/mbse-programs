@@ -532,14 +532,14 @@ class _Reader:
                 out.modport = self.identifier(node.modport.member)
             return self.made(node, out)
         if kind in ("StructType", "UnionType"):
-            if bool(node.taggedOrSoft):
-                raise self.unsupported(node)
             members = []
             for member in _nodes(node.members):
                 members.append(self.made(member, S.StructMember(random=_text(member.randomQualifier) or None,
                                                                 type=self.data_type(member.type),
                                                                 declarators=self.declarators(member.declarators))))
-            return self.made(node, S.StructType(keyword=node.keyword.rawText, packed=bool(node.packed),
+            qualifier = _text(node.taggedOrSoft) or None  # a union's `tagged` or `soft`
+            return self.made(node, S.StructType(keyword=node.keyword.rawText, qualifier=qualifier,
+                                                packed=bool(node.packed),
                                                 signing=_text(node.signing) or None, members=members,
                                                 dimensions=[self.dimension(d) for d in _nodes(node.dimensions)]))
         members = []  # an EnumType, the last of slang's data types
@@ -1096,21 +1096,54 @@ class _Reader:
         return out
 
     def predicate(self, node: Any) -> S.Expression:
-        conditions = _nodes(node.conditions)
-        if len(conditions) != 1 or conditions[0].matchesClause is not None:
-            raise self.unsupported(node)
-        return self.expression(conditions[0].expr)
+        """An `if`'s or a `?:`'s condition: an expression, `value matches pattern`, or several of them joined by
+        `&&&`."""
+        conditions = []
+        for condition in _nodes(node.conditions):
+            value = self.expression(condition.expr)
+            if condition.matchesClause is not None:
+                pattern = self.match_pattern(condition.matchesClause.pattern)
+                value = self.made(condition, S.MatchesExpression(value=value, pattern=pattern))
+            conditions.append(value)
+        return conditions[0] if len(conditions) == 1 else self.made(node, S.PredicateExpression(conditions=conditions))
+
+    def match_pattern(self, node: Any) -> Any:
+        kind = node.kind.name
+        if kind == "ParenthesizedPattern":  # a pattern's parentheses are not kept
+            return self.match_pattern(node.pattern)
+        if kind == "ExpressionPattern":
+            return self.expression(node.expr)
+        if kind == "VariablePattern":
+            out: Any = S.VariablePattern(name=self.identifier(node.variableName))
+        elif kind == "WildcardPattern":
+            out = S.WildcardPattern()
+        elif kind == "TaggedPattern":
+            out = S.TaggedPattern(member=self.identifier(node.memberName),
+                                  pattern=self.match_pattern(node.pattern) if node.pattern is not None else None)
+        else:  # a StructurePattern
+            out = S.StructurePattern()
+            for member in _nodes(node.members):
+                if member.kind.name == "NamedStructurePatternMember":
+                    out.items.append(self.made(member, S.PatternMember(name=self.identifier(member.name),
+                                                                       pattern=self.match_pattern(member.pattern))))
+                else:
+                    out.items.append(self.match_pattern(member.pattern))
+        return self.made(node, out)
 
     def case(self, node: Any) -> S.CaseStatement:
         inside = _text(node.matchesOrInside)
-        if inside == "matches":
-            raise self.unsupported(node)
         out = S.CaseStatement(qualifier=_text(node.uniqueOrPriority) or None, keyword=node.caseKeyword.rawText,
-                              expression=self.expression(node.expr), inside=inside == "inside")
+                              expression=self.expression(node.expr), inside=inside == "inside",
+                              matches=inside == "matches")
         for item in _nodes(node.items):
             if item.kind.name == "DefaultCaseItem":
                 out.items.append(self.made(item, S.CaseItem(body=self.statement(item.clause))))
-            else:  # a StandardCaseItem: a PatternCaseItem is only in `case matches`
+            elif item.kind.name == "PatternCaseItem":
+                guard = self.expression(item.expr) if item.expr is not None else None
+                pattern = self.match_pattern(item.pattern)
+                out.items.append(self.made(item, S.PatternCaseItem(pattern=pattern, guard=guard,
+                                                                   body=self.statement(item.statement))))
+            else:  # a StandardCaseItem
                 values = [self.range_or_expression(e) for e in _nodes(item.expressions)]
                 out.items.append(self.made(item, S.CaseItem(expressions=values, body=self.statement(item.clause))))
         return out
@@ -1889,6 +1922,10 @@ class _Reader:
     def root(self, node: Any) -> S.RootExpression:
         return S.RootExpression()
 
+    def tagged(self, node: Any) -> S.TaggedExpression:
+        return S.TaggedExpression(member=self.identifier(node.member),
+                                  value=self.expression(node.expr) if node.expr is not None else None)
+
     def empty_queue(self, node: Any) -> S.EmptyQueue:
         return S.EmptyQueue()
 
@@ -1953,7 +1990,8 @@ class _Reader:
         "NewClassExpression": new_class, "CopyClassExpression": copy_class, "NewArrayExpression": new_array,
         "NullLiteralExpression": null, "ThisHandle": this, "SuperHandle": super_handle, "ExpressionOrDist": dist,
         "StreamingConcatenationExpression": streaming, "MinTypMaxExpression": min_typ_max, "RootScope": root,
-        "EmptyQueueExpression": empty_queue, "ArrayOrRandomizeMethodExpression": with_clause,
+        "EmptyQueueExpression": empty_queue, "TaggedUnionExpression": tagged,
+        "ArrayOrRandomizeMethodExpression": with_clause,
     }
 
 

@@ -49,7 +49,8 @@ function precedence(node: unknown): number {
   if (isAny(node, [S.InsideExpression, S.DistExpression])) return RELATIONAL;
   if (node instanceof S.ConditionalExpression) return CONDITIONAL;
   if (isAny(node, [S.UnaryExpression, S.IncrementExpression])) return UNARY;
-  if (isAny(node, [S.AssignmentExpression, S.MinTypMaxExpression])) return 0;
+  if (isAny(node, [S.AssignmentExpression, S.MinTypMaxExpression, S.TaggedExpression, S.MatchesExpression,
+    S.PredicateExpression])) return 0; // a tagged value ends where an operator follows it
   if (node instanceof S.RepetitionSequence) return REPEAT;
   if (node instanceof S.DelaySequence) return DELAY;
   if (node instanceof S.BinarySequence) return SEQUENCE[node.operator as string] as number;
@@ -300,7 +301,7 @@ export class Printer {
     }
     if (node instanceof S.ImplicitType) return joined([node.signing, dimensions]);
     if (node instanceof S.StructType) {
-      const head = joined([node.keyword, node.packed ? "packed" : null, node.signing]);
+      const head = joined([node.keyword, node.qualifier, node.packed ? "packed" : null, node.signing]);
       const members = node.members.map((m) => `${this.member(m)};`).join(" ");
       return withDimensions(`${head} { ${members} }`);
     }
@@ -323,7 +324,7 @@ export class Printer {
   /** A structure or union over several lines, one member per line. */
   structLines(node: any, level: number): string[] {
     const p = pad(level);
-    const head = joined([node.keyword, node.packed ? "packed" : null, node.signing]);
+    const head = joined([node.keyword, node.qualifier, node.packed ? "packed" : null, node.signing]);
     const lines = [`${head} {`];
     lines.push(...node.members.map((m: any) => `${p}${INDENT}${this.member(m)};`));
     const dimensions = node.dimensions.map((d: any) => this.dimension(d)).join("");
@@ -799,13 +800,33 @@ export class Printer {
   case(node: any, level: number): string[] {
     const p = pad(level);
     const qualifier = node.qualifier ? `${node.qualifier} ` : "";
-    const lines = [`${p}${qualifier}${node.keyword} (${this.text(node.expression)})${node.inside ? " inside" : ""}`];
+    const kind = node.inside ? " inside" : node.matches ? " matches" : "";
+    const lines = [`${p}${qualifier}${node.keyword} (${this.text(node.expression)})${kind}`];
     for (const item of node.items) {
+      if (item instanceof S.PatternCaseItem) {
+        const guard = item.guard !== null ? ` &&& ${this.text(item.guard)}` : "";
+        lines.push(...this.caseItem(`${p}${INDENT}${this.patternText(item.pattern)}${guard}:`, item.body, level));
+        continue;
+      }
       const label = item.expressions.length > 0 ? item.expressions.map((e: any) => this.rangeText(e)).join(", ") : "default";
       lines.push(...this.caseItem(`${p}${INDENT}${label}:`, item.body, level));
     }
     lines.push(`${p}endcase`);
     return lines;
+  }
+
+  patternText(node: any): string {
+    if (node instanceof S.VariablePattern) return `.${node.name?.spelling}`;
+    if (node instanceof S.WildcardPattern) return ".*";
+    if (node instanceof S.TaggedPattern) {
+      return `tagged ${node.member?.spelling}` + (node.pattern !== null ? ` ${this.patternText(node.pattern)}` : "");
+    }
+    if (node instanceof S.StructurePattern) {
+      const items = node.items.map((i: any) => (i instanceof S.PatternMember ? `${i.name?.spelling}: ${this.patternText(i.pattern)}`
+        : this.patternText(i)));
+      return "'{" + items.join(", ") + "}";
+    }
+    return this.text(node); // a constant pattern
   }
 
   /** `label: body`: a null statement, a block or a one-line statement on the label's line, else on the next. */
@@ -1294,9 +1315,18 @@ export class Printer {
     if (node instanceof S.AssignmentExpression) return `${this.text(node.target)} ${node.operator} ${this.text(node.value)}`;
     if (node instanceof S.ConditionalExpression) {
       const attributes = node.attributes.length > 0 ? `${this.attributeText(node.attributes)} ` : "";
-      return `${this.operand(node.condition, CONDITIONAL + 1)} ? ${attributes}${this.operand(node.consequence, CONDITIONAL + 1)}`
+      const matching = isAny(node.condition, [S.MatchesExpression, S.PredicateExpression]); // never parenthesized
+      const condition = matching ? this.text(node.condition) : this.operand(node.condition, CONDITIONAL + 1);
+      return `${condition} ? ${attributes}${this.operand(node.consequence, CONDITIONAL + 1)}`
         + ` : ${this.operand(node.alternative, CONDITIONAL)}`;
     }
+    if (node instanceof S.TaggedExpression) {
+      if (node.value === null) return `tagged ${node.member?.spelling}`;
+      const nested = node.value instanceof S.TaggedExpression; // `tagged a tagged b 1` needs no parentheses
+      return `tagged ${node.member?.spelling} ${nested ? this.text(node.value) : this.operand(node.value, UNARY)}`;
+    }
+    if (node instanceof S.MatchesExpression) return `${this.text(node.value)} matches ${this.patternText(node.pattern)}`;
+    if (node instanceof S.PredicateExpression) return node.conditions.map((c) => this.text(c)).join(" &&& ");
     if (node instanceof S.InsideExpression) {
       return `${this.operand(node.value, RELATIONAL + 1)} inside {${node.set.map((r) => this.rangeText(r)).join(", ")}}`;
     }

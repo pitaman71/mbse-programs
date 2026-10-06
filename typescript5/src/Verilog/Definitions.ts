@@ -27,6 +27,8 @@
  *   where its signals are clockvars. A statement's label, and an assertion's, names a 'label'.
  * - A covergroup has a scope, where its ports and its `sample` function's are arguments; a coverpoint and a cross have
  *   scopes, where their bins are, and a labeled one is an entity. A bin's `with (filter)` has a scope where `item` is.
+ * - A pattern's variables (`.v`) are declared in a block of their own, which the `case` item's guard and body, or the
+ *   `if`'s or `?:`'s condition and consequence, see.
  * - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
  *   argument gives it (`find(x) with (x > 0)`), or `item`.
  * - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
@@ -39,7 +41,7 @@
  */
 
 import { Entity, Program, Scope } from "../Framework/Definitions.js";
-import { children, type SyntaxNode } from "../Framework/Syntax.js";
+import { children, type SyntaxNode, walk } from "../Framework/Syntax.js";
 import * as S from "./Syntax.js";
 
 type Method = (self: Definer, node: any, scope: Scope) => void;
@@ -464,6 +466,36 @@ class Definer {
       inner);
   }
 
+  /** `if (x matches .v) body`: a pattern's variables are seen by the condition and the consequence. */
+  ifStatement(node: any, scope: Scope): void {
+    const inner = this.patternVariables(node.condition, scope);
+    this.visitAll([node.condition, node.consequence], inner);
+    if (node.alternative !== null) this.visit(node.alternative, scope);
+  }
+
+  conditional(node: any, scope: Scope): void {
+    const inner = this.patternVariables(node.condition, scope);
+    this.visitAll([node.condition, ...node.attributes, node.consequence], inner);
+    this.visit(node.alternative, scope);
+  }
+
+  patternCaseItem(node: any, scope: Scope): void {
+    const inner = this.patternVariables(node.pattern, scope);
+    this.visitAll([node.pattern, ...(node.guard !== null ? [node.guard] : []), node.body], inner);
+  }
+
+  /** A block scope where the variables of `node`'s patterns are declared, or `scope` when it has none. */
+  patternVariables(node: any, scope: Scope): Scope {
+    const variables = [...walk(node)].filter((n) => n instanceof S.VariablePattern) as S.VariablePattern[];
+    if (variables.length === 0) return scope;
+    const inner = new Scope("block", null, scope, node);
+    for (const variable of variables) {
+      this.program.located(variable.name, inner);
+      this.entity(inner, "variable", variable.name, variable);
+    }
+    return inner;
+  }
+
   foreach(node: any, scope: Scope): void {
     this.visit(node.array, scope);
     const inner = new Scope("block", null, scope, node);
@@ -547,6 +579,10 @@ const methods: [Function[], Method][] = [
   [[S.RandSequenceStatement], (d, n, s) => d.randsequence(n, s)],
   [[S.CheckerDeclaration], (d, n, s) => d.checkerDeclaration(n, s)],
   [[S.ExportDeclaration], () => undefined], // what a package exports is not followed: its names are not looked up
+  [[S.IfStatement], (d, n, s) => d.ifStatement(n, s)],
+  [[S.ConditionalExpression], (d, n, s) => d.conditional(n, s)],
+  [[S.PatternCaseItem], (d, n, s) => d.patternCaseItem(n, s)],
+  [[S.VariablePattern], () => undefined], // declared where its pattern's variables are
   [[S.DpiExport], (d, n, s) => d.dpiExport(n, s)],
   [[S.BindDirective], (d, n, s) => d.bind(n, s)],
   [[S.NetDeclaration], (d, n, s) => d.declarators(n, s, "net")],

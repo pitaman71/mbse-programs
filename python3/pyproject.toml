@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mbse-programs"
-version = "0.3.12"
+version = "0.3.13"
 description = "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++, Python, TypeScript, JavaScript, Verilog and SystemVerilog, with their definitions, built for transpilers that never parse or print strings"
 keywords = ["ast", "abstract syntax tree", "c++", "c", "python", "typescript", "javascript", "verilog", "systemverilog",
             "transpiler", "mbse", "tree-sitter", "slang", "code generation"]

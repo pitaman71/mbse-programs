@@ -29,6 +29,9 @@ package logger_pkg;
         logic [7:0] status;
     } reading_t;
     typedef logic [7:0] byte_t;
+    // A sample, or none yet; a word, read as either half.
+    typedef union tagged { void none; reading_t reading; } sample_t;
+    typedef union soft { byte_t low; logic [15:0] word; } word_t;
     typedef byte_t queue_t[$];
 
     function automatic logic in_range(input logic signed [15:0] raw, input int lo = 200, hi = 800);
@@ -115,6 +118,7 @@ module sampler
     event done;
     logic [7:0] dynamic [];
     logger_pkg::queue_t pending;
+    sample_t latest;
     typedef out.word_t word_t;
     logic [3:0] grid [2][2];
 
@@ -232,6 +236,15 @@ module sampler
         sum <= repeat (2) @(posedge clk) '0;
         samples = logger_pkg::FIELDS + pending[$];
         pending = {};
+        latest = tagged none;
+        latest = tagged reading reading;
+        case (latest) matches
+            tagged reading .r &&& r.status != 0: samples = r.raw;
+            tagged none: ;
+            default: ;
+        endcase
+        if (latest matches tagged reading '{.raw, .*} &&& raw > 0) samples = raw;
+        samples = latest matches tagged reading '{raw: .level, status: 8'h00} ? level : 0;
         lookup["packed"] = {>>{reading.raw, reading.status}} + {<< byte {history with [0 +: 2]}} + {>> 4 {history with [1]}};
         history = '{DEPTH{8'h00}};
         #(1:2:3) average = $unit::ambient + (2:3:4);

@@ -107,6 +107,7 @@ ElaborationTaskName = Choice["$fatal", "$error", "$warning", "$info"]
 DpiSpec = Choice["DPI-C", "DPI"]
 DpiProperty = Choice["context", "pure"]
 SubroutineKeyword = Choice["function", "task"]
+UnionQualifier = Choice["tagged", "soft"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -171,6 +172,11 @@ class Constraint(SyntaxNode):
 class Property(SyntaxNode):
     """A property: what a concurrent assertion checks (16.12, A.2.10). A sequence, and an expression, is a property
     too: a position that holds a property holds a `Property` or an `Expression`."""
+
+
+class Pattern(SyntaxNode):
+    """A pattern that `matches` compares a value with, binding its variables (12.6). An expression is a pattern too, a
+    constant one: a position that holds a pattern holds a `Pattern` or an `Expression`."""
 
 
 class ProductionItem(SyntaxNode):
@@ -579,14 +585,22 @@ class ImplicitType(DataType):
 
 
 class StructType(DataType):
-    """`struct packed signed { members }` or `union ...`, with packed dimensions (7.2, 7.3)."""
+    """`struct packed signed { members }` or `union ...`, with packed dimensions (7.2, 7.3). A union may be `tagged`,
+    its members told apart by a tag, or `soft`, its members of different widths (7.3.2, 7.3.1)."""
 
     keyword: Choice["struct", "union"]
+    qualifier: UnionQualifier | None
     packed: bool
     signing: Signing | None
     members: list[StructMember]
     dimensions: list[Dimension]
     SINCE = sv()
+    FEATURES = {"qualifier": {"soft": sv(2023)}}
+
+    def check(self) -> list[str]:
+        if self.qualifier is not None and self.keyword != "union":
+            return ["a StructType with a qualifier is a union"]
+        return []
 
 
 class StructMember(SyntaxNode):
@@ -1345,14 +1359,36 @@ class IfStatement(Statement):
 
 
 class CaseStatement(Statement):
-    """`qualifier case (expression) inside items endcase`, or `casez` or `casex` (12.5)."""
+    """`qualifier case (expression) inside items endcase`, or `casez` or `casex` (12.5), or `case (expression) matches`
+    of `PatternCaseItem`s (12.6.1)."""
 
     qualifier: Qualifier | None
     keyword: CaseKeyword
     expression: Expression
     inside: bool
-    items: list[CaseItem]
-    FEATURES = {"qualifier": {"unique": sv(), "priority": sv(), "unique0": sv(2009)}, "inside": {True: sv()}}
+    matches: bool
+    items: list[CaseItem | PatternCaseItem]
+    FEATURES = {"qualifier": {"unique": sv(), "priority": sv(), "unique0": sv(2009)}, "inside": {True: sv()},
+                "matches": {True: sv()}}
+
+    def check(self) -> list[str]:
+        if self.inside is True and self.matches is True:
+            return ["a CaseStatement is inside or matches, not both"]
+        patterns = [isinstance(i, PatternCaseItem) for i in self.items]
+        if self.matches is not True and any(patterns):
+            return ["a CaseStatement with PatternCaseItems matches"]
+        if self.matches is True and not all(p or not i.expressions for p, i in zip(patterns, self.items)):
+            return ["a matching CaseStatement has PatternCaseItems and a default"]
+        return []
+
+
+class PatternCaseItem(SyntaxNode):
+    """`pattern &&& guard: body` in a `case matches` (12.6.1)."""
+
+    pattern: Pattern | Expression
+    guard: Expression | None
+    body: Statement
+    SINCE = sv()
 
 
 class CaseItem(SyntaxNode):
@@ -2476,6 +2512,75 @@ class DollarExpression(Expression):
     SINCE = sv()
 
 
+class TaggedExpression(Expression):
+    """`tagged member value`: a tagged union's value, of one of its members (11.9)."""
+
+    member: Identifier
+    value: Expression | None
+    SINCE = sv()
+
+
+class MatchesExpression(Expression):
+    """`value matches pattern`, a condition of an `if` or a `?:` that binds the pattern's variables there (12.6.2,
+    12.6.3)."""
+
+    value: Expression
+    pattern: Pattern | Expression
+    SINCE = sv()
+
+
+class PredicateExpression(Expression):
+    """`condition &&& condition ...`, conditions of an `if` or a `?:` that all hold, in order (12.6.2)."""
+
+    conditions: list[Expression]
+    SINCE = sv()
+
+    def check(self) -> list[str]:
+        return ["a PredicateExpression has two conditions or more"] if len(self.conditions) < 2 else []
+
+
+class VariablePattern(Pattern):
+    """`.name`: any value, bound to a variable of that name (12.6)."""
+
+    name: Identifier
+    SINCE = sv()
+
+
+class WildcardPattern(Pattern):
+    """`.*`: any value (12.6)."""
+
+    SINCE = sv()
+
+
+class TaggedPattern(Pattern):
+    """`tagged member pattern`: a tagged union's value of that member, which matches the pattern (12.6)."""
+
+    member: Identifier
+    pattern: Pattern | Expression | None
+    SINCE = sv()
+
+
+class StructurePattern(Pattern):
+    """`'{patterns}` or `'{member: pattern, ...}`: a structure's members, in order or by name (12.6)."""
+
+    items: list[Pattern | Expression | PatternMember]
+    SINCE = sv()
+
+    def check(self) -> list[str]:
+        named = [isinstance(i, PatternMember) for i in self.items]
+        if any(named) and not all(named):
+            return ["a StructurePattern's members are in order or by name, not both"]
+        return []
+
+
+class PatternMember(SyntaxNode):
+    """`member: pattern` in a structure pattern (12.6)."""
+
+    name: Identifier
+    pattern: Pattern | Expression
+    SINCE = sv()
+
+
 class StreamingConcatenation(Expression):
     """`{>> slice {items}}` or `{<< slice {items}}`: items packed in a stream, in slices of `slice` bits or of a
     type's size, from the left or the right (11.4.14)."""
@@ -2679,6 +2784,7 @@ KINDS: list[type[SyntaxNode]] = [
     GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
     ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
     AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
+    PatternCaseItem,
     ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement,
     BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement,
     ForceStatement, ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement,
@@ -2690,7 +2796,9 @@ KINDS: list[type[SyntaxNode]] = [
     UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression,
     ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,
     CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression,
-    StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue,
+    TaggedExpression, MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern, TaggedPattern,
+    StructurePattern, PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument,
+    RootExpression, EmptyQueue,
     InterfaceTypeName, UnitName,
     TypeReference,
     NullLiteral, ThisExpression, SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression,

@@ -335,13 +335,14 @@ modules' members and libraries' globals are not resolved.
 Verilog and SystemVerilog are one tree language, Verilog, with two families: Verilog (IEEE 1364: 1995, 2001 and 2005)
 and SystemVerilog (IEEE 1800: 2005 to 2023). The kinds are organized as IEEE 1800's grammar is and cover its design
 subset, its classes, its randomization and its assertions: design units (modules, interfaces, programs and packages),
-ports and parameters, data types and dimensions, declarations, continuous assignments, procedural blocks and
-statements, generate constructs, instantiation, functions and tasks, classes with their properties, methods and
-objects, constraints and `randomize() with`, sequences, properties and concurrent assertions, clocking blocks, `let`,
-covergroups, immediate assertions, attributes, every expression but tagged unions, strengths, net types, aliases,
-`defparam`, time units, and compiler directives. Kinds and features record where they exist in both families: ANSI ports and `**` from Verilog-2001, `logic`, packages,
-interfaces, `always_ff` and streaming concatenation from SystemVerilog 2005, `unique0` from 2009, `final` assertions
-from 2012 and triple-quoted strings and tolerance ranges (`[20.0 +/- 2.5]`) from 2023. Verilog has none of SystemVerilog's own.
+ports and parameters, data types and dimensions, declarations, continuous assignments, procedural blocks and statements,
+generate constructs, instantiation, functions and tasks, classes with their properties, methods and objects, constraints
+and `randomize() with`, sequences, properties and concurrent assertions, clocking blocks, `let`, covergroups, immediate
+assertions, attributes, every expression, tagged unions and `matches`, strengths, net types, aliases, `defparam`, time
+units, and compiler directives. Kinds and features record where they exist in both families: ANSI ports and `**` from
+Verilog-2001, `logic`, packages, interfaces, `always_ff` and streaming concatenation from SystemVerilog 2005, `unique0`
+from 2009, `final` assertions from 2012 and triple-quoted strings and tolerance ranges (`[20.0 +/- 2.5]`) from 2023.
+Verilog has none of SystemVerilog's own.
 
 The tree is abstract where the grammar only spells:
 
@@ -399,6 +400,12 @@ The tree is abstract where the grammar only spells:
   `VariableDeclaration`s with `random`, and it is instantiated as a module is (`ModuleInstantiation`, whose `module` may
   be a package's: `p::c`), or in a procedure, a `CheckerStatement`. `export p::x;` and `export *::*;` are
   `ExportDeclaration`s, and a net of a user-defined net type (`nt #1 w;`) a `NetDeclaration` without a `net_type`.
+- A union may be `tagged` or `soft` (`StructType`'s `qualifier`); `tagged m value` is a `TaggedExpression`, which is
+  parenthesized where it is an operand, since slang ends its value where an operator follows. Patterns are a category,
+  `Pattern`: `VariablePattern` (`.v`), `WildcardPattern` (`.*`), `TaggedPattern` and `StructurePattern` (with
+  `PatternMember`s), an expression being a constant pattern; a pattern's parentheses are not kept. `value matches
+  pattern` is a `MatchesExpression` and `&&&` a `PredicateExpression`, in an `if`'s or a `?:`'s condition; `case
+  matches` has `PatternCaseItem`s with a guard.
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
@@ -411,7 +418,7 @@ The tree is abstract where the grammar only spells:
   as written; a macro used anywhere else is refused.
 
 `covergroup extends` and `@@` block events are not kinds yet, and neither are specify
-blocks, user-defined primitives and gate instances, nor tagged unions and the patterns of `matches`.
+blocks, user-defined primitives and gate instances.
 
 ### Reading Verilog
 
@@ -457,13 +464,14 @@ clocking block one where its signals are clockvars; a label names a 'label'. A c
 `option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration
 is. A non-ANSI port is one entity, which the header names and a port declaration declares. `import p::x` declares an
 entity whose `target` is `p::x`, and `import p::*` makes the package's names visible where nothing nearer declares them;
-A checker has a scope where its ports are arguments; what a package exports is not followed. A `randsequence`'s
-productions are entities of its scope, and a production's ports its arguments. An `extern` unit declares nothing: the
-unit of its name does, with its ports for `.*`. `bind`'s instances and connections are found in its target. A macro's
-name in an `` `ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x` in the
-compilation unit. An explicit port's own name (`.p(x)`) is not looked up: what it connects is. An enumeration's member
-`name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A package's and
-a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
+A pattern's variables are declared in a block that its guard and body, or its condition and consequence, see. A checker
+has a scope where its ports are arguments; what a package exports is not followed. A `randsequence`'s productions are
+entities of its scope, and a production's ports its arguments. An `extern` unit declares nothing: the unit of its name
+does, with its ports for `.*`. `bind`'s instances and connections are found in its target. A macro's name in an ``
+`ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x` in the compilation unit.
+An explicit port's own name (`.p(x)`) is not looked up: what it connects is. An enumeration's member `name[2]` declares
+`name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A package's and a class's names
+are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
 (`sampler.counter.count`). A member after `.` and what an instance's module declares are not resolved.
 
 ## Transpiling
@@ -610,8 +618,8 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **The rest of Verilog.** Tagged unions and `matches`, user-defined primitives and gate instances, and specify
-  blocks, which slang reads and the reader refuses, are the next kinds of Verilog.
+- **The rest of Verilog.** User-defined primitives and gate instances, and specify blocks, which slang reads and the
+  reader refuses, are the next kinds of Verilog.
 - **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
   Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from

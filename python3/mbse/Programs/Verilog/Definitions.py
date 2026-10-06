@@ -26,6 +26,8 @@
   signals are clockvars. A statement's label, and an assertion's, names a 'label'.
 - A covergroup has a scope, where its ports and its `sample` function's are arguments; a coverpoint and a cross have
   scopes, where their bins are, and a labeled one is an entity. A bin's `with (filter)` has a scope where `item` is.
+- A pattern's variables (`.v`) are declared in a block of their own, which the `case` item's guard and body, or the
+  `if`'s or `?:`'s condition and consequence, see.
 - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
   argument gives it (`find(x) with (x > 0)`), or `item`.
 - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
@@ -42,7 +44,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..Framework.Definitions import Entity, Program, Scope
-from ..Framework.Syntax import SyntaxNode, children
+from ..Framework.Syntax import SyntaxNode, children, walk
 from . import Syntax as S
 
 __all__ = ["define", "referents"]
@@ -395,6 +397,36 @@ class _Definer:
         self.program.located(node.name, scope)
         self.entity(scope, "constraint", node.name, node)
 
+    def if_statement(self, node: S.IfStatement, scope: Scope) -> None:
+        """`if (x matches .v) body`: a pattern's variables are seen by the condition and the consequence."""
+        inner = self.pattern_variables(node.condition, scope)
+        self.visit_all([node.condition, node.consequence], inner)
+        if node.alternative is not None:
+            self.visit(node.alternative, scope)
+
+    def conditional(self, node: S.ConditionalExpression, scope: Scope) -> None:
+        inner = self.pattern_variables(node.condition, scope)
+        self.visit_all([node.condition, *node.attributes, node.consequence], inner)
+        self.visit(node.alternative, scope)
+
+    def pattern_case_item(self, node: S.PatternCaseItem, scope: Scope) -> None:
+        inner = self.pattern_variables(node.pattern, scope)
+        self.visit_all([node.pattern, *([node.guard] if node.guard is not None else []), node.body], inner)
+
+    def pattern_variables(self, node: Any, scope: Scope) -> Scope:
+        """A block scope where the variables of `node`'s patterns are declared, or `scope` when it has none."""
+        variables = [n for n in walk(node) if isinstance(n, S.VariablePattern)]
+        if not variables:
+            return scope
+        inner = Scope("block", None, scope, node)
+        for variable in variables:
+            self.program.located(variable.name, inner)
+            self.entity(inner, "variable", variable.name, variable)
+        return inner
+
+    def variable_pattern(self, node: S.VariablePattern, scope: Scope) -> None:
+        """Declared where its pattern's variables are."""
+
     def export_declaration(self, node: S.ExportDeclaration, scope: Scope) -> None:
         """What a package exports is not followed: its names are not looked up."""
 
@@ -486,7 +518,8 @@ class _Definer:
         S.ExplicitPort: explicit_port, S.ExplicitAnsiPort: explicit_port, S.IfdefDirective: ifdef,
         S.InterfaceTypeName: interface_type, S.DpiImport: dpi_import, S.DpiExport: dpi_export, S.BindDirective: bind,
         S.RandSequenceStatement: randsequence, S.CheckerDeclaration: checker_declaration,
-        S.ExportDeclaration: export_declaration,
+        S.ExportDeclaration: export_declaration, S.IfStatement: if_statement, S.ConditionalExpression: conditional,
+        S.PatternCaseItem: pattern_case_item, S.VariablePattern: variable_pattern,
         S.NetDeclaration: net, S.VariableDeclaration: variable, S.PortDeclaration: port_declaration,
         S.TypedefDeclaration: typedef, S.NetTypeDeclaration: net_type, S.EnumType: enum, S.GenvarDeclaration: genvar,
         S.ModportDeclaration: modport,

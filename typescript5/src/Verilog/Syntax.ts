@@ -179,6 +179,8 @@ export const DPI_PROPERTYS = ["context", "pure"] as const;
 export type DpiProperty = (typeof DPI_PROPERTYS)[number];
 export const SUBROUTINE_KEYWORDS = ["function", "task"] as const;
 export type SubroutineKeyword = (typeof SUBROUTINE_KEYWORDS)[number];
+export const UNION_QUALIFIERS = ["tagged", "soft"] as const;
+export type UnionQualifier = (typeof UNION_QUALIFIERS)[number];
 export const DEFAULT_NETTYPES = [
   "wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"
 ] as const;
@@ -254,6 +256,12 @@ export abstract class BinsSelect extends SyntaxNode {}
 
 /** What a `randsequence` production's rule lists: productions to generate, code, and their choices (18.17). */
 export abstract class ProductionItem extends SyntaxNode {}
+
+/**
+ * A pattern that `matches` compares a value with, binding its variables (12.6). An expression is a pattern too, a
+ * constant one: a position that holds a pattern holds a `Pattern` or an `Expression`.
+ */
+export abstract class Pattern extends SyntaxNode {}
 
 // === Lexical conventions (5) ===
 
@@ -789,16 +797,24 @@ export class ImplicitType extends DataType {
 
 const StructTypeSpec = {
   keyword: choice("struct", "union"),
+  qualifier: optionalChoice(...UNION_QUALIFIERS),
   packed: flag(),
   signing: optionalChoice(...SIGNINGS),
   members: many(() => [StructMember]),
   dimensions: many(() => [Dimension]),
 };
 export interface StructType extends Properties<typeof StructTypeSpec> {}
-/** `struct packed signed { members }` or `union ...`, with packed dimensions (7.2, 7.3). */
+/**
+ * `struct packed signed { members }` or `union ...`, with packed dimensions (7.2, 7.3). A union may be `tagged`,
+ * its members told apart by a tag, or `soft`, its members of different widths (7.3.2, 7.3.1).
+ */
 export class StructType extends DataType {
   static override SPEC = StructTypeSpec;
   static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { qualifier: [["soft", sv(2023)]] };
+  override check(): string[] {
+    return this.qualifier !== null && this.keyword !== "union" ? ["a StructType with a qualifier is a union"] : [];
+  }
 }
 
 const StructMemberSpec = {
@@ -1823,16 +1839,42 @@ const CaseStatementSpec = {
   keyword: choice(...CASE_KEYWORDS),
   expression: one(() => [Expression]),
   inside: flag(),
-  items: many(() => [CaseItem]),
+  matches: flag(),
+  items: many(() => [CaseItem, PatternCaseItem]),
 };
 export interface CaseStatement extends Properties<typeof CaseStatementSpec> {}
-/** `qualifier case (expression) inside items endcase`, or `casez` or `casex` (12.5). */
+/**
+ * `qualifier case (expression) inside items endcase`, or `casez` or `casex` (12.5), or `case (expression) matches`
+ * of `PatternCaseItem`s (12.6.1).
+ */
 export class CaseStatement extends Statement {
   static override SPEC = CaseStatementSpec;
   static override FEATURES: Features = {
     qualifier: [["unique", sv()], ["priority", sv()], ["unique0", sv(2009)]],
     inside: [[true, sv()]],
+    matches: [[true, sv()]],
   };
+  override check(): string[] {
+    if (this.inside === true && this.matches === true) return ["a CaseStatement is inside or matches, not both"];
+    const patterns = this.items.map((i) => i instanceof PatternCaseItem);
+    if (this.matches !== true && patterns.some((p) => p)) return ["a CaseStatement with PatternCaseItems matches"];
+    if (this.matches === true && !patterns.every((p, i) => p || (this.items[i] as CaseItem).expressions.length === 0)) {
+      return ["a matching CaseStatement has PatternCaseItems and a default"];
+    }
+    return [];
+  }
+}
+
+const PatternCaseItemSpec = {
+  pattern: one(() => [Pattern, Expression]),
+  guard: optional(() => [Expression]),
+  body: one(() => [Statement]),
+};
+export interface PatternCaseItem extends Properties<typeof PatternCaseItemSpec> {}
+/** `pattern &&& guard: body` in a `case matches` (12.6.1). */
+export class PatternCaseItem extends SyntaxNode {
+  static override SPEC = PatternCaseItemSpec;
+  static override SINCE: Availability | null = sv();
 }
 
 const CaseItemSpec = {
@@ -3389,6 +3431,98 @@ export class DollarExpression extends Expression {
   static override SINCE: Availability | null = sv();
 }
 
+const TaggedExpressionSpec = {
+  member: one(() => [Identifier]),
+  value: optional(() => [Expression]),
+};
+export interface TaggedExpression extends Properties<typeof TaggedExpressionSpec> {}
+/** `tagged member value`: a tagged union's value, of one of its members (11.9). */
+export class TaggedExpression extends Expression {
+  static override SPEC = TaggedExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const MatchesExpressionSpec = {
+  value: one(() => [Expression]),
+  pattern: one(() => [Pattern, Expression]),
+};
+export interface MatchesExpression extends Properties<typeof MatchesExpressionSpec> {}
+/**
+ * `value matches pattern`, a condition of an `if` or a `?:` that binds the pattern's variables there (12.6.2,
+ * 12.6.3).
+ */
+export class MatchesExpression extends Expression {
+  static override SPEC = MatchesExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const PredicateExpressionSpec = {
+  conditions: many(() => [Expression]),
+};
+export interface PredicateExpression extends Properties<typeof PredicateExpressionSpec> {}
+/** `condition &&& condition ...`, conditions of an `if` or a `?:` that all hold, in order (12.6.2). */
+export class PredicateExpression extends Expression {
+  static override SPEC = PredicateExpressionSpec;
+  static override SINCE: Availability | null = sv();
+  override check(): string[] {
+    return this.conditions.length < 2 ? ["a PredicateExpression has two conditions or more"] : [];
+  }
+}
+
+const VariablePatternSpec = {
+  name: one(() => [Identifier]),
+};
+export interface VariablePattern extends Properties<typeof VariablePatternSpec> {}
+/** `.name`: any value, bound to a variable of that name (12.6). */
+export class VariablePattern extends Pattern {
+  static override SPEC = VariablePatternSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const WildcardPatternSpec = {};
+export interface WildcardPattern extends Properties<typeof WildcardPatternSpec> {}
+/** `.*`: any value (12.6). */
+export class WildcardPattern extends Pattern {
+  static override SPEC = WildcardPatternSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const TaggedPatternSpec = {
+  member: one(() => [Identifier]),
+  pattern: optional(() => [Pattern, Expression]),
+};
+export interface TaggedPattern extends Properties<typeof TaggedPatternSpec> {}
+/** `tagged member pattern`: a tagged union's value of that member, which matches the pattern (12.6). */
+export class TaggedPattern extends Pattern {
+  static override SPEC = TaggedPatternSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const StructurePatternSpec = {
+  items: many(() => [Pattern, Expression, PatternMember]),
+};
+export interface StructurePattern extends Properties<typeof StructurePatternSpec> {}
+/** `'{patterns}` or `'{member: pattern, ...}`: a structure's members, in order or by name (12.6). */
+export class StructurePattern extends Pattern {
+  static override SPEC = StructurePatternSpec;
+  static override SINCE: Availability | null = sv();
+  override check(): string[] {
+    const named = this.items.map((i) => i instanceof PatternMember);
+    return named.some((n) => n) && !named.every((n) => n) ? ["a StructurePattern's members are in order or by name, not both"] : [];
+  }
+}
+
+const PatternMemberSpec = {
+  name: one(() => [Identifier]),
+  pattern: one(() => [Pattern, Expression]),
+};
+export interface PatternMember extends Properties<typeof PatternMemberSpec> {}
+/** `member: pattern` in a structure pattern (12.6). */
+export class PatternMember extends SyntaxNode {
+  static override SPEC = PatternMemberSpec;
+  static override SINCE: Availability | null = sv();
+}
+
 const StreamingConcatenationSpec = {
   operator: choice(...STREAM_OPERATORS),
   slice: optional(() => [Expression, DataType]),
@@ -3670,30 +3804,32 @@ export const KINDS = [
   FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor,
   GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
   AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
-  ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
-  ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement,
-  ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production,
-  ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,
-  ImmediateAssertion, DelayControl, RepeatEventControl, EventControl, EventExpression, NameExpression,
-  MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral,
-  StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression,
-  InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression,
-  SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, StreamingConcatenation,
-  StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName,
-  TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression,
-  RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration,
-  ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint,
-  ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem,
-  LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration,
-  SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence,
-  BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty,
-  UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem,
-  ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal,
-  ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption,
-  Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault,
-  BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect,
-  FilteredBinsSelect, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective,
-  IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
+  PatternCaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement,
+  ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger,
+  DisableStatement, ForceStatement, ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement,
+  RandSequenceStatement, Production, ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat,
+  ProductionCase, ProductionCaseItem, ImmediateAssertion, DelayControl, RepeatEventControl, EventControl,
+  EventExpression, NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral,
+  TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression,
+  AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication,
+  AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage,
+  DollarExpression, TaggedExpression, MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern,
+  TaggedPattern, StructurePattern, PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression,
+  EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression,
+  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
+  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
+  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
+  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
+  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
+  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
+  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
+  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
+  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
+  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
+  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
+  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
+  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
+  ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */
