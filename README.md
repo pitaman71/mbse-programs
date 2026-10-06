@@ -181,16 +181,16 @@ in-place rewriting, and definitions with lookup), and four languages:
   TypeScript 5.0 and 5.9 and ES2020 and ES2025 (and any other version or edition), each with JSX or without, parsing
   through tree-sitter-typescript 0.23.2 with corrections of its grammar, printing, and the definitions of a program,
   which keep values, types and namespaces apart. Checked against typescript-estree on 1,857 files.
-- Verilog: 256 kinds covering SystemVerilog 2023's design subset and its verification constructs (design units, ports of
+- Verilog: 263 kinds covering SystemVerilog 2023's design subset and its verification constructs (design units, ports of
   every form, parameters, data types, declarations, procedural blocks, statements, generate constructs, instantiation,
   functions and tasks, classes with their properties, methods and objects, constraints, `randomize() with` and
   `randcase`, `randsequence`, sequences and properties, concurrent and immediate assertions, checkers, clocking blocks,
   `let`, covergroups, attributes, every expression, tagged unions and `matches`, strengths, net types, aliases,
-  `defparam`, time units and compiler directives), with Verilog as a family of its own; the standards Verilog-2005 and
-  SystemVerilog 2017 and 2023 (and any other year of either), reading through slang 12.0.0 (`pyslang`), which TypeScript
-  runs through the Python implementation, printing, and the definitions of a source file with packages, imports, classes
-  and hierarchical scopes. Comments, directives and conditional compilation are kept as trees, and what is outside the
-  kinds (primitives, specify blocks) is refused by name.
+  `defparam`, time units, gates, user-defined primitives and compiler directives), with Verilog as a family of its own;
+  the standards Verilog-2005 and SystemVerilog 2017 and 2023 (and any other year of either), reading through slang
+  12.0.0 (`pyslang`), which TypeScript runs through the Python implementation, printing, and the definitions of a source
+  file with packages, imports, classes and hierarchical scopes. Comments, directives and conditional compilation are
+  kept as trees, and what is outside the kinds (specify blocks) is refused by name.
 
 And one transpiler, TypeScript to Python, over the subset of TypeScript that ordinary code is written in: statements,
 functions, classes, enums, imports and type annotations, with JavaScript's common globals and methods mapped to

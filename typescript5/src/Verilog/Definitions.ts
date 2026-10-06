@@ -8,9 +8,9 @@
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
  *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance',
  *   'block', 'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup',
- *   'coverpoint', 'cross', 'bins', 'production', 'checker' and 'import'. An enumeration's members are declared where
- *   the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]`
- *   declares `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
+ *   'coverpoint', 'cross', 'bins', 'production', 'checker', 'primitive' and 'import'. An enumeration's members are
+ *   declared where the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and
+ *   `name[1:3]` declares `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
  * - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
  *   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
  *   is, and its instances and connections in the target; what it instantiates is declared nowhere.
@@ -442,6 +442,38 @@ class Definer {
     }
   }
 
+  gateInstantiation(node: any, scope: Scope): void {
+    if (node.primitive !== null) this.program.located(node.primitive, scope);
+    this.visitAll([node.strength, node.delay].filter((p) => p !== null), scope);
+    for (const instance of node.instances) {
+      this.program.located(instance, scope);
+      this.visitAll([...instance.dimensions, ...instance.terminals], scope);
+      if (instance.name !== null) {
+        this.program.located(instance.name, scope);
+        this.entity(scope, "instance", instance.name, instance);
+      }
+    }
+  }
+
+  /** A primitive has a scope where its ports are: one entity each, which its header and its declarations name. */
+  udpDeclaration(node: any, scope: Scope): void {
+    const inner = this.scoped(scope, "primitive", node.name, node, "primitive", ".");
+    this.program.located(node.name, scope);
+    for (const port of [...node.ports, ...node.declarations]) {
+      this.program.located(port, inner);
+      if (port instanceof S.Identifier) { // a non-ANSI header's name
+        this.entity(inner, "port", port, port);
+        continue;
+      }
+      if (port.value !== null) this.visit(port.value, inner);
+      for (const name of port.names) {
+        this.program.located(name, inner);
+        if (port.direction !== null) this.entity(inner, "port", name, port); // `reg q;` names an output again
+      }
+    }
+    if (node.initial !== null) this.locate(node.initial, inner);
+  }
+
   connection(node: any, scope: Scope): void {
     this.program.located(node.name, scope); // a port or argument of what is called: not resolved
     if (node.value !== null) this.visit(node.value, scope);
@@ -583,6 +615,8 @@ const methods: [Function[], Method][] = [
   [[S.ConditionalExpression], (d, n, s) => d.conditional(n, s)],
   [[S.PatternCaseItem], (d, n, s) => d.patternCaseItem(n, s)],
   [[S.VariablePattern], () => undefined], // declared where its pattern's variables are
+  [[S.GateInstantiation], (d, n, s) => d.gateInstantiation(n, s)],
+  [[S.UdpDeclaration], (d, n, s) => d.udpDeclaration(n, s)],
   [[S.DpiExport], (d, n, s) => d.dpiExport(n, s)],
   [[S.BindDirective], (d, n, s) => d.bind(n, s)],
   [[S.NetDeclaration], (d, n, s) => d.declarators(n, s, "net")],

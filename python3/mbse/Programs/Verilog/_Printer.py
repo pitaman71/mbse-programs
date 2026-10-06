@@ -92,7 +92,7 @@ def _multiline(node: Any) -> bool:
     if isinstance(node, S.CoverCross):
         return bool(node.body)
     return isinstance(node, (S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-                             S.CheckerDeclaration,
+                             S.CheckerDeclaration, S.UdpDeclaration,
                              S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration,
                              S.SequenceDeclaration, S.ClockingDeclaration, S.CovergroupDeclaration, S.AlwaysConstruct,
                              S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf,
@@ -400,7 +400,11 @@ class Printer:
         return " ".join(p for p in parts if p)
 
     def strength(self, node: Any) -> str:
-        return f"({node.size})" if isinstance(node, S.ChargeStrength) else f"({node.first}, {node.second})"
+        if isinstance(node, S.ChargeStrength):
+            return f"({node.size})"
+        if isinstance(node, S.PullStrength):
+            return f"({node.strength})"
+        return f"({node.first}, {node.second})"
 
     def variable_prefix(self, node: Any) -> str:
         """What a variable declaration says before its type: `local rand const var static`."""
@@ -702,6 +706,37 @@ class Printer:
         return [*lines, *body, f"{pad}end{end}"]
 
     # Instantiation
+
+    def gate_instantiation(self, node: S.GateInstantiation, level: int) -> list[str]:
+        head = " ".join(p for p in (node.keyword or self.name(node.primitive),
+                                    self.strength(node.strength) if node.strength is not None else None,
+                                    self.timing_text(node.delay) if node.delay is not None else None) if p)
+        instances = ", ".join(" ".join(p for p in (
+            (i.name.spelling + "".join(self.dimension(d) for d in i.dimensions)) if i.name is not None else None,
+            "(" + ", ".join(self.text(x) for x in i.terminals) + ")") if p) for i in node.instances)
+        return [f"{_INDENT * level}{head} {instances};"]
+
+    def udp_declaration(self, node: S.UdpDeclaration, level: int) -> list[str]:
+        pad = _INDENT * level
+        ports = ", ".join(p.spelling if isinstance(p, S.Identifier) else self.udp_port(p) for p in node.ports)
+        lines = [f"{pad}primitive {node.name.spelling} ({ports});"]
+        lines.extend(f"{pad}{_INDENT}{self.udp_port(d)};" for d in node.declarations)
+        if node.initial is not None:
+            lines.append(f"{pad}{_INDENT}initial {node.initial.name.spelling} = {self.text(node.initial.value)};")
+        lines.append(f"{pad}{_INDENT}table")
+        lines.extend(self.items(node.entries, level + 2, after=lines))
+        lines.append(f"{pad}{_INDENT}endtable")
+        lines.append(f"{pad}endprimitive" + (f" : {node.name.spelling}" if node.labeled else ""))
+        return lines
+
+    def udp_port(self, node: S.UdpPort) -> str:
+        head = " ".join(p for p in (node.direction, "reg" if node.reg else None) if p)
+        value = f" = {self.text(node.value)}" if node.value is not None else ""
+        return f"{head} {', '.join(n.spelling for n in node.names)}{value}"
+
+    def udp_entry(self, node: S.UdpEntry, level: int) -> list[str]:
+        current = f" : {node.current}" if node.current is not None else ""
+        return [f"{_INDENT * level}{node.inputs}{current} : {node.output};"]
 
     def instantiation(self, node: S.ModuleInstantiation, level: int) -> list[str]:
         parameters = self.parameter_values(node.parameters)
@@ -1427,7 +1462,8 @@ class Printer:
         S.DefParam: defparam, S.TimeUnitsDeclaration: time_units, S.EmptyItem: empty_item,
         S.ElaborationTask: elaboration_task, S.CheckerDeclaration: checker_declaration,
         S.ExportDeclaration: export_declaration, S.DpiImport: dpi_import, S.DpiExport: dpi_export,
-        S.BindDirective: bind,
+        S.BindDirective: bind, S.GateInstantiation: gate_instantiation, S.UdpDeclaration: udp_declaration,
+        S.UdpEntry: udp_entry,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,

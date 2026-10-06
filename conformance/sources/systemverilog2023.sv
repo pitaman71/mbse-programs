@@ -114,6 +114,7 @@ module sampler
     tri scalared [1:0] pair;
     level_t #1 levels;
     wire [1:0] low_pair;
+    wire ready_low, alarm_n, alarm, odd;
     var type(nibble2) shadow;
     event done;
     logic [7:0] dynamic [];
@@ -127,6 +128,12 @@ module sampler
     assign (weak0, weak1) #1 pair = nibble2[1:0];
     alias low_pair = pair;
     defparam u_counter.STEP = 2;
+    and #(1, 2) g_ready (ready_low, out.ready, rst_n);
+    nand (strong0, weak1) (alarm_n, nibble2[0], nibble2[1]);
+    pullup (weak1) (pair[0]);
+    bufif1 b_drive [1:0] (pair, nibble2[1:0], {2{rst_n}});
+    alarm_latch #1 (alarm, nibble2[0], clk);
+    parity u_parity (odd, nibble2[0], nibble2[1]);
 
     always_ff @(posedge clk or negedge rst_n) begin : counter
         if (!rst_n) begin
@@ -319,6 +326,31 @@ checker checker_unit (input logic clk, input logic [15:0] count, sequence settle
     rand bit hold;
     assert property (hold |=> $stable(count));
 endchecker : checker_unit
+
+// The alarm's latch: it follows its input while enabled, and holds it otherwise.
+primitive alarm_latch (q, d, en);
+    output q;
+    reg q;
+    input d, en;
+    initial q = 1'b0;
+    table
+        // d en : q : q+
+        ? 0 : ? : -;
+        0 (01) : ? : 0;
+        1 1 : ? : 1;
+        * 1 : ? : -;
+    endtable
+endprimitive : alarm_latch
+
+// The parity of two bits.
+primitive parity (output p, input a, b);
+    table
+        0 0 : 0;
+        0 1 : 1;
+        1 0 : 1;
+        1 1 : 0;
+    endtable
+endprimitive
 
 // The watchdog, declared before its body, whose ports its declaration gives.
 extern module watchdog #(parameter int LIMIT = 8) (input logic clk, output logic bark);

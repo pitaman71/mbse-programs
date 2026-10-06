@@ -406,6 +406,10 @@ The tree is abstract where the grammar only spells:
   `PatternMember`s), an expression being a constant pattern; a pattern's parentheses are not kept. `value matches
   pattern` is a `MatchesExpression` and `&&&` a `PredicateExpression`, in an `if`'s or a `?:`'s condition; `case
   matches` has `PatternCaseItem`s with a guard.
+- Gates, switches and pulls are a `GateInstantiation` of `GateInstance`s (whose names may be left out), with a
+  `DriveStrength` or a pull's `PullStrength`; so is a user-defined primitive's instance without a name, whose
+  `primitive` is its name. A primitive is a `UdpDeclaration` of `UdpPort`s, an optional `UdpInitial`, and a table of
+  `UdpEntry`s, whose fields are kept as written (`(01) 1 : ? : -`) and checked against IEEE 1800's symbols.
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
@@ -417,8 +421,7 @@ The tree is abstract where the grammar only spells:
 - A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
   as written; a macro used anywhere else is refused.
 
-`covergroup extends` and `@@` block events are not kinds yet, and neither are specify
-blocks, user-defined primitives and gate instances.
+`covergroup extends` and `@@` block events are not kinds yet, and neither are specify blocks.
 
 ### Reading Verilog
 
@@ -464,14 +467,15 @@ signals are clockvars; a label names a 'label'. A covergroup has a scope of its 
 a coverpoint and a cross scopes of their bins, and a bin's filter one where `item` is; `option` and `type_option` are
 built in, and not entities. A pattern's variables are declared in a block that its guard and body, or its condition and
 consequence, see. An enumeration's members are declared where the enumeration is: `name[2]` declares `name0` and
-`name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A non-ANSI port is one entity, which the
-header names and a port declaration declares; an explicit port's own name (`.p(x)`) is not looked up, but what it
-connects is. An `extern` unit declares nothing: the unit of its name does, with its ports for `.*`. `bind`'s instances
-and connections are found in its target. `import p::x` declares an entity whose `target` is `p::x`, and `import p::*`
-makes the package's names visible where nothing nearer declares them; what a package exports is not followed. `$unit::x`
-finds `x` in the compilation unit. A package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`,
-`packet::new`), a design unit's and a block's with `.` (`sampler.counter.count`). A macro's name in an `` `ifdef ``
-condition, an interface's type (`bus.t`), a member after `.` and what an instance's module declares are not resolved.
+`name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A primitive has a scope where its ports are,
+and a named gate is an 'instance'. A non-ANSI port is one entity, which the header names and a port declaration
+declares; an explicit port's own name (`.p(x)`) is not looked up, but what it connects is. An `extern` unit declares
+nothing: the unit of its name does, with its ports for `.*`. `bind`'s instances and connections are found in its target.
+`import p::x` declares an entity whose `target` is `p::x`, and `import p::*` makes the package's names visible where
+nothing nearer declares them; what a package exports is not followed. `$unit::x` finds `x` in the compilation unit. A
+package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a
+block's with `.` (`sampler.counter.count`). A macro's name in an `` `ifdef `` condition, an interface's type (`bus.t`),
+a member after `.` and what an instance's module declares are not resolved.
 
 ## Transpiling
 
@@ -617,8 +621,7 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **The rest of Verilog.** User-defined primitives and gate instances, and specify blocks, which slang reads and the
-  reader refuses, are the next kinds of Verilog.
+- **The rest of Verilog.** Specify blocks, which slang reads and the reader refuses, are the next kinds of Verilog.
 - **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
   Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from

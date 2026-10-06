@@ -108,6 +108,10 @@ DpiSpec = Choice["DPI-C", "DPI"]
 DpiProperty = Choice["context", "pure"]
 SubroutineKeyword = Choice["function", "task"]
 UnionQualifier = Choice["tagged", "soft"]
+GateKeyword = Choice["and", "nand", "or", "nor", "xor", "xnor", "buf", "not", "bufif0", "bufif1", "notif0",
+                     "notif1", "nmos", "pmos", "rnmos", "rpmos", "cmos", "rcmos", "tran", "rtran", "tranif0", "tranif1",
+                     "rtranif0", "rtranif1", "pullup", "pulldown"]
+UdpDirection = Choice["output", "input"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -1268,6 +1272,109 @@ class GenerateBlock(Item):
 
 
 # --- Instantiation (23.3) ---
+
+
+class GateInstantiation(Item):
+    """`gate strength #delay instances;`: built-in gates, switches and pulls (28.3), or a user-defined primitive's
+    instances without names (29.8), whose `primitive` is its name."""
+
+    keyword: GateKeyword | None
+    primitive: Identifier | None
+    strength: DriveStrength | PullStrength | None
+    delay: DelayControl | None
+    instances: list[GateInstance]
+
+    def check(self) -> list[str]:
+        if (self.keyword is None) == (self.primitive is None):
+            return ["a GateInstantiation is a gate's or a primitive's"]
+        if isinstance(self.strength, PullStrength) and self.keyword not in ("pullup", "pulldown"):
+            return ["a GateInstantiation with a pull strength is a pullup or a pulldown"]
+        return []
+
+
+class GateInstance(SyntaxNode):
+    """`name dimensions (terminals)`, a gate's instance: its output terminals, then its inputs; the name may be left
+    out (28.3)."""
+
+    name: Identifier | None
+    dimensions: list[Dimension]
+    terminals: list[Expression]
+
+    def check(self) -> list[str]:
+        return ["a GateInstance with dimensions has a name"] if self.dimensions and self.name is None else []
+
+
+class PullStrength(SyntaxNode):
+    """`(strength)`, a `pullup`'s or a `pulldown`'s strength (28.6)."""
+
+    strength: Strength
+
+
+class UdpDeclaration(Item):
+    """`primitive name (ports); declarations initial table entries endtable endprimitive`, a user-defined primitive:
+    its output from its inputs, and from its current state when its output is a `reg` (29). An ANSI header declares
+    its ports (`UdpPort`s); a non-ANSI one names them (`Identifier`s), and `declarations` declare them. `labeled`
+    repeats the name after `endprimitive`."""
+
+    name: Identifier
+    ports: list[UdpPort | Identifier]
+    declarations: list[UdpPort]
+    initial: UdpInitial | None
+    entries: list[UdpEntry | Comment | Directive]
+    labeled: bool
+    FEATURES = {"labeled": {True: sv()}}
+
+
+class UdpPort(SyntaxNode):
+    """`output reg name = value`, `input names` or `reg name`: a primitive's port, or its output's state (29.3)."""
+
+    direction: UdpDirection | None
+    reg: bool
+    names: list[Identifier]
+    value: Expression | None
+
+    def check(self) -> list[str]:
+        if self.direction == "input" and (self.reg is True or self.value is not None):
+            return ["an input UdpPort has no reg and no value"]
+        if self.direction is None and self.reg is not True:
+            return ["a UdpPort without a direction is a reg"]
+        if self.value is not None and (self.reg is not True or len(self.names) != 1):
+            return ["a UdpPort with a value is one output reg"]
+        return []
+
+
+class UdpInitial(SyntaxNode):
+    """`initial name = value;`, a sequential primitive's starting state (29.7)."""
+
+    name: Identifier
+    value: Expression
+
+
+class UdpEntry(SyntaxNode):
+    """`inputs : current : output;`, a row of a primitive's table: its inputs' levels and edges (`0 (01) ?`),
+    separated by spaces, and for a sequential primitive its current state; the output is a level, or `-` for no change
+    (29.3.6)."""
+
+    inputs: str
+    current: str | None
+    output: str
+
+    def check(self) -> list[str]:
+        if not isinstance(self.inputs, str) or not isinstance(self.output, str):
+            return []
+        fields = self.inputs.split(" ")
+        if not all(f in _UDP_INPUTS or len(f) == 4 and f[0] + f[3] == "()" and set(f[1:3]) <= _UDP_LEVELS
+                   for f in fields):
+            return ["a UdpEntry's inputs are levels and edges"]
+        if self.current is not None and self.current not in _UDP_LEVELS:
+            return ["a UdpEntry's current state is a level"]
+        if self.output not in ("0", "1", "x", "X") and (self.output != "-" or self.current is None):
+            return ["a UdpEntry's output is 0, 1 or x, or - with a current state"]
+        return []
+
+
+_UDP_LEVELS = {"0", "1", "x", "X", "?", "b", "B"}
+_UDP_INPUTS = _UDP_LEVELS | {"r", "R", "f", "F", "p", "P", "n", "N", "*"}
 
 
 class ModuleInstantiation(Item):
@@ -2782,7 +2889,8 @@ KINDS: list[type[SyntaxNode]] = [
     ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
     FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
     GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
-    ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
+    ModuleInstantiation, Instance, NamedConnection, WildcardConnection, GateInstantiation, GateInstance, PullStrength,
+    UdpDeclaration, UdpPort, UdpInitial, UdpEntry,
     AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
     PatternCaseItem,
     ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement,

@@ -181,6 +181,14 @@ export const SUBROUTINE_KEYWORDS = ["function", "task"] as const;
 export type SubroutineKeyword = (typeof SUBROUTINE_KEYWORDS)[number];
 export const UNION_QUALIFIERS = ["tagged", "soft"] as const;
 export type UnionQualifier = (typeof UNION_QUALIFIERS)[number];
+export const GATE_KEYWORDS = [
+  "and", "nand", "or", "nor", "xor", "xnor", "buf", "not", "bufif0", "bufif1", "notif0", "notif1", "nmos", "pmos",
+  "rnmos", "rpmos", "cmos", "rcmos", "tran", "rtran", "tranif0", "tranif1", "rtranif0", "rtranif1", "pullup",
+  "pulldown"
+] as const;
+export type GateKeyword = (typeof GATE_KEYWORDS)[number];
+export const UDP_DIRECTIONS = ["output", "input"] as const;
+export type UdpDirection = (typeof UDP_DIRECTIONS)[number];
 export const DEFAULT_NETTYPES = [
   "wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"
 ] as const;
@@ -1707,6 +1715,129 @@ export class GenerateBlock extends Item {
 }
 
 // --- Instantiation (23.3) ---
+
+const GateInstantiationSpec = {
+  keyword: optionalChoice(...GATE_KEYWORDS),
+  primitive: optional(() => [Identifier]),
+  strength: optional(() => [DriveStrength, PullStrength]),
+  delay: optional(() => [DelayControl]),
+  instances: many(() => [GateInstance]),
+};
+export interface GateInstantiation extends Properties<typeof GateInstantiationSpec> {}
+/**
+ * `gate strength #delay instances;`: built-in gates, switches and pulls (28.3), or a user-defined primitive's
+ * instances without names (29.8), whose `primitive` is its name.
+ */
+export class GateInstantiation extends Item {
+  static override SPEC = GateInstantiationSpec;
+  override check(): string[] {
+    if ((this.keyword === null) === (this.primitive === null)) return ["a GateInstantiation is a gate's or a primitive's"];
+    if (this.strength instanceof PullStrength && this.keyword !== "pullup" && this.keyword !== "pulldown") {
+      return ["a GateInstantiation with a pull strength is a pullup or a pulldown"];
+    }
+    return [];
+  }
+}
+
+const GateInstanceSpec = {
+  name: optional(() => [Identifier]),
+  dimensions: many(() => [Dimension]),
+  terminals: many(() => [Expression]),
+};
+export interface GateInstance extends Properties<typeof GateInstanceSpec> {}
+/**
+ * `name dimensions (terminals)`, a gate's instance: its output terminals, then its inputs; the name may be left
+ * out (28.3).
+ */
+export class GateInstance extends SyntaxNode {
+  static override SPEC = GateInstanceSpec;
+  override check(): string[] {
+    return this.dimensions.length > 0 && this.name === null ? ["a GateInstance with dimensions has a name"] : [];
+  }
+}
+
+const PullStrengthSpec = {
+  strength: choice(...STRENGTHS),
+};
+export interface PullStrength extends Properties<typeof PullStrengthSpec> {}
+/** `(strength)`, a `pullup`'s or a `pulldown`'s strength (28.6). */
+export class PullStrength extends SyntaxNode {
+  static override SPEC = PullStrengthSpec;
+}
+
+const UdpDeclarationSpec = {
+  name: one(() => [Identifier]),
+  ports: many(() => [UdpPort, Identifier]),
+  declarations: many(() => [UdpPort]),
+  initial: optional(() => [UdpInitial]),
+  entries: many(() => [UdpEntry, Comment, Directive]),
+  labeled: flag(),
+};
+export interface UdpDeclaration extends Properties<typeof UdpDeclarationSpec> {}
+/**
+ * `primitive name (ports); declarations initial table entries endtable endprimitive`, a user-defined primitive:
+ * its output from its inputs, and from its current state when its output is a `reg` (29). An ANSI header declares
+ * its ports (`UdpPort`s); a non-ANSI one names them (`Identifier`s), and `declarations` declare them. `labeled`
+ * repeats the name after `endprimitive`.
+ */
+export class UdpDeclaration extends Item {
+  static override SPEC = UdpDeclarationSpec;
+  static override FEATURES: Features = { labeled: [[true, sv()]] };
+}
+
+const UdpPortSpec = {
+  direction: optionalChoice(...UDP_DIRECTIONS),
+  reg: flag(),
+  names: many(() => [Identifier]),
+  value: optional(() => [Expression]),
+};
+export interface UdpPort extends Properties<typeof UdpPortSpec> {}
+/** `output reg name = value`, `input names` or `reg name`: a primitive's port, or its output's state (29.3). */
+export class UdpPort extends SyntaxNode {
+  static override SPEC = UdpPortSpec;
+  override check(): string[] {
+    if (this.direction === "input" && (this.reg === true || this.value !== null)) return ["an input UdpPort has no reg and no value"];
+    if (this.direction === null && this.reg !== true) return ["a UdpPort without a direction is a reg"];
+    if (this.value !== null && (this.reg !== true || this.names.length !== 1)) return ["a UdpPort with a value is one output reg"];
+    return [];
+  }
+}
+
+const UdpInitialSpec = {
+  name: one(() => [Identifier]),
+  value: one(() => [Expression]),
+};
+export interface UdpInitial extends Properties<typeof UdpInitialSpec> {}
+/** `initial name = value;`, a sequential primitive's starting state (29.7). */
+export class UdpInitial extends SyntaxNode {
+  static override SPEC = UdpInitialSpec;
+}
+
+const UdpEntrySpec = {
+  inputs: text(),
+  current: optionalText(),
+  output: text(),
+};
+export interface UdpEntry extends Properties<typeof UdpEntrySpec> {}
+/**
+ * `inputs : current : output;`, a row of a primitive's table: its inputs' levels and edges (`0 (01) ?`),
+ * separated by spaces, and for a sequential primitive its current state; the output is a level, or `-` for no change
+ * (29.3.6).
+ */
+export class UdpEntry extends SyntaxNode {
+  static override SPEC = UdpEntrySpec;
+  override check(): string[] {
+    const [inputs, current, output] = [this.inputs, this.current, this.output];
+    if (typeof inputs !== "string" || typeof output !== "string") return [];
+    const edge = (f: string) => f.length === 4 && f.startsWith("(") && f.endsWith(")") && [...f.slice(1, 3)].every((c) => UDP_LEVELS.has(c));
+    if (!inputs.split(" ").every((f) => UDP_INPUTS.has(f) || edge(f))) return ["a UdpEntry's inputs are levels and edges"];
+    if (current !== null && !UDP_LEVELS.has(current as string)) return ["a UdpEntry's current state is a level"];
+    if (!["0", "1", "x", "X"].includes(output) && (output !== "-" || current === null)) {
+      return ["a UdpEntry's output is 0, 1 or x, or - with a current state"];
+    }
+    return [];
+  }
+}
 
 const ModuleInstantiationSpec = {
   module: one(() => [Identifier, ScopedName]),
@@ -3755,6 +3886,9 @@ function methodProblems(method: FunctionDeclaration | TaskDeclaration): string[]
   return [];
 }
 
+const UDP_LEVELS = new Set(["0", "1", "x", "X", "?", "b", "B"]);
+const UDP_INPUTS = new Set([...UDP_LEVELS, "r", "R", "f", "F", "p", "P", "n", "N", "*"]);
+
 /** An `extern` design unit is a header alone, and `.*` is a header's only port. */
 function unitProblems(unit: ModuleDeclaration | InterfaceDeclaration | ProgramDeclaration): string[] {
   const kind = unit.kind().KIND;
@@ -3803,33 +3937,33 @@ export const KINDS = [
   ModportItem, ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
   FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor,
   GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
-  AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
-  PatternCaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement,
-  ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger,
-  DisableStatement, ForceStatement, ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement,
-  RandSequenceStatement, Production, ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat,
-  ProductionCase, ProductionCaseItem, ImmediateAssertion, DelayControl, RepeatEventControl, EventControl,
-  EventExpression, NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral,
-  TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression,
-  AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication,
-  AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage,
-  DollarExpression, TaggedExpression, MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern,
-  TaggedPattern, StructurePattern, PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression,
-  EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression,
-  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
-  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
-  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
-  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
-  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
-  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
-  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
-  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
-  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
-  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
-  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
-  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
-  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
-  ElsifDirective, DisabledText, OtherDirective,
+  GateInstantiation, GateInstance, PullStrength, UdpDeclaration, UdpPort, UdpInitial, UdpEntry, AssignmentStatement,
+  ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem, PatternCaseItem,
+  ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
+  ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement,
+  ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production,
+  ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,
+  ImmediateAssertion, DelayControl, RepeatEventControl, EventControl, EventExpression, NameExpression,
+  MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral,
+  StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression,
+  InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression,
+  SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, TaggedExpression,
+  MatchesExpression, PredicateExpression, VariablePattern, WildcardPattern, TaggedPattern, StructurePattern,
+  PatternMember, StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue,
+  InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression,
+  NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem,
+  LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
+  ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
+  RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem,
+  PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep,
+  CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence,
+  ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty,
+  CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew,
+  ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration,
+  SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence,
+  TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect,
+  ParenthesizedBinsSelect, FilteredBinsSelect, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective,
+  DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

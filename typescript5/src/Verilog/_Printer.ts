@@ -73,6 +73,7 @@ function multiline(node: unknown): boolean {
   if (node instanceof S.Coverpoint) return node.items.length > 0;
   if (node instanceof S.CoverCross) return node.body.length > 0;
   return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration, S.CheckerDeclaration,
+    S.UdpDeclaration,
     S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration, S.SequenceDeclaration, S.ClockingDeclaration,
     S.CovergroupDeclaration,
     S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
@@ -370,7 +371,9 @@ export class Printer {
   }
 
   strength(node: any): string {
-    return node instanceof S.ChargeStrength ? `(${node.size})` : `(${node.first}, ${node.second})`;
+    if (node instanceof S.ChargeStrength) return `(${node.size})`;
+    if (node instanceof S.PullStrength) return `(${node.strength})`;
+    return `(${node.first}, ${node.second})`;
   }
 
   /** What a variable declaration says before its type: `local rand const var static`. */
@@ -700,6 +703,39 @@ export class Printer {
   }
 
   // Instantiation
+
+  gateInstantiation(node: any, level: number): string[] {
+    const head = joined([node.keyword ?? this.name(node.primitive), node.strength !== null ? this.strength(node.strength) : null,
+      node.delay !== null ? this.timingText(node.delay) : null]);
+    const instances = node.instances.map((i: any) => joined([
+      i.name !== null ? i.name.spelling + i.dimensions.map((d: any) => this.dimension(d)).join("") : null,
+      "(" + i.terminals.map((x: any) => this.text(x)).join(", ") + ")"])).join(", ");
+    return [`${pad(level)}${head} ${instances};`];
+  }
+
+  udpDeclaration(node: any, level: number): string[] {
+    const p = pad(level);
+    const ports = node.ports.map((q: any) => (q instanceof S.Identifier ? q.spelling : this.udpPort(q))).join(", ");
+    const lines = [`${p}primitive ${node.name.spelling} (${ports});`];
+    lines.push(...node.declarations.map((d: any) => `${p}${INDENT}${this.udpPort(d)};`));
+    if (node.initial !== null) lines.push(`${p}${INDENT}initial ${node.initial.name.spelling} = ${this.text(node.initial.value)};`);
+    lines.push(`${p}${INDENT}table`);
+    lines.push(...this.items(node.entries, level + 2, lines));
+    lines.push(`${p}${INDENT}endtable`);
+    lines.push(`${p}endprimitive` + (node.labeled ? ` : ${node.name.spelling}` : ""));
+    return lines;
+  }
+
+  udpPort(node: any): string {
+    const head = joined([node.direction, node.reg ? "reg" : null]);
+    const value = node.value !== null ? ` = ${this.text(node.value)}` : "";
+    return `${head} ${node.names.map((n: any) => n.spelling).join(", ")}${value}`;
+  }
+
+  udpEntry(node: any, level: number): string[] {
+    const current = node.current !== null ? ` : ${node.current}` : "";
+    return [`${pad(level)}${node.inputs}${current} : ${node.output};`];
+  }
 
   instantiation(node: any, level: number): string[] {
     const parameters = this.parameterValues(node.parameters);
@@ -1455,6 +1491,9 @@ const items: [Function[], Method][] = [
   [[S.DpiImport], (s, n, l) => s.dpiImport(n, l)],
   [[S.DpiExport], (s, n, l) => s.dpiExport(n, l)],
   [[S.BindDirective], (s, n, l) => s.bind(n, l)],
+  [[S.GateInstantiation], (s, n, l) => s.gateInstantiation(n, l)],
+  [[S.UdpDeclaration], (s, n, l) => s.udpDeclaration(n, l)],
+  [[S.UdpEntry], (s, n, l) => s.udpEntry(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [

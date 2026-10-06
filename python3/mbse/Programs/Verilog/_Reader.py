@@ -18,7 +18,7 @@ implementation reports the same line and column.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Sequence
-from typing import Any
+from typing import Any, get_args
 
 import pyslang
 from pyslang import parsing, syntax
@@ -84,6 +84,9 @@ def _nodes(items: Any) -> list[Any]:
 def _is_type(kind: str) -> bool:
     """Whether a syntax kind where an expression or a type may be is a type: a named one reads as an expression."""
     return kind.endswith("Type") and kind != "NamedType" or kind == "TypeReference"
+
+
+_GATES = set(get_args(S.GateKeyword))
 
 
 def _text(token: parsing.Token | None) -> str:
@@ -640,11 +643,13 @@ class _Reader:
         out.declarators = self.declarators(node.declarators)
         return out
 
-    def strength(self, node: Any) -> S.DriveStrength | S.ChargeStrength | None:
+    def strength(self, node: Any) -> S.DriveStrength | S.ChargeStrength | S.PullStrength | None:
         if node is None:
             return None
         if node.kind.name == "ChargeStrength":
             return self.made(node, S.ChargeStrength(size=node.strength.rawText))
+        if node.kind.name == "PullStrength":
+            return self.made(node, S.PullStrength(strength=node.strength.rawText))
         return self.made(node, S.DriveStrength(first=node.strength0.rawText, second=node.strength1.rawText))
 
     def net_type_declaration(self, node: Any) -> S.NetTypeDeclaration:
@@ -663,6 +668,62 @@ class _Reader:
         kind = self.made(node.netType, S.NamedType(name=self.identifier(node.netType)))
         return S.NetDeclaration(type=kind, delay=self.delay(node.delay) if node.delay is not None else None,
                                 declarators=self.declarators(node.declarators))
+
+    def gate_instantiation(self, node: Any) -> S.GateInstantiation:
+        """Gates, switches and pulls, or a user-defined primitive's instances without names."""
+        kind = node.type.rawText
+        out = S.GateInstantiation(strength=self.strength(node.strength),
+                                  delay=self.delay(node.delay) if node.delay is not None else None)
+        if kind in _GATES:
+            out.keyword = kind
+        else:
+            out.primitive = self.identifier(node.type)
+        for instance in _nodes(node.instances):
+            gate = S.GateInstance(terminals=[self.expression(c.expr) for c in _nodes(instance.connections)])
+            if instance.decl is not None:
+                gate.name = self.identifier(instance.decl.name)
+                gate.dimensions = [self.dimension(d) for d in _nodes(instance.decl.dimensions)]
+            out.instances.append(self.made(instance, gate))
+        return out
+
+    def udp_declaration(self, node: Any) -> S.UdpDeclaration:
+        ports = node.portList
+        if ports.kind.name == "WildcardUdpPortList":
+            raise self.unsupported(ports)
+        body = node.body
+        out = S.UdpDeclaration(name=self.identifier(node.name), labeled=node.endBlockName is not None,
+                               ports=[self.identifier(p.identifier) if p.kind.name == "IdentifierName"
+                                      else self.udp_port(p) for p in _nodes(ports.ports)],
+                               declarations=[self.udp_port(p) for p in _nodes(body.portDecls)],
+                               entries=self.items(_nodes(body.entries), body.endtable, convert=self.udp_entry))
+        if body.initialStmt is not None:
+            initial = body.initialStmt
+            out.initial = self.made(initial, S.UdpInitial(name=self.identifier(initial.name),
+                                                         value=self.expression(initial.value)))
+        return out
+
+    def udp_port(self, node: Any) -> S.UdpPort:
+        if node.kind.name == "UdpInputPortDecl":
+            out = S.UdpPort(direction="input", names=[self.identifier(n.identifier) for n in _nodes(node.names)])
+        else:  # a UdpOutputPortDecl, or `reg name;`
+            out = S.UdpPort(direction=_text(node.keyword) or None, reg=bool(node.reg),
+                            names=[self.identifier(node.name)])
+            if node.initializer is not None:
+                out.value = self.expression(node.initializer.expr)
+        return self.made(node, out)
+
+    def udp_entry(self, node: Any) -> S.UdpEntry:
+        out = S.UdpEntry(inputs=" ".join(self.udp_field(f) for f in _nodes(node.inputs)),
+                         output=self.udp_field(node.next))
+        if node.current is not None:
+            out.current = self.udp_field(node.current)
+        return self.made(node, out)
+
+    def udp_field(self, node: Any) -> str:
+        """A level, or an edge in parentheses: `(01)`."""
+        if node.kind.name == "UdpEdgeField":
+            return "(" + node.first.rawText + _text(node.second) + ")"
+        return node.field.rawText
 
     def checker_declaration(self, node: Any) -> S.CheckerDeclaration:
         return S.CheckerDeclaration(name=self.identifier(node.name), ports=self.assertion_ports(node.portList),
@@ -1960,7 +2021,8 @@ class _Reader:
         "DPIExport": dpi_export, "BindDirective": bind,
         "CheckerDeclaration": checker_declaration, "CheckerDataDeclaration": checker_data,
         "PackageExportDeclaration": export_declaration, "PackageExportAllDeclaration": export_declaration,
-        "UserDefinedNetDeclaration": user_net,
+        "UserDefinedNetDeclaration": user_net, "PrimitiveInstantiation": gate_instantiation,
+        "UdpDeclaration": udp_declaration,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,
