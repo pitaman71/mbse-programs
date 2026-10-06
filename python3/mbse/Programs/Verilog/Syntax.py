@@ -118,6 +118,7 @@ DataPolarity = Choice["+:", "-:", ":"]
 TimingCheckName = Choice["$setup", "$hold", "$setuphold", "$recovery", "$removal", "$recrem", "$skew", "$timeskew",
                          "$fullskew", "$period", "$width", "$nochange"]
 BlockEventKeyword = Choice["begin", "end"]
+ConfigRuleKeyword = Choice["default", "instance", "cell"]
 PulseStyle = Choice["pulsestyle_onevent", "pulsestyle_ondetect", "showcancelled", "noshowcancelled"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
@@ -389,6 +390,69 @@ class CheckerDeclaration(Item):
     items: list[Item | Directive | Comment]
     labeled: bool
     SINCE = sv(2009)
+
+
+class ConfigDeclaration(Item):
+    """`config name; localparams design cells; rules endconfig`: which libraries' cells a design's instances use (33.4).
+    `labeled` repeats the name after `endconfig`."""
+
+    name: Identifier
+    localparams: list[ParameterDeclaration]
+    design: list[ConfigCell]
+    rules: list[ConfigRule | Directive | Comment]
+    labeled: bool
+    SINCE = verilog(2001)
+    FEATURES = {"localparams": {True: sv(2009)}}
+
+
+class ConfigCell(SyntaxNode):
+    """`library.cell`, or `cell` of the libraries a rule searches (33.4.1)."""
+
+    library: Identifier | None
+    cell: Identifier
+
+
+class ConfigRule(SyntaxNode):
+    """`default liblist libraries;`, `instance path clause;` or `cell name clause;`: where an instance, or a cell, comes
+    from (33.4.1)."""
+
+    keyword: ConfigRuleKeyword
+    path: list[Identifier]
+    cell: ConfigCell | None
+    clause: ConfigLiblist | ConfigUse
+    SINCE = verilog(2001)
+
+    def check(self) -> list[str]:
+        if (self.keyword == "instance") != bool(self.path) or (self.keyword == "cell") != (self.cell is not None):
+            return ["a ConfigRule has a path for an instance, a cell for a cell, and neither for the default"]
+        if self.keyword == "default" and isinstance(self.clause, ConfigUse):
+            return ["a default ConfigRule has a liblist"]
+        return []
+
+
+class ConfigLiblist(SyntaxNode):
+    """`liblist libraries`: the libraries a rule searches, in order (33.4.1.5)."""
+
+    libraries: list[Identifier]
+    SINCE = verilog(2001)
+
+
+class ConfigUse(SyntaxNode):
+    """`use library.cell #(parameters) :config`: the cell an instance or a cell uses, with parameters, or a
+    configuration when `config` (33.4.1.6)."""
+
+    cell: ConfigCell | None
+    parameters: list[Expression | DataType | Connection]
+    config: bool
+    SINCE = verilog(2001)
+    FEATURES = {"parameters": {True: sv(2009)}}
+
+    def check(self) -> list[str]:
+        if self.cell is None and not self.parameters:
+            return ["a ConfigUse has a cell or parameters"]
+        if self.config is True and self.cell is None:
+            return ["a ConfigUse of a configuration has its cell"]
+        return []
 
 
 class PackageDeclaration(Item):
@@ -3019,6 +3083,7 @@ KINDS: list[type[SyntaxNode]] = [
     Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
     AttributedStatement, AttributedPort,
     SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration, CheckerDeclaration, PackageDeclaration,
+    ConfigDeclaration, ConfigCell, ConfigRule, ConfigLiblist, ConfigUse,
     AnsiPort, InterfacePort, InterfacePortDeclaration, PortReference, PortConcatenation, ExplicitPort, WildcardPort,
     EmptyPort, ExplicitAnsiPort,
     PortDeclaration,

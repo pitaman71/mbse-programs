@@ -92,7 +92,7 @@ def _multiline(node: Any) -> bool:
     if isinstance(node, S.CoverCross):
         return bool(node.body)
     return isinstance(node, (S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-                             S.CheckerDeclaration, S.UdpDeclaration, S.SpecifyBlock,
+                             S.CheckerDeclaration, S.UdpDeclaration, S.SpecifyBlock, S.ConfigDeclaration,
                              S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration,
                              S.SequenceDeclaration, S.ClockingDeclaration, S.CovergroupDeclaration, S.AlwaysConstruct,
                              S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf,
@@ -742,6 +742,34 @@ class Printer:
     def udp_entry(self, node: S.UdpEntry, level: int) -> list[str]:
         current = f" : {node.current}" if node.current is not None else ""
         return [f"{_INDENT * level}{node.inputs}{current} : {node.output};"]
+
+    def config_declaration(self, node: S.ConfigDeclaration, level: int) -> list[str]:
+        pad = _INDENT * level
+        lines = [f"{pad}config {node.name.spelling};"]
+        lines.extend(f"{pad}{_INDENT}{self.parameter_text(p)};" for p in node.localparams)
+        lines.append(f"{pad}{_INDENT}design {' '.join(self.config_cell(c) for c in node.design)};")
+        lines.extend(self.items(node.rules, level + 1, after=lines))
+        lines.append(f"{pad}endconfig" + (f" : {node.name.spelling}" if node.labeled else ""))
+        return lines
+
+    def config_cell(self, node: S.ConfigCell) -> str:
+        return (f"{node.library.spelling}." if node.library is not None else "") + node.cell.spelling
+
+    def config_rule(self, node: S.ConfigRule, level: int) -> list[str]:
+        if node.keyword == "instance":
+            head = f"instance {'.'.join(p.spelling for p in node.path)}"
+        elif node.keyword == "cell":
+            head = f"cell {self.config_cell(node.cell)}"
+        else:
+            head = "default"
+        clause = node.clause
+        if isinstance(clause, S.ConfigLiblist):
+            text = " ".join(["liblist", *(l.spelling for l in clause.libraries)])
+        else:
+            cell = f" {self.config_cell(clause.cell)}" if clause.cell is not None else ""
+            parameters = f" {self.parameter_values(clause.parameters).strip()}" if clause.parameters else ""
+            text = f"use{cell}{parameters}{':config' if clause.config else ''}"
+        return [f"{_INDENT * level}{head} {text};"]
 
     def specify_block(self, node: S.SpecifyBlock, level: int) -> list[str]:
         pad = _INDENT * level
@@ -1514,7 +1542,8 @@ class Printer:
         S.ElaborationTask: elaboration_task, S.CheckerDeclaration: checker_declaration,
         S.ExportDeclaration: export_declaration, S.DpiImport: dpi_import, S.DpiExport: dpi_export,
         S.BindDirective: bind, S.GateInstantiation: gate_instantiation, S.UdpDeclaration: udp_declaration,
-        S.UdpEntry: udp_entry, S.SpecifyBlock: specify_block, S.SpecparamDeclaration: specparam,
+        S.UdpEntry: udp_entry, S.ConfigDeclaration: config_declaration, S.ConfigRule: config_rule,
+        S.SpecifyBlock: specify_block, S.SpecparamDeclaration: specparam,
         S.PathDeclaration: path, S.TimingCheck: timing_check, S.PulseStyleDeclaration: pulse_style,
     }
     STATEMENTS = {

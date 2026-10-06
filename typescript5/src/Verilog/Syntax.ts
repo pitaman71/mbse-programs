@@ -202,6 +202,8 @@ export const TIMING_CHECK_NAMES = [
 export type TimingCheckName = (typeof TIMING_CHECK_NAMES)[number];
 export const BLOCK_EVENT_KEYWORDS = ["begin", "end"] as const;
 export type BlockEventKeyword = (typeof BLOCK_EVENT_KEYWORDS)[number];
+export const CONFIG_RULE_KEYWORDS = ["default", "instance", "cell"] as const;
+export type ConfigRuleKeyword = (typeof CONFIG_RULE_KEYWORDS)[number];
 export const PULSE_STYLES = ["pulsestyle_onevent", "pulsestyle_ondetect", "showcancelled", "noshowcancelled"] as const;
 export type PulseStyle = (typeof PULSE_STYLES)[number];
 export const DEFAULT_NETTYPES = [
@@ -520,6 +522,88 @@ export interface CheckerDeclaration extends Properties<typeof CheckerDeclaration
 export class CheckerDeclaration extends Item {
   static override SPEC = CheckerDeclarationSpec;
   static override SINCE: Availability | null = sv(2009);
+}
+
+const ConfigDeclarationSpec = {
+  name: one(() => [Identifier]),
+  localparams: many(() => [ParameterDeclaration]),
+  design: many(() => [ConfigCell]),
+  rules: many(() => [ConfigRule, Directive, Comment]),
+  labeled: flag(),
+};
+export interface ConfigDeclaration extends Properties<typeof ConfigDeclarationSpec> {}
+/**
+ * `config name; localparams design cells; rules endconfig`: which libraries' cells a design's instances use (33.4).
+ * `labeled` repeats the name after `endconfig`.
+ */
+export class ConfigDeclaration extends Item {
+  static override SPEC = ConfigDeclarationSpec;
+  static override SINCE: Availability | null = verilog(2001);
+  static override FEATURES: Features = { localparams: [[true, sv(2009)]] };
+}
+
+const ConfigCellSpec = {
+  library: optional(() => [Identifier]),
+  cell: one(() => [Identifier]),
+};
+export interface ConfigCell extends Properties<typeof ConfigCellSpec> {}
+/** `library.cell`, or `cell` of the libraries a rule searches (33.4.1). */
+export class ConfigCell extends SyntaxNode {
+  static override SPEC = ConfigCellSpec;
+}
+
+const ConfigRuleSpec = {
+  keyword: choice(...CONFIG_RULE_KEYWORDS),
+  path: many(() => [Identifier]),
+  cell: optional(() => [ConfigCell]),
+  clause: one(() => [ConfigLiblist, ConfigUse]),
+};
+export interface ConfigRule extends Properties<typeof ConfigRuleSpec> {}
+/**
+ * `default liblist libraries;`, `instance path clause;` or `cell name clause;`: where an instance, or a cell, comes
+ * from (33.4.1).
+ */
+export class ConfigRule extends SyntaxNode {
+  static override SPEC = ConfigRuleSpec;
+  static override SINCE: Availability | null = verilog(2001);
+  override check(): string[] {
+    if ((this.keyword === "instance") !== (this.path.length > 0) || (this.keyword === "cell") !== (this.cell !== null)) {
+      return ["a ConfigRule has a path for an instance, a cell for a cell, and neither for the default"];
+    }
+    if (this.keyword === "default" && this.clause instanceof ConfigUse) return ["a default ConfigRule has a liblist"];
+    return [];
+  }
+}
+
+const ConfigLiblistSpec = {
+  libraries: many(() => [Identifier]),
+};
+export interface ConfigLiblist extends Properties<typeof ConfigLiblistSpec> {}
+/** `liblist libraries`: the libraries a rule searches, in order (33.4.1.5). */
+export class ConfigLiblist extends SyntaxNode {
+  static override SPEC = ConfigLiblistSpec;
+  static override SINCE: Availability | null = verilog(2001);
+}
+
+const ConfigUseSpec = {
+  cell: optional(() => [ConfigCell]),
+  parameters: many(() => [Expression, DataType, Connection]),
+  config: flag(),
+};
+export interface ConfigUse extends Properties<typeof ConfigUseSpec> {}
+/**
+ * `use library.cell #(parameters) :config`: the cell an instance or a cell uses, with parameters, or a
+ * configuration when `config` (33.4.1.6).
+ */
+export class ConfigUse extends SyntaxNode {
+  static override SPEC = ConfigUseSpec;
+  static override SINCE: Availability | null = verilog(2001);
+  static override FEATURES: Features = { parameters: [[true, sv(2009)]] };
+  override check(): string[] {
+    if (this.cell === null && this.parameters.length === 0) return ["a ConfigUse has a cell or parameters"];
+    if (this.config === true && this.cell === null) return ["a ConfigUse of a configuration has its cell"];
+    return [];
+  }
 }
 
 const PackageDeclarationSpec = {
@@ -4121,22 +4205,22 @@ function conditionProblems(directive: IfdefDirective | ElsifDirective): string[]
 export const KINDS = [
   Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
   AttributedStatement, AttributedPort, SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration,
-  CheckerDeclaration, PackageDeclaration, AnsiPort, InterfacePort, InterfacePortDeclaration, PortReference,
-  PortConcatenation, ExplicitPort, WildcardPort, EmptyPort, ExplicitAnsiPort, PortDeclaration, ParameterDeclaration,
-  ParamAssignment, TypeParameterDeclaration, TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType,
-  KeywordType, NamedType, VirtualInterfaceType, ImplicitType, StructType, StructMember, EnumType, EnumMember,
-  RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension, NetDeclaration,
-  DriveStrength, ChargeStrength, VariableDeclaration, VariableDeclarator, ForwardTypedefDeclaration,
-  TypedefDeclaration, EmptyItem, DpiImport, DpiExport, BindDirective, ElaborationTask, GenvarDeclaration,
-  ImportDeclaration, ExportDeclaration, ImportItem, NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment,
-  TimeUnitsDeclaration, ModportDeclaration, ModportItem, ModportPort, ModportSubroutine, ModportClocking,
-  ContinuousAssign, AlwaysConstruct, InitialConstruct, FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort,
-  ClassDeclaration, GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation,
-  Instance, AttributedConnection, NamedConnection, WildcardConnection, GateInstantiation, GateInstance, PullStrength,
-  UdpDeclaration, UdpPort, UdpInitial, UdpEntry, SpecifyBlock, SpecparamDeclaration, SpecparamAssignment,
-  PathDeclaration, TimingCheck, TimingCheckEvent, PulseStyleDeclaration, AssignmentStatement, ExpressionStatement,
-  NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem, PatternCaseItem, ForStatement,
-  WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
+  CheckerDeclaration, PackageDeclaration, ConfigDeclaration, ConfigCell, ConfigRule, ConfigLiblist, ConfigUse,
+  AnsiPort, InterfacePort, InterfacePortDeclaration, PortReference, PortConcatenation, ExplicitPort, WildcardPort,
+  EmptyPort, ExplicitAnsiPort, PortDeclaration, ParameterDeclaration, ParamAssignment, TypeParameterDeclaration,
+  TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType,
+  ImplicitType, StructType, StructMember, EnumType, EnumMember, RangeDimension, SizeDimension, UnsizedDimension,
+  AssociativeDimension, QueueDimension, NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration,
+  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, DpiImport, DpiExport, BindDirective,
+  ElaborationTask, GenvarDeclaration, ImportDeclaration, ExportDeclaration, ImportItem, NetTypeDeclaration, NetAlias,
+  DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem, ModportPort, ModportSubroutine,
+  ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct, FinalConstruct, FunctionDeclaration,
+  TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
+  ModuleInstantiation, Instance, AttributedConnection, NamedConnection, WildcardConnection, GateInstantiation,
+  GateInstance, PullStrength, UdpDeclaration, UdpPort, UdpInitial, UdpEntry, SpecifyBlock, SpecparamDeclaration,
+  SpecparamAssignment, PathDeclaration, TimingCheck, TimingCheckEvent, PulseStyleDeclaration, AssignmentStatement,
+  ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem, PatternCaseItem,
+  ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
   ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement,
   ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production,
   ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,

@@ -73,7 +73,7 @@ function multiline(node: unknown): boolean {
   if (node instanceof S.Coverpoint) return node.items.length > 0;
   if (node instanceof S.CoverCross) return node.body.length > 0;
   return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration, S.CheckerDeclaration,
-    S.UdpDeclaration, S.SpecifyBlock,
+    S.UdpDeclaration, S.SpecifyBlock, S.ConfigDeclaration,
     S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration, S.SequenceDeclaration, S.ClockingDeclaration,
     S.CovergroupDeclaration,
     S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
@@ -741,6 +741,35 @@ export class Printer {
   udpEntry(node: any, level: number): string[] {
     const current = node.current !== null ? ` : ${node.current}` : "";
     return [`${pad(level)}${node.inputs}${current} : ${node.output};`];
+  }
+
+  configDeclaration(node: any, level: number): string[] {
+    const p = pad(level);
+    const lines = [`${p}config ${node.name.spelling};`];
+    lines.push(...node.localparams.map((q: any) => `${p}${INDENT}${this.parameterText(q)};`));
+    lines.push(`${p}${INDENT}design ${node.design.map((c: any) => this.configCell(c)).join(" ")};`);
+    lines.push(...this.items(node.rules, level + 1, lines));
+    lines.push(`${p}endconfig` + (node.labeled ? ` : ${node.name.spelling}` : ""));
+    return lines;
+  }
+
+  configCell(node: any): string {
+    return (node.library !== null ? `${node.library.spelling}.` : "") + node.cell.spelling;
+  }
+
+  configRule(node: any, level: number): string[] {
+    const head = node.keyword === "instance" ? `instance ${node.path.map((q: any) => q.spelling).join(".")}`
+      : node.keyword === "cell" ? `cell ${this.configCell(node.cell)}` : "default";
+    const clause = node.clause;
+    let text: string;
+    if (clause instanceof S.ConfigLiblist) {
+      text = ["liblist", ...clause.libraries.map((l: any) => l.spelling)].join(" ");
+    } else {
+      const cell = clause.cell !== null ? ` ${this.configCell(clause.cell)}` : "";
+      const parameters = clause.parameters.length > 0 ? ` ${this.parameterValues(clause.parameters).trim()}` : "";
+      text = `use${cell}${parameters}${clause.config ? ":config" : ""}`;
+    }
+    return [`${pad(level)}${head} ${text};`];
   }
 
   specifyBlock(node: any, level: number): string[] {
@@ -1549,6 +1578,8 @@ const items: [Function[], Method][] = [
   [[S.UdpDeclaration], (s, n, l) => s.udpDeclaration(n, l)],
   [[S.UdpEntry], (s, n, l) => s.udpEntry(n, l)],
   [[S.SpecifyBlock], (s, n, l) => s.specifyBlock(n, l)],
+  [[S.ConfigDeclaration], (s, n, l) => s.configDeclaration(n, l)],
+  [[S.ConfigRule], (s, n, l) => s.configRule(n, l)],
   [[S.SpecparamDeclaration], (s, n, l) => s.specparam(n, l)],
   [[S.PathDeclaration], (s, n, l) => s.path(n, l)],
   [[S.TimingCheck], (s, n, l) => s.timingCheck(n, l)],

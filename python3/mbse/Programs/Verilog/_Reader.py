@@ -413,8 +413,11 @@ class _Reader:
                 out.append(self.made(port, S.EmptyPort()))
             else:  # an ExplicitAnsiPort
                 value = self.expression(port.expr) if port.expr is not None else None
-                out.append(self.made(port, S.ExplicitAnsiPort(direction=_text(port.direction) or None,
-                                                              name=self.identifier(port.name), value=value)))
+                converted = self.made(port, S.ExplicitAnsiPort(direction=_text(port.direction) or None,
+                                                               name=self.identifier(port.name), value=value))
+                attributes = self.attributes(port)
+                out.append(self.made(port, S.AttributedPort(attributes=attributes, port=converted))
+                           if attributes else converted)
         return out
 
     def port_expression(self, node: Any) -> S.PortReference | S.PortConcatenation:
@@ -788,6 +791,35 @@ class _Reader:
     def pulse_style(self, node: Any) -> S.PulseStyleDeclaration:
         return S.PulseStyleDeclaration(keyword=node.keyword.rawText,
                                        outputs=[self.expression(o) for o in _nodes(node.inputs)])
+
+    def config_declaration(self, node: Any) -> S.ConfigDeclaration:
+        return S.ConfigDeclaration(name=self.identifier(node.name), labeled=node.blockName is not None,
+                                   localparams=[self.made(p, self.parameter(p)) for p in _nodes(node.localparams)],
+                                   design=[self.config_cell(c) for c in _nodes(node.topCells)],
+                                   rules=self.items(_nodes(node.rules), node.endconfig, convert=self.config_rule))
+
+    def config_cell(self, node: Any) -> S.ConfigCell:
+        return self.made(node, S.ConfigCell(library=self.identifier(node.library) if node.library else None,
+                                            cell=self.identifier(node.cell)))
+
+    def config_rule(self, node: Any) -> S.ConfigRule:
+        kind = node.kind.name
+        if kind == "DefaultConfigRule":
+            out = S.ConfigRule(keyword="default", clause=self.config_clause(node.liblist))
+        elif kind == "InstanceConfigRule":
+            path = [self.identifier(node.topModule), *[self.identifier(i.name) for i in _nodes(node.instanceNames)]]
+            out = S.ConfigRule(keyword="instance", path=path, clause=self.config_clause(node.ruleClause))
+        else:  # a CellConfigRule
+            out = S.ConfigRule(keyword="cell", cell=self.config_cell(node.name),
+                               clause=self.config_clause(node.ruleClause))
+        return self.made(node, out)
+
+    def config_clause(self, node: Any) -> S.ConfigLiblist | S.ConfigUse:
+        if node.kind.name == "ConfigLiblist":
+            return self.made(node, S.ConfigLiblist(libraries=[self.identifier(l) for l in node.libraries]))
+        out = S.ConfigUse(cell=self.config_cell(node.name) if node.name is not None else None,
+                          parameters=self.parameter_values(node.paramAssignments), config=bool(node.config))
+        return self.made(node, out)
 
     def checker_declaration(self, node: Any) -> S.CheckerDeclaration:
         return S.CheckerDeclaration(name=self.identifier(node.name), ports=self.assertion_ports(node.portList),
@@ -2117,7 +2149,8 @@ class _Reader:
         "CheckerDeclaration": checker_declaration, "CheckerDataDeclaration": checker_data,
         "PackageExportDeclaration": export_declaration, "PackageExportAllDeclaration": export_declaration,
         "UserDefinedNetDeclaration": user_net, "PrimitiveInstantiation": gate_instantiation,
-        "UdpDeclaration": udp_declaration, "SpecifyBlock": specify_block, "SpecparamDeclaration": specparam,
+        "UdpDeclaration": udp_declaration, "ConfigDeclaration": config_declaration, "SpecifyBlock": specify_block,
+        "SpecparamDeclaration": specparam,
         "PathDeclaration": path, "ConditionalPathDeclaration": path, "IfNonePathDeclaration": path,
         "SystemTimingCheck": timing_check, "PulseStyleDeclaration": pulse_style,
     }

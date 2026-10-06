@@ -431,7 +431,7 @@ module probe_pair (.halves({lo, hi}), .first(lo[0]), .pair(hi[1:0]), , .unused()
 endmodule
 
 module probe_tap (
-    input .sum(probe + 1),
+    (* summed *) input .sum(probe + 1),
     .raw(probe),
     output logic level
 );
@@ -470,6 +470,19 @@ program automatic test_program (
         @(posedge clk) assert property (@(posedge clk) clk |-> ##1 !clk);
     end
 endprogram
+
+// Which libraries the logger's design comes from: its probes from the bench's library, one counter from a faster
+// cell, and the watchdog with a shorter limit.
+config logger_cfg;
+    localparam int FAST_LIMIT = 4;
+    design work.sampler work.test_program;
+    default liblist work bench;
+    instance sampler.tap liblist bench;
+    instance sampler.u_counter use fast.counter;
+    cell parity use work.parity:config;
+    cell alarm_latch liblist;
+    instance sampler.dog use #(.LIMIT(FAST_LIMIT));
+endconfig : logger_cfg
 
 // The testbench's transactions and drivers.
 package logger_tb_pkg;

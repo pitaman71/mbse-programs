@@ -8,9 +8,10 @@
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
  *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance',
  *   'block', 'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup',
- *   'coverpoint', 'cross', 'bins', 'production', 'checker', 'primitive', 'specparam' and 'import'. An enumeration's
- *   members are declared where the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and
- *   `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
+ *   'coverpoint', 'cross', 'bins', 'production', 'checker', 'primitive', 'specparam', 'config' and 'import'. An
+ *   enumeration's members are declared where the enumeration is, as SystemVerilog does; a member `name[2]` declares
+ *   `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal numbers). A `nettype` declares a
+ *   'type'.
  * - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
  *   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
  *   is, and its instances and connections in the target; what it instantiates is declared nowhere.
@@ -429,6 +430,16 @@ class Definer {
     this.visit(node.expression, inner);
   }
 
+  /** A configuration has a scope of its localparams; its cells and libraries are the libraries', not looked up. */
+  configDeclaration(node: any, scope: Scope): void {
+    const inner = this.scoped(scope, "config", node.name, node, "config");
+    this.program.located(node.name, scope);
+    this.visitAll(node.localparams, inner);
+    for (const rule of node.rules) {
+      if (rule instanceof S.ConfigRule && rule.clause instanceof S.ConfigUse) this.visitAll(rule.clause.parameters, inner);
+    }
+  }
+
   checkerDeclaration(node: any, scope: Scope): void {
     const inner = this.scoped(scope, "checker", node.name, node, "checker");
     this.program.located(node.name, scope);
@@ -631,6 +642,7 @@ const methods: [Function[], Method][] = [
   [[S.DpiImport], (d, n, s) => d.dpiImport(n, s)],
   [[S.RandSequenceStatement], (d, n, s) => d.randsequence(n, s)],
   [[S.CheckerDeclaration], (d, n, s) => d.checkerDeclaration(n, s)],
+  [[S.ConfigDeclaration], (d, n, s) => d.configDeclaration(n, s)],
   [[S.ExportDeclaration], () => undefined], // what a package exports is not followed: its names are not looked up
   [[S.IfStatement], (d, n, s) => d.ifStatement(n, s)],
   [[S.ConditionalExpression], (d, n, s) => d.conditional(n, s)],

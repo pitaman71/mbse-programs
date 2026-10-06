@@ -672,6 +672,196 @@
    ]
   },
   {
+   "kind": "ConfigDeclaration",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "localparams": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "localparams",
+     "type": [
+      "ParameterDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "design",
+     "type": [
+      "ConfigCell"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "rules",
+     "type": [
+      "ConfigRule",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ConfigCell",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "library",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "cell",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConfigRule",
+   "category": "SyntaxNode",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "default",
+      "instance",
+      "cell"
+     ]
+    },
+    {
+     "name": "path",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "cell",
+     "type": [
+      "ConfigCell"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "clause",
+     "type": [
+      "ConfigLiblist",
+      "ConfigUse"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConfigLiblist",
+   "category": "SyntaxNode",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "libraries",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ConfigUse",
+   "category": "SyntaxNode",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "parameters": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "cell",
+     "type": [
+      "ConfigCell"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "Expression",
+      "DataType",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "config",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
    "kind": "AnsiPort",
    "category": "Port",
    "since": {

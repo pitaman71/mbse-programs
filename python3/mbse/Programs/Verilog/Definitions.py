@@ -7,9 +7,9 @@
 - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port', 'net',
   'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block', 'class',
   'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint', 'cross',
-  'bins', 'production', 'checker', 'primitive', 'specparam' and 'import'. An enumeration's members are declared where
-  the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares
-  `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
+  'bins', 'production', 'checker', 'primitive', 'specparam', 'config' and 'import'. An enumeration's members are
+  declared where the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and
+  `name[1:3]` declares `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
 - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
   is, and its instances and connections in the target; what it instantiates is declared nowhere.
@@ -439,6 +439,15 @@ class _Definer:
     def export_declaration(self, node: S.ExportDeclaration, scope: Scope) -> None:
         """What a package exports is not followed: its names are not looked up."""
 
+    def config_declaration(self, node: S.ConfigDeclaration, scope: Scope) -> None:
+        """A configuration has a scope of its localparams; its cells and libraries are the libraries', not looked up."""
+        inner = self.scoped(scope, "config", node.name, node, "config")
+        self.program.located(node.name, scope)
+        self.visit_all(node.localparams, inner)
+        for rule in node.rules:
+            if isinstance(rule, S.ConfigRule) and isinstance(rule.clause, S.ConfigUse):
+                self.visit_all(rule.clause.parameters, inner)
+
     def checker_declaration(self, node: S.CheckerDeclaration, scope: Scope) -> None:
         inner = self.scoped(scope, "checker", node.name, node, "checker")
         self.program.located(node.name, scope)
@@ -564,6 +573,7 @@ class _Definer:
         S.ExplicitPort: explicit_port, S.ExplicitAnsiPort: explicit_port, S.IfdefDirective: ifdef,
         S.InterfaceTypeName: interface_type, S.DpiImport: dpi_import, S.DpiExport: dpi_export, S.BindDirective: bind,
         S.RandSequenceStatement: randsequence, S.CheckerDeclaration: checker_declaration,
+        S.ConfigDeclaration: config_declaration,
         S.ExportDeclaration: export_declaration, S.IfStatement: if_statement, S.ConditionalExpression: conditional,
         S.PatternCaseItem: pattern_case_item, S.VariablePattern: variable_pattern,
         S.GateInstantiation: gate_instantiation, S.UdpDeclaration: udp_declaration, S.SpecparamDeclaration: specparam,
