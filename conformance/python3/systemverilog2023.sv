@@ -15,6 +15,8 @@
 
 `undef CHECKS
 `include "defs.svh"
+// The cold room's temperature, for the compilation unit.
+real ambient = 4.0;
 
 /* The packet's fields, as the interface control document specifies them. */
 package logger_pkg;
@@ -74,6 +76,8 @@ module sampler
     genvar g;
     state_t state_next;
     logic [3:0] nibble2;
+    wire #(1, 2, 3) settled = nibble2[0];
+    var type(nibble2) shadow;
     event done;
     logic [7:0] dynamic[];
     logger_pkg::queue_t pending;
@@ -141,6 +145,7 @@ module sampler
     counter #(WIDTH, 1) u_counter (.clk, .rst_n(rst_n), .count());
     checker_unit u_check (.*);
     fifo #(.DEPTH(DEPTH)) u_fifo[1:0] (clk, rst_n, out.data);
+    fifo spare (clk, , out.data);
 
     initial begin
         lookup["idle"] = 8'hFF;
@@ -178,6 +183,13 @@ module sampler
         i = int'(average) <-> i;
         disable counter;
         samples = logger_pkg::FIELDS + pending[$];
+        pending = {};
+        lookup["packed"] = {>>{reading.raw, reading.status}} + {<< byte {history with [0 +: 2]}} + {>> 4 {history with [1]}};
+        history = '{DEPTH{8'h00}};
+        #(1:2:3) average = $unit::ambient + (2:3:4);
+        if (average inside {[20.0 +/- 2.5], [4.0 +%- 10.0]})
+            $display("in band", , average);
+        samples = $root.sampler.samples + type(samples)'(1);
         $finish;
     end
 

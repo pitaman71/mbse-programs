@@ -44,7 +44,7 @@ function precedence(node: unknown): number {
   if (isAny(node, [S.InsideExpression, S.DistExpression])) return RELATIONAL;
   if (node instanceof S.ConditionalExpression) return CONDITIONAL;
   if (isAny(node, [S.UnaryExpression, S.IncrementExpression])) return UNARY;
-  if (node instanceof S.AssignmentExpression) return 0;
+  if (isAny(node, [S.AssignmentExpression, S.MinTypMaxExpression])) return 0;
   if (node instanceof S.RepetitionSequence) return REPEAT;
   if (node instanceof S.DelaySequence) return DELAY;
   if (node instanceof S.BinarySequence) return SEQUENCE[node.operator as string] as number;
@@ -267,6 +267,7 @@ export class Printer {
     if (node instanceof S.IntegerAtomType) return joined([node.keyword, node.signing]);
     if (node instanceof S.NonIntegerType || node instanceof S.KeywordType) return node.keyword as string;
     if (node instanceof S.NamedType) return withDimensions(this.name(node.name));
+    if (node instanceof S.TypeReference) return `type(${this.typeOrText(node.operand)})`;
     if (node instanceof S.VirtualInterfaceType) {
       const modport = node.modport !== null ? `.${node.modport.spelling}` : "";
       return `${node.interface_keyword ? "virtual interface" : "virtual"} ${node.interface?.spelling}`
@@ -297,6 +298,7 @@ export class Printer {
   name(node: any): string {
     if (node instanceof S.ScopedName) return `${this.name(node.scope)}::${this.name(node.name)}`;
     if (node instanceof S.LocalName) return `local::${node.name?.spelling}`;
+    if (node instanceof S.UnitName) return "$unit";
     if (node instanceof S.ParameterizedName) return node.name?.spelling + this.parameterValues(node.parameters);
     return node.spelling;
   }
@@ -605,6 +607,7 @@ export class Printer {
   }
 
   typeOrText(node: any): string {
+    if (node instanceof S.EmptyArgument) return "";
     return node instanceof S.DataType ? this.typeText(node) : this.text(node);
   }
 
@@ -1038,6 +1041,10 @@ export class Printer {
 
   timingText(node: any): string {
     if (node instanceof S.DelayControl) {
+      if (node.fall !== null) {
+        const values = [node.value, node.fall, ...(node.turnoff !== null ? [node.turnoff] : [])];
+        return "#(" + values.map((v) => this.text(v)).join(", ") + ")";
+      }
       const value = node.value;
       const text = this.text(value);
       const simple = isAny(value, [S.IntegerLiteral, S.RealLiteral, S.TimeLiteral, S.NameExpression,
@@ -1060,7 +1067,10 @@ export class Printer {
   // Expressions
 
   rangeText(node: any): string {
-    if (node instanceof S.ValueRange) return `[${this.text(node.left)}:${this.text(node.right)}]`;
+    if (node instanceof S.ValueRange) {
+      const operator = node.operator !== null ? ` ${node.operator} ` : ":";
+      return `[${this.text(node.left)}${operator}${this.text(node.right)}]`;
+    }
     return this.text(node);
   }
 
@@ -1116,7 +1126,9 @@ export class Printer {
     }
     if (node instanceof S.AssignmentPattern) {
       const prefix = node.type !== null ? this.typeText(node.type) : "";
-      return `${prefix}'{${node.items.map((i) => this.patternItem(i)).join(", ")}}`;
+      const items = node.items.map((i) => this.patternItem(i)).join(", ");
+      if (node.count !== null) return `${prefix}'{${this.operand(node.count, PRIMARY)}{${items}}}`;
+      return `${prefix}'{${items}}`;
     }
     if (node instanceof S.CallExpression) {
       const attributes = node.attributes.length > 0 ? ` ${this.attributeText(node.attributes)} ` : "";
@@ -1136,6 +1148,13 @@ export class Printer {
     if (node instanceof S.ParenthesizedExpression) return `(${this.text(node.expression)})`;
     if (node instanceof S.MacroUsage) return `\`${node.name?.spelling}` + (node.arguments !== null ? `(${node.arguments})` : "");
     if (node instanceof S.DollarExpression) return "$";
+    if (node instanceof S.RootExpression) return "$root";
+    if (node instanceof S.EmptyQueue) return "{}";
+    if (node instanceof S.MinTypMaxExpression) return `${this.text(node.min)}:${this.text(node.typ)}:${this.text(node.max)}`;
+    if (node instanceof S.StreamingConcatenation) {
+      const slice = node.slice !== null ? ` ${this.typeOrText(node.slice)} ` : "";
+      return `{${node.operator}${slice}{${node.items.map((i) => this.streamItem(i)).join(", ")}}}`;
+    }
     if (node instanceof S.NullLiteral) return "null";
     if (isAny(node, [S.Sequence, S.Property])) return this.propertyText(node);
     if (node instanceof S.DistExpression) {
@@ -1162,6 +1181,13 @@ export class Printer {
       return `new[${this.text(node.size)}]${node.value !== null ? `(${this.text(node.value)})` : ""}`;
     }
     return node instanceof S.Port ? this.port(node) : node instanceof S.Dimension ? this.dimension(node) : this.typeText(node);
+  }
+
+  streamItem(node: S.StreamItem): string {
+    if (node.left === null) return this.text(node.expression);
+    const operator = node.operator === null ? "" : node.operator === ":" ? node.operator : ` ${node.operator} `;
+    const right = node.right !== null ? this.text(node.right) : "";
+    return `${this.text(node.expression)} with [${this.text(node.left)}${operator}${right}]`;
   }
 
   patternItem(node: any): string {

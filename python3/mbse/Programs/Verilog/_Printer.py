@@ -44,7 +44,7 @@ def _precedence(node: Any) -> int:
         return CONDITIONAL
     if isinstance(node, (S.UnaryExpression, S.IncrementExpression)):
         return UNARY
-    if isinstance(node, S.AssignmentExpression):
+    if isinstance(node, (S.AssignmentExpression, S.MinTypMaxExpression)):
         return 0
     if isinstance(node, S.RepetitionSequence):
         return REPEAT
@@ -278,6 +278,8 @@ class Printer:
             return node.keyword
         if isinstance(node, S.NamedType):
             return self.name(node.name) + (f" {dimensions}" if dimensions else "")
+        if isinstance(node, S.TypeReference):
+            return f"type({self.type_or_text(node.operand)})"
         if isinstance(node, S.VirtualInterfaceType):
             head = "virtual interface" if node.interface_keyword else "virtual"
             modport = f".{node.modport.spelling}" if node.modport is not None else ""
@@ -308,6 +310,8 @@ class Printer:
             return f"{self.name(node.scope)}::{self.name(node.name)}"
         if isinstance(node, S.LocalName):
             return f"local::{node.name.spelling}"
+        if isinstance(node, S.UnitName):
+            return "$unit"
         if isinstance(node, S.ParameterizedName):
             return node.name.spelling + self.parameter_values(node.parameters)
         return node.spelling
@@ -595,6 +599,8 @@ class Printer:
         return self.type_or_text(node)
 
     def type_or_text(self, node: Any) -> str:
+        if isinstance(node, S.EmptyArgument):
+            return ""
         return self.type_text(node) if isinstance(node, S.DataType) else self.text(node)
 
     # Statements
@@ -1010,6 +1016,9 @@ class Printer:
 
     def timing_text(self, node: Any) -> str:
         if isinstance(node, S.DelayControl):
+            if node.fall is not None:
+                values = [node.value, node.fall, *([node.turnoff] if node.turnoff is not None else [])]
+                return "#(" + ", ".join(self.text(v) for v in values) + ")"
             value = node.value
             text = self.text(value)
             simple = isinstance(value, (S.IntegerLiteral, S.RealLiteral, S.TimeLiteral, S.NameExpression,
@@ -1031,7 +1040,8 @@ class Printer:
 
     def range_text(self, node: Any) -> str:
         if isinstance(node, S.ValueRange):
-            return f"[{self.text(node.left)}:{self.text(node.right)}]"
+            operator = f" {node.operator} " if node.operator is not None else ":"
+            return f"[{self.text(node.left)}{operator}{self.text(node.right)}]"
         return self.text(node)
 
     def operand(self, node: Any, level: int) -> str:
@@ -1090,7 +1100,10 @@ class Printer:
             return f"{{{self.operand(node.count, PRIMARY)}{{{', '.join(self.text(i) for i in node.items)}}}}}"
         if isinstance(node, S.AssignmentPattern):
             prefix = self.type_text(node.type) if node.type is not None else ""
-            return f"{prefix}'{{{', '.join(self.pattern_item(i) for i in node.items)}}}"
+            items = ", ".join(self.pattern_item(i) for i in node.items)
+            if node.count is not None:
+                return f"{prefix}'{{{self.operand(node.count, PRIMARY)}{{{items}}}}}"
+            return f"{prefix}'{{{items}}}"
         if isinstance(node, S.CallExpression):
             attributes = f" {self.attribute_text(node.attributes)} " if node.attributes else ""
             return (f"{self.operand(node.callee, PRIMARY)}{attributes}"
@@ -1112,6 +1125,15 @@ class Printer:
             return f"`{node.name.spelling}" + (f"({node.arguments})" if node.arguments is not None else "")
         if isinstance(node, S.DollarExpression):
             return "$"
+        if isinstance(node, S.RootExpression):
+            return "$root"
+        if isinstance(node, S.EmptyQueue):
+            return "{}"
+        if isinstance(node, S.MinTypMaxExpression):
+            return f"{self.text(node.min)}:{self.text(node.typ)}:{self.text(node.max)}"
+        if isinstance(node, S.StreamingConcatenation):
+            slice_ = f" {self.type_or_text(node.slice)} " if node.slice is not None else ""
+            return f"{{{node.operator}{slice_}{{{', '.join(self.stream_item(i) for i in node.items)}}}}}"
         if isinstance(node, S.NullLiteral):
             return "null"
         if isinstance(node, (S.Sequence, S.Property)):
@@ -1145,6 +1167,13 @@ class Printer:
             return f"new[{self.text(node.size)}]{value}"
         return self.port(node) if isinstance(node, S.Port) else self.dimension(node) if isinstance(node, S.Dimension) \
             else self.type_text(node)
+
+    def stream_item(self, node: S.StreamItem) -> str:
+        if node.left is None:
+            return self.text(node.expression)
+        operator = "" if node.operator is None else node.operator if node.operator == ":" else f" {node.operator} "
+        right = self.text(node.right) if node.right is not None else ""
+        return f"{self.text(node.expression)} with [{self.text(node.left)}{operator}{right}]"
 
     def pattern_item(self, node: Any) -> str:
         if not isinstance(node, S.PatternItem):

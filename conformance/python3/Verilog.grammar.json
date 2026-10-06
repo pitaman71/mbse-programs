@@ -122,7 +122,8 @@
      "name": "scope",
      "type": [
       "Identifier",
-      "ParameterizedName"
+      "ParameterizedName",
+      "UnitName"
      ],
      "optional": false,
      "many": false
@@ -3411,6 +3412,22 @@
      ],
      "optional": false,
      "many": false
+    },
+    {
+     "name": "fall",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "turnoff",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
     }
    ]
   },
@@ -4051,7 +4068,13 @@
     "SystemVerilog": 2005
    },
    "extension": false,
-   "features": {},
+   "features": {
+    "operator": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
    "properties": [
     {
      "name": "left",
@@ -4060,6 +4083,15 @@
      ],
      "optional": false,
      "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "+/-",
+      "+%-"
+     ]
     },
     {
      "name": "right",
@@ -4126,6 +4158,14 @@
      "name": "type",
      "type": [
       "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "count",
+     "type": [
+      "Expression"
      ],
      "optional": true,
      "many": false
@@ -4239,7 +4279,8 @@
      "name": "arguments",
      "type": [
       "Expression",
-      "DataType"
+      "DataType",
+      "EmptyArgument"
      ],
      "optional": true,
      "many": true
@@ -4322,6 +4363,185 @@
    "extension": false,
    "features": {},
    "properties": []
+  },
+  {
+   "kind": "StreamingConcatenation",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      ">>",
+      "<<"
+     ]
+    },
+    {
+     "name": "slice",
+     "type": [
+      "Expression",
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "StreamItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "StreamItem",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "left": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      ":",
+      "+:",
+      "-:"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MinTypMaxExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "min",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "typ",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "max",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "EmptyArgument",
+   "category": "Connection",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "RootExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "EmptyQueue",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "UnitName",
+   "category": "Name",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "TypeReference",
+   "category": "DataType",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "operand",
+     "type": [
+      "Expression",
+      "DataType"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
   },
   {
    "kind": "NullLiteral",

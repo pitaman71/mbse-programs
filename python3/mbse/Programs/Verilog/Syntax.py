@@ -89,6 +89,8 @@ AbortKeyword = Choice["accept_on", "reject_on", "sync_accept_on", "sync_reject_o
 PortDirection = Choice["input", "output", "inout"]
 ClockingDirection = Choice["input", "output", "inout", "input output"]
 ClockingScope = Choice["default", "global"]
+StreamOperator = Choice[">>", "<<"]
+ToleranceOperator = Choice["+/-", "+%-"]
 BinsKeyword = Choice["bins", "illegal_bins", "ignore_bins"]
 BinsSelectOperator = Choice["&&", "||"]
 PrototypeQualifier = Choice["extern", "pure"]
@@ -203,7 +205,7 @@ class ScopedName(Name):
     """`scope::name`: a name in a package or a class, whose scope may be a parameterized class (26.3, 8.23). A name
     of several scopes nests to the right: `p::c::x` is `p::(c::x)`."""
 
-    scope: Identifier | ParameterizedName
+    scope: Identifier | ParameterizedName | UnitName
     name: Name
     SINCE = sv()
 
@@ -1693,9 +1695,15 @@ class FilteredBinsSelect(BinsSelect):
 
 
 class DelayControl(TimingControl):
-    """`#value`: a number, a time literal, a name or a parenthesized expression (9.4.1)."""
+    """`#value`: a number, a time literal, a name or a parenthesized expression (9.4.1); or, of a net, a continuous
+    assignment or a gate, `#(value, fall, turnoff)`, its rise, fall and turn-off delays (28.16)."""
 
     value: Expression
+    fall: Expression | None
+    turnoff: Expression | None
+
+    def check(self) -> list[str]:
+        return ["a DelayControl with a turnoff has a fall"] if self.turnoff is not None and self.fall is None else []
 
 
 class CycleDelay(TimingControl):
@@ -1850,11 +1858,14 @@ class InsideExpression(Expression):
 
 
 class ValueRange(Range):
-    """`[left:right]` in a set (11.4.13)."""
+    """`[left:right]` in a set (11.4.13), or with an `operator` a tolerance range: `[center +/- width]` or
+    `[center +%- percent]`."""
 
     left: Expression
+    operator: ToleranceOperator | None
     right: Expression
     SINCE = sv()
+    FEATURES = {"operator": {True: sv(2023)}}
 
 
 class Concatenation(Expression):
@@ -1871,11 +1882,18 @@ class Replication(Expression):
 
 
 class AssignmentPattern(Expression):
-    """`type'{items}` or `'{items}`: positional values, or `key: value` items (10.9)."""
+    """`type'{items}` or `'{items}`: positional values, or `key: value` items, or with a `count` the positional values
+    repeated (`'{2{a, b}}`) (10.9)."""
 
     type: DataType | None
+    count: Expression | None
     items: list[Expression | PatternItem]
     SINCE = sv()
+
+    def check(self) -> list[str]:
+        if self.count is not None and any(isinstance(i, PatternItem) for i in self.items):
+            return ["a repeated AssignmentPattern has positional items only"]
+        return []
 
 
 class PatternItem(SyntaxNode):
@@ -1966,7 +1984,7 @@ class SystemCall(Expression):
 
     name: str
     attributes: list[AttributeInstance]
-    arguments: list[Expression | DataType]
+    arguments: list[Expression | DataType | EmptyArgument]
     FEATURES = {"attributes": {True: verilog(2001)}}
 
     def check(self) -> list[str]:
@@ -2003,6 +2021,70 @@ class MacroUsage(Expression):
 class DollarExpression(Expression):
     """`$`, the last element of a queue or an unbounded range (7.10.1)."""
 
+    SINCE = sv()
+
+
+class StreamingConcatenation(Expression):
+    """`{>> slice {items}}` or `{<< slice {items}}`: items packed in a stream, in slices of `slice` bits or of a
+    type's size, from the left or the right (11.4.14)."""
+
+    operator: StreamOperator
+    slice: Expression | DataType | None
+    items: list[StreamItem]
+    SINCE = sv()
+
+
+class StreamItem(SyntaxNode):
+    """`expression with [left operator right]`, an item of a streaming concatenation, of an array's elements `left`,
+    `left:right`, `left+:right` or `left-:right` when it has a `with` (11.4.14.4)."""
+
+    expression: Expression
+    left: Expression | None
+    operator: SelectOperator | None
+    right: Expression | None
+    SINCE = sv()
+    FEATURES = {"left": {True: sv(2009)}}
+
+    def check(self) -> list[str]:
+        if (self.operator is None) != (self.right is None) or self.left is None and self.operator is not None:
+            return ["a StreamItem's `with` has a left, and an operator and a right, or neither"]
+        return []
+
+
+class MinTypMaxExpression(Expression):
+    """`min:typ:max`, a minimum, typical and maximum value, as delays have (11.11)."""
+
+    min: Expression
+    typ: Expression
+    max: Expression
+
+
+class EmptyArgument(Connection):
+    """A port connection or an argument left out: `u i(a, , b)`, `f(a, , b)`, `$display(a,, b)` (23.3.2.2, 13.5)."""
+
+
+class RootExpression(Expression):
+    """`$root`, the top of the design's hierarchy, where a hierarchical name starts (23.6)."""
+
+    SINCE = sv()
+
+
+class EmptyQueue(Expression):
+    """`{}`, a queue or a dynamic array with no elements (7.10)."""
+
+    SINCE = sv()
+
+
+class UnitName(Name):
+    """`$unit`, the compilation unit, as a scope: `$unit::name` (26.3)."""
+
+    SINCE = sv()
+
+
+class TypeReference(DataType):
+    """`type(operand)`: the type of an expression, or a type itself (6.23)."""
+
+    operand: Expression | DataType
     SINCE = sv()
 
 
@@ -2108,6 +2190,8 @@ KINDS: list[type[SyntaxNode]] = [
     UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression,
     ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,
     CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression,
+    StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue, UnitName,
+    TypeReference,
     NullLiteral, ThisExpression, SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression,
     RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem, LocalName,
     ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,

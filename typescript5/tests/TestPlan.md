@@ -37,12 +37,12 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `15_PythonBridge.ipynb` | BRG | 7 | as in Python, but for the checks against the dialect's `parse`, `ast.literal_eval` and running the function, which need Python |
 | `16_Conformance.ipynb` | CONF | 3 | as in Python, from this side |
 | `17_Skill.ipynb` | SKL | 3 | as in Python; SKL-02 type-checks the skill's TypeScript program strictly, then runs it |
-| `18_Verilog.ipynb` | VLG | 9 | as in Python |
-| `19_VerilogRead.ipynb` | VLGRD | 18 | as in Python, reading through the Python implementation; VLGRD-13 reads through it directly, and fails clearly when its interpreter cannot run |
-| `20_VerilogPrint.ipynb` | VLGPRT | 12 | as in Python |
-| `21_VerilogDefinitions.ipynb` | VLGDEF | 8 | as in Python |
+| `18_Verilog.ipynb` | VLG | 10 | as in Python |
+| `19_VerilogRead.ipynb` | VLGRD | 19 | as in Python, reading through the Python implementation; VLGRD-13 reads through it directly, and fails clearly when its interpreter cannot run |
+| `20_VerilogPrint.ipynb` | VLGPRT | 13 | as in Python |
+| `21_VerilogDefinitions.ipynb` | VLGDEF | 9 | as in Python |
 
-Total: 166 cases, with the same IDs in the same order in both implementations.
+Total: 170 cases, with the same IDs in the same order in both implementations.
 
 ---
 

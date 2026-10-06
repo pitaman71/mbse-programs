@@ -81,6 +81,11 @@ def _nodes(items: Any) -> list[Any]:
     return [items[i] for i in range(len(items)) if not isinstance(items[i], parsing.Token) and items[i] is not None]
 
 
+def _is_type(kind: str) -> bool:
+    """Whether a syntax kind where an expression or a type may be is a type: a named one reads as an expression."""
+    return kind.endswith("Type") and kind != "NamedType" or kind == "TypeReference"
+
+
 def _text(token: parsing.Token | None) -> str:
     return "" if token is None else token.rawText
 
@@ -471,6 +476,8 @@ class _Reader:
             # `string`, `chandle`, `event` or `void`: slang reads the other keyword types (`untyped`, `property`,
             # `sequence`) only where the reader refuses what declares them
             return self.made(node, S.KeywordType(keyword=keyword))
+        if kind == "TypeReference":
+            return self.made(node, S.TypeReference(operand=self.expression_or_type(node.expr)))
         if kind == "NamedType":
             return self.made(node, S.NamedType(name=self.name(node.name)))
         if kind == "VirtualInterfaceType":
@@ -492,18 +499,16 @@ class _Reader:
             return self.made(node, S.StructType(keyword=node.keyword.rawText, packed=bool(node.packed),
                                                 signing=_text(node.signing) or None, members=members,
                                                 dimensions=[self.dimension(d) for d in _nodes(node.dimensions)]))
-        if kind == "EnumType":
-            members = []
-            for member in _nodes(node.members):
-                if _nodes(member.dimensions):
-                    raise self.unsupported(member)
-                enum = S.EnumMember(name=self.identifier(member.name))
-                if member.initializer is not None:
-                    enum.value = self.expression(member.initializer.expr)
-                members.append(self.made(member, enum))
-            return self.made(node, S.EnumType(base=self.data_type(node.baseType), members=members,
-                                              dimensions=[self.dimension(d) for d in _nodes(node.dimensions)]))
-        raise self.unsupported(node)
+        members = []  # an EnumType, the last of slang's data types
+        for member in _nodes(node.members):
+            if _nodes(member.dimensions):
+                raise self.unsupported(member)
+            enum = S.EnumMember(name=self.identifier(member.name))
+            if member.initializer is not None:
+                enum.value = self.expression(member.initializer.expr)
+            members.append(self.made(member, enum))
+        return self.made(node, S.EnumType(base=self.data_type(node.baseType), members=members,
+                                          dimensions=[self.dimension(d) for d in _nodes(node.dimensions)]))
 
     def name(self, node: Any) -> S.Name:
         """A name: an identifier, a parameterized class `c #(...)`, `new`, or `scope::name`, whose scopes, which slang
@@ -518,6 +523,8 @@ class _Reader:
             return self.made(node, S.Identifier(spelling="new"))
         if kind == "ScopedName" and node.left.kind.name == "LocalScope" and node.right.kind.name == "IdentifierName":
             return self.made(node, S.LocalName(name=self.identifier(node.right.identifier)))
+        if kind == "UnitScope":
+            return self.made(node, S.UnitName())
         if kind == "ScopedName" and node.separator.rawText == "::":
             steps = []  # (the scope's syntax, the ScopedName that has it), innermost last
             while node.kind.name == "ScopedName" and node.separator.rawText == "::":
@@ -525,7 +532,7 @@ class _Reader:
                 node = node.left
             out = self.name(steps[0].right)
             for step, scope in zip(steps, [*(s.right for s in steps[1:]), node]):
-                if scope.kind.name not in ("IdentifierName", "ClassName"):
+                if scope.kind.name not in ("IdentifierName", "ClassName", "UnitScope"):
                     raise self.unsupported(steps[-1])
                 out = self.made(step, S.ScopedName(scope=self.name(scope), name=out))
             return out
@@ -870,8 +877,8 @@ class _Reader:
                     item.connections.append(self.made(connection, named))
                 elif kind == "WildcardPortConnection":
                     item.connections.append(self.made(connection, S.WildcardConnection()))
-                else:
-                    raise self.unsupported(connection)
+                else:  # an EmptyPortConnection: slang has no other connection
+                    item.connections.append(self.made(connection, S.EmptyArgument()))
             out.instances.append(self.made(instance, item))
         return out
 
@@ -879,7 +886,7 @@ class _Reader:
         while node.kind.name in ("SimplePropertyExpr", "SimpleSequenceExpr") \
                 and getattr(node, "repetition", None) is None:
             node = node.expr  # what slang reads as a property, then a sequence, when it may be one
-        if node.kind.name.endswith("Type") and node.kind.name not in ("NamedType",):
+        if _is_type(node.kind.name):
             return self.data_type(node)
         return self.expression(node)
 
@@ -1384,11 +1391,13 @@ class _Reader:
         raise self.unsupported(node)
 
     def delay(self, node: Any) -> S.DelayControl:
-        if node.kind.name == "Delay3":  # a net's or an assignment's `#(value)`; rise, fall and turn-off delays: refused
-            if node.delay2 is not None:
-                raise self.unsupported(node)
-            value = self.made(node, S.ParenthesizedExpression(expression=self.expression(node.delay1)))
-            return self.made(node, S.DelayControl(value=value))
+        if node.kind.name == "Delay3":  # a net's, an assignment's or a gate's `#(value)` or `#(rise, fall, turnoff)`
+            if node.delay2 is None:
+                value = self.made(node, S.ParenthesizedExpression(expression=self.expression(node.delay1)))
+                return self.made(node, S.DelayControl(value=value))
+            turnoff = None if node.delay3 is None else self.expression(node.delay3)
+            return self.made(node, S.DelayControl(value=self.expression(node.delay1), fall=self.expression(node.delay2),
+                                                  turnoff=turnoff))
         return self.made(node, S.DelayControl(value=self.expression(node.delayValue)))
 
     def events(self, node: Any) -> list[S.EventExpression]:
@@ -1538,9 +1547,9 @@ class _Reader:
 
     def range_or_expression(self, node: Any) -> Any:
         if node.kind.name == "ValueRangeExpression":
-            if node.op and node.op.rawText != ":":
-                raise self.unsupported(node)
-            return self.made(node, S.ValueRange(left=self.expression(node.left), right=self.expression(node.right)))
+            operator = node.op.rawText
+            return self.made(node, S.ValueRange(left=self.expression(node.left), right=self.expression(node.right),
+                                                operator=None if operator == ":" else operator))
         return self.expression(node)
 
     def concatenation(self, node: Any) -> S.Concatenation:
@@ -1556,19 +1565,20 @@ class _Reader:
         kind = pattern.kind.name
         if kind == "SimpleAssignmentPattern":
             out.items = [self.expression(e) for e in _nodes(pattern.items)]
-        elif kind == "StructuredAssignmentPattern":
+        elif kind == "ReplicatedAssignmentPattern":
+            out.count = self.expression(pattern.countExpr)
+            out.items = [self.expression(e) for e in _nodes(pattern.items)]
+        else:  # a StructuredAssignmentPattern: slang has no other pattern
             for item in _nodes(pattern.items):
                 key = item.key
                 entry = S.PatternItem(value=self.expression(item.expr))
                 if key.kind.name == "DefaultPatternKeyExpression":
                     entry.key = None
-                elif key.kind.name.endswith("Type") and key.kind.name != "NamedType":
+                elif _is_type(key.kind.name):
                     entry.key = self.data_type(key)
                 else:
                     entry.key = self.expression(key)
                 out.items.append(self.made(item, entry))
-        else:
-            raise self.unsupported(pattern)
         return out
 
     def invocation(self, node: Any) -> S.Expression:
@@ -1591,7 +1601,7 @@ class _Reader:
                     named.value = self.expression(argument.expr)
                 out.append(self.made(argument, named))
             else:  # an EmptyArgument
-                raise self.unsupported(argument)
+                out.append(self.made(argument, S.EmptyArgument()))
         return out
 
     def system_name(self, node: Any) -> S.SystemCall:
@@ -1601,7 +1611,7 @@ class _Reader:
         target = node.left
         value = node.right.expression  # a cast's parentheses are its own
         kind = target.kind.name
-        if kind.endswith("Type") and kind not in ("NamedType",) or kind == "ImplicitType":
+        if _is_type(kind):
             cast_type: Any = self.data_type(target)
         else:
             cast_type = self.expression(target)
@@ -1636,6 +1646,33 @@ class _Reader:
 
     def super_handle(self, node: Any) -> S.SuperExpression:
         return S.SuperExpression()
+
+    def streaming(self, node: Any) -> S.StreamingConcatenation:
+        out = S.StreamingConcatenation(operator=node.operatorToken.rawText)
+        if node.sliceSize is not None:
+            out.slice = self.expression_or_type(node.sliceSize)
+        for stream in _nodes(node.expressions):
+            item = S.StreamItem(expression=self.expression(stream.expression))
+            if stream.withRange is not None:
+                selector = stream.withRange.range.selector
+                if selector.kind.name == "BitSelect":
+                    item.left = self.expression(selector.expr)
+                else:
+                    item.left = self.expression(selector.left)
+                    item.operator = selector.range.rawText
+                    item.right = self.expression(selector.right)
+            out.items.append(self.made(stream, item))
+        return out
+
+    def min_typ_max(self, node: Any) -> S.MinTypMaxExpression:
+        return S.MinTypMaxExpression(min=self.expression(node.min), typ=self.expression(node.typ),
+                                     max=self.expression(node.max))
+
+    def root(self, node: Any) -> S.RootExpression:
+        return S.RootExpression()
+
+    def empty_queue(self, node: Any) -> S.EmptyQueue:
+        return S.EmptyQueue()
 
     def parenthesized(self, node: Any) -> S.ParenthesizedExpression:
         return S.ParenthesizedExpression(expression=self.expression(node.expression))
@@ -1687,7 +1724,8 @@ class _Reader:
         "CastExpression": cast, "SignedCastExpression": signed_cast, "ParenthesizedExpression": parenthesized,
         "NewClassExpression": new_class, "CopyClassExpression": copy_class, "NewArrayExpression": new_array,
         "NullLiteralExpression": null, "ThisHandle": this, "SuperHandle": super_handle, "ExpressionOrDist": dist,
-        "ArrayOrRandomizeMethodExpression": with_clause,
+        "StreamingConcatenationExpression": streaming, "MinTypMaxExpression": min_typ_max, "RootScope": root,
+        "EmptyQueueExpression": empty_queue, "ArrayOrRandomizeMethodExpression": with_clause,
     }
 
 

@@ -476,10 +476,15 @@ function spelling(name: any): string {
   return name instanceof S.ParameterizedName ? name.name?.spelling as string : name.spelling;
 }
 
-/** The entities a name finds from `scope`: an identifier or a parameterized class as lookup resolves it, and
- * `p::c::x` as `x` in `c` in the package or class `p` that `p` resolves to. */
+/** The entities a name finds from `scope`: an identifier or a parameterized class as lookup resolves it,
+ * `p::c::x` as `x` in `c` in the package or class `p` that `p` resolves to, and `$unit::x` as `x` in the
+ * compilation unit. */
 function lookup(scope: Scope, name: any): Entity[] {
   if (!(name instanceof S.ScopedName)) return scope.resolve(spelling(name));
+  if (name.scope instanceof S.UnitName) { // `$unit::x`: in the compilation unit
+    while (scope.parent !== null) scope = scope.parent;
+    return name.name instanceof S.ScopedName ? lookup(scope, name.name) : scope.lookup(spelling(name.name));
+  }
   let found = scope.resolve(spelling(name.scope));
   for (;;) { // each scope, a package or a class, in the one before it
     const holder = found.find((e) => e.kind === "package" || e.kind === "class");

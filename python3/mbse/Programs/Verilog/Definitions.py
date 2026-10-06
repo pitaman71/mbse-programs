@@ -442,10 +442,15 @@ def _spelling(name: Any) -> str:
 
 
 def _lookup(scope: Scope, name: Any) -> list[Entity]:
-    """The entities a name finds from `scope`: an identifier or a parameterized class as lookup resolves it, and
-    `p::c::x` as `x` in `c` in the package or class `p` that `p` resolves to."""
+    """The entities a name finds from `scope`: an identifier or a parameterized class as lookup resolves it,
+    `p::c::x` as `x` in `c` in the package or class `p` that `p` resolves to, and `$unit::x` as `x` in the
+    compilation unit."""
     if not isinstance(name, S.ScopedName):
         return scope.resolve(_spelling(name))
+    if isinstance(name.scope, S.UnitName):  # `$unit::x`: in the compilation unit
+        while scope.parent is not None:
+            scope = scope.parent
+        return _lookup(scope, name.name) if isinstance(name.name, S.ScopedName) else scope.lookup(_spelling(name.name))
     found = scope.resolve(_spelling(name.scope))
     while True:  # each scope, a package or a class, in the one before it
         holders = [e for e in found if e.kind in ("package", "class")]

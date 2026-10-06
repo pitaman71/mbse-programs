@@ -141,6 +141,10 @@ export const CLOCKING_DIRECTIONS = ["input", "output", "inout", "input output"] 
 export type ClockingDirection = (typeof CLOCKING_DIRECTIONS)[number];
 export const CLOCKING_SCOPES = ["default", "global"] as const;
 export type ClockingScope = (typeof CLOCKING_SCOPES)[number];
+export const STREAM_OPERATORS = [">>", "<<"] as const;
+export type StreamOperator = (typeof STREAM_OPERATORS)[number];
+export const TOLERANCE_OPERATORS = ["+/-", "+%-"] as const;
+export type ToleranceOperator = (typeof TOLERANCE_OPERATORS)[number];
 export const BINS_KEYWORDS = ["bins", "illegal_bins", "ignore_bins"] as const;
 export type BinsKeyword = (typeof BINS_KEYWORDS)[number];
 export const BINS_SELECT_OPERATORS = ["&&", "||"] as const;
@@ -261,7 +265,7 @@ export class Identifier extends Name {
 }
 
 const ScopedNameSpec = {
-  scope: one(() => [Identifier, ParameterizedName]),
+  scope: one(() => [Identifier, ParameterizedName, UnitName]),
   name: one(() => [Name]),
 };
 export interface ScopedName extends Properties<typeof ScopedNameSpec> {}
@@ -2318,11 +2322,19 @@ export class FilteredBinsSelect extends BinsSelect {
 
 const DelayControlSpec = {
   value: one(() => [Expression]),
+  fall: optional(() => [Expression]),
+  turnoff: optional(() => [Expression]),
 };
 export interface DelayControl extends Properties<typeof DelayControlSpec> {}
-/** `#value`: a number, a time literal, a name or a parenthesized expression (9.4.1). */
+/**
+ * `#value`: a number, a time literal, a name or a parenthesized expression (9.4.1); or, of a net, a continuous
+ * assignment or a gate, `#(value, fall, turnoff)`, its rise, fall and turn-off delays (28.16).
+ */
 export class DelayControl extends TimingControl {
   static override SPEC = DelayControlSpec;
+  override check(): string[] {
+    return this.turnoff !== null && this.fall === null ? ["a DelayControl with a turnoff has a fall"] : [];
+  }
 }
 
 const CycleDelaySpec = {
@@ -2542,13 +2554,18 @@ export class InsideExpression extends Expression {
 
 const ValueRangeSpec = {
   left: one(() => [Expression]),
+  operator: optionalChoice(...TOLERANCE_OPERATORS),
   right: one(() => [Expression]),
 };
 export interface ValueRange extends Properties<typeof ValueRangeSpec> {}
-/** `[left:right]` in a set (11.4.13). */
+/**
+ * `[left:right]` in a set (11.4.13), or with an `operator` a tolerance range: `[center +/- width]` or
+ * `[center +%- percent]`.
+ */
 export class ValueRange extends Range {
   static override SPEC = ValueRangeSpec;
   static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { operator: [[true, sv(2023)]] };
 }
 
 const ConcatenationSpec = {
@@ -2572,13 +2589,23 @@ export class Replication extends Expression {
 
 const AssignmentPatternSpec = {
   type: optional(() => [DataType]),
+  count: optional(() => [Expression]),
   items: many(() => [Expression, PatternItem]),
 };
 export interface AssignmentPattern extends Properties<typeof AssignmentPatternSpec> {}
-/** `type'{items}` or `'{items}`: positional values, or `key: value` items (10.9). */
+/**
+ * `type'{items}` or `'{items}`: positional values, or `key: value` items, or with a `count` the positional values
+ * repeated (`'{2{a, b}}`) (10.9).
+ */
 export class AssignmentPattern extends Expression {
   static override SPEC = AssignmentPatternSpec;
   static override SINCE: Availability | null = sv();
+  override check(): string[] {
+    if (this.count !== null && this.items.some((i) => i instanceof PatternItem)) {
+      return ["a repeated AssignmentPattern has positional items only"];
+    }
+    return [];
+  }
 }
 
 const PatternItemSpec = {
@@ -2701,7 +2728,7 @@ export class CallExpression extends Expression {
 const SystemCallSpec = {
   name: text(),
   attributes: many(() => [AttributeInstance]),
-  arguments: many(() => [Expression, DataType]),
+  arguments: many(() => [Expression, DataType, EmptyArgument]),
 };
 export interface SystemCall extends Properties<typeof SystemCallSpec> {}
 /**
@@ -2759,6 +2786,96 @@ export interface DollarExpression extends Properties<typeof DollarExpressionSpec
 /** `$`, the last element of a queue or an unbounded range (7.10.1). */
 export class DollarExpression extends Expression {
   static override SPEC = DollarExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const StreamingConcatenationSpec = {
+  operator: choice(...STREAM_OPERATORS),
+  slice: optional(() => [Expression, DataType]),
+  items: many(() => [StreamItem]),
+};
+export interface StreamingConcatenation extends Properties<typeof StreamingConcatenationSpec> {}
+/**
+ * `{>> slice {items}}` or `{<< slice {items}}`: items packed in a stream, in slices of `slice` bits or of a
+ * type's size, from the left or the right (11.4.14).
+ */
+export class StreamingConcatenation extends Expression {
+  static override SPEC = StreamingConcatenationSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const StreamItemSpec = {
+  expression: one(() => [Expression]),
+  left: optional(() => [Expression]),
+  operator: optionalChoice(...SELECT_OPERATORS),
+  right: optional(() => [Expression]),
+};
+export interface StreamItem extends Properties<typeof StreamItemSpec> {}
+/**
+ * `expression with [left operator right]`, an item of a streaming concatenation, of an array's elements `left`,
+ * `left:right`, `left+:right` or `left-:right` when it has a `with` (11.4.14.4).
+ */
+export class StreamItem extends SyntaxNode {
+  static override SPEC = StreamItemSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { left: [[true, sv(2009)]] };
+  override check(): string[] {
+    if ((this.operator === null) !== (this.right === null) || (this.left === null && this.operator !== null)) {
+      return ["a StreamItem's `with` has a left, and an operator and a right, or neither"];
+    }
+    return [];
+  }
+}
+
+const MinTypMaxExpressionSpec = {
+  min: one(() => [Expression]),
+  typ: one(() => [Expression]),
+  max: one(() => [Expression]),
+};
+export interface MinTypMaxExpression extends Properties<typeof MinTypMaxExpressionSpec> {}
+/** `min:typ:max`, a minimum, typical and maximum value, as delays have (11.11). */
+export class MinTypMaxExpression extends Expression {
+  static override SPEC = MinTypMaxExpressionSpec;
+}
+
+const EmptyArgumentSpec = {};
+export interface EmptyArgument extends Properties<typeof EmptyArgumentSpec> {}
+/** A port connection or an argument left out: `u i(a, , b)`, `f(a, , b)`, `$display(a,, b)` (23.3.2.2, 13.5). */
+export class EmptyArgument extends Connection {
+  static override SPEC = EmptyArgumentSpec;
+}
+
+const RootExpressionSpec = {};
+export interface RootExpression extends Properties<typeof RootExpressionSpec> {}
+/** `$root`, the top of the design's hierarchy, where a hierarchical name starts (23.6). */
+export class RootExpression extends Expression {
+  static override SPEC = RootExpressionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const EmptyQueueSpec = {};
+export interface EmptyQueue extends Properties<typeof EmptyQueueSpec> {}
+/** `{}`, a queue or a dynamic array with no elements (7.10). */
+export class EmptyQueue extends Expression {
+  static override SPEC = EmptyQueueSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const UnitNameSpec = {};
+export interface UnitName extends Properties<typeof UnitNameSpec> {}
+/** `$unit`, the compilation unit, as a scope: `$unit::name` (26.3). */
+export class UnitName extends Name {
+  static override SPEC = UnitNameSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const TypeReferenceSpec = {
+  operand: one(() => [Expression, DataType]),
+};
+export interface TypeReference extends Properties<typeof TypeReferenceSpec> {}
+/** `type(operand)`: the type of an expression, or a type itself (6.23). */
+export class TypeReference extends DataType {
+  static override SPEC = TypeReferenceSpec;
   static override SINCE: Availability | null = sv();
 }
 
@@ -2899,20 +3016,22 @@ export const KINDS = [
   RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression,
   IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange,
   Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression,
-  ParenthesizedExpression, MacroUsage, DollarExpression, NullLiteral, ThisExpression, SuperExpression, NewExpression,
-  NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem,
-  LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
-  ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
-  RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem,
-  PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep,
-  CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence,
-  ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty,
-  CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew,
-  ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration,
-  SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence,
-  TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect,
-  ParenthesizedBinsSelect, FilteredBinsSelect, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective,
-  DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
+  ParenthesizedExpression, MacroUsage, DollarExpression, StreamingConcatenation, StreamItem, MinTypMaxExpression,
+  EmptyArgument, RootExpression, EmptyQueue, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression,
+  NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression,
+  DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock,
+  ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint,
+  DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion,
+  ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration,
+  AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence,
+  FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty,
+  AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty,
+  ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable,
+  CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues,
+  BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf,
+  BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect, IncludeDirective, DefineDirective,
+  UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText,
+  OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */
