@@ -415,6 +415,11 @@ export class Printer {
     return [`${pad(level)}modport ${items.join(", ")};`];
   }
 
+  elaborationTask(node: any, level: number): string[] {
+    const args = node.arguments.length > 0 ? `(${node.arguments.map((a: any) => this.typeOrText(a)).join(", ")})` : "";
+    return [`${pad(level)}${node.name}${args};`];
+  }
+
   modportPort(node: any): string {
     if (node instanceof S.ModportClocking) return `clocking ${node.name?.spelling}`;
     if (node instanceof S.ModportSubroutine) {
@@ -721,7 +726,13 @@ export class Printer {
     if (node instanceof S.BreakStatement) return "break;";
     if (node instanceof S.ContinueStatement) return "continue;";
     if (node instanceof S.ReturnStatement) return "return" + (node.value !== null ? ` ${this.text(node.value)}` : "") + ";";
-    if (node instanceof S.EventTrigger) return `${node.nonblocking ? "->>" : "->"} ${this.text(node.event)};`;
+    if (node instanceof S.EventTrigger) {
+      const timing = node.timing !== null ? `${this.timingText(node.timing)} ` : "";
+      return `${node.nonblocking ? "->>" : "->"} ${timing}${this.text(node.event)};`;
+    }
+    if (node instanceof S.ForceStatement) return `${node.keyword} ${this.text(node.target)} = ${this.text(node.value)};`;
+    if (node instanceof S.ReleaseStatement) return `${node.keyword} ${this.text(node.target)};`;
+    if (node instanceof S.WaitForkStatement) return "wait fork;";
     return `disable ${node.target !== null ? this.text(node.target) : "fork"};`; // a DisableStatement
   }
 
@@ -845,6 +856,11 @@ export class Printer {
   concurrent(node: any, level: number): string[] {
     return this.actions(`${pad(level)}${node.keyword} ${node.sequence ? "sequence" : "property"} (${this.spec(node.spec)})`,
       node, level);
+  }
+
+  waitOrder(node: any, level: number): string[] {
+    const events = node.events.map((e: any) => this.text(e)).join(", ");
+    return this.actions(`${pad(level)}wait_order (${events})`, node, level);
   }
 
   expect(node: any, level: number): string[] {
@@ -1121,6 +1137,7 @@ export class Printer {
   // Timing controls
 
   timingText(node: any): string {
+    if (node instanceof S.RepeatEventControl) return `repeat (${this.text(node.count)}) ${this.timingText(node.event)}`;
     if (node instanceof S.DelayControl) {
       if (node.fall !== null) {
         const values = [node.value, node.fall, ...(node.turnoff !== null ? [node.turnoff] : [])];
@@ -1320,6 +1337,7 @@ const items: [Function[], Method][] = [
   [[S.DefParam], (s, n, l) => s.defparam(n, l)],
   [[S.TimeUnitsDeclaration], (s, n, l) => s.timeUnits(n, l)],
   [[S.EmptyItem], (_s, _n, l) => [`${pad(l)};`]],
+  [[S.ElaborationTask], (s, n, l) => s.elaborationTask(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [
@@ -1336,5 +1354,6 @@ const statements: [Function[], Method][] = [
   [[S.ExpectStatement], (s, n, l) => s.expect(n, l)],
   [[S.LabeledStatement], (s, n, l) => s.labeled(n, l)],
   [[S.AttributedStatement], (s, n, l) => s.attributed(n, l)],
+  [[S.WaitOrderStatement], (s, n, l) => s.waitOrder(n, l)],
 ];
 for (const [kinds, method] of statements) for (const kind of kinds) Printer.STATEMENTS.set(kind, method);

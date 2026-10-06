@@ -101,6 +101,9 @@ NetExpansion = Choice["vectored", "scalared"]
 TimeUnitKeyword = Choice["timeunit", "timeprecision"]
 ImportExport = Choice["import", "export"]
 OverrideSpecifier = Choice["initial", "extends"]
+ForceKeyword = Choice["force", "assign"]
+ReleaseKeyword = Choice["release", "deassign"]
+ElaborationTaskName = Choice["$fatal", "$error", "$warning", "$info"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -695,6 +698,15 @@ class EmptyItem(Item):
     """`;` alone, where items are listed (A.1.4, A.1.9)."""
 
     SINCE = sv()
+
+
+class ElaborationTask(Item):
+    """`$fatal(arguments);`, `$error`, `$warning` or `$info` among items: a message, or a failure, when elaboration
+    reaches it (20.11)."""
+
+    name: ElaborationTaskName
+    arguments: list[Expression | EmptyArgument]
+    SINCE = sv(2009)
 
 
 class GenvarDeclaration(Item):
@@ -1332,11 +1344,48 @@ class WaitStatement(Statement):
 
 
 class EventTrigger(Statement):
-    """`-> event;`, or `->> event;` when `nonblocking` (15.5.1)."""
+    """`-> event;`, or `->> timing event;` when `nonblocking`, after a delay or an event control (15.5.1)."""
 
     nonblocking: bool
+    timing: TimingControl | None
     event: Expression
     FEATURES = {"nonblocking": {True: sv()}}
+
+    def check(self) -> list[str]:
+        if self.timing is not None and self.nonblocking is not True:
+            return ["an EventTrigger with a timing is nonblocking"]
+        return []
+
+
+class ForceStatement(Statement):
+    """`force target = value;` or `assign target = value;`: a procedural continuous assignment, which holds until
+    `release` or `deassign` (10.6)."""
+
+    keyword: ForceKeyword
+    target: Expression
+    value: Expression
+
+
+class ReleaseStatement(Statement):
+    """`release target;` or `deassign target;`, which ends a `force` or a procedural `assign` (10.6)."""
+
+    keyword: ReleaseKeyword
+    target: Expression
+
+
+class WaitForkStatement(Statement):
+    """`wait fork;`, until the processes this one forked end (9.6.1)."""
+
+    SINCE = sv()
+
+
+class WaitOrderStatement(Statement):
+    """`wait_order (events) pass else fail`: until the events trigger in order (15.5.4)."""
+
+    events: list[Expression]
+    pass_action: Statement | None
+    fail_action: Statement | None
+    SINCE = sv()
 
 
 class DisableStatement(Statement):
@@ -1911,6 +1960,13 @@ class CycleDelay(TimingControl):
     SINCE = sv()
 
 
+class RepeatEventControl(TimingControl):
+    """`repeat (count) @(events)`, an intra-assignment event control that waits for `count` of them (9.4.5)."""
+
+    count: Expression
+    event: EventControl
+
+
 class EventControl(TimingControl):
     """`@(events)`, joined by `or`, or `@(*)` without events (9.4.2)."""
 
@@ -2416,7 +2472,8 @@ KINDS: list[type[SyntaxNode]] = [
     EnumType, EnumMember,
     RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension,
     NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration, VariableDeclarator,
-    ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, GenvarDeclaration, ImportDeclaration, ImportItem,
+    ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, ElaborationTask, GenvarDeclaration, ImportDeclaration,
+    ImportItem,
     NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem,
     ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
     FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
@@ -2425,8 +2482,9 @@ KINDS: list[type[SyntaxNode]] = [
     AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
     ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement,
     BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement,
+    ForceStatement, ReleaseStatement, WaitForkStatement, WaitOrderStatement,
     ImmediateAssertion,
-    DelayControl, EventControl, EventExpression,
+    DelayControl, RepeatEventControl, EventControl, EventExpression,
     NameExpression, MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral,
     UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression,
     ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,

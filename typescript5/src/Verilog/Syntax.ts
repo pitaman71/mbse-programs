@@ -167,6 +167,12 @@ export const IMPORT_EXPORTS = ["import", "export"] as const;
 export type ImportExport = (typeof IMPORT_EXPORTS)[number];
 export const OVERRIDE_SPECIFIERS = ["initial", "extends"] as const;
 export type OverrideSpecifier = (typeof OVERRIDE_SPECIFIERS)[number];
+export const FORCE_KEYWORDS = ["force", "assign"] as const;
+export type ForceKeyword = (typeof FORCE_KEYWORDS)[number];
+export const RELEASE_KEYWORDS = ["release", "deassign"] as const;
+export type ReleaseKeyword = (typeof RELEASE_KEYWORDS)[number];
+export const ELABORATION_TASK_NAMES = ["$fatal", "$error", "$warning", "$info"] as const;
+export type ElaborationTaskName = (typeof ELABORATION_TASK_NAMES)[number];
 export const DEFAULT_NETTYPES = [
   "wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"
 ] as const;
@@ -964,6 +970,20 @@ export interface EmptyItem extends Properties<typeof EmptyItemSpec> {}
 export class EmptyItem extends Item {
   static override SPEC = EmptyItemSpec;
   static override SINCE: Availability | null = sv();
+}
+
+const ElaborationTaskSpec = {
+  name: choice(...ELABORATION_TASK_NAMES),
+  arguments: many(() => [Expression, EmptyArgument]),
+};
+export interface ElaborationTask extends Properties<typeof ElaborationTaskSpec> {}
+/**
+ * `$fatal(arguments);`, `$error`, `$warning` or `$info` among items: a message, or a failure, when elaboration
+ * reaches it (20.11).
+ */
+export class ElaborationTask extends Item {
+  static override SPEC = ElaborationTaskSpec;
+  static override SINCE: Availability | null = sv(2009);
 }
 
 const GenvarDeclarationSpec = {
@@ -1827,13 +1847,61 @@ export class WaitStatement extends Statement {
 
 const EventTriggerSpec = {
   nonblocking: flag(),
+  timing: optional(() => [TimingControl]),
   event: one(() => [Expression]),
 };
 export interface EventTrigger extends Properties<typeof EventTriggerSpec> {}
-/** `-> event;`, or `->> event;` when `nonblocking` (15.5.1). */
+/** `-> event;`, or `->> timing event;` when `nonblocking`, after a delay or an event control (15.5.1). */
 export class EventTrigger extends Statement {
   static override SPEC = EventTriggerSpec;
   static override FEATURES: Features = { nonblocking: [[true, sv()]] };
+  override check(): string[] {
+    return this.timing !== null && this.nonblocking !== true ? ["an EventTrigger with a timing is nonblocking"] : [];
+  }
+}
+
+const ForceStatementSpec = {
+  keyword: choice(...FORCE_KEYWORDS),
+  target: one(() => [Expression]),
+  value: one(() => [Expression]),
+};
+export interface ForceStatement extends Properties<typeof ForceStatementSpec> {}
+/**
+ * `force target = value;` or `assign target = value;`: a procedural continuous assignment, which holds until
+ * `release` or `deassign` (10.6).
+ */
+export class ForceStatement extends Statement {
+  static override SPEC = ForceStatementSpec;
+}
+
+const ReleaseStatementSpec = {
+  keyword: choice(...RELEASE_KEYWORDS),
+  target: one(() => [Expression]),
+};
+export interface ReleaseStatement extends Properties<typeof ReleaseStatementSpec> {}
+/** `release target;` or `deassign target;`, which ends a `force` or a procedural `assign` (10.6). */
+export class ReleaseStatement extends Statement {
+  static override SPEC = ReleaseStatementSpec;
+}
+
+const WaitForkStatementSpec = {};
+export interface WaitForkStatement extends Properties<typeof WaitForkStatementSpec> {}
+/** `wait fork;`, until the processes this one forked end (9.6.1). */
+export class WaitForkStatement extends Statement {
+  static override SPEC = WaitForkStatementSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const WaitOrderStatementSpec = {
+  events: many(() => [Expression]),
+  pass_action: optional(() => [Statement]),
+  fail_action: optional(() => [Statement]),
+};
+export interface WaitOrderStatement extends Properties<typeof WaitOrderStatementSpec> {}
+/** `wait_order (events) pass else fail`: until the events trigger in order (15.5.4). */
+export class WaitOrderStatement extends Statement {
+  static override SPEC = WaitOrderStatementSpec;
+  static override SINCE: Availability | null = sv();
 }
 
 const DisableStatementSpec = {
@@ -2622,6 +2690,16 @@ export class CycleDelay extends TimingControl {
   static override SINCE: Availability | null = sv();
 }
 
+const RepeatEventControlSpec = {
+  count: one(() => [Expression]),
+  event: one(() => [EventControl]),
+};
+export interface RepeatEventControl extends Properties<typeof RepeatEventControlSpec> {}
+/** `repeat (count) @(events)`, an intra-assignment event control that waits for `count` of them (9.4.5). */
+export class RepeatEventControl extends TimingControl {
+  static override SPEC = RepeatEventControlSpec;
+}
+
 const EventControlSpec = {
   events: many(() => [EventExpression]),
 };
@@ -3330,15 +3408,16 @@ export const KINDS = [
   IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType,
   StructType, StructMember, EnumType, EnumMember, RangeDimension, SizeDimension, UnsizedDimension,
   AssociativeDimension, QueueDimension, NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration,
-  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, GenvarDeclaration, ImportDeclaration,
-  ImportItem, NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration,
-  ModportItem, ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
-  FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor,
-  GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
-  AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
-  ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
-  ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement,
-  ImmediateAssertion, DelayControl, EventControl, EventExpression, NameExpression, MemberExpression, IndexExpression,
+  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, ElaborationTask, GenvarDeclaration,
+  ImportDeclaration, ImportItem, NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration,
+  ModportDeclaration, ModportItem, ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct,
+  InitialConstruct, FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion,
+  GenerateFor, GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection,
+  WildcardConnection, AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement,
+  CaseStatement, CaseItem, ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement,
+  ForeachStatement, BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger,
+  DisableStatement, ForceStatement, ReleaseStatement, WaitForkStatement, WaitOrderStatement, ImmediateAssertion,
+  DelayControl, RepeatEventControl, EventControl, EventExpression, NameExpression, MemberExpression, IndexExpression,
   RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression,
   IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange,
   Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression,

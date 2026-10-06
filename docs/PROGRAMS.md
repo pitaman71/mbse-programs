@@ -384,6 +384,10 @@ The tree is abstract where the grammar only spells:
 - `` `ifdef `` and `` `elsif `` take a macro's `name`, or a `condition` in parentheses (SystemVerilog 2023):
   `NameExpression`s of macros joined by `!`, `&&`, `||`, `->` and `<->`. slang 12 reads no directive inside such a
   conditional's branches.
+- `force` and `assign` in a procedure are a `ForceStatement`, `release` and `deassign` a `ReleaseStatement`; `wait
+  fork` is a `WaitForkStatement` and `wait_order` a `WaitOrderStatement` with its actions; `->>` may wait (`->> #1 e`);
+  `repeat (n) @(e)` before an assignment's value is a `RepeatEventControl`. `$fatal`, `$error`, `$warning` and `$info`
+  among items are `ElaborationTask`s.
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's

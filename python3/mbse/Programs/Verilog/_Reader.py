@@ -644,6 +644,15 @@ class _Reader:
             out.function = self.name(node.withFunction.name)
         return out
 
+    def elaboration_task(self, node: Any) -> S.ElaborationTask:
+        out = S.ElaborationTask(name=node.name.rawText)
+        if node.arguments is not None:
+            out.arguments = self.arguments(node.arguments)
+            for argument in out.arguments:
+                if not isinstance(argument, (S.Expression, S.EmptyArgument)):  # a type, or a named argument
+                    raise self.unsupported(node)
+        return out
+
     def empty_member(self, node: Any) -> S.EmptyItem:
         return S.EmptyItem()
 
@@ -1128,9 +1137,23 @@ class _Reader:
         return S.WaitStatement(condition=self.expression(node.expr), body=self.optional_statement(node.statement))
 
     def trigger(self, node: Any) -> S.EventTrigger:
-        if node.timing is not None:
-            raise self.unsupported(node)
-        return S.EventTrigger(nonblocking=node.trigger.rawText == "->>", event=self.expression(node.name))
+        return S.EventTrigger(nonblocking=node.trigger.rawText == "->>",
+                              timing=self.timing(node.timing) if node.timing is not None else None,
+                              event=self.expression(node.name))
+
+    def force(self, node: Any) -> S.ForceStatement:
+        assignment = node.expr  # slang reads only an assignment
+        return S.ForceStatement(keyword=node.keyword.rawText, target=self.expression(assignment.left),
+                                value=self.expression(assignment.right))
+
+    def release(self, node: Any) -> S.ReleaseStatement:
+        return S.ReleaseStatement(keyword=node.keyword.rawText, target=self.expression(node.variable))
+
+    def wait_fork(self, node: Any) -> S.WaitForkStatement:
+        return S.WaitForkStatement()
+
+    def wait_order(self, node: Any) -> S.WaitOrderStatement:
+        return self.actions(node.action, S.WaitOrderStatement(events=[self.expression(n) for n in _nodes(node.names)]))
 
     def disable(self, node: Any) -> S.DisableStatement:
         return S.DisableStatement(target=self.expression(node.name))
@@ -1482,6 +1505,9 @@ class _Reader:
             return self.made(node, S.EventControl())
         if kind == "CycleDelay":
             return self.made(node, S.CycleDelay(value=self.expression(node.delayValue)))
+        if kind == "RepeatedEventControl":
+            return self.made(node, S.RepeatEventControl(count=self.expression(node.expr),
+                                                        event=self.timing(node.eventControl)))
         raise self.unsupported(node)
 
     def delay(self, node: Any) -> S.DelayControl:
@@ -1797,6 +1823,7 @@ class _Reader:
         "DefaultClockingReference": default_clocking, "DefaultDisableDeclaration": default_disable,
         "CovergroupDeclaration": covergroup, "NetTypeDeclaration": net_type_declaration, "NetAlias": net_alias,
         "DefParam": defparam, "TimeUnitsDeclaration": time_units, "EmptyMember": empty_member,
+        "ElabSystemTask": elaboration_task,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,
@@ -1811,6 +1838,8 @@ class _Reader:
         "BlockingEventTriggerStatement": trigger, "NonblockingEventTriggerStatement": trigger,
         "DisableStatement": disable, "DisableForkStatement": disable_fork, "ImmediateAssertStatement": assertion,
         "ImmediateAssumeStatement": assertion, "ImmediateCoverStatement": assertion,
+        "ProceduralForceStatement": force, "ProceduralAssignStatement": force, "ProceduralReleaseStatement": release,
+        "ProceduralDeassignStatement": release, "WaitForkStatement": wait_fork, "WaitOrderStatement": wait_order,
     }
     EXPRESSIONS = {
         "IdentifierName": identifier_name, "IdentifierSelectName": identifier_select, "ScopedName": scoped,

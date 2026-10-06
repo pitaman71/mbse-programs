@@ -448,6 +448,10 @@ class Printer:
         function = f" with {self.name(node.function)}" if node.function is not None else ""
         return [f"{_INDENT * level}nettype {self.type_text(node.type)} {node.name.spelling}{function};"]
 
+    def elaboration_task(self, node: S.ElaborationTask, level: int) -> list[str]:
+        arguments = f"({', '.join(self.type_or_text(a) for a in node.arguments)})" if node.arguments else ""
+        return [f"{_INDENT * level}{node.name}{arguments};"]
+
     def empty_item(self, node: S.EmptyItem, level: int) -> list[str]:
         return [_INDENT * level + ";"]
 
@@ -721,7 +725,14 @@ class Printer:
         if isinstance(node, S.ReturnStatement):
             return "return" + (f" {self.text(node.value)}" if node.value is not None else "") + ";"
         if isinstance(node, S.EventTrigger):
-            return f"{'->>' if node.nonblocking else '->'} {self.text(node.event)};"
+            timing = f"{self.timing_text(node.timing)} " if node.timing is not None else ""
+            return f"{'->>' if node.nonblocking else '->'} {timing}{self.text(node.event)};"
+        if isinstance(node, S.ForceStatement):
+            return f"{node.keyword} {self.text(node.target)} = {self.text(node.value)};"
+        if isinstance(node, S.ReleaseStatement):
+            return f"{node.keyword} {self.text(node.target)};"
+        if isinstance(node, S.WaitForkStatement):
+            return "wait fork;"
         return f"disable {self.text(node.target) if node.target is not None else 'fork'};"  # a DisableStatement
 
     def block(self, node: Any, level: int) -> list[str]:
@@ -840,6 +851,10 @@ class Printer:
     def concurrent(self, node: S.ConcurrentAssertion, level: int) -> list[str]:
         kind = "sequence" if node.sequence else "property"
         return self.actions(f"{_INDENT * level}{node.keyword} {kind} ({self.spec(node.spec)})", node, level)
+
+    def wait_order(self, node: S.WaitOrderStatement, level: int) -> list[str]:
+        events = ", ".join(self.text(e) for e in node.events)
+        return self.actions(f"{_INDENT * level}wait_order ({events})", node, level)
 
     def expect(self, node: S.ExpectStatement, level: int) -> list[str]:
         return self.actions(f"{_INDENT * level}expect ({self.spec(node.spec)})", node, level)
@@ -1100,6 +1115,8 @@ class Printer:
     # Timing controls
 
     def timing_text(self, node: Any) -> str:
+        if isinstance(node, S.RepeatEventControl):
+            return f"repeat ({self.text(node.count)}) {self.timing_text(node.event)}"
         if isinstance(node, S.DelayControl):
             if node.fall is not None:
                 values = [node.value, node.fall, *([node.turnoff] if node.turnoff is not None else [])]
@@ -1287,6 +1304,7 @@ class Printer:
         S.CoverageBins: coverage_bins, S.CoverCross: cover_cross, S.BinsSelection: bins_selection,
         S.AttributedItem: attributed, S.NetTypeDeclaration: net_type_declaration, S.NetAlias: net_alias,
         S.DefParam: defparam, S.TimeUnitsDeclaration: time_units, S.EmptyItem: empty_item,
+        S.ElaborationTask: elaboration_task,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,
@@ -1294,4 +1312,5 @@ class Printer:
         S.ForeachStatement: loop, S.DoWhileStatement: loop, S.TimedStatement: timed, S.WaitStatement: wait,
         S.ImmediateAssertion: assertion, S.RandCaseStatement: randcase, S.ConcurrentAssertion: concurrent,
         S.ExpectStatement: expect, S.LabeledStatement: labeled, S.AttributedStatement: attributed,
+        S.WaitOrderStatement: wait_order,
     }

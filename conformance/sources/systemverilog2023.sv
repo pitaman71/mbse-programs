@@ -171,6 +171,8 @@ module sampler
     endcase
 
     bus_if #(.W(8)) monitor (.clk(clk));
+    if (DEPTH < 2) $error("DEPTH is %0d, below 2", DEPTH);
+    else $info;
     counter #(WIDTH, 1) u_counter (.clk, .rst_n(rst_n), .count());
     checker_unit u_check (.*);
     fifo #(.DEPTH(DEPTH)) u_fifo [1:0] (clk, rst_n, out.data);
@@ -206,6 +208,13 @@ module sampler
         samples = $clog2(DEPTH) + $bits(sum) + (count ~^ 8'hA5) + &count + |count + ^count;
         i = int'(average) <-> i;
         disable counter;
+        force out.valid = 1'b0;
+        release out.valid;
+        assign samples = 0;
+        deassign samples;
+        ->> #1 done;
+        ->> @(posedge clk) done;
+        sum <= repeat (2) @(posedge clk) '0;
         samples = logger_pkg::FIELDS + pending[$];
         pending = {};
         lookup["packed"] = {>>{reading.raw, reading.status}} + {<< byte {history with [0 +: 2]}} + {>> 4 {history with [1]}};
@@ -288,8 +297,14 @@ program automatic test_program ((* clock *) input logic clk);
     clocking tick @(posedge clk);
     endclocking
     default clocking tick;
+    event armed, fired;
     initial begin
         repeat (3) @(posedge clk);
+        fork
+            ##1;
+        join_none
+        wait fork;
+        wait_order (armed, fired) $display("in order"); else $display("out of order");
         ##2;
         settle: ##1 $display("time %t", $time);
         expect (@(posedge clk) ##[1:5] clk) else $display("no clock");

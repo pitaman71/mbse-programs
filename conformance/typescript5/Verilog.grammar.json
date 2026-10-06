@@ -1976,6 +1976,37 @@
    "properties": []
   },
   {
+   "kind": "ElaborationTask",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "$fatal",
+      "$error",
+      "$warning",
+      "$info"
+     ]
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "EmptyArgument"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
    "kind": "GenvarDeclaration",
    "category": "Item",
    "since": {
@@ -3868,6 +3899,14 @@
      "optional": false
     },
     {
+     "name": "timing",
+     "type": [
+      "TimingControl"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
      "name": "event",
      "type": [
       "Expression"
@@ -3888,6 +3927,111 @@
      "name": "target",
      "type": [
       "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForceStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "force",
+      "assign"
+     ]
+    },
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ReleaseStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "release",
+      "deassign"
+     ]
+    },
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "WaitForkStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "WaitOrderStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "events",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "pass_action",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "fail_action",
+     "type": [
+      "Statement"
      ],
      "optional": true,
      "many": false
@@ -3986,6 +4130,31 @@
       "Expression"
      ],
      "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RepeatEventControl",
+   "category": "TimingControl",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "count",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "event",
+     "type": [
+      "EventControl"
+     ],
+     "optional": false,
      "many": false
     }
    ]
