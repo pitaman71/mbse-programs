@@ -377,6 +377,13 @@ The tree is abstract where the grammar only spells:
   (`{a, b}`), an `ExplicitPort` (`.p(x)`) or an `EmptyPort`; an ANSI header's `.p(expression)` is an
   `ExplicitAnsiPort`. A modport's ports are `ModportPort`s, explicit ones included (`input .a(b)`),
   `ModportSubroutine`s (`import f`, `export task t(int a)`) and `ModportClocking`s (`clocking cb`).
+- A class may be `final` (`class :final c`) and pass its base its constructor's arguments (`extends b(default)`,
+  `defaulted`); a method and a constraint have a `specifier` (`:initial`, `:extends`) and may be `final`. A class's
+  `typedef` may be `local` or `protected`; `;` alone is an `EmptyItem`; `typedef bus.t t` names an interface's type
+  with an `InterfaceTypeName`; a `foreach` dimension skipped (`q[, j]`) is an `EmptyArgument`.
+- `` `ifdef `` and `` `elsif `` take a macro's `name`, or a `condition` in parentheses (SystemVerilog 2023):
+  `NameExpression`s of macros joined by `!`, `&&`, `||`, `->` and `<->`. slang 12 reads no directive inside such a
+  conditional's branches.
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
@@ -435,11 +442,11 @@ clocking block one where its signals are clockvars; a label names a 'label'. A c
 `option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration
 is. A non-ANSI port is one entity, which the header names and a port declaration declares. `import p::x` declares an
 entity whose `target` is `p::x`, and `import p::*` makes the package's names visible where nothing nearer declares them;
-`$unit::x` finds `x` in the compilation unit. An explicit port's own name (`.p(x)`) is not looked up: what it connects
-is. An enumeration's member `name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype`
-declares a type. A package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design
-unit's and a block's with `.` (`sampler.counter.count`). A member after `.` and what an instance's module declares are
-not resolved.
+A macro's name in an `` `ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x`
+in the compilation unit. An explicit port's own name (`.p(x)`) is not looked up: what it connects is. An enumeration's
+member `name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A
+package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a
+block's with `.` (`sampler.counter.count`). A member after `.` and what an instance's module declares are not resolved.
 
 ## Transpiling
 

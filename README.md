@@ -181,7 +181,7 @@ in-place rewriting, and definitions with lookup), and four languages:
   TypeScript 5.0 and 5.9 and ES2020 and ES2025 (and any other version or edition), each with JSX or without, parsing
   through tree-sitter-typescript 0.23.2 with corrections of its grammar, printing, and the definitions of a program,
   which keep values, types and namespaces apart. Checked against typescript-estree on 1,857 files.
-- Verilog: 223 kinds covering SystemVerilog 2023's design subset and its verification constructs (design units, ports of
+- Verilog: 225 kinds covering SystemVerilog 2023's design subset and its verification constructs (design units, ports of
   every form, parameters, data types, declarations, procedural blocks, statements, generate constructs, instantiation,
   functions and tasks, classes with their properties, methods and objects, constraints, `randomize() with` and
   `randcase`, sequences and properties, concurrent and immediate assertions, clocking blocks, `let`, covergroups,

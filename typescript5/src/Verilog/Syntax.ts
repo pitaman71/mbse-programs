@@ -165,6 +165,8 @@ export const TIME_UNIT_KEYWORDS = ["timeunit", "timeprecision"] as const;
 export type TimeUnitKeyword = (typeof TIME_UNIT_KEYWORDS)[number];
 export const IMPORT_EXPORTS = ["import", "export"] as const;
 export type ImportExport = (typeof IMPORT_EXPORTS)[number];
+export const OVERRIDE_SPECIFIERS = ["initial", "extends"] as const;
+export type OverrideSpecifier = (typeof OVERRIDE_SPECIFIERS)[number];
 export const DEFAULT_NETTYPES = [
   "wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"
 ] as const;
@@ -944,14 +946,23 @@ export class ForwardTypedefDeclaration extends Item {
 }
 
 const TypedefDeclarationSpec = {
+  visibility: optionalChoice(...VISIBILITYS),
   type: one(() => [DataType]),
   name: one(() => [Identifier]),
   dimensions: many(() => [Dimension]),
 };
 export interface TypedefDeclaration extends Properties<typeof TypedefDeclarationSpec> {}
-/** `typedef type name dimensions;` (6.18). */
+/** `typedef type name dimensions;` (6.18), `local` or `protected` in a class (8.18). */
 export class TypedefDeclaration extends Item {
   static override SPEC = TypedefDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const EmptyItemSpec = {};
+export interface EmptyItem extends Properties<typeof EmptyItemSpec> {}
+/** `;` alone, where items are listed (A.1.4, A.1.9). */
+export class EmptyItem extends Item {
+  static override SPEC = EmptyItemSpec;
   static override SINCE: Availability | null = sv();
 }
 
@@ -1159,6 +1170,8 @@ const FunctionDeclarationSpec = {
   virtual: flag(),
   visibility: optionalChoice(...VISIBILITYS),
   static: flag(),
+  specifier: optionalChoice(...OVERRIDE_SPECIFIERS),
+  final: flag(),
   lifetime: optionalChoice(...LIFETIMES),
   type: optional(() => [DataType]),
   name: one(() => [Name]),
@@ -1171,7 +1184,8 @@ export interface FunctionDeclaration extends Properties<typeof FunctionDeclarati
  * `function lifetime type name(ports); body endfunction` (13.4). The body lists declarations and statements in
  * order. Without ports in parentheses, Verilog-1995 style, `PortDeclaration`s in the body declare them.
  * In a class, a method may be `local` or `protected`, `static`, `virtual`, and a prototype without a body:
- * `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24). A constructor is named `new`.
+ * `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24). A constructor is named `new`. A virtual
+ * method's `:initial` or `:extends` `specifier` and `:final` say whether it overrides and may be overridden (8.20).
  */
 export class FunctionDeclaration extends Item {
   static override SPEC = FunctionDeclarationSpec;
@@ -1183,6 +1197,8 @@ export class FunctionDeclaration extends Item {
     virtual: [[true, sv()]],
     visibility: [[true, sv()]],
     static: [[true, sv()]],
+    specifier: [[true, sv(2023)]],
+    final: [[true, sv(2023)]],
   };
   override check(): string[] {
     return methodProblems(this);
@@ -1195,6 +1211,8 @@ const TaskDeclarationSpec = {
   virtual: flag(),
   visibility: optionalChoice(...VISIBILITYS),
   static: flag(),
+  specifier: optionalChoice(...OVERRIDE_SPECIFIERS),
+  final: flag(),
   lifetime: optionalChoice(...LIFETIMES),
   name: one(() => [Name]),
   ports: many(() => [TfPort]),
@@ -1205,7 +1223,8 @@ export interface TaskDeclaration extends Properties<typeof TaskDeclarationSpec> 
 /**
  * `task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`,
  * `virtual`, and a prototype without a body: `extern`, defined outside the class, or `pure virtual` (8.10, 8.20,
- * 8.24). A constructor is named `new`.
+ * 8.24). A constructor is named `new`. A virtual method's `:initial` or `:extends` `specifier` and `:final` say
+ * whether it overrides and may be overridden (8.20).
  */
 export class TaskDeclaration extends Item {
   static override SPEC = TaskDeclarationSpec;
@@ -1217,6 +1236,8 @@ export class TaskDeclaration extends Item {
     virtual: [[true, sv()]],
     visibility: [[true, sv()]],
     static: [[true, sv()]],
+    specifier: [[true, sv(2023)]],
+    final: [[true, sv(2023)]],
   };
   override check(): string[] {
     return methodProblems(this);
@@ -1260,10 +1281,12 @@ export class TfPort extends SyntaxNode {
 const ClassDeclarationSpec = {
   virtual: flag(),
   interface: flag(),
+  final: flag(),
   name: one(() => [Identifier]),
   parameters: many(() => [ParameterDeclaration, TypeParameterDeclaration]),
   base: optional(() => [NamedType]),
   arguments: many(() => [Expression, Connection]),
+  defaulted: flag(),
   interfaces: many(() => [NamedType]),
   items: many(() => [Item, Directive, Comment]),
   labeled: flag(),
@@ -1272,17 +1295,27 @@ export interface ClassDeclaration extends Properties<typeof ClassDeclarationSpec
 /**
  * `virtual class name #(parameters) extends base(arguments) implements interfaces; items endclass`, or
  * `interface class name #(parameters) extends interfaces; items endclass` (8.3, 8.26). Its items are properties,
- * methods, parameters, types and classes. `labeled` repeats the name after `endclass`.
+ * methods, parameters, types and classes. `labeled` repeats the name after `endclass`. A `final` class
+ * (`class :final c`) has no derived classes, and a `defaulted` one passes its base its constructor's arguments
+ * (`extends base(default)`) (8.15).
  */
 export class ClassDeclaration extends Item {
   static override SPEC = ClassDeclarationSpec;
   static override SINCE: Availability | null = sv();
-  static override FEATURES: Features = { interface: [[true, sv(2012)]], interfaces: [[true, sv(2012)]] };
+  static override FEATURES: Features = {
+    interface: [[true, sv(2012)]],
+    interfaces: [[true, sv(2012)]],
+    final: [[true, sv(2023)]],
+    defaulted: [[true, sv(2023)]],
+  };
   override check(): string[] {
     if (this.interface === true && (this.virtual === true || this.base !== null || this.arguments.length > 0)) {
       return ["an interface ClassDeclaration has no virtual, base or arguments"];
     }
     if (this.arguments.length > 0 && this.base === null) return ["a ClassDeclaration with arguments has a base"];
+    if (this.defaulted === true && (this.base === null || this.arguments.length > 0)) {
+      return ["a ClassDeclaration with default arguments has a base and no others"];
+    }
     return [];
   }
 }
@@ -1291,33 +1324,43 @@ export class ClassDeclaration extends Item {
 
 const ConstraintDeclarationSpec = {
   static: flag(),
+  specifier: optionalChoice(...OVERRIDE_SPECIFIERS),
+  final: flag(),
   name: one(() => [Name]),
   items: many(() => [Constraint, Directive, Comment]),
 };
 export interface ConstraintDeclaration extends Properties<typeof ConstraintDeclarationSpec> {}
 /**
  * `static constraint name { constraints }` in a class, or outside it with a qualified name (`constraint c::k { }`),
- * which defines a prototype (18.5).
+ * which defines a prototype (18.5). Its `:initial` or `:extends` `specifier` and `:final` say whether it overrides and
+ * may be overridden (18.5.2).
  */
 export class ConstraintDeclaration extends Item {
   static override SPEC = ConstraintDeclarationSpec;
   static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { specifier: [[true, sv(2023)]], final: [[true, sv(2023)]] };
 }
 
 const ConstraintPrototypeSpec = {
   qualifier: optionalChoice(...PROTOTYPE_QUALIFIERS),
   static: flag(),
+  specifier: optionalChoice(...OVERRIDE_SPECIFIERS),
+  final: flag(),
   name: one(() => [Identifier]),
 };
 export interface ConstraintPrototype extends Properties<typeof ConstraintPrototypeSpec> {}
 /**
  * `qualifier static constraint name;`: a constraint defined outside its class, `extern` or by default, or `pure`,
- * which derived classes define (18.5.1).
+ * which derived classes define (18.5.1), with a `specifier` and `final` as a declaration has.
  */
 export class ConstraintPrototype extends Item {
   static override SPEC = ConstraintPrototypeSpec;
   static override SINCE: Availability | null = sv();
-  static override FEATURES: Features = { qualifier: [["pure", sv(2012)]] };
+  static override FEATURES: Features = {
+    qualifier: [["pure", sv(2012)]],
+    specifier: [[true, sv(2023)]],
+    final: [[true, sv(2023)]],
+  };
 }
 
 const ConstraintBlockSpec = {
@@ -1367,7 +1410,7 @@ export class ConditionalConstraint extends Constraint {
 
 const ForeachConstraintSpec = {
   array: one(() => [Expression]),
-  variables: many(() => [Identifier]),
+  variables: many(() => [Identifier, EmptyArgument]),
   body: one(() => [Constraint]),
 };
 export interface ForeachConstraint extends Properties<typeof ForeachConstraintSpec> {}
@@ -1726,11 +1769,11 @@ export class ForeverStatement extends Statement {
 
 const ForeachStatementSpec = {
   array: one(() => [Expression]),
-  variables: many(() => [Identifier]),
+  variables: many(() => [Identifier, EmptyArgument]),
   body: one(() => [Statement]),
 };
 export interface ForeachStatement extends Properties<typeof ForeachStatementSpec> {}
-/** `foreach (array[variables]) body` (12.7.3). */
+/** `foreach (array[variables]) body` (12.7.3); a dimension it skips is an `EmptyArgument` (`q[, j]`). */
 export class ForeachStatement extends Statement {
   static override SPEC = ForeachStatementSpec;
   static override SINCE: Availability | null = sv();
@@ -3072,7 +3115,10 @@ export class MinTypMaxExpression extends Expression {
 
 const EmptyArgumentSpec = {};
 export interface EmptyArgument extends Properties<typeof EmptyArgumentSpec> {}
-/** A port connection or an argument left out: `u i(a, , b)`, `f(a, , b)`, `$display(a,, b)` (23.3.2.2, 13.5). */
+/**
+ * A port connection, an argument or a `foreach` loop's variable left out: `u i(a, , b)`, `f(a, , b)`,
+ * `$display(a,, b)`, `foreach (q[, j])` (23.3.2.2, 13.5, 12.7.3).
+ */
 export class EmptyArgument extends Connection {
   static override SPEC = EmptyArgumentSpec;
 }
@@ -3090,6 +3136,17 @@ export interface EmptyQueue extends Properties<typeof EmptyQueueSpec> {}
 /** `{}`, a queue or a dynamic array with no elements (7.10). */
 export class EmptyQueue extends Expression {
   static override SPEC = EmptyQueueSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const InterfaceTypeNameSpec = {
+  interface: one(() => [Identifier]),
+  name: one(() => [Identifier]),
+};
+export interface InterfaceTypeName extends Properties<typeof InterfaceTypeNameSpec> {}
+/** `interface.name`: a type an interface port's interface declares, as `typedef` names it (6.18). */
+export class InterfaceTypeName extends Name {
+  static override SPEC = InterfaceTypeNameSpec;
   static override SINCE: Availability | null = sv();
 }
 
@@ -3170,7 +3227,8 @@ export class DefaultNettypeDirective extends Directive {
 
 const IfdefDirectiveSpec = {
   negated: flag(),
-  name: one(() => [Identifier]),
+  name: optional(() => [Identifier]),
+  condition: optional(() => [Expression]),
   items: many(() => [Item, Statement, Constraint, Directive, Comment]),
   branches: many(() => [ElsifDirective]),
   alternative: many(() => [Item, Statement, Constraint, Directive, Comment]),
@@ -3180,21 +3238,31 @@ export interface IfdefDirective extends Properties<typeof IfdefDirectiveSpec> {}
 /**
  * `` `ifdef name items `elsif name items `else items `endif ``, or `` `ifndef `` when `negated`, as a tree of its
  * branches (22.6). Branches hold what their place lists: items, statements or constraints. A branch the reading did
- * not take ends with its text as written, a `DisabledText`.
+ * not take ends with its text as written, a `DisabledText`. In place of a name, a `condition` combines macros'
+ * names with `!`, `&&`, `||`, `->`, `<->` and parentheses: `` `ifdef (A && !B) ``.
  */
 export class IfdefDirective extends Directive {
   static override SPEC = IfdefDirectiveSpec;
+  static override FEATURES: Features = { condition: [[true, sv(2023)]] };
+  override check(): string[] {
+    return conditionProblems(this);
+  }
 }
 
 const ElsifDirectiveSpec = {
-  name: one(() => [Identifier]),
+  name: optional(() => [Identifier]),
+  condition: optional(() => [Expression]),
   items: many(() => [Item, Statement, Constraint, Directive, Comment]),
 };
 export interface ElsifDirective extends Properties<typeof ElsifDirectiveSpec> {}
-/** `` `elsif name items ``, a branch of an `IfdefDirective` (22.6). */
+/** `` `elsif name items `` or `` `elsif (condition) items ``, a branch of an `IfdefDirective` (22.6). */
 export class ElsifDirective extends Directive {
   static override SPEC = ElsifDirectiveSpec;
   static override SINCE: Availability | null = verilog(2001);
+  static override FEATURES: Features = { condition: [[true, sv(2023)]] };
+  override check(): string[] {
+    return conditionProblems(this);
+  }
 }
 
 const DisabledTextSpec = {
@@ -3228,6 +3296,30 @@ function methodProblems(method: FunctionDeclaration | TaskDeclaration): string[]
   return [];
 }
 
+/** A directive has a name or a condition, and a condition only macros' names and `!`, `&&`, `||`, `->`, `<->`. */
+function conditionProblems(directive: IfdefDirective | ElsifDirective): string[] {
+  const kind = directive.kind().KIND;
+  if ((directive.name === null) === (directive.condition === null)) return [`an ${kind} has a name or a condition`];
+  if (directive.condition !== null && !(directive.condition instanceof ParenthesizedExpression)) {
+    return [`an ${kind}'s condition is in parentheses`];
+  }
+  const nodes: unknown[] = directive.condition !== null ? [directive.condition] : [];
+  while (nodes.length > 0) {
+    const node = nodes.pop();
+    if (node instanceof ParenthesizedExpression) {
+      nodes.push(node.expression);
+    } else if (node instanceof UnaryExpression && node.operator === "!" && node.attributes.length === 0) {
+      nodes.push(node.operand);
+    } else if (node instanceof BinaryExpression && ["&&", "||", "->", "<->"].includes(node.operator as string)
+      && node.attributes.length === 0) {
+      nodes.push(node.left, node.right);
+    } else if (!(node instanceof NameExpression && node.name instanceof Identifier)) {
+      return [`an ${kind}'s condition has macros' names, !, &&, ||, -> and <-> only`];
+    }
+  }
+  return [];
+}
+
 // --- The language ---
 
 export const KINDS = [
@@ -3238,9 +3330,9 @@ export const KINDS = [
   IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType,
   StructType, StructMember, EnumType, EnumMember, RangeDimension, SizeDimension, UnsizedDimension,
   AssociativeDimension, QueueDimension, NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration,
-  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, GenvarDeclaration, ImportDeclaration, ImportItem,
-  NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem,
-  ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
+  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, GenvarDeclaration, ImportDeclaration,
+  ImportItem, NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration,
+  ModportItem, ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
   FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor,
   GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
   AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
@@ -3251,21 +3343,21 @@ export const KINDS = [
   IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange,
   Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression,
   ParenthesizedExpression, MacroUsage, DollarExpression, StreamingConcatenation, StreamItem, MinTypMaxExpression,
-  EmptyArgument, RootExpression, EmptyQueue, UnitName, TypeReference, NullLiteral, ThisExpression, SuperExpression,
-  NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression, ArrayMethodWithExpression,
-  DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype, ConstraintBlock,
-  ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint,
-  DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement, ConcurrentAssertion,
-  ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration, LetDeclaration,
-  AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence, ParenthesizedSequence,
-  FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty, StrengthProperty,
-  AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty, ClockedProperty,
-  ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking, DefaultDisable,
-  CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues,
-  BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf,
-  BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect, IncludeDirective, DefineDirective,
-  UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText,
-  OtherDirective,
+  EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression,
+  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
+  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
+  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
+  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
+  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
+  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
+  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
+  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
+  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
+  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
+  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
+  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
+  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
+  ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

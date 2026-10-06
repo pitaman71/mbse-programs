@@ -60,6 +60,7 @@ interface bus_if #(
 );
     timeunit 1ns;
     timeprecision 1ps;
+    typedef logic [W - 1:0] word_t;
     logic [W - 1:0] data;
     logic valid, ready;
     modport source (output data, output valid, input ready);
@@ -112,6 +113,8 @@ module sampler
     event done;
     logic [7:0] dynamic[];
     logger_pkg::queue_t pending;
+    typedef out.word_t word_t;
+    logic [3:0] grid[2][2];
     assign out.data = reading.status;
     assign #2 out.valid = state == SEND && !out.ready ? 1'b1 : 1'b0;
     assign (weak0, weak1) #1 pair = nibble2[1:0];
@@ -201,6 +204,8 @@ module sampler
         end
         foreach (history[j])
             history[j] = 8'h00;
+        foreach (grid[, col])
+            grid[0][col] = '0;
         fork
             #5 $display("a %0d", count);
             begin
@@ -229,6 +234,13 @@ module sampler
 
     final
         $display("done");
+
+`ifdef (SIMULATION && !FPGA || TRACE -> SIMULATION)
+    initial
+        $display("traced");
+`elsif (FPGA)
+    initial $display("on the board");
+`endif
 
     // The datapath's properties, checked on every clock.
     default clocking sample_clk @(posedge clk);
@@ -406,6 +418,20 @@ package logger_tb_pkg;
         endfunction
     endclass
 
+    // The last of the samples: no class derives from it, and it takes its base's arguments.
+    class :final last_sample extends sample(default);
+        ;
+        local typedef byte unsigned level_t;
+
+        virtual function :extends :final transaction #(16) copy;
+            return this;
+        endfunction
+
+        constraint :extends :final profile {
+            raw < 500;
+        }
+    endclass
+
     // What the testbench has seen of the readings.
     class coverage;
         transaction #(16) seen;
@@ -455,5 +481,11 @@ package logger_tb_pkg;
             this.bus = bus;
             current = logger_tb_pkg::sample::new(1);
         endfunction
+
+        virtual function :initial void reset;
+            current = null;
+        endfunction
+
+        extern constraint :initial settled;
     endclass
 endpackage

@@ -1931,6 +1931,15 @@
    "features": {},
    "properties": [
     {
+     "name": "visibility",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "local",
+      "protected"
+     ]
+    },
+    {
      "name": "type",
      "type": [
       "DataType"
@@ -1955,6 +1964,16 @@
      "many": true
     }
    ]
+  },
+  {
+   "kind": "EmptyItem",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
   },
   {
    "kind": "GenvarDeclaration",
@@ -2447,6 +2466,16 @@
      "true": {
       "SystemVerilog": 2005
      }
+    },
+    "specifier": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    },
+    "final": {
+     "true": {
+      "SystemVerilog": 2023
+     }
     }
    },
    "properties": [
@@ -2476,6 +2505,20 @@
     },
     {
      "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "specifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "initial",
+      "extends"
+     ]
+    },
+    {
+     "name": "final",
      "type": "bool",
      "optional": false
     },
@@ -2571,6 +2614,16 @@
      "true": {
       "SystemVerilog": 2005
      }
+    },
+    "specifier": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    },
+    "final": {
+     "true": {
+      "SystemVerilog": 2023
+     }
     }
    },
    "properties": [
@@ -2600,6 +2653,20 @@
     },
     {
      "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "specifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "initial",
+      "extends"
+     ]
+    },
+    {
+     "name": "final",
      "type": "bool",
      "optional": false
     },
@@ -2759,6 +2826,16 @@
      "true": {
       "SystemVerilog": 2012
      }
+    },
+    "final": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    },
+    "defaulted": {
+     "true": {
+      "SystemVerilog": 2023
+     }
     }
    },
    "properties": [
@@ -2769,6 +2846,11 @@
     },
     {
      "name": "interface",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "final",
      "type": "bool",
      "optional": false
     },
@@ -2805,6 +2887,11 @@
      ],
      "optional": true,
      "many": true
+    },
+    {
+     "name": "defaulted",
+     "type": "bool",
+     "optional": false
     },
     {
      "name": "interfaces",
@@ -3657,7 +3744,8 @@
     {
      "name": "variables",
      "type": [
-      "Identifier"
+      "Identifier",
+      "EmptyArgument"
      ],
      "optional": true,
      "many": true
@@ -4985,6 +5073,33 @@
    "properties": []
   },
   {
+   "kind": "InterfaceTypeName",
+   "category": "Name",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "interface",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
    "kind": "UnitName",
    "category": "Name",
    "since": {
@@ -5284,10 +5399,35 @@
     "SystemVerilog": 2005
    },
    "extension": false,
-   "features": {},
+   "features": {
+    "specifier": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    },
+    "final": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
    "properties": [
     {
      "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "specifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "initial",
+      "extends"
+     ]
+    },
+    {
+     "name": "final",
      "type": "bool",
      "optional": false
     },
@@ -5323,6 +5463,16 @@
      "pure": {
       "SystemVerilog": 2012
      }
+    },
+    "specifier": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    },
+    "final": {
+     "true": {
+      "SystemVerilog": 2023
+     }
     }
    },
    "properties": [
@@ -5337,6 +5487,20 @@
     },
     {
      "name": "static",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "specifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "initial",
+      "extends"
+     ]
+    },
+    {
+     "name": "final",
      "type": "bool",
      "optional": false
     },
@@ -5483,7 +5647,8 @@
     {
      "name": "variables",
      "type": [
-      "Identifier"
+      "Identifier",
+      "EmptyArgument"
      ],
      "optional": true,
      "many": true
@@ -7623,7 +7788,13 @@
    "category": "Directive",
    "since": null,
    "extension": false,
-   "features": {},
+   "features": {
+    "condition": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
    "properties": [
     {
      "name": "negated",
@@ -7635,7 +7806,15 @@
      "type": [
       "Identifier"
      ],
-     "optional": false,
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
      "many": false
     },
     {
@@ -7685,14 +7864,28 @@
     "SystemVerilog": 2005
    },
    "extension": false,
-   "features": {},
+   "features": {
+    "condition": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
    "properties": [
     {
      "name": "name",
      "type": [
       "Identifier"
      ],
-     "optional": false,
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
      "many": false
     },
     {

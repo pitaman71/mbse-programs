@@ -29,8 +29,9 @@
  *   are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
  *   (`sampler.counter.count`).
  *
- * Not resolved: a member after `.` (of a structure, an object, an interface port or a hierarchical path), what an
- * instance's module declares, and a forward `typedef` (the declaration it announces is the entity).
+ * Not resolved: a member after `.` (of a structure, an object, an interface port or a hierarchical path, or an
+ * interface's type: `bus.t`), what an instance's module declares, a forward `typedef` (the declaration it announces is
+ * the entity), and the macros' names of `` `ifdef `` and `` `elsif ``.
  */
 
 import { Entity, Program, Scope } from "../Framework/Definitions.js";
@@ -418,9 +419,20 @@ class Definer {
     const inner = new Scope("block", null, scope, node);
     for (const variable of node.variables) {
       this.program.located(variable, inner);
-      this.entity(inner, "variable", variable, node);
+      if (variable instanceof S.Identifier) this.entity(inner, "variable", variable, node); // not a dimension it skips
     }
     this.visit(node.body, inner);
+  }
+
+  /** A conditional's branches; its macros' names are not the program's. */
+  ifdef(node: any, scope: Scope): void {
+    for (const branch of node.branches) this.program.located(branch, scope);
+    this.visitAll([...node.items, ...node.alternative, ...node.branches.flatMap((b: any) => b.items)], scope);
+  }
+
+  /** `bus.t`: `bus` is found where the name is; `t`, in the interface, is not. */
+  interfaceType(node: any, scope: Scope): void {
+    this.program.located(node.interface, scope);
   }
 
   resolveImports(): void {
@@ -456,6 +468,8 @@ const methods: [Function[], Method][] = [
   [[S.ParameterDeclaration, S.TypeParameterDeclaration], (d, n, s) => d.parameter(n, s)],
   [[S.AnsiPort, S.InterfacePort, S.PortReference], (d, n, s) => d.port(n, s)],
   [[S.ExplicitPort, S.ExplicitAnsiPort], (d, n, s) => d.explicitPort(n, s)],
+  [[S.IfdefDirective], (d, n, s) => d.ifdef(n, s)],
+  [[S.InterfaceTypeName], (d, n, s) => d.interfaceType(n, s)],
   [[S.NetDeclaration], (d, n, s) => d.declarators(n, s, "net")],
   [[S.VariableDeclaration], (d, n, s) => d.declarators(n, s, "variable")],
   [[S.PortDeclaration], (d, n, s) => d.declarators(n, s, "port")],

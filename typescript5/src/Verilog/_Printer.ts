@@ -37,6 +37,8 @@ const PROPERTY: Record<string, number> = {
 const RIGHT = new Set<number>([IMPLY, CONDITIONAL, THROUGHOUT, IFF, UNTIL, IMPLICATION]); // right-associative levels
 
 const isAny = (node: unknown, kinds: Function[]) => kinds.some((k) => node instanceof k);
+/** `foreach`'s variables, of which a skipped one is empty. */
+const loopVariables = (variables: any[]) => variables.map((v) => (v instanceof S.EmptyArgument ? "" : v.spelling)).join(", ");
 const NON_ANSI = [S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort];
 const joined = (parts: (string | null | undefined)[], separator = " ") => parts.filter((p) => p).join(separator);
 
@@ -151,10 +153,10 @@ export class Printer {
 
   directive(node: any, level: number): string[] {
     if (node instanceof S.IfdefDirective) {
-      const lines = [`\`${node.negated ? "ifndef" : "ifdef"} ${node.name?.spelling}`];
+      const lines = [`\`${node.negated ? "ifndef" : "ifdef"} ${this.macroCondition(node)}`];
       lines.push(...this.branch(node.items, level));
       for (const branch of node.branches) {
-        lines.push(`\`elsif ${branch.name?.spelling}`);
+        lines.push(`\`elsif ${this.macroCondition(branch)}`);
         lines.push(...this.branch(branch.items, level));
       }
       if (node.has_else) {
@@ -174,6 +176,10 @@ export class Printer {
     if (node instanceof S.TimescaleDirective) return [`\`timescale ${node.unit} / ${node.precision}`];
     if (node instanceof S.DefaultNettypeDirective) return [`\`default_nettype ${node.net_type}`];
     return [node.text]; // an OtherDirective: the tree is valid, so nothing else is here
+  }
+
+  macroCondition(node: any): string {
+    return node.name !== null ? node.name.spelling : this.text(node.condition);
   }
 
   branch(items: readonly any[], level: number): string[] {
@@ -323,6 +329,7 @@ export class Printer {
     if (node instanceof S.ScopedName) return `${this.name(node.scope)}::${this.name(node.name)}`;
     if (node instanceof S.LocalName) return `local::${node.name?.spelling}`;
     if (node instanceof S.UnitName) return "$unit";
+    if (node instanceof S.InterfaceTypeName) return `${node.interface?.spelling}.${node.name?.spelling}`;
     if (node instanceof S.ParameterizedName) return node.name?.spelling + this.parameterValues(node.parameters);
     return node.spelling;
   }
@@ -380,14 +387,15 @@ export class Printer {
 
   typedef(node: any, level: number): string[] {
     const p = pad(level);
+    const visibility = node.visibility ? `${node.visibility} ` : "";
     const dimensions = node.dimensions.map((d: any) => this.dimension(d)).join("");
     if (node.type instanceof S.StructType && node.type.members.length > 1) {
       const lines = this.structLines(node.type, level);
-      lines[0] = `${p}typedef ${lines[0]}`;
+      lines[0] = `${p}${visibility}typedef ${lines[0]}`;
       lines[lines.length - 1] += ` ${node.name.spelling}${dimensions};`;
       return lines;
     }
-    return [`${p}typedef ${this.typeText(node.type)} ${node.name.spelling}${dimensions};`];
+    return [`${p}${visibility}typedef ${this.typeText(node.type)} ${node.name.spelling}${dimensions};`];
   }
 
   genvar(node: any, level: number): string[] {
@@ -450,7 +458,7 @@ export class Printer {
   subroutineHead(node: any): string {
     const task = node instanceof S.TaskDeclaration;
     const parts = [node.extern ? "extern" : null, node.pure ? "pure" : null, node.virtual ? "virtual" : null,
-      node.visibility, node.static ? "static" : null, task ? "task" : "function", node.lifetime];
+      node.visibility, node.static ? "static" : null, task ? "task" : "function", this.specifierText(node), node.lifetime];
     if (!task && node.type !== null) parts.push(this.typeText(node.type));
     let head = joined(parts) + " " + this.name(node.name);
     if (node.ports.length > 0) head += "(" + node.ports.map((q: any) => this.tfPort(q)).join(", ") + ")";
@@ -470,7 +478,7 @@ export class Printer {
   classDeclaration(node: any, level: number): string[] {
     const p = pad(level);
     const keyword = node.virtual ? "virtual class" : node.interface ? "interface class" : "class";
-    let head = `${p}${keyword} ${node.name.spelling}`;
+    let head = `${p}${keyword} ${node.final ? ":final " : ""}${node.name.spelling}`;
     const lines: string[] = [];
     if (node.parameters.length > 0) {
       lines.push(head + " #(");
@@ -479,7 +487,8 @@ export class Printer {
       head = p + ")";
     }
     if (node.base !== null) {
-      const args = node.arguments.length > 0 ? `(${node.arguments.map((a: any) => this.connection(a)).join(", ")})` : "";
+      const args = node.arguments.length > 0 ? `(${node.arguments.map((a: any) => this.connection(a)).join(", ")})`
+        : node.defaulted ? "(default)" : "";
       head += ` extends ${this.typeText(node.base)}${args}`;
     }
     if (node.interfaces.length > 0) {
@@ -494,13 +503,20 @@ export class Printer {
   // Constraints
 
   constraintDeclaration(node: any, level: number): string[] {
-    const lines = [`${pad(level)}${node.static ? "static " : ""}constraint ${this.name(node.name)} {`];
+    const lines = [pad(level) + joined([node.static ? "static" : null, "constraint", this.specifierText(node),
+      this.name(node.name)]) + " {"];
     const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
     return [...lines, ...body, `${pad(level)}}`];
   }
 
   constraintPrototype(node: any, level: number): string[] {
-    return [pad(level) + joined([node.qualifier, node.static ? "static" : null, "constraint", node.name.spelling]) + ";"];
+    return [pad(level) + joined([node.qualifier, node.static ? "static" : null, "constraint", this.specifierText(node),
+      node.name.spelling]) + ";"];
+  }
+
+  /** A method's or a constraint's `:initial` or `:extends`, and `:final`. */
+  specifierText(node: any): string {
+    return [node.specifier, node.final ? "final" : null].filter((w) => w).map((w) => `:${w}`).join(" ");
   }
 
   /** A constraint's lines: a block opens on its header's line, any other body goes on the next. */
@@ -531,7 +547,7 @@ export class Printer {
       return [...lines, p + tail[0], ...tail.slice(1)];
     }
     if (node instanceof S.ForeachConstraint) {
-      const variables = node.variables.map((v) => v.spelling).join(", ");
+      const variables = loopVariables(node.variables);
       return this.constraintHeaded(`${p}foreach (${this.text(node.array)}[${variables}])`, node.body, level);
     }
     return [p + this.constraintText(node)];
@@ -557,7 +573,7 @@ export class Printer {
       return `if (${this.text(node.condition)}) ${this.constraintText(node.consequence)}${alternative}`;
     }
     if (node instanceof S.ForeachConstraint) {
-      const variables = node.variables.map((v) => v.spelling).join(", ");
+      const variables = loopVariables(node.variables);
       return `foreach (${this.text(node.array)}[${variables}]) ${this.constraintText(node.body)}`;
     }
     if (node instanceof S.SolveBeforeConstraint) {
@@ -783,7 +799,7 @@ export class Printer {
     if (node instanceof S.RepeatStatement) return this.headed(`${p}repeat (${this.text(node.count)})`, node.body, level);
     if (node instanceof S.ForeverStatement) return this.headed(`${p}forever`, node.body, level);
     if (node instanceof S.ForeachStatement) {
-      const variables = node.variables.map((v) => v.spelling).join(", ");
+      const variables = loopVariables(node.variables);
       return this.headed(`${p}foreach (${this.text(node.array)}[${variables}])`, node.body, level);
     }
     const lines = this.headed(`${p}do`, node.body, level); // a DoWhileStatement
@@ -1303,6 +1319,7 @@ const items: [Function[], Method][] = [
   [[S.NetAlias], (s, n, l) => s.netAlias(n, l)],
   [[S.DefParam], (s, n, l) => s.defparam(n, l)],
   [[S.TimeUnitsDeclaration], (s, n, l) => s.timeUnits(n, l)],
+  [[S.EmptyItem], (_s, _n, l) => [`${pad(l)};`]],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [

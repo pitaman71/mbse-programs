@@ -63,6 +63,11 @@ def _precedence(node: Any) -> int:
     return PRIMARY
 
 
+def _loop_variables(variables: list[Any]) -> str:
+    """`foreach`'s variables, of which a skipped one is empty."""
+    return ", ".join("" if isinstance(v, S.EmptyArgument) else v.spelling for v in variables)
+
+
 _NON_ANSI = (S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort)
 
 
@@ -161,10 +166,10 @@ class Printer:
 
     def directive(self, node: Any, level: int) -> list[str]:
         if isinstance(node, S.IfdefDirective):
-            lines = [f"`{'ifndef' if node.negated else 'ifdef'} {node.name.spelling}"]
+            lines = [f"`{'ifndef' if node.negated else 'ifdef'} {self.macro_condition(node)}"]
             lines.extend(self.branch(node.items, level))
             for branch in node.branches:
-                lines.append(f"`elsif {branch.name.spelling}")
+                lines.append(f"`elsif {self.macro_condition(branch)}")
                 lines.extend(self.branch(branch.items, level))
             if node.has_else:
                 lines.append("`else")
@@ -185,6 +190,9 @@ class Printer:
         if isinstance(node, S.DefaultNettypeDirective):
             return [f"`default_nettype {node.net_type}"]
         return [node.text]  # an OtherDirective: the tree is valid, so nothing else is here
+
+    def macro_condition(self, node: Any) -> str:
+        return node.name.spelling if node.name is not None else self.text(node.condition)
 
     def branch(self, items: list[Any], level: int) -> list[str]:
         out: list[str] = []
@@ -337,6 +345,8 @@ class Printer:
             return f"local::{node.name.spelling}"
         if isinstance(node, S.UnitName):
             return "$unit"
+        if isinstance(node, S.InterfaceTypeName):
+            return f"{node.interface.spelling}.{node.name.spelling}"
         if isinstance(node, S.ParameterizedName):
             return node.name.spelling + self.parameter_values(node.parameters)
         return node.spelling
@@ -395,13 +405,14 @@ class Printer:
 
     def typedef(self, node: S.TypedefDeclaration, level: int) -> list[str]:
         pad = _INDENT * level
+        visibility = f"{node.visibility} " if node.visibility else ""
         dimensions = "".join(self.dimension(d) for d in node.dimensions)
         if isinstance(node.type, S.StructType) and len(node.type.members) > 1:
             lines = self.struct_lines(node.type, level)
-            lines[0] = f"{pad}typedef {lines[0]}"
+            lines[0] = f"{pad}{visibility}typedef {lines[0]}"
             lines[-1] += f" {node.name.spelling}{dimensions};"
             return lines
-        return [f"{pad}typedef {self.type_text(node.type)} {node.name.spelling}{dimensions};"]
+        return [f"{pad}{visibility}typedef {self.type_text(node.type)} {node.name.spelling}{dimensions};"]
 
     def genvar(self, node: S.GenvarDeclaration, level: int) -> list[str]:
         return [f"{_INDENT * level}genvar {', '.join(n.spelling for n in node.names)};"]
@@ -437,6 +448,9 @@ class Printer:
         function = f" with {self.name(node.function)}" if node.function is not None else ""
         return [f"{_INDENT * level}nettype {self.type_text(node.type)} {node.name.spelling}{function};"]
 
+    def empty_item(self, node: S.EmptyItem, level: int) -> list[str]:
+        return [_INDENT * level + ";"]
+
     def net_alias(self, node: S.NetAlias, level: int) -> list[str]:
         return [f"{_INDENT * level}alias {' = '.join(self.text(n) for n in node.nets)};"]
 
@@ -457,7 +471,8 @@ class Printer:
         """A function's or a task's header, without its `;`."""
         task = isinstance(node, S.TaskDeclaration)
         parts = ["extern" if node.extern else None, "pure" if node.pure else None, "virtual" if node.virtual else None,
-                 node.visibility, "static" if node.static else None, "task" if task else "function", node.lifetime]
+                 node.visibility, "static" if node.static else None, "task" if task else "function",
+                 self.specifier_text(node), node.lifetime]
         if not task and node.type is not None:
             parts.append(self.type_text(node.type))
         head = " ".join(p for p in parts if p) + " " + self.name(node.name)
@@ -479,7 +494,7 @@ class Printer:
     def class_declaration(self, node: S.ClassDeclaration, level: int) -> list[str]:
         pad = _INDENT * level
         keyword = "virtual class" if node.virtual else "interface class" if node.interface else "class"
-        head = f"{pad}{keyword} {node.name.spelling}"
+        head = f"{pad}{keyword} {':final ' if node.final else ''}{node.name.spelling}"
         lines: list[str] = []
         if node.parameters:
             lines.append(head + " #(")
@@ -487,7 +502,8 @@ class Printer:
                          for i, p in enumerate(node.parameters))
             head = pad + ")"
         if node.base is not None:
-            arguments = f"({', '.join(self.connection(a) for a in node.arguments)})" if node.arguments else ""
+            arguments = f"({', '.join(self.connection(a) for a in node.arguments)})" if node.arguments else \
+                "(default)" if node.defaulted else ""
             head += f" extends {self.type_text(node.base)}{arguments}"
         if node.interfaces:
             head += f" {'extends' if node.interface else 'implements'} " + ", ".join(self.type_text(i)
@@ -501,13 +517,19 @@ class Printer:
 
     def constraint_declaration(self, node: S.ConstraintDeclaration, level: int) -> list[str]:
         pad = _INDENT * level
-        lines = [f"{pad}{'static ' if node.static else ''}constraint {self.name(node.name)} {{"]
+        words = ["static" if node.static else None, "constraint", self.specifier_text(node), self.name(node.name)]
+        lines = [pad + " ".join(w for w in words if w) + " {"]
         body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
         return [*lines, *body, f"{pad}}}"]
 
     def constraint_prototype(self, node: S.ConstraintPrototype, level: int) -> list[str]:
-        words = [node.qualifier, "static" if node.static else None, "constraint", node.name.spelling]
+        words = [node.qualifier, "static" if node.static else None, "constraint", self.specifier_text(node),
+                 node.name.spelling]
         return [_INDENT * level + " ".join(w for w in words if w) + ";"]
+
+    def specifier_text(self, node: Any) -> str:
+        """A method's or a constraint's `:initial` or `:extends`, and `:final`."""
+        return " ".join(f":{w}" for w in (node.specifier, "final" if node.final else None) if w)
 
     def constraint(self, node: Any, level: int) -> list[str]:
         """A constraint's lines: a block opens on its header's line, any other body goes on the next."""
@@ -532,7 +554,7 @@ class Printer:
                 return lines + tail[1:]
             return lines + [pad + tail[0], *tail[1:]]
         if isinstance(node, S.ForeachConstraint):
-            variables = ", ".join(v.spelling for v in node.variables)
+            variables = _loop_variables(node.variables)
             return self.constraint_headed(f"{pad}foreach ({self.text(node.array)}[{variables}])", node.body, level)
         return [pad + self.constraint_text(node)]
 
@@ -554,7 +576,7 @@ class Printer:
             alternative = f" else {self.constraint_text(node.alternative)}" if node.alternative is not None else ""
             return f"if ({self.text(node.condition)}) {self.constraint_text(node.consequence)}{alternative}"
         if isinstance(node, S.ForeachConstraint):
-            variables = ", ".join(v.spelling for v in node.variables)
+            variables = _loop_variables(node.variables)
             return f"foreach ({self.text(node.array)}[{variables}]) {self.constraint_text(node.body)}"
         if isinstance(node, S.SolveBeforeConstraint):
             return (f"solve {', '.join(self.text(e) for e in node.solve)} before "
@@ -775,7 +797,7 @@ class Printer:
         if isinstance(node, S.ForeverStatement):
             return self.headed(f"{pad}forever", node.body, level)
         if isinstance(node, S.ForeachStatement):
-            variables = ", ".join(v.spelling for v in node.variables)
+            variables = _loop_variables(node.variables)
             return self.headed(f"{pad}foreach ({self.text(node.array)}[{variables}])", node.body, level)
         lines = self.headed(f"{pad}do", node.body, level)  # a DoWhileStatement
         tail = f"while ({self.text(node.condition)});"
@@ -1264,7 +1286,7 @@ class Printer:
         S.CovergroupDeclaration: covergroup, S.CoverageOption: coverage_option, S.Coverpoint: coverpoint,
         S.CoverageBins: coverage_bins, S.CoverCross: cover_cross, S.BinsSelection: bins_selection,
         S.AttributedItem: attributed, S.NetTypeDeclaration: net_type_declaration, S.NetAlias: net_alias,
-        S.DefParam: defparam, S.TimeUnitsDeclaration: time_units,
+        S.DefParam: defparam, S.TimeUnitsDeclaration: time_units, S.EmptyItem: empty_item,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,

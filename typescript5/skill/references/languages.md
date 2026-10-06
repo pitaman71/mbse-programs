@@ -10,7 +10,7 @@ category, property and availability as data: read it rather than guessing a prop
 | Ccpp: C and C++ | 171, through C++26 and C23 | `Ccpp17`, `Ccpp20`, `CcppStandard(year, "C++" or "C")` | the C++ grammar: specifiers, declarators, statements |
 | Python | 86, Python 3.0 to 3.15 | `Python312`, `Python314`, `PythonStandard(major, minor)` | Python's `ast`, names as `Identifier`s |
 | TypeScript: TypeScript and JavaScript | 163, through TypeScript 5.9 and ES2025, with JSX | `TypeScript50`, `TypeScript59`, `ECMAScript2020`, `ECMAScript2025`, each with `.JSX`; `TypeScriptStandard(major, minor, jsx)`, `ECMAScriptStandard(year, jsx)` | typescript-estree (TSESTree) |
-| Verilog: Verilog and SystemVerilog | 223, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
+| Verilog: Verilog and SystemVerilog | 225, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
 
 ## Ccpp
 
@@ -82,11 +82,13 @@ Definitions.define(unit).lookup("logger_pkg::FIELDS")           # packages quali
   `parse(text, includePaths, defines)` runs the Python implementation's reader, so it needs `python3/`'s environment
   (or `MBSE_PROGRAMS_PYTHON`); printing, checking and definitions don't.
 - Kept as written: parentheses, literals' spelling, comments and directives where items and statements are listed,
-  `` `ifdef `` as a tree whose untaken branches keep their text (`DisabledText`), a macro use that is a whole
-  expression (`MacroUsage`). An included file's items are not spliced in: the `IncludeDirective` stays.
-- Classes: `ClassDeclaration` (`virtual`, `interface`, `parameters`, `base` and its `arguments`, `interfaces`), properties
-  as `VariableDeclaration`s with `visibility` and `random`, methods as `FunctionDeclaration`/`TaskDeclaration` with
-  `extern`, `pure`, `virtual`, `visibility` and `static` (a constructor is named `new`), `NewExpression`, `this`,
+  `` `ifdef `` as a tree whose untaken branches keep their text (`DisabledText`), with a macro's `name` or a 2023
+  `condition` (`` `ifdef (A && !B) ``, no directive inside its branches), a macro use that is a whole expression
+  (`MacroUsage`). An included file's items are not spliced in: the `IncludeDirective` stays.
+- Classes: `ClassDeclaration` (`virtual`, `interface`, `final`, `parameters`, `base` and its `arguments` or
+  `defaulted`, `interfaces`), properties as `VariableDeclaration`s with `visibility` and `random`, methods as
+  `FunctionDeclaration`/`TaskDeclaration` with `extern`, `pure`, `virtual`, `visibility`, `static`, `specifier`
+  (`:initial`, `:extends`) and `final` (a constructor is named `new`), `local typedef`, `EmptyItem` (`;`), `NewExpression`, `this`,
   `super`, `null`, and class scopes as `ScopedName`s whose scope may be a `ParameterizedName` (`c #(8)::x`).
 - Randomization: `ConstraintDeclaration` and `ConstraintPrototype`, whose items are `Constraint`s (expression, `soft`,
   implication, `if`, `foreach`, `solve before`, `disable soft`, `unique`, blocks); `DistExpression`;

@@ -243,11 +243,11 @@ class _Reader:
 
     def ifdef(self, flat: list[tuple[str, Any, Any]], i: int, end: int) -> tuple[S.IfdefDirective, int]:
         opener = flat[i][1]
-        node = S.IfdefDirective(negated=opener.kind.name == "IfNDefDirective", name=self.condition_name(opener))
+        node = self.condition(opener, S.IfdefDirective(negated=opener.kind.name == "IfNDefDirective"))
         node.items, i = self.branch(opener, flat, i + 1, end)
         while i < end and flat[i][0] == "elsif":
             directive = flat[i][1]
-            branch = self.made(directive, S.ElsifDirective(name=self.condition_name(directive)))
+            branch = self.made(directive, self.condition(directive, S.ElsifDirective()))
             branch.items, i = self.branch(directive, flat, i + 1, end)
             node.branches.append(branch)
         if i < end and flat[i][0] == "else":
@@ -263,12 +263,28 @@ class _Reader:
             items = [*items, self.made(directive, S.DisabledText(text=text.strip("\n").rstrip()))]
         return items, i
 
-    def condition_name(self, directive: Any) -> S.Identifier:
+    def condition(self, directive: Any, out: Any) -> Any:
+        """`out` with a directive's macro name, or its condition in parentheses."""
         expression = directive.expr
-        if expression is None or expression.kind.name != "NamedConditionalDirectiveExpression":
-            raise self.unsupported(directive)
-        token = expression.name
-        return self.made(token, S.Identifier(spelling=token.rawText))
+        if expression.kind.name == "NamedConditionalDirectiveExpression":
+            out.name = self.made(expression.name, S.Identifier(spelling=expression.name.rawText))
+        else:
+            out.condition = self.macro_condition(expression)
+        return out
+
+    def macro_condition(self, node: Any) -> S.Expression:
+        """A condition of macros' names, `!`, `&&`, `||`, `->`, `<->` and parentheses."""
+        kind = node.kind.name
+        if kind == "NamedConditionalDirectiveExpression":
+            out: Any = S.NameExpression(name=self.made(node.name, S.Identifier(spelling=node.name.rawText)))
+        elif kind == "ParenthesizedConditionalDirectiveExpression":
+            out = S.ParenthesizedExpression(expression=self.macro_condition(node.operand))
+        elif kind == "UnaryConditionalDirectiveExpression":
+            out = S.UnaryExpression(operator=node.op.rawText, operand=self.macro_condition(node.operand))
+        else:  # a BinaryConditionalDirectiveExpression
+            out = S.BinaryExpression(left=self.macro_condition(node.left), operator=node.op.rawText,
+                                     right=self.macro_condition(node.right))
+        return self.made(node, out)
 
     # Directives
 
@@ -492,6 +508,12 @@ class _Reader:
         if kind == "TypeReference":
             return self.made(node, S.TypeReference(operand=self.expression_or_type(node.expr)))
         if kind == "NamedType":
+            name = node.name
+            if name.kind.name == "ScopedName" and name.separator.rawText == "." \
+                    and name.left.kind.name == name.right.kind.name == "IdentifierName":  # an interface's type
+                interface = S.InterfaceTypeName(interface=self.identifier(name.left.identifier),
+                                                name=self.identifier(name.right.identifier))
+                return self.made(node, S.NamedType(name=self.made(name, interface)))
             return self.made(node, S.NamedType(name=self.name(node.name)))
         if kind == "VirtualInterfaceType":
             out = S.VirtualInterfaceType(interface_keyword=bool(node.interfaceKeyword),
@@ -622,6 +644,9 @@ class _Reader:
             out.function = self.name(node.withFunction.name)
         return out
 
+    def empty_member(self, node: Any) -> S.EmptyItem:
+        return S.EmptyItem()
+
     def net_alias(self, node: Any) -> S.NetAlias:
         return S.NetAlias(nets=[self.expression(n) for n in _nodes(node.nets)])
 
@@ -705,10 +730,9 @@ class _Reader:
 
     def prototype(self, prototype: Any) -> Any:
         """A function or a task as its prototype declares it, without a body."""
-        if _nodes(prototype.specifiers):  # `:initial`, `:extends`, `:final`
-            raise self.unsupported(prototype)
         task = prototype.keyword.rawText == "task"
         out: Any = S.TaskDeclaration() if task else S.FunctionDeclaration(type=self.data_type(prototype.returnType))
+        self.specifiers(out, prototype.specifiers)
         out.lifetime = _text(prototype.lifetime) or None
         out.name = self.name(prototype.name)
         if prototype.portList is not None:
@@ -718,18 +742,16 @@ class _Reader:
     # Classes
 
     def class_declaration(self, node: Any) -> S.ClassDeclaration:
-        if node.finalSpecifier is not None:
-            raise self.unsupported(node)
         kind = _text(node.virtualOrInterface)
         out = S.ClassDeclaration(virtual=kind == "virtual", interface=kind == "interface",
+                                 final=node.finalSpecifier is not None,
                                  name=self.identifier(node.name),
                                  labeled=node.endBlockName is not None)
         if node.parameters is not None:
             out.parameters = self.parameter_ports(node.parameters)
         extends = node.extendsClause
         if extends is not None:
-            if extends.defaultedArg is not None:
-                raise self.unsupported(extends)
+            out.defaulted = extends.defaultedArg is not None
             out.base = self.made(extends.baseName, S.NamedType(name=self.name(extends.baseName)))
             if extends.arguments is not None:
                 out.arguments = self.arguments(extends.arguments)
@@ -761,9 +783,13 @@ class _Reader:
     def class_property(self, node: Any) -> Any:
         declaration = node.declaration
         if declaration.kind.name != "DataDeclaration":
-            if node.qualifiers:  # a qualified typedef or parameter
+            words = [q.rawText for q in node.qualifiers]
+            if words and declaration.kind.name != "TypedefDeclaration":  # a qualified import or forward typedef
                 raise self.unsupported(node)
-            return self.item(declaration)
+            out = self.item(declaration)
+            if words:  # `local` or `protected`, the only qualifier slang reads on a typedef
+                out.visibility = words[0]
+            return out
         return self.qualified(node, self.data_declaration(declaration))
 
     def class_method(self, node: Any) -> Any:
@@ -775,17 +801,25 @@ class _Reader:
     # Constraints
 
     def constraint_declaration(self, node: Any) -> S.ConstraintDeclaration:
-        if _nodes(node.specifiers):  # `:initial`, `:extends`, `:final`
-            raise self.unsupported(node)
-        return S.ConstraintDeclaration(static=any(q.rawText == "static" for q in node.qualifiers),
-                                       name=self.name(node.name), items=self.constraint_items(node.block))
+        out = S.ConstraintDeclaration(static=any(q.rawText == "static" for q in node.qualifiers),
+                                      name=self.name(node.name), items=self.constraint_items(node.block))
+        return self.specifiers(out, node.specifiers)
 
     def constraint_prototype(self, node: Any) -> S.ConstraintPrototype:
-        if _nodes(node.specifiers):
-            raise self.unsupported(node)
         words = [q.rawText for q in node.qualifiers]
-        return S.ConstraintPrototype(qualifier=next((w for w in words if w in ("extern", "pure")), None),
-                                     static="static" in words, name=self.identifier(node.name.identifier))
+        out = S.ConstraintPrototype(qualifier=next((w for w in words if w in ("extern", "pure")), None),
+                                    static="static" in words, name=self.identifier(node.name.identifier))
+        return self.specifiers(out, node.specifiers)
+
+    def specifiers(self, out: Any, specifiers: Any) -> Any:
+        """`out` with a method's or a constraint's `:initial` or `:extends`, and `:final`."""
+        for specifier in _nodes(specifiers):
+            word = specifier.keyword.rawText
+            if word == "final":
+                out.final = True
+            else:
+                out.specifier = word
+        return out
 
     def constraint_items(self, block: Any) -> list[Any]:
         """The constraints of `{ ... }`, with the comments and directives among them."""
@@ -1055,12 +1089,13 @@ class _Reader:
         out.steps = [self.expression(s) for s in _nodes(node.steps)]
         return out
 
-    def loop_variables(self, loop: Any) -> list[S.Identifier]:
-        """The index variables of `foreach (array[variables])`, none of which may be skipped."""
-        variables = []
+    def loop_variables(self, loop: Any) -> list[S.Identifier | S.EmptyArgument]:
+        """The index variables of `foreach (array[variables])`, a skipped one an `EmptyArgument`."""
+        variables: list[S.Identifier | S.EmptyArgument] = []
         for variable in _nodes(loop.loopVariables):
             if variable.kind.name == "EmptyIdentifierName":
-                raise self.unsupported(variable)
+                variables.append(self.made(variable, S.EmptyArgument()))
+                continue
             token = variable.identifier if hasattr(variable, "identifier") else variable.name
             variables.append(self.identifier(token))
         return variables
@@ -1761,7 +1796,7 @@ class _Reader:
         "LetDeclaration": let_declaration, "ClockingDeclaration": clocking_declaration,
         "DefaultClockingReference": default_clocking, "DefaultDisableDeclaration": default_disable,
         "CovergroupDeclaration": covergroup, "NetTypeDeclaration": net_type_declaration, "NetAlias": net_alias,
-        "DefParam": defparam, "TimeUnitsDeclaration": time_units,
+        "DefParam": defparam, "TimeUnitsDeclaration": time_units, "EmptyMember": empty_member,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,

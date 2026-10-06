@@ -100,6 +100,7 @@ ChargeSize = Choice["small", "medium", "large"]
 NetExpansion = Choice["vectored", "scalared"]
 TimeUnitKeyword = Choice["timeunit", "timeprecision"]
 ImportExport = Choice["import", "export"]
+OverrideSpecifier = Choice["initial", "extends"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -681,11 +682,18 @@ class ForwardTypedefDeclaration(Item):
 
 
 class TypedefDeclaration(Item):
-    """`typedef type name dimensions;` (6.18)."""
+    """`typedef type name dimensions;` (6.18), `local` or `protected` in a class (8.18)."""
 
+    visibility: Visibility | None
     type: DataType
     name: Identifier
     dimensions: list[Dimension]
+    SINCE = sv()
+
+
+class EmptyItem(Item):
+    """`;` alone, where items are listed (A.1.4, A.1.9)."""
+
     SINCE = sv()
 
 
@@ -839,13 +847,17 @@ class FunctionDeclaration(Item):
     """`function lifetime type name(ports); body endfunction` (13.4). The body lists declarations and statements in
     order. Without ports in parentheses, Verilog-1995 style, `PortDeclaration`s in the body declare them.
     In a class, a method may be `local` or `protected`, `static`, `virtual`, and a prototype without a body:
-    `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24). A constructor is named `new`."""
+    `extern`, defined outside the class, or `pure virtual` (8.10, 8.20, 8.24). A constructor is named `new`. A virtual
+    method's `:initial` or `:extends` `specifier` and `:final` say whether it overrides and may be overridden (8.20).
+    """
 
     extern: bool
     pure: bool
     virtual: bool
     visibility: Visibility | None
     static: bool
+    specifier: OverrideSpecifier | None
+    final: bool
     lifetime: Lifetime | None
     type: DataType | None
     name: Name
@@ -853,7 +865,8 @@ class FunctionDeclaration(Item):
     body: list[Item | Statement | Directive | Comment]
     labeled: bool
     FEATURES = {"lifetime": {True: verilog(2001)}, "labeled": {True: sv()}, "extern": {True: sv()},
-                "pure": {True: sv()}, "virtual": {True: sv()}, "visibility": {True: sv()}, "static": {True: sv()}}
+                "pure": {True: sv()}, "virtual": {True: sv()}, "visibility": {True: sv()}, "static": {True: sv()},
+                "specifier": {True: sv(2023)}, "final": {True: sv(2023)}}
 
     def check(self) -> list[str]:
         return _method_problems(self)
@@ -862,20 +875,24 @@ class FunctionDeclaration(Item):
 class TaskDeclaration(Item):
     """`task lifetime name(ports); body endtask` (13.3). In a class, a method may be `local` or `protected`, `static`,
     `virtual`, and a prototype without a body: `extern`, defined outside the class, or `pure virtual` (8.10, 8.20,
-    8.24). A constructor is named `new`."""
+    8.24). A constructor is named `new`. A virtual method's `:initial` or `:extends` `specifier` and `:final` say
+    whether it overrides and may be overridden (8.20)."""
 
     extern: bool
     pure: bool
     virtual: bool
     visibility: Visibility | None
     static: bool
+    specifier: OverrideSpecifier | None
+    final: bool
     lifetime: Lifetime | None
     name: Name
     ports: list[TfPort]
     body: list[Item | Statement | Directive | Comment]
     labeled: bool
     FEATURES = {"lifetime": {True: verilog(2001)}, "labeled": {True: sv()}, "extern": {True: sv()},
-                "pure": {True: sv()}, "virtual": {True: sv()}, "visibility": {True: sv()}, "static": {True: sv()}}
+                "pure": {True: sv()}, "virtual": {True: sv()}, "visibility": {True: sv()}, "static": {True: sv()},
+                "specifier": {True: sv(2023)}, "final": {True: sv(2023)}}
 
     def check(self) -> list[str]:
         return _method_problems(self)
@@ -920,25 +937,32 @@ class TfPort(SyntaxNode):
 class ClassDeclaration(Item):
     """`virtual class name #(parameters) extends base(arguments) implements interfaces; items endclass`, or
     `interface class name #(parameters) extends interfaces; items endclass` (8.3, 8.26). Its items are properties,
-    methods, parameters, types and classes. `labeled` repeats the name after `endclass`."""
+    methods, parameters, types and classes. `labeled` repeats the name after `endclass`. A `final` class
+    (`class :final c`) has no derived classes, and a `defaulted` one passes its base its constructor's arguments
+    (`extends base(default)`) (8.15)."""
 
     virtual: bool
     interface: bool
+    final: bool
     name: Identifier
     parameters: list[ParameterDeclaration | TypeParameterDeclaration]
     base: NamedType | None
     arguments: list[Expression | Connection]
+    defaulted: bool
     interfaces: list[NamedType]
     items: list[Item | Directive | Comment]
     labeled: bool
     SINCE = sv()
-    FEATURES = {"interface": {True: sv(2012)}, "interfaces": {True: sv(2012)}}
+    FEATURES = {"interface": {True: sv(2012)}, "interfaces": {True: sv(2012)}, "final": {True: sv(2023)},
+                "defaulted": {True: sv(2023)}}
 
     def check(self) -> list[str]:
         if self.interface is True and (self.virtual is True or self.base is not None or self.arguments):
             return ["an interface ClassDeclaration has no virtual, base or arguments"]
         if self.arguments and self.base is None:
             return ["a ClassDeclaration with arguments has a base"]
+        if self.defaulted is True and (self.base is None or self.arguments):
+            return ["a ClassDeclaration with default arguments has a base and no others"]
         return []
 
 
@@ -947,23 +971,29 @@ class ClassDeclaration(Item):
 
 class ConstraintDeclaration(Item):
     """`static constraint name { constraints }` in a class, or outside it with a qualified name (`constraint c::k { }`),
-    which defines a prototype (18.5)."""
+    which defines a prototype (18.5). Its `:initial` or `:extends` `specifier` and `:final` say whether it overrides and
+    may be overridden (18.5.2)."""
 
     static: bool
+    specifier: OverrideSpecifier | None
+    final: bool
     name: Name
     items: list[Constraint | Directive | Comment]
     SINCE = sv()
+    FEATURES = {"specifier": {True: sv(2023)}, "final": {True: sv(2023)}}
 
 
 class ConstraintPrototype(Item):
     """`qualifier static constraint name;`: a constraint defined outside its class, `extern` or by default, or `pure`,
-    which derived classes define (18.5.1)."""
+    which derived classes define (18.5.1), with a `specifier` and `final` as a declaration has."""
 
     qualifier: PrototypeQualifier | None
     static: bool
+    specifier: OverrideSpecifier | None
+    final: bool
     name: Identifier
     SINCE = sv()
-    FEATURES = {"qualifier": {"pure": sv(2012)}}
+    FEATURES = {"qualifier": {"pure": sv(2012)}, "specifier": {True: sv(2023)}, "final": {True: sv(2023)}}
 
 
 class ConstraintBlock(Constraint):
@@ -1003,7 +1033,7 @@ class ForeachConstraint(Constraint):
     """`foreach (array[variables]) body`, a constraint on each element (18.5.8.1)."""
 
     array: Expression
-    variables: list[Identifier]
+    variables: list[Identifier | EmptyArgument]
     body: Constraint
     SINCE = sv()
 
@@ -1260,10 +1290,10 @@ class ForeverStatement(Statement):
 
 
 class ForeachStatement(Statement):
-    """`foreach (array[variables]) body` (12.7.3)."""
+    """`foreach (array[variables]) body` (12.7.3); a dimension it skips is an `EmptyArgument` (`q[, j]`)."""
 
     array: Expression
-    variables: list[Identifier]
+    variables: list[Identifier | EmptyArgument]
     body: Statement
     SINCE = sv()
 
@@ -2228,7 +2258,8 @@ class MinTypMaxExpression(Expression):
 
 
 class EmptyArgument(Connection):
-    """A port connection or an argument left out: `u i(a, , b)`, `f(a, , b)`, `$display(a,, b)` (23.3.2.2, 13.5)."""
+    """A port connection, an argument or a `foreach` loop's variable left out: `u i(a, , b)`, `f(a, , b)`,
+    `$display(a,, b)`, `foreach (q[, j])` (23.3.2.2, 13.5, 12.7.3)."""
 
 
 class RootExpression(Expression):
@@ -2240,6 +2271,14 @@ class RootExpression(Expression):
 class EmptyQueue(Expression):
     """`{}`, a queue or a dynamic array with no elements (7.10)."""
 
+    SINCE = sv()
+
+
+class InterfaceTypeName(Name):
+    """`interface.name`: a type an interface port's interface declares, as `typedef` names it (6.18)."""
+
+    interface: Identifier
+    name: Identifier
     SINCE = sv()
 
 
@@ -2300,22 +2339,54 @@ class DefaultNettypeDirective(Directive):
 class IfdefDirective(Directive):
     """`` `ifdef name items `elsif name items `else items `endif ``, or `` `ifndef `` when `negated`, as a tree of its
     branches (22.6). Branches hold what their place lists: items, statements or constraints. A branch the reading did
-    not take ends with its text as written, a `DisabledText`."""
+    not take ends with its text as written, a `DisabledText`. In place of a name, a `condition` combines macros'
+    names with `!`, `&&`, `||`, `->`, `<->` and parentheses: `` `ifdef (A && !B) ``."""
 
     negated: bool
-    name: Identifier
+    name: Identifier | None
+    condition: Expression | None
     items: list[Item | Statement | Constraint | Directive | Comment]
     branches: list[ElsifDirective]
     alternative: list[Item | Statement | Constraint | Directive | Comment]
     has_else: bool
+    FEATURES = {"condition": {True: sv(2023)}}
+
+    def check(self) -> list[str]:
+        return _condition_problems(self)
 
 
 class ElsifDirective(Directive):
-    """`` `elsif name items ``, a branch of an `IfdefDirective` (22.6)."""
+    """`` `elsif name items `` or `` `elsif (condition) items ``, a branch of an `IfdefDirective` (22.6)."""
 
-    name: Identifier
+    name: Identifier | None
+    condition: Expression | None
     items: list[Item | Statement | Constraint | Directive | Comment]
     SINCE = verilog(2001)
+    FEATURES = {"condition": {True: sv(2023)}}
+
+    def check(self) -> list[str]:
+        return _condition_problems(self)
+
+
+def _condition_problems(directive: IfdefDirective | ElsifDirective) -> list[str]:
+    """A directive has a name or a condition, and a condition only macros' names and `!`, `&&`, `||`, `->`, `<->`."""
+    kind = type(directive).__name__
+    if (directive.name is None) == (directive.condition is None):
+        return [f"an {kind} has a name or a condition"]
+    if directive.condition is not None and not isinstance(directive.condition, ParenthesizedExpression):
+        return [f"an {kind}'s condition is in parentheses"]
+    nodes = [directive.condition] if directive.condition is not None else []
+    while nodes:
+        node = nodes.pop()
+        if isinstance(node, ParenthesizedExpression):
+            nodes.append(node.expression)
+        elif isinstance(node, UnaryExpression) and node.operator == "!" and not node.attributes:
+            nodes.append(node.operand)
+        elif isinstance(node, BinaryExpression) and node.operator in ("&&", "||", "->", "<->") and not node.attributes:
+            nodes.extend([node.left, node.right])
+        elif not (isinstance(node, NameExpression) and isinstance(node.name, Identifier)):
+            return [f"an {kind}'s condition has macros' names, !, &&, ||, -> and <-> only"]
+    return []
 
 
 class DisabledText(Directive):
@@ -2345,7 +2416,7 @@ KINDS: list[type[SyntaxNode]] = [
     EnumType, EnumMember,
     RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension,
     NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration, VariableDeclarator,
-    ForwardTypedefDeclaration, TypedefDeclaration, GenvarDeclaration, ImportDeclaration, ImportItem,
+    ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, GenvarDeclaration, ImportDeclaration, ImportItem,
     NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem,
     ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
     FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
@@ -2360,7 +2431,8 @@ KINDS: list[type[SyntaxNode]] = [
     UnbasedUnsizedLiteral, StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression,
     ConditionalExpression, InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem,
     CallExpression, SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression,
-    StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue, UnitName,
+    StreamingConcatenation, StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue,
+    InterfaceTypeName, UnitName,
     TypeReference,
     NullLiteral, ThisExpression, SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression,
     RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem, LocalName,

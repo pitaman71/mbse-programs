@@ -28,8 +28,9 @@
   are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
   (`sampler.counter.count`).
 
-Not resolved: a member after `.` (of a structure, an object, an interface port or a hierarchical path), what an
-instance's module declares, and a forward `typedef` (the declaration it announces is the entity).
+Not resolved: a member after `.` (of a structure, an object, an interface port or a hierarchical path, or an
+interface's type: `bus.t`), what an instance's module declares, a forward `typedef` (the declaration it announces is
+the entity), and the macros' names of `` `ifdef `` and `` `elsif ``.
 """
 
 from __future__ import annotations
@@ -400,14 +401,27 @@ class _Definer:
         inner = Scope("block", None, scope, node)
         for variable in node.variables:
             self.program.located(variable, inner)
-            self.entity(inner, "variable", variable, node)
+            if isinstance(variable, S.Identifier):  # not a dimension it skips
+                self.entity(inner, "variable", variable, node)
         self.visit(node.body, inner)
+
+    def ifdef(self, node: Any, scope: Scope) -> None:
+        """A conditional's branches; its macros' names are not the program's."""
+        for branch in getattr(node, "branches", []):
+            self.program.located(branch, scope)
+        self.visit_all([*node.items, *getattr(node, "alternative", []),
+                        *[i for b in getattr(node, "branches", []) for i in b.items]], scope)
+
+    def interface_type(self, node: S.InterfaceTypeName, scope: Scope) -> None:
+        """`bus.t`: `bus` is found where the name is; `t`, in the interface, is not."""
+        self.program.located(node.interface, scope)
 
     METHODS = {
         S.ModuleDeclaration: design_unit, S.InterfaceDeclaration: design_unit, S.ProgramDeclaration: design_unit,
         S.PackageDeclaration: design_unit, S.ImportDeclaration: import_declaration, S.ParameterDeclaration: parameter,
         S.TypeParameterDeclaration: parameter, S.AnsiPort: port, S.InterfacePort: port, S.PortReference: port,
-        S.ExplicitPort: explicit_port, S.ExplicitAnsiPort: explicit_port,
+        S.ExplicitPort: explicit_port, S.ExplicitAnsiPort: explicit_port, S.IfdefDirective: ifdef,
+        S.InterfaceTypeName: interface_type,
         S.NetDeclaration: net, S.VariableDeclaration: variable, S.PortDeclaration: port_declaration,
         S.TypedefDeclaration: typedef, S.NetTypeDeclaration: net_type, S.EnumType: enum, S.GenvarDeclaration: genvar,
         S.ModportDeclaration: modport,
