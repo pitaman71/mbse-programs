@@ -10,7 +10,7 @@ category, property and availability as data: read it rather than guessing a prop
 | Ccpp: C and C++ | 171, through C++26 and C23 | `Ccpp17`, `Ccpp20`, `CcppStandard(year, "C++" or "C")` | the C++ grammar: specifiers, declarators, statements |
 | Python | 86, Python 3.0 to 3.15 | `Python312`, `Python314`, `PythonStandard(major, minor)` | Python's `ast`, names as `Identifier`s |
 | TypeScript: TypeScript and JavaScript | 163, through TypeScript 5.9 and ES2025, with JSX | `TypeScript50`, `TypeScript59`, `ECMAScript2020`, `ECMAScript2025`, each with `.JSX`; `TypeScriptStandard(major, minor, jsx)`, `ECMAScriptStandard(year, jsx)` | typescript-estree (TSESTree) |
-| Verilog: Verilog and SystemVerilog | 210, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
+| Verilog: Verilog and SystemVerilog | 217, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
 
 ## Ccpp
 
@@ -108,12 +108,16 @@ Definitions.define(unit).lookup("logger_pkg::FIELDS")           # packages quali
   (`{}`), `UnitName` (`$unit::x`), `TypeReference` (`type(a)`); a repeated pattern is an `AssignmentPattern` with a
   `count`, a tolerance range a `ValueRange` with an `operator`, and `#(rise, fall, turnoff)` a `DelayControl` with a
   `fall` and a `turnoff`.
+- Declarations: a `NetDeclaration` has a `strength` (`DriveStrength`, or a trireg's `ChargeStrength`) and an
+  `expansion` (`vectored`, `scalared`), and a `ContinuousAssign` a `strength`; `NetTypeDeclaration`, `NetAlias`,
+  `DefParam`, `TimeUnitsDeclaration`; `EnumMember`'s `left` and `right` (`A[2]`, `A[1:3]`); `StructMember`'s `random`;
+  `TfPort`'s `const` and `static`; `TypeParameterDeclaration`'s `restriction`.
 - Refused, by slang's kind name at its line and column (`unsupported syntax: CheckerDeclaration`): checkers,
-  `randsequence`, strengths, tagged unions, and a macro used where a whole expression isn't.
+  `randsequence`, tagged unions, and a macro used where a whole expression isn't.
 - Definitions: packages, design units, classes, functions and tasks, and blocks as scopes; a class's lookup goes on to
   its base; a method or constraint defined outside its class (`c::f`) is its prototype's entity; an array method's
   iterator (`item`, or its argument's name) is a variable of its `with`; `import p::x` aliases, `import
-  p::*` is found where nothing nearer is; `$unit::x` in the compilation unit; members after `.` and instances'
+  p::*` is found where nothing nearer is; `$unit::x` in the compilation unit; `A[1:3]` declares `A1` to `A3`; members after `.` and instances'
   contents unresolved.
 
 ## Printing

@@ -257,7 +257,7 @@ class Printer:
         if isinstance(node, S.TypeParameterDeclaration):
             assignments = ", ".join(a.name.spelling + (f" = {self.type_text(a.type)}" if a.type is not None else "")
                                     for a in node.assignments)
-            return " ".join(p for p in (node.keyword, "type", assignments) if p)
+            return " ".join(p for p in (node.keyword, "type", node.restriction, assignments) if p)
         assignments = ", ".join(a.name.spelling + "".join(self.dimension(d) for d in a.dimensions)
                                 + (f" = {self.text(a.value)}" if a.value is not None else "") for a in node.assignments)
         return " ".join(p for p in (node.keyword, self.type_text(node.type) if node.type is not None else None,
@@ -288,19 +288,28 @@ class Printer:
             return " ".join(p for p in (node.signing, dimensions) if p)
         if isinstance(node, S.StructType):
             head = " ".join(p for p in (node.keyword, "packed" if node.packed else None, node.signing) if p)
-            members = " ".join(f"{self.type_text(m.type)} {self.declarators(m.declarators)};" for m in node.members)
+            members = " ".join(f"{self.member(m)};" for m in node.members)
             return f"{head} {{ {members} }}" + (f" {dimensions}" if dimensions else "")
         base = f" {self.type_text(node.base)}" if node.base is not None else ""  # an EnumType
-        members = ", ".join(m.name.spelling + (f" = {self.text(m.value)}" if m.value is not None else "")
-                            for m in node.members)
+        members = ", ".join(self.enum_member(m) for m in node.members)
         return f"enum{base} {{{members}}}" + (f" {dimensions}" if dimensions else "")
+
+    def member(self, node: S.StructMember) -> str:
+        random = f"{node.random} " if node.random else ""
+        return f"{random}{self.type_text(node.type)} {self.declarators(node.declarators)}"
+
+    def enum_member(self, node: S.EnumMember) -> str:
+        numbers = ""
+        if node.left is not None:
+            numbers = f"[{self.text(node.left)}" + (f":{self.text(node.right)}" if node.right is not None else "") + "]"
+        return node.name.spelling + numbers + (f" = {self.text(node.value)}" if node.value is not None else "")
 
     def struct_lines(self, node: S.StructType, level: int) -> list[str]:
         """A structure or union over several lines, one member per line."""
         pad = _INDENT * level
         head = " ".join(p for p in (node.keyword, "packed" if node.packed else None, node.signing) if p)
         lines = [f"{head} {{"]
-        lines.extend(f"{pad}{_INDENT}{self.type_text(m.type)} {self.declarators(m.declarators)};" for m in node.members)
+        lines.extend(f"{pad}{_INDENT}{self.member(m)};" for m in node.members)
         dimensions = "".join(self.dimension(d) for d in node.dimensions)
         lines.append(f"{pad}}}" + (f" {dimensions}" if dimensions else ""))
         return lines
@@ -340,11 +349,15 @@ class Printer:
     def declaration_head(self, node: Any) -> str:
         parts: list[str | None] = []
         if isinstance(node, S.NetDeclaration):
-            parts = [node.net_type, self.type_text(node.type) if node.type is not None else None,
+            parts = [node.net_type, self.strength(node.strength) if node.strength is not None else None,
+                     node.expansion, self.type_text(node.type) if node.type is not None else None,
                      self.timing_text(node.delay) if node.delay is not None else None]
         else:
             parts = [self.variable_prefix(node), self.type_text(node.type) if node.type is not None else None]
         return " ".join(p for p in parts if p)
+
+    def strength(self, node: Any) -> str:
+        return f"({node.size})" if isinstance(node, S.ChargeStrength) else f"({node.first}, {node.second})"
 
     def variable_prefix(self, node: Any) -> str:
         """What a variable declaration says before its type: `local rand const var static`."""
@@ -356,7 +369,9 @@ class Printer:
         kind = getattr(node, "type", None)
         if isinstance(kind, S.StructType) and len(kind.members) > 1:
             lines = self.struct_lines(kind, level)
-            prefix = self.variable_prefix(node) if isinstance(node, S.VariableDeclaration) else node.net_type
+            prefix = self.variable_prefix(node) if isinstance(node, S.VariableDeclaration) else " ".join(
+                p for p in (node.net_type, self.strength(node.strength) if node.strength is not None else None,
+                            node.expansion) if p)
             lines[0] = pad + (prefix + " " if prefix else "") + lines[0]
             lines[-1] += " " + self.declarators(node.declarators) + ";"
             return lines
@@ -388,8 +403,24 @@ class Printer:
         return [f"{_INDENT * level}modport {items};"]
 
     def continuous_assign(self, node: S.ContinuousAssign, level: int) -> list[str]:
+        strength = f" {self.strength(node.strength)}" if node.strength is not None else ""
         delay = f" {self.timing_text(node.delay)}" if node.delay is not None else ""
-        return [f"{_INDENT * level}assign{delay} {', '.join(self.text(a) for a in node.assignments)};"]
+        return [f"{_INDENT * level}assign{strength}{delay} {', '.join(self.text(a) for a in node.assignments)};"]
+
+    def net_type_declaration(self, node: S.NetTypeDeclaration, level: int) -> list[str]:
+        function = f" with {self.name(node.function)}" if node.function is not None else ""
+        return [f"{_INDENT * level}nettype {self.type_text(node.type)} {node.name.spelling}{function};"]
+
+    def net_alias(self, node: S.NetAlias, level: int) -> list[str]:
+        return [f"{_INDENT * level}alias {' = '.join(self.text(n) for n in node.nets)};"]
+
+    def defparam(self, node: S.DefParam, level: int) -> list[str]:
+        assignments = ", ".join(f"{self.text(a.target)} = {self.text(a.value)}" for a in node.assignments)
+        return [f"{_INDENT * level}defparam {assignments};"]
+
+    def time_units(self, node: S.TimeUnitsDeclaration, level: int) -> list[str]:
+        precision = f" / {node.precision.spelling}" if node.precision is not None else ""
+        return [f"{_INDENT * level}{node.keyword} {node.time.spelling}{precision};"]
 
     def procedural(self, node: Any, level: int) -> list[str]:
         keyword = node.keyword if isinstance(node, S.AlwaysConstruct) else (
@@ -521,8 +552,9 @@ class Printer:
         return [f"{_INDENT * level}typedef {keyword}{node.name.spelling};"]
 
     def tf_port(self, node: S.TfPort) -> str:
-        parts = [node.direction, "var" if node.var else None, self.type_text(node.type) if node.type is not None
-                 else None, node.name.spelling + "".join(self.dimension(d) for d in node.dimensions)]
+        parts = ["const" if node.const else None, node.direction, "static" if node.static else None,
+                 "var" if node.var else None, self.type_text(node.type) if node.type is not None else None,
+                 node.name.spelling + "".join(self.dimension(d) for d in node.dimensions)]
         text = " ".join(p for p in parts if p)
         return text + (f" = {self.text(node.value)}" if node.value is not None else "")
 
@@ -1200,7 +1232,8 @@ class Printer:
         S.ClockingSignals: clocking_signals, S.DefaultClocking: default_clocking, S.DefaultDisable: default_disable,
         S.CovergroupDeclaration: covergroup, S.CoverageOption: coverage_option, S.Coverpoint: coverpoint,
         S.CoverageBins: coverage_bins, S.CoverCross: cover_cross, S.BinsSelection: bins_selection,
-        S.AttributedItem: attributed,
+        S.AttributedItem: attributed, S.NetTypeDeclaration: net_type_declaration, S.NetAlias: net_alias,
+        S.DefParam: defparam, S.TimeUnitsDeclaration: time_units,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,

@@ -430,15 +430,14 @@ class _Reader:
             return self.parameter(node.parameter)
         keyword = _text(node.keyword) or None  # a header's entry may have none
         if node.kind.name == "TypeParameterDeclaration":
-            if node.typeRestriction is not None:
-                raise self.unsupported(node)
+            restriction = self.restriction(node.typeRestriction)
             assignments = []
             for declarator in _nodes(node.declarators):
                 assignment = S.TypeAssignment(name=self.identifier(declarator.name))
                 if declarator.assignment is not None:
                     assignment.type = self.data_type(declarator.assignment.type)
                 assignments.append(self.made(declarator, assignment))
-            return S.TypeParameterDeclaration(keyword=keyword, assignments=assignments)
+            return S.TypeParameterDeclaration(keyword=keyword, restriction=restriction, assignments=assignments)
         out = S.ParameterDeclaration(keyword=keyword, type=self.data_type(node.type))
         for declarator in _nodes(node.declarators):
             assignment = S.ParamAssignment(name=self.identifier(declarator.name),
@@ -492,18 +491,25 @@ class _Reader:
                 raise self.unsupported(node)
             members = []
             for member in _nodes(node.members):
-                if bool(member.randomQualifier):
-                    raise self.unsupported(member)
-                members.append(self.made(member, S.StructMember(type=self.data_type(member.type),
+                members.append(self.made(member, S.StructMember(random=_text(member.randomQualifier) or None,
+                                                                type=self.data_type(member.type),
                                                                 declarators=self.declarators(member.declarators))))
             return self.made(node, S.StructType(keyword=node.keyword.rawText, packed=bool(node.packed),
                                                 signing=_text(node.signing) or None, members=members,
                                                 dimensions=[self.dimension(d) for d in _nodes(node.dimensions)]))
         members = []  # an EnumType, the last of slang's data types
         for member in _nodes(node.members):
-            if _nodes(member.dimensions):
-                raise self.unsupported(member)
             enum = S.EnumMember(name=self.identifier(member.name))
+            dimensions = _nodes(member.dimensions)
+            if dimensions:  # `name[count]` or `name[left:right]`
+                selector = getattr(dimensions[0].specifier, "selector", None) if len(dimensions) == 1 else None
+                kind = getattr(selector, "kind", None)
+                if kind is None or kind.name not in ("BitSelect", "SimpleRangeSelect"):
+                    raise self.unsupported(member)
+                if kind.name == "BitSelect":
+                    enum.left = self.expression(selector.expr)
+                else:
+                    enum.left, enum.right = self.expression(selector.left), self.expression(selector.right)
             if member.initializer is not None:
                 enum.value = self.expression(member.initializer.expr)
             members.append(self.made(member, enum))
@@ -582,12 +588,40 @@ class _Reader:
         return out
 
     def net_declaration(self, node: Any) -> S.NetDeclaration:
-        if node.strength is not None or bool(node.expansionHint):
-            raise self.unsupported(node)
-        out = S.NetDeclaration(net_type=node.netType.rawText, type=self.data_type(node.type))
+        out = S.NetDeclaration(net_type=node.netType.rawText, strength=self.strength(node.strength),
+                               expansion=_text(node.expansionHint) or None, type=self.data_type(node.type))
         if node.delay is not None:
             out.delay = self.delay(node.delay)
         out.declarators = self.declarators(node.declarators)
+        return out
+
+    def strength(self, node: Any) -> S.DriveStrength | S.ChargeStrength | None:
+        if node is None:
+            return None
+        if node.kind.name == "ChargeStrength":
+            return self.made(node, S.ChargeStrength(size=node.strength.rawText))
+        return self.made(node, S.DriveStrength(first=node.strength0.rawText, second=node.strength1.rawText))
+
+    def net_type_declaration(self, node: Any) -> S.NetTypeDeclaration:
+        out = S.NetTypeDeclaration(type=self.data_type(node.type), name=self.identifier(node.name))
+        if node.withFunction is not None:
+            out.function = self.name(node.withFunction.name)
+        return out
+
+    def net_alias(self, node: Any) -> S.NetAlias:
+        return S.NetAlias(nets=[self.expression(n) for n in _nodes(node.nets)])
+
+    def defparam(self, node: Any) -> S.DefParam:
+        return S.DefParam(assignments=[
+            self.made(a, S.DefParamAssignment(target=self.expression(a.name), value=self.expression(a.setter.expr)))
+            for a in _nodes(node.assignments)])
+
+    def time_units(self, node: Any) -> S.TimeUnitsDeclaration:
+        out = S.TimeUnitsDeclaration(keyword=node.keyword.rawText,
+                                     time=self.made(node.time, S.TimeLiteral(spelling=self.token_text(node.time))))
+        if node.divider is not None:
+            value = node.divider.value
+            out.precision = self.made(value, S.TimeLiteral(spelling=self.token_text(value)))
         return out
 
     def typedef(self, node: Any) -> S.TypedefDeclaration:
@@ -621,9 +655,7 @@ class _Reader:
         return S.ModportDeclaration(items=items)
 
     def continuous_assign(self, node: Any) -> S.ContinuousAssign:
-        if node.strength is not None:
-            raise self.unsupported(node)
-        out = S.ContinuousAssign()
+        out = S.ContinuousAssign(strength=self.strength(node.strength))
         if node.delay is not None:
             out.delay = self.delay(node.delay)
         out.assignments = [self.expression(a) for a in _nodes(node.assignments)]  # slang reads only assignments
@@ -785,17 +817,17 @@ class _Reader:
                                          items=self.constraint_items(node.constraints))
 
     def forward_typedef(self, node: Any) -> S.ForwardTypedefDeclaration:
-        out = S.ForwardTypedefDeclaration(name=self.identifier(node.name))
-        restriction = node.typeRestriction
-        if restriction is not None:
-            out.keyword = " ".join(t.rawText for t in (restriction.keyword1, restriction.keyword2) if t)
-        return out
+        return S.ForwardTypedefDeclaration(keyword=self.restriction(node.typeRestriction),
+                                           name=self.identifier(node.name))
+
+    def restriction(self, node: Any) -> str | None:
+        """`enum`, `struct`, `union`, `class` or `interface class`, what a forward type or a type parameter is."""
+        return None if node is None else " ".join(t.rawText for t in (node.keyword1, node.keyword2) if t)
 
     def tf_port(self, node: Any) -> S.TfPort:
-        if bool(node.constKeyword) or bool(node.staticKeyword):
-            raise self.unsupported(node)
         declarator = node.declarator
-        out = S.TfPort(direction=_text(node.direction) or None, var=bool(node.varKeyword),
+        out = S.TfPort(const=bool(node.constKeyword), direction=_text(node.direction) or None,
+                       static=bool(node.staticKeyword), var=bool(node.varKeyword),
                        type=self.data_type(node.dataType), name=self.identifier(declarator.name),
                        dimensions=[self.dimension(d) for d in _nodes(declarator.dimensions)])
         if declarator.initializer is not None:
@@ -1698,7 +1730,8 @@ class _Reader:
         "PropertyDeclaration": property_declaration, "SequenceDeclaration": sequence_declaration,
         "LetDeclaration": let_declaration, "ClockingDeclaration": clocking_declaration,
         "DefaultClockingReference": default_clocking, "DefaultDisableDeclaration": default_disable,
-        "CovergroupDeclaration": covergroup,
+        "CovergroupDeclaration": covergroup, "NetTypeDeclaration": net_type_declaration, "NetAlias": net_alias,
+        "DefParam": defparam, "TimeUnitsDeclaration": time_units,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,

@@ -7,7 +7,9 @@
 - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
   'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint',
-  'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
+  'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does;
+  a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal numbers).
+  A `nettype` declares a 'type'.
 - A non-ANSI port is one entity, which the header names and a port declaration declares.
 - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
   where nothing nearer declares them, as wildcard imports do.
@@ -51,11 +53,12 @@ class _Definer:
         self.wildcards: list[tuple[Scope, S.ImportItem]] = []
         self.classes: list[tuple[Scope, S.ClassDeclaration]] = []
 
-    def entity(self, scope: Scope, kind: str, name: S.Identifier, node: Any) -> Entity:
-        """The entity `name` declares in `scope`: a new one, or for a port or an argument declared twice (a non-ANSI
-        port; a method's prototype and its definition) the one already there."""
-        existing = [e for e in scope.names.get(name.spelling, []) if e.kind == kind and kind in ("port", "argument")]
-        entity = existing[0] if existing else self.program.add(Entity(kind, name.spelling, scope))
+    def entity(self, scope: Scope, kind: str, name: S.Identifier, node: Any, spelling: str | None = None) -> Entity:
+        """The entity `name` declares in `scope`, as `spelling` if it is given: a new one, or for a port or an argument
+        declared twice (a non-ANSI port; a method's prototype and its definition) the one already there."""
+        spelling = name.spelling if spelling is None else spelling
+        existing = [e for e in scope.names.get(spelling, []) if e.kind == kind and kind in ("port", "argument")]
+        entity = existing[0] if existing else self.program.add(Entity(kind, spelling, scope))
         scope.declare(entity)
         entity.declarations.append(node)
         if entity.definition is None:
@@ -169,9 +172,20 @@ class _Definer:
         for member in node.members:
             self.program.located(member, scope)
             self.program.located(member.name, scope)
-            if member.value is not None:
-                self.visit(member.value, scope)
-            self.entity(scope, "enumerator", member.name, member)
+            self.visit_all([p for p in (member.left, member.right, member.value) if p is not None], scope)
+            if member.left is None:
+                self.entity(scope, "enumerator", member.name, member)
+                continue
+            declared = [self.entity(scope, "enumerator", member.name, member, f"{member.name.spelling}{number}")
+                        for number in _numbers(member.left, member.right)]
+            if declared:  # the member's name declares the first
+                self.program.declares(member.name, declared[0])
+                self.program.declares(member, declared[0])
+
+    def net_type(self, node: S.NetTypeDeclaration, scope: Scope) -> None:
+        self.visit_all([node.type, *([node.function] if node.function is not None else [])], scope)
+        self.program.located(node.name, scope)
+        self.entity(scope, "type", node.name, node)
 
     def genvar(self, node: S.GenvarDeclaration, scope: Scope) -> None:
         for name in node.names:
@@ -389,7 +403,8 @@ class _Definer:
         S.PackageDeclaration: design_unit, S.ImportDeclaration: import_declaration, S.ParameterDeclaration: parameter,
         S.TypeParameterDeclaration: parameter, S.AnsiPort: port, S.InterfacePort: port, S.PortReference: port,
         S.NetDeclaration: net, S.VariableDeclaration: variable, S.PortDeclaration: port_declaration,
-        S.TypedefDeclaration: typedef, S.EnumType: enum, S.GenvarDeclaration: genvar, S.ModportDeclaration: modport,
+        S.TypedefDeclaration: typedef, S.NetTypeDeclaration: net_type, S.EnumType: enum, S.GenvarDeclaration: genvar,
+        S.ModportDeclaration: modport,
         S.FunctionDeclaration: subroutine, S.TaskDeclaration: subroutine, S.ModuleInstantiation: instance,
         S.NamedConnection: connection, S.SeqBlock: block, S.ParBlock: block, S.GenerateBlock: block,
         S.GenerateFor: generate_for, S.ForStatement: for_statement, S.ForeachStatement: foreach,
@@ -434,6 +449,20 @@ def define(unit: S.SourceText) -> Program:
     definer.resolve_imports()
     definer.resolve_bases()
     return definer.program
+
+
+def _numbers(left: Any, right: Any) -> list[int]:
+    """The numbers of an enumeration's member `name[left:right]`, or of `name[left]` 0 to `left - 1`; none when they
+    are not decimal numbers."""
+    bounds = [b.spelling.replace("_", "") if isinstance(b, S.IntegerLiteral) else "" for b in (left, right)
+              if b is not None]
+    if not all(b.isdigit() for b in bounds):
+        return []
+    if right is None:
+        return list(range(int(bounds[0])))
+    first, last = int(bounds[0]), int(bounds[1])
+    step = 1 if last >= first else -1
+    return list(range(first, last + step, step))
 
 
 def _spelling(name: Any) -> str:

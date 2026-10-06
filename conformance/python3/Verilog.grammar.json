@@ -910,7 +910,13 @@
     "SystemVerilog": 2005
    },
    "extension": false,
-   "features": {},
+   "features": {
+    "restriction": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
    "properties": [
     {
      "name": "keyword",
@@ -919,6 +925,18 @@
      "choices": [
       "parameter",
       "localparam"
+     ]
+    },
+    {
+     "name": "restriction",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "enum",
+      "struct",
+      "union",
+      "class",
+      "interface class"
      ]
     },
     {
@@ -1293,6 +1311,15 @@
    "features": {},
    "properties": [
     {
+     "name": "random",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "rand",
+      "randc"
+     ]
+    },
+    {
      "name": "type",
      "type": [
       "DataType"
@@ -1358,6 +1385,22 @@
       "Identifier"
      ],
      "optional": false,
+     "many": false
+    },
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
      "many": false
     },
     {
@@ -1500,6 +1543,24 @@
      ]
     },
     {
+     "name": "strength",
+     "type": [
+      "DriveStrength",
+      "ChargeStrength"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "expansion",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "vectored",
+      "scalared"
+     ]
+    },
+    {
      "name": "type",
      "type": [
       "DataType"
@@ -1522,6 +1583,68 @@
      ],
      "optional": true,
      "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DriveStrength",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "first",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "supply0",
+      "strong0",
+      "pull0",
+      "weak0",
+      "highz0",
+      "supply1",
+      "strong1",
+      "pull1",
+      "weak1",
+      "highz1"
+     ]
+    },
+    {
+     "name": "second",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "supply0",
+      "strong0",
+      "pull0",
+      "weak0",
+      "highz0",
+      "supply1",
+      "strong1",
+      "pull1",
+      "weak1",
+      "highz1"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "ChargeStrength",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "size",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "small",
+      "medium",
+      "large"
+     ]
     }
    ]
   },
@@ -1783,6 +1906,144 @@
    ]
   },
   {
+   "kind": "NetTypeDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2012
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "function",
+     "type": [
+      "Name"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NetAlias",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "nets",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DefParam",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "assignments",
+     "type": [
+      "DefParamAssignment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DefParamAssignment",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TimeUnitsDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "precision": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "timeunit",
+      "timeprecision"
+     ]
+    },
+    {
+     "name": "time",
+     "type": [
+      "TimeLiteral"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "precision",
+     "type": [
+      "TimeLiteral"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
    "kind": "ModportDeclaration",
    "category": "Item",
    "since": {
@@ -1861,6 +2122,14 @@
    "extension": false,
    "features": {},
    "properties": [
+    {
+     "name": "strength",
+     "type": [
+      "DriveStrength"
+     ],
+     "optional": true,
+     "many": false
+    },
     {
      "name": "delay",
      "type": [
@@ -2218,9 +2487,24 @@
      "ref": {
       "SystemVerilog": 2005
      }
+    },
+    "const": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "static": {
+     "true": {
+      "SystemVerilog": 2023
+     }
     }
    },
    "properties": [
+    {
+     "name": "const",
+     "type": "bool",
+     "optional": false
+    },
     {
      "name": "direction",
      "type": "str",
@@ -2231,6 +2515,11 @@
       "inout",
       "ref"
      ]
+    },
+    {
+     "name": "static",
+     "type": "bool",
+     "optional": false
     },
     {
      "name": "var",

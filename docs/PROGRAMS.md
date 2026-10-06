@@ -338,8 +338,8 @@ subset, its classes, its randomization and its assertions: design units (modules
 ports and parameters, data types and dimensions, declarations, continuous assignments, procedural blocks and
 statements, generate constructs, instantiation, functions and tasks, classes with their properties, methods and
 objects, constraints and `randomize() with`, sequences, properties and concurrent assertions, clocking blocks, `let`,
-covergroups, immediate assertions, attributes, every expression but tagged unions, and compiler directives. Kinds and
-features record where they exist in both families: ANSI ports and `**` from Verilog-2001, `logic`, packages,
+covergroups, immediate assertions, attributes, every expression but tagged unions, strengths, net types, aliases,
+`defparam`, time units, and compiler directives. Kinds and features record where they exist in both families: ANSI ports and `**` from Verilog-2001, `logic`, packages,
 interfaces, `always_ff` and streaming concatenation from SystemVerilog 2005, `unique0` from 2009, `final` assertions
 from 2012 and triple-quoted strings and tolerance ranges (`[20.0 +/- 2.5]`) from 2023. Verilog has none of SystemVerilog's own.
 
@@ -373,6 +373,10 @@ The tree is abstract where the grammar only spells:
   (`u i(a, , b)`, `$display(a,, b)`) is an `EmptyArgument`. A repeated assignment pattern (`'{2{a, b}}`) is an
   `AssignmentPattern` with a `count`, and a tolerance range a `ValueRange` with an `operator`. `$root` is a
   `RootExpression`, `$unit::x` a `ScopedName` whose scope is a `UnitName`, and `type(e)` a `TypeReference`.
+- A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
+  `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
+  `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
+  `ref` port may be `const ref` or `ref static`; a type parameter may be restricted (`parameter type enum T`).
 - Literals keep their spelling: size, base and digits with their underscores (`8'b0000_0100`).
 - Equivalent spellings are normalized: `@*` is `@(*)`, events joined by `,` are joined by `or`, and `@e` is `@(e)`.
 - Comments and compiler directives are kept where items, statements and constraints are listed. Conditional compilation is a tree
@@ -381,7 +385,7 @@ The tree is abstract where the grammar only spells:
   as written; a macro used anywhere else is refused.
 
 Checkers, `randsequence`, `covergroup extends` and `@@` block events are not kinds yet, and neither are specify
-blocks, user-defined primitives and gate instances, strengths, nor tagged unions and the patterns of `matches`.
+blocks, user-defined primitives and gate instances, nor tagged unions and the patterns of `matches`.
 
 ### Reading Verilog
 
@@ -427,7 +431,8 @@ arguments (the `sample` function's too), a coverpoint and a cross scopes of thei
 `item` is; `option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration is. A non-ANSI port is one entity,
 which the header names and a port declaration declares. `import p::x` declares an entity whose `target` is `p::x`, and
 `import p::*` makes the package's names visible where nothing nearer declares them; `$unit::x` finds `x` in the
-compilation unit. A package's and a class's names
+compilation unit. An enumeration's member `name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`;
+a `nettype` declares a type. A package's and a class's names
 are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
 (`sampler.counter.count`). A member after `.` and what an instance's module declares are not resolved.
 

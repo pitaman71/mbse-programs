@@ -247,7 +247,7 @@ export class Printer {
   parameterText(node: any): string {
     if (node instanceof S.TypeParameterDeclaration) {
       const assignments = node.assignments.map((a) => a.name?.spelling + (a.type !== null ? ` = ${this.typeText(a.type)}` : ""));
-      return joined([node.keyword, "type", assignments.join(", ")]);
+      return joined([node.keyword, "type", node.restriction, assignments.join(", ")]);
     }
     const assignments = node.assignments.map((a: any) => a.name.spelling
       + a.dimensions.map((d: any) => this.dimension(d)).join("") + (a.value !== null ? ` = ${this.text(a.value)}` : ""));
@@ -276,12 +276,23 @@ export class Printer {
     if (node instanceof S.ImplicitType) return joined([node.signing, dimensions]);
     if (node instanceof S.StructType) {
       const head = joined([node.keyword, node.packed ? "packed" : null, node.signing]);
-      const members = node.members.map((m) => `${this.typeText(m.type)} ${this.declarators(m.declarators)};`).join(" ");
+      const members = node.members.map((m) => `${this.member(m)};`).join(" ");
       return withDimensions(`${head} { ${members} }`);
     }
     const base = node.base !== null ? ` ${this.typeText(node.base)}` : ""; // an EnumType
-    const members = node.members.map((m: any) => m.name.spelling + (m.value !== null ? ` = ${this.text(m.value)}` : ""));
+    const members = node.members.map((m: any) => this.enumMember(m));
     return withDimensions(`enum${base} {${members.join(", ")}}`);
+  }
+
+  member(node: any): string {
+    const random = node.random ? `${node.random} ` : "";
+    return `${random}${this.typeText(node.type)} ${this.declarators(node.declarators)}`;
+  }
+
+  enumMember(node: any): string {
+    let numbers = "";
+    if (node.left !== null) numbers = `[${this.text(node.left)}` + (node.right !== null ? `:${this.text(node.right)}` : "") + "]";
+    return node.name.spelling + numbers + (node.value !== null ? ` = ${this.text(node.value)}` : "");
   }
 
   /** A structure or union over several lines, one member per line. */
@@ -289,7 +300,7 @@ export class Printer {
     const p = pad(level);
     const head = joined([node.keyword, node.packed ? "packed" : null, node.signing]);
     const lines = [`${head} {`];
-    lines.push(...node.members.map((m: any) => `${p}${INDENT}${this.typeText(m.type)} ${this.declarators(m.declarators)};`));
+    lines.push(...node.members.map((m: any) => `${p}${INDENT}${this.member(m)};`));
     const dimensions = node.dimensions.map((d: any) => this.dimension(d)).join("");
     lines.push(`${p}}` + (dimensions ? ` ${dimensions}` : ""));
     return lines;
@@ -325,10 +336,14 @@ export class Printer {
 
   declarationHead(node: any): string {
     if (node instanceof S.NetDeclaration) {
-      return joined([node.net_type, node.type !== null ? this.typeText(node.type) : null,
-        node.delay !== null ? this.timingText(node.delay) : null]);
+      return joined([node.net_type, node.strength !== null ? this.strength(node.strength) : null, node.expansion,
+        node.type !== null ? this.typeText(node.type) : null, node.delay !== null ? this.timingText(node.delay) : null]);
     }
     return joined([this.variablePrefix(node), node.type !== null ? this.typeText(node.type) : null]);
+  }
+
+  strength(node: any): string {
+    return node instanceof S.ChargeStrength ? `(${node.size})` : `(${node.first}, ${node.second})`;
   }
 
   /** What a variable declaration says before its type: `local rand const var static`. */
@@ -341,7 +356,8 @@ export class Printer {
     const kind = node.type;
     if (kind instanceof S.StructType && kind.members.length > 1) {
       const lines = this.structLines(kind, level);
-      const prefix = node instanceof S.VariableDeclaration ? this.variablePrefix(node) : node.net_type;
+      const prefix = node instanceof S.VariableDeclaration ? this.variablePrefix(node)
+        : joined([node.net_type, node.strength !== null ? this.strength(node.strength) : null, node.expansion]);
       lines[0] = p + (prefix ? prefix + " " : "") + lines[0];
       lines[lines.length - 1] += " " + this.declarators(node.declarators) + ";";
       return lines;
@@ -379,8 +395,28 @@ export class Printer {
   }
 
   continuousAssign(node: any, level: number): string[] {
+    const strength = node.strength !== null ? ` ${this.strength(node.strength)}` : "";
     const delay = node.delay !== null ? ` ${this.timingText(node.delay)}` : "";
-    return [`${pad(level)}assign${delay} ${node.assignments.map((a: any) => this.text(a)).join(", ")};`];
+    return [`${pad(level)}assign${strength}${delay} ${node.assignments.map((a: any) => this.text(a)).join(", ")};`];
+  }
+
+  netTypeDeclaration(node: any, level: number): string[] {
+    const fn = node.function !== null ? ` with ${this.name(node.function)}` : "";
+    return [`${pad(level)}nettype ${this.typeText(node.type)} ${node.name.spelling}${fn};`];
+  }
+
+  netAlias(node: any, level: number): string[] {
+    return [`${pad(level)}alias ${node.nets.map((n: any) => this.text(n)).join(" = ")};`];
+  }
+
+  defparam(node: any, level: number): string[] {
+    const assignments = node.assignments.map((a: any) => `${this.text(a.target)} = ${this.text(a.value)}`).join(", ");
+    return [`${pad(level)}defparam ${assignments};`];
+  }
+
+  timeUnits(node: any, level: number): string[] {
+    const precision = node.precision !== null ? ` / ${node.precision.spelling}` : "";
+    return [`${pad(level)}${node.keyword} ${node.time.spelling}${precision};`];
   }
 
   procedural(node: any, level: number): string[] {
@@ -522,7 +558,8 @@ export class Printer {
   }
 
   tfPort(node: any): string {
-    const text = joined([node.direction, node.var ? "var" : null, node.type !== null ? this.typeText(node.type) : null,
+    const text = joined([node.const ? "const" : null, node.direction, node.static ? "static" : null,
+      node.var ? "var" : null, node.type !== null ? this.typeText(node.type) : null,
       node.name.spelling + node.dimensions.map((d: any) => this.dimension(d)).join("")]);
     return text + (node.value !== null ? ` = ${this.text(node.value)}` : "");
   }
@@ -1234,6 +1271,10 @@ const items: [Function[], Method][] = [
   [[S.CoverCross], (s, n, l) => s.coverCross(n, l)],
   [[S.BinsSelection], (s, n, l) => s.binsSelection(n, l)],
   [[S.AttributedItem], (s, n, l) => s.attributed(n, l)],
+  [[S.NetTypeDeclaration], (s, n, l) => s.netTypeDeclaration(n, l)],
+  [[S.NetAlias], (s, n, l) => s.netAlias(n, l)],
+  [[S.DefParam], (s, n, l) => s.defparam(n, l)],
+  [[S.TimeUnitsDeclaration], (s, n, l) => s.timeUnits(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [

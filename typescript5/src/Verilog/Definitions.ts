@@ -7,7 +7,10 @@
  *   `for` loops, named or not.
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
  *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
- *   'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint', 'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
+ *   'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint',
+ *   'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog
+ *   does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal
+ *   numbers). A `nettype` declares a 'type'.
  * - A non-ANSI port is one entity, which the header names and a port declaration declares.
  * - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
  *   where nothing nearer declares them, as wildcard imports do.
@@ -51,12 +54,13 @@ class Definer {
     this.program = new Program(this.root);
   }
 
-  /** The entity `name` declares in `scope`: a new one, or for a port or an argument declared twice (a non-ANSI port; a
-   * method's prototype and its definition) the one already there. */
-  entity(scope: Scope, kind: string, name: any, node: unknown): Entity {
-    const existing = (scope.names.get(name.spelling) ?? []).filter((e) => e.kind === kind
+  /** The entity `name` declares in `scope`, as `spelling` if it is given: a new one, or for a port or an argument
+   * declared twice (a non-ANSI port; a method's prototype and its definition) the one already there. */
+  entity(scope: Scope, kind: string, name: any, node: unknown, spelling: string | null = null): Entity {
+    const named = spelling ?? name.spelling;
+    const existing = (scope.names.get(named) ?? []).filter((e) => e.kind === kind
       && (kind === "port" || kind === "argument"));
-    const entity = existing[0] ?? this.program.add(new Entity(kind, name.spelling, scope));
+    const entity = existing[0] ?? this.program.add(new Entity(kind, named, scope));
     scope.declare(entity);
     entity.declarations.push(node);
     if (entity.definition === null) entity.definition = node;
@@ -163,9 +167,24 @@ class Definer {
     for (const member of node.members) {
       this.program.located(member, scope);
       this.program.located(member.name, scope);
-      if (member.value !== null) this.visit(member.value, scope);
-      this.entity(scope, "enumerator", member.name, member);
+      this.visitAll([member.left, member.right, member.value].filter((p) => p !== null), scope);
+      if (member.left === null) {
+        this.entity(scope, "enumerator", member.name, member);
+        continue;
+      }
+      const declared = numbers(member.left, member.right).map((number) =>
+        this.entity(scope, "enumerator", member.name, member, `${member.name.spelling}${number}`));
+      if (declared.length > 0) { // the member's name declares the first
+        this.program.declares(member.name, declared[0] as Entity);
+        this.program.declares(member, declared[0] as Entity);
+      }
     }
+  }
+
+  netType(node: any, scope: Scope): void {
+    this.visitAll([node.type, ...(node.function !== null ? [node.function] : [])], scope);
+    this.program.located(node.name, scope);
+    this.entity(scope, "type", node.name, node);
   }
 
   genvar(node: any, scope: Scope): void {
@@ -435,6 +454,7 @@ const methods: [Function[], Method][] = [
   [[S.VariableDeclaration], (d, n, s) => d.declarators(n, s, "variable")],
   [[S.PortDeclaration], (d, n, s) => d.declarators(n, s, "port")],
   [[S.TypedefDeclaration], (d, n, s) => d.typedef(n, s)],
+  [[S.NetTypeDeclaration], (d, n, s) => d.netType(n, s)],
   [[S.EnumType], (d, n, s) => d.enum(n, s)],
   [[S.GenvarDeclaration], (d, n, s) => d.genvar(n, s)],
   [[S.ModportDeclaration], (d, n, s) => d.modport(n, s)],
@@ -469,6 +489,18 @@ export function define(unit: S.SourceText): Program {
   definer.resolveImports();
   definer.resolveBases();
   return definer.program;
+}
+
+/** The numbers of an enumeration's member `name[left:right]`, or of `name[left]` 0 to `left - 1`; none when they are not
+ * decimal numbers. */
+function numbers(left: any, right: any): number[] {
+  const bounds = [left, right].filter((b) => b !== null)
+    .map((b) => (b instanceof S.IntegerLiteral ? (b.spelling as string).replaceAll("_", "") : ""));
+  if (!bounds.every((b) => /^[0-9]+$/.test(b))) return [];
+  if (right === null) return Array.from({ length: Number(bounds[0]) }, (_, i) => i);
+  const [first, last] = [Number(bounds[0]), Number(bounds[1])];
+  const step = last >= first ? 1 : -1;
+  return Array.from({ length: Math.abs(last - first) + 1 }, (_, i) => first + i * step);
 }
 
 /** The spelling of an identifier, or of a parameterized class's name. */

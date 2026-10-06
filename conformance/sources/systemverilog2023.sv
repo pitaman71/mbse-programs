@@ -19,9 +19,11 @@ real ambient = 4.0;
 
 /* The packet's fields, as the interface control document specifies them. */
 package logger_pkg;
+    timeunit 1ns / 1ps;
     parameter int unsigned FIELDS = 3;
     localparam logic [7:0] BATTERY_LOW = 8'b0000_0100;
     typedef enum logic [1:0] {IDLE, SAMPLE, SEND = 2'd3} state_t;
+    typedef enum {PROBE[2], BAY[1:3] = 5} source_t;
     typedef struct packed {
         logic signed [15:0] raw;
         logic [7:0] status;
@@ -33,12 +35,25 @@ package logger_pkg;
         return raw >= lo && raw <= hi;
     endfunction
 
+    // The probe's current, which its drivers add.
+    function automatic real sum_currents(input real drivers[]);
+        return drivers[0] + drivers[1];
+    endfunction
+    nettype real current_t with sum_currents;
+    nettype logic [1:0] level_t;
+
+    function automatic void tally(const ref int total, ref static int seen);
+        seen += total;
+    endfunction
+
     task automatic wait_cycles(input int n);
         repeat (n) @(posedge tb.clk);
     endtask
 endpackage
 
 interface bus_if #(parameter int W = 8) (input logic clk);
+    timeunit 1ns;
+    timeprecision 1ps;
     logic [W-1:0] data;
     logic valid, ready;
     modport source (output data, output valid, input ready);
@@ -50,6 +65,7 @@ module sampler
 #(
     parameter int WIDTH = `WIDTH,
     parameter type T = reading_t,
+    parameter type enum S = state_t,
     localparam int DEPTH = 4
 ) (
     input  wire              clk,
@@ -73,6 +89,10 @@ module sampler
     state_t state_next;
     logic [3:0] nibble2;
     wire #(1, 2, 3) settled = nibble2[0];
+    wire (strong0, pull1) vectored [3:0] driven = nibble2;
+    trireg (medium) held;
+    tri scalared [1:0] pair;
+    wire [1:0] low_pair;
     var type(nibble2) shadow;
     event done;
     logic [7:0] dynamic [];
@@ -80,6 +100,9 @@ module sampler
 
     assign out.data = reading.status;
     assign #2 out.valid = state == SEND && !out.ready ? 1'b1 : 1'b0;
+    assign (weak0, weak1) #1 pair = nibble2[1:0];
+    alias low_pair = pair;
+    defparam u_counter.STEP = 2;
 
     always_ff @(posedge clk or negedge rst_n) begin : counter
         if (!rst_n) begin
@@ -252,6 +275,10 @@ endprogram
 package logger_tb_pkg;
     import logger_pkg::*;
     typedef class driver;
+    typedef struct {
+        rand bit [7:0] gap;
+        int unsigned id;
+    } stimulus_t;
 
     interface class sink #(type T = reading_t);
         pure virtual function void put(T item);

@@ -95,6 +95,10 @@ BinsKeyword = Choice["bins", "illegal_bins", "ignore_bins"]
 BinsSelectOperator = Choice["&&", "||"]
 PrototypeQualifier = Choice["extern", "pure"]
 ForwardKeyword = Choice["enum", "struct", "union", "class", "interface class"]
+Strength = Choice["supply0", "strong0", "pull0", "weak0", "highz0", "supply1", "strong1", "pull1", "weak1", "highz1"]
+ChargeSize = Choice["small", "medium", "large"]
+NetExpansion = Choice["vectored", "scalared"]
+TimeUnitKeyword = Choice["timeunit", "timeprecision"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -406,8 +410,10 @@ class TypeParameterDeclaration(Item):
     without a keyword (6.20.3)."""
 
     keyword: ParameterKeyword | None
+    restriction: ForwardKeyword | None
     assignments: list[TypeAssignment]
     SINCE = sv()
+    FEATURES = {"restriction": {True: sv(2023)}}
 
 
 class TypeAssignment(SyntaxNode):
@@ -493,8 +499,10 @@ class StructType(DataType):
 
 
 class StructMember(SyntaxNode):
-    """`type declarators;` in a structure or union (7.2)."""
+    """`random type declarators;` in a structure or union (7.2), `rand` or `randc` in one that is randomized
+    (18.4)."""
 
+    random: RandomQualifier | None
     type: DataType
     declarators: list[VariableDeclarator]
 
@@ -509,10 +517,16 @@ class EnumType(DataType):
 
 
 class EnumMember(SyntaxNode):
-    """`name = value` in an enumeration (6.19)."""
+    """`name = value` in an enumeration (6.19), or `name[left:right] = value`, members named from `name` with numbers
+    `left` to `right`, or with one number `left`, 0 to `left - 1`."""
 
     name: Identifier
+    left: Expression | None
+    right: Expression | None
     value: Expression | None
+
+    def check(self) -> list[str]:
+        return ["an EnumMember with a right has a left"] if self.right is not None and self.left is None else []
 
 
 # --- Dimensions (7.4) ---
@@ -556,13 +570,44 @@ class QueueDimension(Dimension):
 
 
 class NetDeclaration(Item):
-    """`net_type type #delay declarators;` (6.7)."""
+    """`net_type strength expansion type #delay declarators;` (6.7): a drive strength, or a `trireg`'s charge
+    strength, and `vectored` or `scalared`."""
 
     net_type: NetType
+    strength: DriveStrength | ChargeStrength | None
+    expansion: NetExpansion | None
     type: DataType | None
     delay: DelayControl | None
     declarators: list[VariableDeclarator]
     FEATURES = {"net_type": {"uwire": verilog(2005), "interconnect": sv(2012)}}
+
+    def check(self) -> list[str]:
+        if isinstance(self.strength, ChargeStrength) and self.net_type != "trireg":
+            return ["a NetDeclaration with a charge strength is a trireg"]
+        return []
+
+
+class DriveStrength(SyntaxNode):
+    """`(strength0, strength1)`, in either order: a net's or a continuous assignment's strengths of 0 and 1, of
+    `supply`, `strong`, `pull`, `weak` and `highz`, not both `highz` (6.3.2, 10.3.4)."""
+
+    first: Strength
+    second: Strength
+
+    def check(self) -> list[str]:
+        if not isinstance(self.first, str) or not isinstance(self.second, str):
+            return []
+        if {self.first[-1], self.second[-1]} != {"0", "1"}:
+            return ["a DriveStrength has a strength of 0 and one of 1"]
+        if self.first.startswith("highz") and self.second.startswith("highz"):
+            return ["a DriveStrength is not highz for both"]
+        return []
+
+
+class ChargeStrength(SyntaxNode):
+    """`(small)`, `(medium)` or `(large)`: a `trireg`'s charge strength (6.6.4.2)."""
+
+    size: ChargeSize
 
 
 class VariableDeclaration(Item):
@@ -627,6 +672,53 @@ class ImportItem(SyntaxNode):
     name: Identifier | None
 
 
+class NetTypeDeclaration(Item):
+    """`nettype type name with function;`: a user-defined net type, resolved by `function` (6.6.7)."""
+
+    type: DataType
+    name: Identifier
+    function: Name | None
+    SINCE = sv(2012)
+
+
+class NetAlias(Item):
+    """`alias net = net = ...;`: two nets or more that are one (10.11)."""
+
+    nets: list[Expression]
+    SINCE = sv()
+
+    def check(self) -> list[str]:
+        return ["a NetAlias has two nets or more"] if len(self.nets) < 2 else []
+
+
+class DefParam(Item):
+    """`defparam target = value, ...;`: parameters of instances, set by their hierarchical names (23.10.1)."""
+
+    assignments: list[DefParamAssignment]
+
+
+class DefParamAssignment(SyntaxNode):
+    """`target = value` in a `defparam`."""
+
+    target: Expression
+    value: Expression
+
+
+class TimeUnitsDeclaration(Item):
+    """`timeunit time / precision;` or `timeprecision time;` (3.14.2.2)."""
+
+    keyword: TimeUnitKeyword
+    time: TimeLiteral
+    precision: TimeLiteral | None
+    SINCE = sv()
+    FEATURES = {"precision": {True: sv(2009)}}
+
+    def check(self) -> list[str]:
+        if self.precision is not None and self.keyword == "timeprecision":
+            return ["a timeprecision TimeUnitsDeclaration has no precision"]
+        return []
+
+
 class ModportDeclaration(Item):
     """`modport items;` in an interface (25.5)."""
 
@@ -649,8 +741,9 @@ class ModportPort(SyntaxNode):
 
 
 class ContinuousAssign(Item):
-    """`assign #delay target = value, ...;` (10.3)."""
+    """`assign strength #delay target = value, ...;` (10.3)."""
 
+    strength: DriveStrength | None
     delay: DelayControl | None
     assignments: list[AssignmentExpression]
 
@@ -734,16 +827,25 @@ def _method_problems(method: FunctionDeclaration | TaskDeclaration) -> list[str]
 
 class TfPort(SyntaxNode):
     """`direction var type name dimensions = default`, a task's or function's port in parentheses (13.3). Without a
-    direction or a type, a port inherits them from the one before it."""
+    direction or a type, a port inherits them from the one before it. A `ref` may be `const ref` or `ref static`
+    (13.5.2)."""
 
+    const: bool
     direction: Direction | None
+    static: bool
     var: bool
     type: DataType | None
     name: Identifier
     dimensions: list[Dimension]
     value: Expression | None
     SINCE = verilog(2001)
-    FEATURES = {"var": {True: sv()}, "value": {True: sv()}, "direction": {"ref": sv()}}
+    FEATURES = {"var": {True: sv()}, "value": {True: sv()}, "direction": {"ref": sv()}, "const": {True: sv()},
+                "static": {True: sv(2023)}}
+
+    def check(self) -> list[str]:
+        if (self.const is True or self.static is True) and self.direction != "ref":
+            return ["a const or static TfPort is a ref"]
+        return []
 
 
 # --- Classes (8) ---
@@ -2175,9 +2277,10 @@ KINDS: list[type[SyntaxNode]] = [
     StructType, StructMember,
     EnumType, EnumMember,
     RangeDimension, SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension,
-    NetDeclaration, VariableDeclaration, VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration,
-    GenvarDeclaration, ImportDeclaration,
-    ImportItem, ModportDeclaration, ModportItem, ModportPort, ContinuousAssign, AlwaysConstruct, InitialConstruct,
+    NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration, VariableDeclarator,
+    ForwardTypedefDeclaration, TypedefDeclaration, GenvarDeclaration, ImportDeclaration, ImportItem,
+    NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem,
+    ModportPort, ContinuousAssign, AlwaysConstruct, InitialConstruct,
     FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
     GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
     ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
