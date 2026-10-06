@@ -6,8 +6,8 @@
   `for` loops, named or not.
 - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
-  'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label' and 'import'. An enumeration's
-  members are declared where the enumeration is, as SystemVerilog does.
+  'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint',
+  'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
 - A non-ANSI port is one entity, which the header names and a port declaration declares.
 - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
   where nothing nearer declares them, as wildcard imports do.
@@ -17,6 +17,8 @@
   variables are its own; `local::x` in `randomize() with` is `x` where the call is.
 - A property, a sequence and a `let` have scopes of their own, where their ports are arguments; a named clocking block
   has one, where its signals are clockvars. A statement's label, and an assertion's, names a 'label'.
+- A covergroup has a scope, where its ports and its `sample` function's are arguments; a coverpoint and a cross have
+  scopes, where their bins are, and a labeled one is an entity. A bin's `with (filter)` has a scope where `item` is.
 - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
   argument gives it (`find(x) with (x > 0)`), or `item`.
 - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
@@ -236,6 +238,53 @@ class _Definer:
             inner = self.out_of_block(node, scope, "constraint")
         self.visit_all(node.items, inner)
 
+    def covergroup(self, node: S.CovergroupDeclaration, scope: Scope) -> None:
+        if node.clock is not None:
+            self.visit(node.clock, scope)
+        inner = self.scoped(scope, "covergroup", node.name, node, "covergroup")
+        self.program.located(node.name, scope)
+        for port in [*node.ports, *(node.sample.ports if node.sample is not None else [])]:
+            self.visit_all([*([port.type] if port.type is not None else []), *port.dimensions,
+                            *([port.value] if port.value is not None else [])], inner)
+            self.program.located(port, inner)
+            self.program.located(port.name, inner)
+            self.entity(inner, "argument", port.name, port)
+        if node.sample is not None:
+            self.program.located(node.sample, inner)
+        self.visit_all(node.items, inner)
+
+    def coverpoint(self, node: Any, scope: Scope) -> None:
+        if isinstance(node, S.Coverpoint):
+            parts = [*([node.type] if node.type is not None else []), node.expression]
+            kind, body = "coverpoint", node.items
+        else:
+            kind, parts, body = "cross", node.items, node.body
+        self.visit_all([*parts, *([node.condition] if node.condition is not None else [])], scope)
+        inner = self.scoped(scope, kind, node.label, node, kind)
+        if node.label is not None:
+            self.program.located(node.label, scope)
+        self.visit_all(body, inner)
+
+    def bins(self, node: Any, scope: Scope) -> None:
+        self.program.located(node.name, scope)
+        self.entity(scope, "bins", node.name, node)
+        if isinstance(node, S.BinsSelection):
+            parts = [node.select]
+        else:
+            parts = [*([node.size] if node.size is not None else []), node.initializer]
+        self.visit_all([*parts, *([node.condition] if node.condition is not None else [])], scope.parent)
+
+    def bins_filter(self, node: Any, scope: Scope) -> None:
+        """Values with a `with (filter)`, where `item` is each value."""
+        self.visit_all(node.values if isinstance(node, S.BinsValues) else [node.expression], scope)
+        if node.filter is not None:
+            inner = Scope("with", None, scope, node)
+            item = self.program.add(Entity("variable", "item", inner))
+            inner.declare(item)
+            item.definition = node
+            item.declarations.append(node)
+            self.visit(node.filter, inner)
+
     def array_method_with(self, node: S.ArrayMethodWithExpression, scope: Scope) -> None:
         inner = Scope("with", None, scope, node)
         call = node.call
@@ -349,7 +398,9 @@ class _Definer:
         S.ArrayMethodWithExpression: array_method_with, S.PropertyDeclaration: assertion_declaration,
         S.SequenceDeclaration: assertion_declaration, S.LetDeclaration: assertion_declaration,
         S.ClockingDeclaration: clocking_declaration, S.ClockingSignals: clocking_signals, S.LabeledStatement: labeled,
-        S.AssertionItem: labeled,
+        S.AssertionItem: labeled, S.CovergroupDeclaration: covergroup, S.Coverpoint: coverpoint,
+        S.CoverCross: coverpoint,
+        S.CoverageBins: bins, S.BinsSelection: bins, S.BinsValues: bins_filter, S.BinsExpression: bins_filter,
     }
 
     def resolve_imports(self) -> None:

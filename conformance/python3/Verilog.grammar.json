@@ -62,6 +62,10 @@
    "base": "Property"
   },
   {
+   "name": "BinsSelect",
+   "base": "SyntaxNode"
+  },
+  {
    "name": "Directive",
    "base": "SyntaxNode"
   }
@@ -5954,6 +5958,619 @@
    "properties": [
     {
      "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CovergroupDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "TfPort"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "clock",
+     "type": [
+      "EventControl"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "sample",
+     "type": [
+      "SampleFunction"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "CoverageOption",
+      "Coverpoint",
+      "CoverCross",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "SampleFunction",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "ports",
+     "type": [
+      "TfPort"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "CoverageOption",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Coverpoint",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "type": {
+     "true": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "CoverageBins",
+      "CoverageOption",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "CoverageBins",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "wildcard",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "bins",
+      "illegal_bins",
+      "ignore_bins"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "array",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "size",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "initializer",
+     "type": [
+      "BinsValues",
+      "BinsTransitions",
+      "BinsDefault",
+      "BinsExpression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinsValues",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "filter": {
+     "true": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "values",
+     "type": [
+      "Expression",
+      "Range"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "filter",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinsTransitions",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "sequences",
+     "type": [
+      "TransitionSequence"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TransitionSequence",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "steps",
+     "type": [
+      "TransitionStep"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TransitionStep",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "values",
+     "type": [
+      "Expression",
+      "Range"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "*",
+      "->",
+      "="
+     ]
+    },
+    {
+     "name": "count",
+     "type": [
+      "Expression",
+      "CycleRange"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinsDefault",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "sequence",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "BinsExpression",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2012
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "filter",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CoverCross",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "BinsSelection",
+      "CoverageOption",
+      "FunctionDeclaration",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "BinsSelection",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "bins",
+      "illegal_bins",
+      "ignore_bins"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "select",
+     "type": [
+      "BinsSelect",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinsOf",
+   "category": "BinsSelect",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "intersect",
+     "type": [
+      "Expression",
+      "Range"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "BinaryBinsSelect",
+   "category": "BinsSelect",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "left",
+     "type": [
+      "BinsSelect",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "&&",
+      "||"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "BinsSelect",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NotBinsSelect",
+   "category": "BinsSelect",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "operand",
+     "type": [
+      "BinsSelect",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParenthesizedBinsSelect",
+   "category": "BinsSelect",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "select",
+     "type": [
+      "BinsSelect",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "FilteredBinsSelect",
+   "category": "BinsSelect",
+   "since": {
+    "SystemVerilog": 2012
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "select",
+     "type": [
+      "BinsSelect",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "filter",
      "type": [
       "Expression"
      ],

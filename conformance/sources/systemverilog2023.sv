@@ -309,6 +309,40 @@ package logger_tb_pkg;
         endfunction
     endclass
 
+    // What the testbench has seen of the readings.
+    class coverage;
+        transaction #(16) seen;
+        covergroup readings(int unsigned limit) @(posedge seen.raw[0]);
+            option.per_instance = 1;
+            bit [15:0] raw_cp: coverpoint seen.raw iff (seen.status != 0) {
+                bins cold[4] = {[200:399]} with (item % 2 == 0);
+                bins warm[] = {[400:limit]};
+                wildcard bins odd = {16'b???????????????1};
+                illegal_bins hot = default;
+                ignore_bins steps = (200 => 201 => 202), (300 => 301[*2:3] => 302[->1] => 303[=2]);
+                bins rising = (200, 300 => 400);
+                bins other = default sequence;
+                bins fast = raw_cp with (item > 700);
+                bins limit_bin = limit;
+                option.at_least = 2;
+            }
+            status_cp: coverpoint seen.status;
+            coverpoint seen.id;
+            both: cross raw_cp, status_cp iff (limit > 0) {
+                bins cold_ok = binsof(raw_cp.cold) && binsof(status_cp) intersect {[0:3]};
+                ignore_bins idle = !binsof(raw_cp) || (binsof(status_cp));
+                bins quiet = both with (status_cp < 2);
+                function int unsigned weight();
+                    return limit;
+                endfunction
+            }
+            cross raw_cp, status_cp;
+        endgroup : readings
+        covergroup sampled with function sample(byte value);
+            coverpoint value;
+        endgroup
+    endclass
+
     class driver;
         virtual bus_if.source bus;
         sample current = null;

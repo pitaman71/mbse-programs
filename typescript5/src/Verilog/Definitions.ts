@@ -7,7 +7,7 @@
  *   `for` loops, named or not.
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
  *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
- *   'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
+ *   'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup', 'coverpoint', 'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
  * - A non-ANSI port is one entity, which the header names and a port declaration declares.
  * - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
  *   where nothing nearer declares them, as wildcard imports do.
@@ -17,6 +17,8 @@
  *   variables are its own; `local::x` in `randomize() with` is `x` where the call is.
  * - A property, a sequence and a `let` have scopes of their own, where their ports are arguments; a named clocking
  *   block has one, where its signals are clockvars. A statement's label, and an assertion's, names a 'label'.
+ * - A covergroup has a scope, where its ports and its `sample` function's are arguments; a coverpoint and a cross have
+ *   scopes, where their bins are, and a labeled one is an entity. A bin's `with (filter)` has a scope where `item` is.
  * - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
  *   argument gives it (`find(x) with (x > 0)`), or `item`.
  * - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
@@ -287,6 +289,52 @@ class Definer {
     this.visit(node instanceof S.LabeledStatement ? node.statement : node.assertion, scope);
   }
 
+  covergroup(node: any, scope: Scope): void {
+    if (node.clock !== null) this.visit(node.clock, scope);
+    const inner = this.scoped(scope, "covergroup", node.name, node, "covergroup");
+    this.program.located(node.name, scope);
+    for (const port of [...node.ports, ...(node.sample !== null ? node.sample.ports : [])]) {
+      this.visitAll([...(port.type !== null ? [port.type] : []), ...port.dimensions, ...(port.value !== null ? [port.value] : [])],
+        inner);
+      this.program.located(port, inner);
+      this.program.located(port.name, inner);
+      this.entity(inner, "argument", port.name, port);
+    }
+    if (node.sample !== null) this.program.located(node.sample, inner);
+    this.visitAll(node.items, inner);
+  }
+
+  coverpoint(node: any, scope: Scope): void {
+    const point = node instanceof S.Coverpoint;
+    const kind = point ? "coverpoint" : "cross";
+    const parts = point ? [...(node.type !== null ? [node.type] : []), node.expression] : node.items;
+    this.visitAll([...parts, ...(node.condition !== null ? [node.condition] : [])], scope);
+    const inner = this.scoped(scope, kind, node.label, node, kind);
+    if (node.label !== null) this.program.located(node.label, scope);
+    this.visitAll(point ? node.items : node.body, inner);
+  }
+
+  bins(node: any, scope: Scope): void {
+    this.program.located(node.name, scope);
+    this.entity(scope, "bins", node.name, node);
+    const parts = node instanceof S.BinsSelection ? [node.select]
+      : [...(node.size !== null ? [node.size] : []), node.initializer];
+    this.visitAll([...parts, ...(node.condition !== null ? [node.condition] : [])], scope.parent as Scope);
+  }
+
+  /** Values with a `with (filter)`, where `item` is each value. */
+  binsFilter(node: any, scope: Scope): void {
+    this.visitAll(node instanceof S.BinsValues ? node.values : [node.expression], scope);
+    if (node.filter !== null) {
+      const inner = new Scope("with", null, scope, node);
+      const item = this.program.add(new Entity("variable", "item", inner));
+      inner.declare(item);
+      item.definition = node;
+      item.declarations.push(node);
+      this.visit(node.filter, inner);
+    }
+  }
+
   arrayMethodWith(node: any, scope: Scope): void {
     const inner = new Scope("with", null, scope, node);
     const call = node.call;
@@ -406,6 +454,10 @@ const methods: [Function[], Method][] = [
   [[S.ClockingDeclaration], (d, n, s) => d.clockingDeclaration(n, s)],
   [[S.ClockingSignals], (d, n, s) => d.clockingSignals(n, s)],
   [[S.LabeledStatement, S.AssertionItem], (d, n, s) => d.labeled(n, s)],
+  [[S.CovergroupDeclaration], (d, n, s) => d.covergroup(n, s)],
+  [[S.Coverpoint, S.CoverCross], (d, n, s) => d.coverpoint(n, s)],
+  [[S.CoverageBins, S.BinsSelection], (d, n, s) => d.bins(n, s)],
+  [[S.BinsValues, S.BinsExpression], (d, n, s) => d.binsFilter(n, s)],
 ];
 for (const [kinds, method] of methods) for (const kind of kinds) Definer.METHODS.set(kind, method);
 

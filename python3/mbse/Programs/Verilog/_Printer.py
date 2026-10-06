@@ -71,11 +71,15 @@ def _prototype(node: Any) -> bool:
 def _multiline(node: Any) -> bool:
     if isinstance(node, (S.FunctionDeclaration, S.TaskDeclaration)):
         return not _prototype(node)
+    if isinstance(node, S.Coverpoint):
+        return bool(node.items)
+    if isinstance(node, S.CoverCross):
+        return bool(node.body)
     return isinstance(node, (S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
                              S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration,
-                             S.SequenceDeclaration, S.ClockingDeclaration, S.AlwaysConstruct, S.InitialConstruct,
-                             S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf, S.GenerateCase,
-                             S.GenerateBlock, S.IfdefDirective))
+                             S.SequenceDeclaration, S.ClockingDeclaration, S.CovergroupDeclaration, S.AlwaysConstruct,
+                             S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf,
+                             S.GenerateCase, S.GenerateBlock, S.IfdefDirective))
 
 
 class Printer:
@@ -861,6 +865,93 @@ class Printer:
             return f"case ({self.text(node.expression)}) {items} endcase"
         return f"({self.text(node.property)})"  # a ParenthesizedProperty
 
+    # Coverage
+
+    def covergroup(self, node: S.CovergroupDeclaration, level: int) -> list[str]:
+        pad = _INDENT * level
+        ports = f"({', '.join(self.tf_port(p) for p in node.ports)})" if node.ports else ""
+        event = ""
+        if node.clock is not None:
+            event = f" {self.timing_text(node.clock)}"
+        elif node.sample is not None:
+            event = f" with function sample({', '.join(self.tf_port(p) for p in node.sample.ports)})"
+        lines = [f"{pad}covergroup {node.name.spelling}{ports}{event};"]
+        body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        return [*lines, *body, f"{pad}endgroup" + (f" : {node.name.spelling}" if node.labeled else "")]
+
+    def coverage_option(self, node: S.CoverageOption, level: int) -> list[str]:
+        return [f"{_INDENT * level}{self.text(node.target)} = {self.text(node.value)};"]
+
+    def condition(self, node: Any) -> str:
+        return f" iff ({self.text(node)})" if node is not None else ""
+
+    def braced(self, head: str, items: list[Any], level: int) -> list[str]:
+        """`head { items }`, or `head;` without items."""
+        if not items:
+            return [head + ";"]
+        lines = [head + " {"]
+        body = self.items(items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        return [*lines, *body, _INDENT * level + "}"]
+
+    def coverpoint(self, node: S.Coverpoint, level: int) -> list[str]:
+        label = ""
+        if node.label is not None:
+            kind = f"{self.type_text(node.type)} " if node.type is not None else ""
+            label = f"{kind}{node.label.spelling}: "
+        head = f"{_INDENT * level}{label}coverpoint {self.text(node.expression)}{self.condition(node.condition)}"
+        return self.braced(head, node.items, level)
+
+    def coverage_bins(self, node: S.CoverageBins, level: int) -> list[str]:
+        size = f"[{self.text(node.size) if node.size is not None else ''}]" if node.array else ""
+        wildcard = "wildcard " if node.wildcard else ""
+        return [f"{_INDENT * level}{wildcard}{node.keyword} {node.name.spelling}{size} = "
+                f"{self.bins_initializer(node.initializer)}{self.condition(node.condition)};"]
+
+    def filtered(self, node: Any) -> str:
+        return f" with ({self.text(node)})" if node is not None else ""
+
+    def bins_initializer(self, node: Any) -> str:
+        if isinstance(node, S.BinsValues):
+            return f"{{{', '.join(self.range_text(v) for v in node.values)}}}{self.filtered(node.filter)}"
+        if isinstance(node, S.BinsDefault):
+            return "default sequence" if node.sequence else "default"
+        if isinstance(node, S.BinsExpression):
+            return self.text(node.expression) + self.filtered(node.filter)
+        return ", ".join("(" + " => ".join(self.transition_step(s) for s in t.steps) + ")"  # BinsTransitions
+                         for t in node.sequences)
+
+    def transition_step(self, node: S.TransitionStep) -> str:
+        values = ", ".join(self.range_text(v) for v in node.values)
+        return values + (f"[{node.operator}{self.cycles(node.count)}]" if node.operator is not None else "")
+
+    def cover_cross(self, node: S.CoverCross, level: int) -> list[str]:
+        label = f"{node.label.spelling}: " if node.label is not None else ""
+        items = ", ".join(self.text(i) for i in node.items)
+        return self.braced(f"{_INDENT * level}{label}cross {items}{self.condition(node.condition)}", node.body, level)
+
+    def bins_selection(self, node: S.BinsSelection, level: int) -> list[str]:
+        return [f"{_INDENT * level}{node.keyword} {node.name.spelling} = {self.select(node.select, 0)}"
+                f"{self.condition(node.condition)};"]
+
+    def select(self, node: Any, level: int) -> str:
+        """A select expression, in parentheses where its place binds tighter: `&&` and `||` (1, to the left), `with`
+        (2), `!` (3)."""
+        if isinstance(node, S.BinaryBinsSelect):
+            own, text = 1, f"{self.select(node.left, 1)} {node.operator} {self.select(node.right, 2)}"
+        elif isinstance(node, S.FilteredBinsSelect):
+            own, text = 2, f"{self.select(node.select, 2)} with ({self.text(node.filter)})"
+        elif isinstance(node, S.NotBinsSelect):
+            own, text = 3, f"!{self.select(node.operand, 3)}"
+        elif isinstance(node, S.BinsOf):
+            ranges = ", ".join(self.range_text(r) for r in node.intersect)
+            intersect = f" intersect {{{ranges}}}" if node.intersect else ""
+            own, text = 4, f"binsof({self.text(node.target)}){intersect}"
+        elif isinstance(node, S.ParenthesizedBinsSelect):
+            own, text = 4, f"({self.select(node.select, 0)})"
+        else:  # an expression
+            own, text = 4, self.text(node)
+        return f"({text})" if own < level else text
+
     # Clocking blocks
 
     def clocking_declaration(self, node: S.ClockingDeclaration, level: int) -> list[str]:
@@ -1049,6 +1140,8 @@ class Printer:
         S.PropertyDeclaration: assertion_declaration, S.SequenceDeclaration: assertion_declaration,
         S.LetDeclaration: let_declaration, S.ClockingDeclaration: clocking_declaration, S.DefaultSkew: default_skew,
         S.ClockingSignals: clocking_signals, S.DefaultClocking: default_clocking, S.DefaultDisable: default_disable,
+        S.CovergroupDeclaration: covergroup, S.CoverageOption: coverage_option, S.Coverpoint: coverpoint,
+        S.CoverageBins: coverage_bins, S.CoverCross: cover_cross, S.BinsSelection: bins_selection,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,

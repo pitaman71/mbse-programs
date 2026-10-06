@@ -1185,6 +1185,116 @@ class _Reader:
             out = S.ClockedProperty(clock=self.timing(node.event), property=self.property(node.expr))
         return self.made(node, out)
 
+    # Coverage
+
+    def covergroup(self, node: Any) -> S.CovergroupDeclaration:
+        if node.extends:  # IEEE 1800-2023's `covergroup extends`: not a kind yet
+            raise self.unsupported(node)
+        out = S.CovergroupDeclaration(name=self.identifier(node.name), labeled=node.endBlockName is not None)
+        if node.portList is not None:
+            out.ports = [self.made(p, self.tf_port(p)) for p in _nodes(node.portList.ports)]
+        event = node.event
+        if event is not None:
+            if event.kind.name == "WithFunctionSample":
+                ports = [] if event.portList is None else [self.made(p, self.tf_port(p))
+                                                           for p in _nodes(event.portList.ports)]
+                out.sample = self.made(event, S.SampleFunction(ports=ports))
+            elif event.kind.name == "BlockCoverageEvent":  # `@@(begin f)`: not a kind yet
+                raise self.unsupported(event)
+            else:
+                out.clock = self.timing(event)
+        out.items = self.items(_nodes(node.members), node.endgroup, convert=self.coverage_item)
+        return out
+
+    def coverage_item(self, node: Any) -> Any:
+        """An item of a covergroup, a coverpoint or a cross: an option, a coverpoint, a cross, a bin, or a function."""
+        kind = node.kind.name
+        if kind == "CoverageOption":
+            out: Any = S.CoverageOption(target=self.expression(node.expr.left), value=self.expression(node.expr.right))
+        elif kind == "Coverpoint":
+            out = S.Coverpoint(type=self.data_type(node.type), expression=self.expression(node.expr),
+                               condition=self.coverage_condition(node.iff))
+            if node.label is not None:
+                out.label = self.identifier(node.label.name)
+            if not node.emptySemi:
+                out.items = self.items(_nodes(node.members), node.closeBrace, convert=self.coverage_item)
+        elif kind == "CoverageBins":
+            out = S.CoverageBins(wildcard=bool(node.wildcard), keyword=node.keyword.rawText,
+                                 name=self.identifier(node.name),
+                                 array=node.size is not None, initializer=self.bins_initializer(node.initializer),
+                                 condition=self.coverage_condition(node.iff))
+            if node.size is not None and node.size.expr is not None:
+                out.size = self.expression(node.size.expr)
+        elif kind == "CoverCross":
+            out = S.CoverCross(items=[self.expression(i) for i in _nodes(node.items)],
+                               condition=self.coverage_condition(node.iff))
+            if node.label is not None:
+                out.label = self.identifier(node.label.name)
+            if not node.emptySemi:
+                out.body = self.items(_nodes(node.members), node.closeBrace, convert=self.coverage_item)
+        elif kind == "BinsSelection":
+            out = S.BinsSelection(keyword=node.keyword.rawText, name=self.identifier(node.name),
+                                  select=self.bins_select(node.expr), condition=self.coverage_condition(node.iff))
+        else:
+            return self.item(node)
+        return self.made(node, out)
+
+    def coverage_condition(self, node: Any) -> Any:
+        return None if node is None else self.expression(node.expr)  # `iff (condition)`: its parentheses are its own
+
+    def with_filter(self, node: Any) -> Any:
+        return None if node is None else self.expression(node.expr)
+
+    def bins_initializer(self, node: Any) -> Any:
+        kind = node.kind.name
+        if kind == "RangeCoverageBinInitializer":
+            out: Any = S.BinsValues(values=[self.range_or_expression(r) for r in _nodes(node.ranges.valueRanges)],
+                                    filter=self.with_filter(node.withClause))
+        elif kind == "DefaultCoverageBinInitializer":
+            out = S.BinsDefault(sequence=bool(node.sequenceKeyword))
+        elif kind == "IdWithExprCoverageBinInitializer":
+            name = self.made(node, S.NameExpression(name=self.identifier(node.id)))
+            out = S.BinsExpression(expression=name, filter=self.with_filter(node.withClause))
+        elif kind == "ExpressionCoverageBinInitializer":
+            out = S.BinsExpression(expression=self.expression(node.expr))
+        else:  # a TransListCoverageBinInitializer: slang has no other initializer
+            sequences = []
+            for transition in _nodes(node.sets):
+                steps = []
+                for step in _nodes(transition.ranges):
+                    item = S.TransitionStep(values=[self.range_or_expression(v) for v in _nodes(step.items)])
+                    if step.repeat is not None:
+                        item.operator = step.repeat.specifier.rawText
+                        item.count = self.cycle_range(step.repeat.selector)
+                    steps.append(self.made(step, item))
+                sequences.append(self.made(transition, S.TransitionSequence(steps=steps)))
+            out = S.BinsTransitions(sequences=sequences)
+        return self.made(node, out)
+
+    def bins_select(self, node: Any) -> Any:
+        """A select expression, or the expression it is."""
+        kind = node.kind.name
+        if kind == "SimpleBinsSelectExpr":
+            if node.matchesClause is not None:  # `matches`: not a kind yet
+                raise self.unsupported(node)
+            return self.expression(node.expr)
+        if kind == "BinsSelectConditionExpr":
+            out: Any = S.BinsOf(target=self.expression(node.name))
+            if node.intersects is not None:
+                out.intersect = [self.range_or_expression(r) for r in _nodes(node.intersects.ranges.valueRanges)]
+        elif kind == "BinaryBinsSelectExpr":
+            out = S.BinaryBinsSelect(left=self.bins_select(node.left), operator=node.op.rawText,
+                                     right=self.bins_select(node.right))
+        elif kind == "UnaryBinsSelectExpr":
+            out = S.NotBinsSelect(operand=self.bins_select(node.expr))
+        elif kind == "ParenthesizedBinsSelectExpr":
+            out = S.ParenthesizedBinsSelect(select=self.bins_select(node.expr))
+        else:  # a BinSelectWithFilterExpr: slang has no other select expression
+            if node.matchesClause is not None:
+                raise self.unsupported(node)
+            out = S.FilteredBinsSelect(select=self.bins_select(node.expr), filter=self.expression(node.filter))
+        return self.made(node, out)
+
     # Clocking blocks
 
     def clocking_declaration(self, node: Any) -> S.ClockingDeclaration:
@@ -1523,6 +1633,7 @@ class _Reader:
         "PropertyDeclaration": property_declaration, "SequenceDeclaration": sequence_declaration,
         "LetDeclaration": let_declaration, "ClockingDeclaration": clocking_declaration,
         "DefaultClockingReference": default_clocking, "DefaultDisableDeclaration": default_disable,
+        "CovergroupDeclaration": covergroup,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,

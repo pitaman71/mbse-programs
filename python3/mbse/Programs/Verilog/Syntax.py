@@ -4,10 +4,10 @@ grammar is.
 The kinds cover SystemVerilog (IEEE 1800-2023)'s design subset and its classes: design units, ports and parameters,
 data types, declarations, continuous assignments, procedural blocks and statements, generate constructs, instantiation,
 functions and tasks, classes with their properties, methods and objects, constraints and randomization, immediate and
-concurrent assertions with their properties and sequences, clocking blocks and compiler directives.
+concurrent assertions with their properties and sequences, clocking blocks, covergroups and compiler directives.
 Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and feature records where it
 exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023` and
-`VerilogStandard(year, family)` check. Covergroups are not kinds yet.
+`VerilogStandard(year, family)` check.
 
 The tree is abstract where the grammar only spells and concrete where a transpiler needs to see what was written:
 
@@ -89,6 +89,8 @@ AbortKeyword = Choice["accept_on", "reject_on", "sync_accept_on", "sync_reject_o
 PortDirection = Choice["input", "output", "inout"]
 ClockingDirection = Choice["input", "output", "inout", "input output"]
 ClockingScope = Choice["default", "global"]
+BinsKeyword = Choice["bins", "illegal_bins", "ignore_bins"]
+BinsSelectOperator = Choice["&&", "||"]
 PrototypeQualifier = Choice["extern", "pure"]
 ForwardKeyword = Choice["enum", "struct", "union", "class", "interface class"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
@@ -155,6 +157,11 @@ class Constraint(SyntaxNode):
 class Property(SyntaxNode):
     """A property: what a concurrent assertion checks (16.12, A.2.10). A sequence, and an expression, is a property
     too: a position that holds a property holds a `Property` or an `Expression`."""
+
+
+class BinsSelect(SyntaxNode):
+    """A select expression: which combinations of a cross's bins a bin of the cross holds (19.6.1). A cross's name, or
+    an expression, is one too: a position that holds a select holds a `BinsSelect` or an `Expression`."""
 
 
 class Sequence(Property):
@@ -1458,6 +1465,188 @@ class DefaultDisable(Item):
     SINCE = sv(2009)
 
 
+# === Coverage (19) ===
+
+
+class CovergroupDeclaration(Item):
+    """`covergroup name(ports) @(clock); items endgroup`, or sampled `with function sample(ports)` (19.3, 19.8.1).
+    Its items are options, coverpoints and crosses. `labeled` repeats the name after `endgroup`."""
+
+    name: Identifier
+    ports: list[TfPort]
+    clock: EventControl | None
+    sample: SampleFunction | None
+    items: list[CoverageOption | Coverpoint | CoverCross | Directive | Comment]
+    labeled: bool
+    SINCE = sv()
+
+    def check(self) -> list[str]:
+        return ["a CovergroupDeclaration has a clock or a sample, not both"] \
+            if self.clock is not None and self.sample is not None else []
+
+
+class SampleFunction(SyntaxNode):
+    """`with function sample(ports)`: a covergroup sampled by calling `sample` with these arguments (19.8.1)."""
+
+    ports: list[TfPort]
+    SINCE = sv(2009)
+
+
+class CoverageOption(Item):
+    """`option.name = value;` or `type_option.name = value;`, in a covergroup, a coverpoint or a cross (19.7)."""
+
+    target: Expression
+    value: Expression
+    SINCE = sv()
+
+
+class Coverpoint(Item):
+    """`type label: coverpoint expression iff (condition) { items }`: the values of an expression a covergroup
+    counts, in its bins (19.5); a labeled coverpoint may give the type its values have. Without items, it ends with
+    `;`."""
+
+    label: Identifier | None
+    type: DataType | None
+    expression: Expression
+    condition: Expression | None
+    items: list[CoverageBins | CoverageOption | Directive | Comment]
+    SINCE = sv()
+    FEATURES = {"type": {True: sv(2012)}}
+
+    def check(self) -> list[str]:
+        return ["a Coverpoint with a type has a label"] if self.type is not None and self.label is None else []
+
+
+class CoverageBins(Item):
+    """`wildcard keyword name[size] = initializer iff (condition);`: a bin of a coverpoint, `bins`, `illegal_bins` or
+    `ignore_bins` (19.5). With `array`, one bin per value, or `size` bins; `wildcard` lets `x`, `z` and `?` match any
+    bit."""
+
+    wildcard: bool
+    keyword: BinsKeyword
+    name: Identifier
+    array: bool
+    size: Expression | None
+    initializer: BinsValues | BinsTransitions | BinsDefault | BinsExpression
+    condition: Expression | None
+    SINCE = sv()
+
+    def check(self) -> list[str]:
+        return ["a CoverageBins with a size is an array"] if self.size is not None and self.array is not True else []
+
+
+class BinsValues(SyntaxNode):
+    """`{ values } with (filter)`: the values a bin counts, which `filter` may thin out (19.5.1)."""
+
+    values: list[Expression | Range]
+    filter: Expression | None
+    SINCE = sv()
+    FEATURES = {"filter": {True: sv(2012)}}
+
+
+class BinsTransitions(SyntaxNode):
+    """`(sequence), (sequence)`: the sequences of values a bin counts (19.5.2)."""
+
+    sequences: list[TransitionSequence]
+    SINCE = sv()
+
+
+class TransitionSequence(SyntaxNode):
+    """`steps => steps => ...`: a sequence of values in a transition bin (19.5.2)."""
+
+    steps: list[TransitionStep]
+    SINCE = sv()
+
+
+class TransitionStep(SyntaxNode):
+    """`values[*count]`: one of the values, repeated `count` times consecutively (`*`), or not (`->`, `=`) (19.5.2)."""
+
+    values: list[Expression | Range]
+    operator: RepetitionOperator | None
+    count: Expression | CycleRange | None
+    SINCE = sv()
+
+    def check(self) -> list[str]:
+        return ["a TransitionStep has both an operator and a count, or neither"] \
+            if (self.operator is None) != (self.count is None) else []
+
+
+class BinsDefault(SyntaxNode):
+    """`default`: the values no other bin counts; with `sequence`, the transitions (19.5.1)."""
+
+    sequence: bool
+    SINCE = sv()
+
+
+class BinsExpression(SyntaxNode):
+    """`expression with (filter)`: the values an expression gives, or a coverpoint's (`cp with (item > 1)`) (19.5.1)."""
+
+    expression: Expression
+    filter: Expression | None
+    SINCE = sv(2012)
+
+
+class CoverCross(Item):
+    """`label: cross items iff (condition) { body }`: the combinations of coverpoints' bins a covergroup counts
+    (19.6). Without a body, it ends with `;`."""
+
+    label: Identifier | None
+    items: list[Expression]
+    condition: Expression | None
+    body: list[BinsSelection | CoverageOption | FunctionDeclaration | Directive | Comment]
+    SINCE = sv()
+
+
+class BinsSelection(Item):
+    """`keyword name = select iff (condition);`: a bin of a cross (19.6.1)."""
+
+    keyword: BinsKeyword
+    name: Identifier
+    select: BinsSelect | Expression
+    condition: Expression | None
+    SINCE = sv()
+
+
+class BinsOf(BinsSelect):
+    """`binsof(target) intersect { values }`: the bins of a coverpoint, or one bin of it (`cp.low`), whose values
+    intersect `values` (19.6.1)."""
+
+    target: Expression
+    intersect: list[Expression | Range]
+    SINCE = sv()
+
+
+class BinaryBinsSelect(BinsSelect):
+    """`left && right` or `left || right` (19.6.1); slang groups both alike, to the left."""
+
+    left: BinsSelect | Expression
+    operator: BinsSelectOperator
+    right: BinsSelect | Expression
+    SINCE = sv()
+
+
+class NotBinsSelect(BinsSelect):
+    """`!operand` (19.6.1)."""
+
+    operand: BinsSelect | Expression
+    SINCE = sv()
+
+
+class ParenthesizedBinsSelect(BinsSelect):
+    """`(select)` (19.6.1)."""
+
+    select: BinsSelect | Expression
+    SINCE = sv()
+
+
+class FilteredBinsSelect(BinsSelect):
+    """`select with (filter)`: the combinations for which `filter` holds (19.6.1.2)."""
+
+    select: BinsSelect | Expression
+    filter: Expression
+    SINCE = sv(2012)
+
+
 # === Timing controls (9.4) ===
 
 
@@ -1877,6 +2066,9 @@ KINDS: list[type[SyntaxNode]] = [
     UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem,
     ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal,
     ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay,
+    CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins, BinsValues, BinsTransitions,
+    TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross, BinsSelection, BinsOf,
+    BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
     IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
     ElsifDirective, DisabledText, OtherDirective,
 ]
@@ -1885,4 +2077,5 @@ LANGUAGE = Language("Verilog", KINDS, base={VERILOG: 1995, SV: 2005})
 
 __all__ += [k.__name__ for k in KINDS] + [
     "Name", "Expression", "Literal", "DataType", "Dimension", "Item", "Port", "Statement", "TimingControl",
-    "Connection", "Range", "Directive", "Constraint", "Property", "Sequence", "sv", "verilog", "VERILOG", "SV"]
+    "Connection", "Range", "Directive", "Constraint", "Property", "Sequence", "BinsSelect", "sv", "verilog", "VERILOG",
+    "SV"]

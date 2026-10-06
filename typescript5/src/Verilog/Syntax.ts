@@ -5,10 +5,10 @@
  * The kinds cover SystemVerilog (IEEE 1800-2023)'s design subset and its classes: design units, ports and parameters,
  * data types, declarations, continuous assignments, procedural blocks and statements, generate constructs,
  * instantiation, functions and tasks, classes with their properties, methods and objects, constraints and
- * randomization, immediate and concurrent assertions with their properties and sequences, clocking blocks and compiler
- * directives. Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and feature
- * records where it exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`,
- * `SystemVerilog2023` and `VerilogStandard(year, family)` check. Covergroups are not kinds yet.
+ * randomization, immediate and concurrent assertions with their properties and sequences, clocking blocks, covergroups
+ * and compiler directives. Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and
+ * feature records where it exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`,
+ * `SystemVerilog2023` and `VerilogStandard(year, family)` check.
  *
  * The tree is abstract where the grammar only spells and concrete where a transpiler needs to see what was written:
  *
@@ -141,6 +141,10 @@ export const CLOCKING_DIRECTIONS = ["input", "output", "inout", "input output"] 
 export type ClockingDirection = (typeof CLOCKING_DIRECTIONS)[number];
 export const CLOCKING_SCOPES = ["default", "global"] as const;
 export type ClockingScope = (typeof CLOCKING_SCOPES)[number];
+export const BINS_KEYWORDS = ["bins", "illegal_bins", "ignore_bins"] as const;
+export type BinsKeyword = (typeof BINS_KEYWORDS)[number];
+export const BINS_SELECT_OPERATORS = ["&&", "||"] as const;
+export type BinsSelectOperator = (typeof BINS_SELECT_OPERATORS)[number];
 export const PROTOTYPE_QUALIFIERS = ["extern", "pure"] as const;
 export type PrototypeQualifier = (typeof PROTOTYPE_QUALIFIERS)[number];
 export const FORWARD_KEYWORDS = ["enum", "struct", "union", "class", "interface class"] as const;
@@ -211,6 +215,12 @@ export abstract class Property extends SyntaxNode {}
  * position that holds a sequence holds a `Sequence` or an `Expression`.
  */
 export abstract class Sequence extends Property {}
+
+/**
+ * A select expression: which combinations of a cross's bins a bin of the cross holds (19.6.1). A cross's name, or
+ * an expression, is one too: a position that holds a select holds a `BinsSelect` or an `Expression`.
+ */
+export abstract class BinsSelect extends SyntaxNode {}
 
 // === Lexical conventions (5) ===
 
@@ -2004,6 +2014,250 @@ export class DefaultDisable extends Item {
   static override SINCE: Availability | null = sv(2009);
 }
 
+// === Coverage (19) ===
+
+const CovergroupDeclarationSpec = {
+  name: one(() => [Identifier]),
+  ports: many(() => [TfPort]),
+  clock: optional(() => [EventControl]),
+  sample: optional(() => [SampleFunction]),
+  items: many(() => [CoverageOption, Coverpoint, CoverCross, Directive, Comment]),
+  labeled: flag(),
+};
+export interface CovergroupDeclaration extends Properties<typeof CovergroupDeclarationSpec> {}
+/**
+ * `covergroup name(ports) @(clock); items endgroup`, or sampled `with function sample(ports)` (19.3, 19.8.1).
+ * Its items are options, coverpoints and crosses. `labeled` repeats the name after `endgroup`.
+ */
+export class CovergroupDeclaration extends Item {
+  static override SPEC = CovergroupDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+  override check(): string[] {
+    return this.clock !== null && this.sample !== null ? ["a CovergroupDeclaration has a clock or a sample, not both"] : [];
+  }
+}
+
+const SampleFunctionSpec = {
+  ports: many(() => [TfPort]),
+};
+export interface SampleFunction extends Properties<typeof SampleFunctionSpec> {}
+/** `with function sample(ports)`: a covergroup sampled by calling `sample` with these arguments (19.8.1). */
+export class SampleFunction extends SyntaxNode {
+  static override SPEC = SampleFunctionSpec;
+  static override SINCE: Availability | null = sv(2009);
+}
+
+const CoverageOptionSpec = {
+  target: one(() => [Expression]),
+  value: one(() => [Expression]),
+};
+export interface CoverageOption extends Properties<typeof CoverageOptionSpec> {}
+/** `option.name = value;` or `type_option.name = value;`, in a covergroup, a coverpoint or a cross (19.7). */
+export class CoverageOption extends Item {
+  static override SPEC = CoverageOptionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const CoverpointSpec = {
+  label: optional(() => [Identifier]),
+  type: optional(() => [DataType]),
+  expression: one(() => [Expression]),
+  condition: optional(() => [Expression]),
+  items: many(() => [CoverageBins, CoverageOption, Directive, Comment]),
+};
+export interface Coverpoint extends Properties<typeof CoverpointSpec> {}
+/**
+ * `type label: coverpoint expression iff (condition) { items }`: the values of an expression a covergroup
+ * counts, in its bins (19.5); a labeled coverpoint may give the type its values have. Without items, it ends with
+ * `;`.
+ */
+export class Coverpoint extends Item {
+  static override SPEC = CoverpointSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { type: [[true, sv(2012)]] };
+  override check(): string[] {
+    return this.type !== null && this.label === null ? ["a Coverpoint with a type has a label"] : [];
+  }
+}
+
+const CoverageBinsSpec = {
+  wildcard: flag(),
+  keyword: choice(...BINS_KEYWORDS),
+  name: one(() => [Identifier]),
+  array: flag(),
+  size: optional(() => [Expression]),
+  initializer: one(() => [BinsValues, BinsTransitions, BinsDefault, BinsExpression]),
+  condition: optional(() => [Expression]),
+};
+export interface CoverageBins extends Properties<typeof CoverageBinsSpec> {}
+/**
+ * `wildcard keyword name[size] = initializer iff (condition);`: a bin of a coverpoint, `bins`, `illegal_bins` or
+ * `ignore_bins` (19.5). With `array`, one bin per value, or `size` bins; `wildcard` lets `x`, `z` and `?` match any
+ * bit.
+ */
+export class CoverageBins extends Item {
+  static override SPEC = CoverageBinsSpec;
+  static override SINCE: Availability | null = sv();
+  override check(): string[] {
+    return this.size !== null && this.array !== true ? ["a CoverageBins with a size is an array"] : [];
+  }
+}
+
+const BinsValuesSpec = {
+  values: many(() => [Expression, Range]),
+  filter: optional(() => [Expression]),
+};
+export interface BinsValues extends Properties<typeof BinsValuesSpec> {}
+/** `{ values } with (filter)`: the values a bin counts, which `filter` may thin out (19.5.1). */
+export class BinsValues extends SyntaxNode {
+  static override SPEC = BinsValuesSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { filter: [[true, sv(2012)]] };
+}
+
+const BinsTransitionsSpec = {
+  sequences: many(() => [TransitionSequence]),
+};
+export interface BinsTransitions extends Properties<typeof BinsTransitionsSpec> {}
+/** `(sequence), (sequence)`: the sequences of values a bin counts (19.5.2). */
+export class BinsTransitions extends SyntaxNode {
+  static override SPEC = BinsTransitionsSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const TransitionSequenceSpec = {
+  steps: many(() => [TransitionStep]),
+};
+export interface TransitionSequence extends Properties<typeof TransitionSequenceSpec> {}
+/** `steps => steps => ...`: a sequence of values in a transition bin (19.5.2). */
+export class TransitionSequence extends SyntaxNode {
+  static override SPEC = TransitionSequenceSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const TransitionStepSpec = {
+  values: many(() => [Expression, Range]),
+  operator: optionalChoice(...REPETITION_OPERATORS),
+  count: optional(() => [Expression, CycleRange]),
+};
+export interface TransitionStep extends Properties<typeof TransitionStepSpec> {}
+/** `values[*count]`: one of the values, repeated `count` times consecutively (`*`), or not (`->`, `=`) (19.5.2). */
+export class TransitionStep extends SyntaxNode {
+  static override SPEC = TransitionStepSpec;
+  static override SINCE: Availability | null = sv();
+  override check(): string[] {
+    return (this.operator === null) !== (this.count === null)
+      ? ["a TransitionStep has both an operator and a count, or neither"] : [];
+  }
+}
+
+const BinsDefaultSpec = {
+  sequence: flag(),
+};
+export interface BinsDefault extends Properties<typeof BinsDefaultSpec> {}
+/** `default`: the values no other bin counts; with `sequence`, the transitions (19.5.1). */
+export class BinsDefault extends SyntaxNode {
+  static override SPEC = BinsDefaultSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const BinsExpressionSpec = {
+  expression: one(() => [Expression]),
+  filter: optional(() => [Expression]),
+};
+export interface BinsExpression extends Properties<typeof BinsExpressionSpec> {}
+/** `expression with (filter)`: the values an expression gives, or a coverpoint's (`cp with (item > 1)`) (19.5.1). */
+export class BinsExpression extends SyntaxNode {
+  static override SPEC = BinsExpressionSpec;
+  static override SINCE: Availability | null = sv(2012);
+}
+
+const CoverCrossSpec = {
+  label: optional(() => [Identifier]),
+  items: many(() => [Expression]),
+  condition: optional(() => [Expression]),
+  body: many(() => [BinsSelection, CoverageOption, FunctionDeclaration, Directive, Comment]),
+};
+export interface CoverCross extends Properties<typeof CoverCrossSpec> {}
+/**
+ * `label: cross items iff (condition) { body }`: the combinations of coverpoints' bins a covergroup counts
+ * (19.6). Without a body, it ends with `;`.
+ */
+export class CoverCross extends Item {
+  static override SPEC = CoverCrossSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const BinsSelectionSpec = {
+  keyword: choice(...BINS_KEYWORDS),
+  name: one(() => [Identifier]),
+  select: one(() => [BinsSelect, Expression]),
+  condition: optional(() => [Expression]),
+};
+export interface BinsSelection extends Properties<typeof BinsSelectionSpec> {}
+/** `keyword name = select iff (condition);`: a bin of a cross (19.6.1). */
+export class BinsSelection extends Item {
+  static override SPEC = BinsSelectionSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const BinsOfSpec = {
+  target: one(() => [Expression]),
+  intersect: many(() => [Expression, Range]),
+};
+export interface BinsOf extends Properties<typeof BinsOfSpec> {}
+/**
+ * `binsof(target) intersect { values }`: the bins of a coverpoint, or one bin of it (`cp.low`), whose values
+ * intersect `values` (19.6.1).
+ */
+export class BinsOf extends BinsSelect {
+  static override SPEC = BinsOfSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const BinaryBinsSelectSpec = {
+  left: one(() => [BinsSelect, Expression]),
+  operator: choice(...BINS_SELECT_OPERATORS),
+  right: one(() => [BinsSelect, Expression]),
+};
+export interface BinaryBinsSelect extends Properties<typeof BinaryBinsSelectSpec> {}
+/** `left && right` or `left || right` (19.6.1); slang groups both alike, to the left. */
+export class BinaryBinsSelect extends BinsSelect {
+  static override SPEC = BinaryBinsSelectSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const NotBinsSelectSpec = {
+  operand: one(() => [BinsSelect, Expression]),
+};
+export interface NotBinsSelect extends Properties<typeof NotBinsSelectSpec> {}
+/** `!operand` (19.6.1). */
+export class NotBinsSelect extends BinsSelect {
+  static override SPEC = NotBinsSelectSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ParenthesizedBinsSelectSpec = {
+  select: one(() => [BinsSelect, Expression]),
+};
+export interface ParenthesizedBinsSelect extends Properties<typeof ParenthesizedBinsSelectSpec> {}
+/** `(select)` (19.6.1). */
+export class ParenthesizedBinsSelect extends BinsSelect {
+  static override SPEC = ParenthesizedBinsSelectSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const FilteredBinsSelectSpec = {
+  select: one(() => [BinsSelect, Expression]),
+  filter: one(() => [Expression]),
+};
+export interface FilteredBinsSelect extends Properties<typeof FilteredBinsSelectSpec> {}
+/** `select with (filter)`: the combinations for which `filter` holds (19.6.1.2). */
+export class FilteredBinsSelect extends BinsSelect {
+  static override SPEC = FilteredBinsSelectSpec;
+  static override SINCE: Availability | null = sv(2012);
+}
+
 // === Timing controls (9.4) ===
 
 const DelayControlSpec = {
@@ -2587,8 +2841,11 @@ export const KINDS = [
   ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
   StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
   ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
-  DefaultDisable, CycleDelay, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective,
-  DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
+  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
+  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
+  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
+  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
+  ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

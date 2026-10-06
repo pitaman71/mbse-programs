@@ -63,8 +63,11 @@ function prototype(node: any): boolean {
 
 function multiline(node: unknown): boolean {
   if (isAny(node, [S.FunctionDeclaration, S.TaskDeclaration])) return !prototype(node);
+  if (node instanceof S.Coverpoint) return node.items.length > 0;
+  if (node instanceof S.CoverCross) return node.body.length > 0;
   return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
     S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration, S.SequenceDeclaration, S.ClockingDeclaration,
+    S.CovergroupDeclaration,
     S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
     S.GenerateIf, S.GenerateCase, S.GenerateBlock, S.IfdefDirective]);
 }
@@ -885,6 +888,99 @@ export class Printer {
     return `(${this.text(node.property)})`; // a ParenthesizedProperty
   }
 
+  // Coverage
+
+  covergroup(node: any, level: number): string[] {
+    const p = pad(level);
+    const ports = node.ports.length > 0 ? `(${node.ports.map((q: any) => this.tfPort(q)).join(", ")})` : "";
+    let event = "";
+    if (node.clock !== null) event = ` ${this.timingText(node.clock)}`;
+    else if (node.sample !== null) event = ` with function sample(${node.sample.ports.map((q: any) => this.tfPort(q)).join(", ")})`;
+    const lines = [`${p}covergroup ${node.name.spelling}${ports}${event};`];
+    const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+    return [...lines, ...body, `${p}endgroup` + (node.labeled ? ` : ${node.name.spelling}` : "")];
+  }
+
+  coverageOption(node: any, level: number): string[] {
+    return [`${pad(level)}${this.text(node.target)} = ${this.text(node.value)};`];
+  }
+
+  condition(node: any): string {
+    return node !== null ? ` iff (${this.text(node)})` : "";
+  }
+
+  /** `head { items }`, or `head;` without items. */
+  braced(head: string, items: readonly any[], level: number): string[] {
+    if (items.length === 0) return [head + ";"];
+    const lines = [head + " {"];
+    const body = this.items(items, level + 1, lines); // after `lines` takes a trailing comment
+    return [...lines, ...body, pad(level) + "}"];
+  }
+
+  coverpoint(node: any, level: number): string[] {
+    const label = node.label !== null ? `${node.type !== null ? `${this.typeText(node.type)} ` : ""}${node.label.spelling}: ` : "";
+    return this.braced(`${pad(level)}${label}coverpoint ${this.text(node.expression)}${this.condition(node.condition)}`,
+      node.items, level);
+  }
+
+  coverageBins(node: any, level: number): string[] {
+    const size = node.array ? `[${node.size !== null ? this.text(node.size) : ""}]` : "";
+    return [`${pad(level)}${node.wildcard ? "wildcard " : ""}${node.keyword} ${node.name.spelling}${size} = `
+      + `${this.binsInitializer(node.initializer)}${this.condition(node.condition)};`];
+  }
+
+  filtered(node: any): string {
+    return node !== null ? ` with (${this.text(node)})` : "";
+  }
+
+  binsInitializer(node: any): string {
+    if (node instanceof S.BinsValues) return `{${node.values.map((v) => this.rangeText(v)).join(", ")}}${this.filtered(node.filter)}`;
+    if (node instanceof S.BinsDefault) return node.sequence ? "default sequence" : "default";
+    if (node instanceof S.BinsExpression) return this.text(node.expression) + this.filtered(node.filter);
+    return node.sequences.map((t: any) => "(" + t.steps.map((s: any) => this.transitionStep(s)).join(" => ") + ")") // BinsTransitions
+      .join(", ");
+  }
+
+  transitionStep(node: any): string {
+    const values = node.values.map((v: any) => this.rangeText(v)).join(", ");
+    return values + (node.operator !== null ? `[${node.operator}${this.cycles(node.count)}]` : "");
+  }
+
+  coverCross(node: any, level: number): string[] {
+    const label = node.label !== null ? `${node.label.spelling}: ` : "";
+    const items = node.items.map((i: any) => this.text(i)).join(", ");
+    return this.braced(`${pad(level)}${label}cross ${items}${this.condition(node.condition)}`, node.body, level);
+  }
+
+  binsSelection(node: any, level: number): string[] {
+    return [`${pad(level)}${node.keyword} ${node.name.spelling} = ${this.select(node.select, 0)}${this.condition(node.condition)};`];
+  }
+
+  /** A select expression, in parentheses where its place binds tighter: `&&` and `||` (1, to the left), `with` (2), `!`
+   * (3). */
+  select(node: any, level: number): string {
+    let own = 4;
+    let text: string;
+    if (node instanceof S.BinaryBinsSelect) {
+      own = 1;
+      text = `${this.select(node.left, 1)} ${node.operator} ${this.select(node.right, 2)}`;
+    } else if (node instanceof S.FilteredBinsSelect) {
+      own = 2;
+      text = `${this.select(node.select, 2)} with (${this.text(node.filter)})`;
+    } else if (node instanceof S.NotBinsSelect) {
+      own = 3;
+      text = `!${this.select(node.operand, 3)}`;
+    } else if (node instanceof S.BinsOf) {
+      const intersect = node.intersect.length > 0 ? ` intersect {${node.intersect.map((r: any) => this.rangeText(r)).join(", ")}}` : "";
+      text = `binsof(${this.text(node.target)})${intersect}`;
+    } else if (node instanceof S.ParenthesizedBinsSelect) {
+      text = `(${this.select(node.select, 0)})`;
+    } else { // an expression
+      text = this.text(node);
+    }
+    return own < level ? `(${text})` : text;
+  }
+
   // Clocking blocks
 
   clockingDeclaration(node: any, level: number): string[] {
@@ -1079,6 +1175,12 @@ const items: [Function[], Method][] = [
   [[S.ClockingSignals], (s, n, l) => s.clockingSignals(n, l)],
   [[S.DefaultClocking], (s, n, l) => s.defaultClocking(n, l)],
   [[S.DefaultDisable], (s, n, l) => s.defaultDisable(n, l)],
+  [[S.CovergroupDeclaration], (s, n, l) => s.covergroup(n, l)],
+  [[S.CoverageOption], (s, n, l) => s.coverageOption(n, l)],
+  [[S.Coverpoint], (s, n, l) => s.coverpoint(n, l)],
+  [[S.CoverageBins], (s, n, l) => s.coverageBins(n, l)],
+  [[S.CoverCross], (s, n, l) => s.coverCross(n, l)],
+  [[S.BinsSelection], (s, n, l) => s.binsSelection(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [
