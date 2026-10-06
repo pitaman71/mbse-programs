@@ -1,7 +1,8 @@
 """Writes this implementation's conformance files: `python -m mbse.Programs.Conformance.write [directory]`.
 
 For each source in `conformance/sources`, it writes the tree the source parses to, as a JSON snapshot
-(`<source>.json`), and the text that tree prints to (`<source>.cpp`, `<source>.py`, `<source>.ts`, `<source>.tsx`);
+(`<source>.json`), and the text that tree prints to (`<source>.cpp`, `<source>.py`, `<source>.ts`, `<source>.tsx`, `<source>.sv`); `.svh` files are
+included by sources, not read on their own;
 and it writes each language's grammar (`<language>.grammar.json`). Every implementation must write the same bytes.
 The default directory is `conformance/python3` at the repository root.
 
@@ -22,6 +23,8 @@ from mbse.Programs.Python import Syntax as PythonSyntax
 from mbse.Programs.Transpilers import TypeScriptToPython
 from mbse.Programs.TypeScript import Syntax as TypeScriptSyntax
 from mbse.Programs.TypeScript import TypeScript59
+from mbse.Programs.Verilog import SystemVerilog2023
+from mbse.Programs.Verilog import Syntax as VerilogSyntax
 from mbse.Schemas.Framework import JSON
 
 ROOT = Path(__file__).resolve().parents[4] / "conformance"
@@ -29,8 +32,10 @@ DEFAULT = ROOT / "python3"
 # By a source's suffix: the standard that parses and prints it, and the kind of its tree.
 STANDARDS = {".cpp": (Ccpp20, CcppSyntax.TranslationUnit), ".py": (Python314, PythonSyntax.Module),
              ".ts": (TypeScript59.STANDARD, TypeScriptSyntax.Program),
-             ".tsx": (TypeScript59.JSX, TypeScriptSyntax.Program)}
-LANGUAGES = [CcppSyntax.LANGUAGE, PythonSyntax.LANGUAGE, TypeScriptSyntax.LANGUAGE]
+             ".tsx": (TypeScript59.JSX, TypeScriptSyntax.Program),
+             ".sv": (SystemVerilog2023.STANDARD, VerilogSyntax.SourceText)}
+LANGUAGES = [CcppSyntax.LANGUAGE, PythonSyntax.LANGUAGE, TypeScriptSyntax.LANGUAGE, VerilogSyntax.LANGUAGE]
+INCLUDED = {".svh"}  # files sources include, read with them
 
 
 def render(sources: Path = ROOT / "sources") -> dict[str, str]:
@@ -38,8 +43,11 @@ def render(sources: Path = ROOT / "sources") -> dict[str, str]:
     files = {f"{language.name()}.grammar.json": json.dumps(language.grammar(), indent=1, ensure_ascii=False) + "\n"
              for language in LANGUAGES}
     for source in sorted(sources.iterdir()):
+        if source.suffix in INCLUDED:
+            continue
         standard, root = STANDARDS[source.suffix]
-        unit = standard.parse(source.read_text(encoding="utf-8"))
+        text = source.read_text(encoding="utf-8")
+        unit = standard.parse(text, include_paths=[str(sources)]) if source.suffix == ".sv" else standard.parse(text)
         files[f"{source.stem}.json"] = JSON.ToJSON(root.LANGUAGE.Builders).Reachable(root.Schema, unit, indent=2) + "\n"
         files[f"{source.stem}{source.suffix}"] = standard.print(unit)
     return files

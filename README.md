@@ -18,8 +18,10 @@ The languages are Ccpp, C and C++ as one tree language, with C++17 and C++20 par
 module through Python 3.15, with Python 3.12 and 3.14 parsed by
 [tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python); and TypeScript, TypeScript and JavaScript as
 one tree language whose kinds follow typescript-estree, with TypeScript 5.0 and 5.9 and ES2020 and ES2025, each with
-JSX or without, parsed by [tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript). A first
-transpiler translates a subset of TypeScript into Python, tree to tree.
+JSX or without, parsed by [tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript); and Verilog,
+Verilog and SystemVerilog as one tree language, with Verilog-2005 and SystemVerilog 2017 and 2023 read by
+[slang](https://github.com/MikePopoloski/slang), a complete SystemVerilog front end. A first transpiler translates a
+subset of TypeScript into Python, tree to tree.
 
 ```python
 from mbse.Programs.Ccpp import Ccpp17, Ccpp20, Syntax as S
@@ -168,7 +170,7 @@ conformance/              the corpus's sources, the files each implementation wr
 ## Status
 
 Built in both languages: the framework (trees, meta-schemas and builders, validation, standards, traversal and
-in-place rewriting, and definitions with lookup), and three languages:
+in-place rewriting, and definitions with lookup), and four languages:
 
 - Ccpp: 171 kinds covering C++26 and C23, the standards C++17 and C++20 (and any year of C++ or C), parsing through
   tree-sitter-cpp 0.23.4, printing, and the definitions of a translation unit.
@@ -179,6 +181,14 @@ in-place rewriting, and definitions with lookup), and three languages:
   TypeScript 5.0 and 5.9 and ES2020 and ES2025 (and any other version or edition), each with JSX or without, parsing
   through tree-sitter-typescript 0.23.2 with corrections of its grammar, printing, and the definitions of a program,
   which keep values, types and namespaces apart. Checked against typescript-estree on 1,857 files.
+- Verilog: 117 kinds covering the design subset of SystemVerilog 2023 (design units, ports, parameters, data types,
+  declarations, procedural blocks, statements, generate constructs, instantiation, functions and tasks, immediate
+  assertions and compiler directives), with Verilog as a family of its own; the standards Verilog-2005 and
+  SystemVerilog 2017 and 2023 (and any other year of either), reading through slang 12.0.0 (`pyslang`), which
+  TypeScript runs through the Python implementation, printing, and the definitions of a source file with packages,
+  imports and hierarchical scopes. Comments, directives and conditional compilation are kept as trees, and what is
+  outside the kinds (verification constructs: classes, constraints, properties and sequences, covergroups) is refused
+  by name.
 
 And one transpiler, TypeScript to Python, over the subset of TypeScript that ordinary code is written in: statements,
 functions, classes, enums, imports and type annotations, with JavaScript's common globals and methods mapped to
@@ -189,8 +199,8 @@ becomes a Python expression or function, and Python source becomes a rule, in Ty
 
 Not built yet: the constructs the parsers cannot read ([Parsing, in the design](docs/PROGRAMS.md#parsing),
 [Parsing Python](docs/PROGRAMS.md#parsing-python), [Parsing TypeScript](docs/PROGRAMS.md#parsing-typescript)) are
-built and printed but not parsed; overloads, dependent names, attributes and properties are not resolved; further
-languages (Verilog) are planned, and transpilers beyond the first.
+built and printed but not parsed; overloads, dependent names, attributes and properties are not resolved; Verilog's
+verification constructs are planned, and transpilers beyond the first.
 
 ---
 

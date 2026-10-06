@@ -1,13 +1,13 @@
 ---
 name: mbse-programs
-description: Read, change, check and generate source code as complete syntax trees instead of strings, for C and C++ (Ccpp), Python and TypeScript/JavaScript, in Python or TypeScript - parse with an established parser (tree-sitter), walk and rewrite trees, resolve what names refer to, check a tree against a language standard (C++17, Python 3.12, ES2025, ...), print it as source, store it as JSON, transpile TypeScript to Python, and turn mbse-expressions rules into Python code and back. Use when writing a code generator, refactoring tool, linter, transpiler or codemod; when generated code must respect precedence, scoping or a target language version; when rules or specifications kept as data must become production source code; or when writing code that imports mbse.Programs or @mbse/programs.
+description: Read, change, check and generate source code as complete syntax trees instead of strings, for C and C++ (Ccpp), Python, TypeScript/JavaScript and Verilog/SystemVerilog, in Python or TypeScript - parse with an established parser (tree-sitter, or slang for Verilog), walk and rewrite trees, resolve what names refer to, check a tree against a language standard (C++17, Python 3.12, ES2025, SystemVerilog 2023, ...), print it as source, store it as JSON, transpile TypeScript to Python, and turn mbse-expressions rules into Python code and back. Use when writing a code generator, refactoring tool, linter, transpiler or codemod; when generated code must respect precedence, scoping or a target language version; when rules or specifications kept as data must become production source code; or when writing code that imports mbse.Programs or @mbse/programs.
 ---
 
 # mbse-programs
 
 A program here is a tree, not text: each language's complete abstract syntax, as plain mutable objects, built, read and
 changed in memory. Text appears only at the edges, where a *standard* (`Python314`, `Ccpp20`, `TypeScript59`, ...)
-parses source into a tree, delegating to tree-sitter, and prints a tree back with the parentheses and layout its
+parses source into a tree, delegating to an established parser (tree-sitter, or slang for Verilog), and prints a tree back with the parentheses and layout its
 grammar needs. Trees are [mbse-schemas](https://github.com/pitaman71/mbse-schemas) data, so they save as JSON,
 byte-identically in Python (`mbse.Programs`) and TypeScript (`@mbse/programs`).
 
@@ -19,8 +19,9 @@ for node in walk(module):                                  # every syntax node, 
 Python314.print(module)                                    # 'def rectangle_area(w, h):\n    return w * h\n'
 ```
 
-The languages are Ccpp (C and C++ as one tree language), Python (whose kinds follow `ast`) and TypeScript (TypeScript
-and JavaScript as one, whose kinds follow typescript-estree). A transpiler maps TypeScript to Python, and a bridge maps
+The languages are Ccpp (C and C++ as one tree language), Python (whose kinds follow `ast`), TypeScript (TypeScript
+and JavaScript as one, whose kinds follow typescript-estree) and Verilog (Verilog and SystemVerilog as one, whose kinds
+follow IEEE 1800's grammar). A transpiler maps TypeScript to Python, and a bridge maps
 mbse-expressions' Python dialect to Python's trees and back, so that rules kept as data become code.
 
 ## When to use it
@@ -51,7 +52,7 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 5. **Standards decide what's allowed.** `check(tree)` lists what a standard lacks, by path; `parse` raises `ParseError`
    (line and column, in code points) and `print` raises `PrintError` for constructs it lacks. Other versions:
    `PythonStandard(major, minor)`, `CcppStandard(year, "C++" or "C")`, `TypeScriptStandard(major, minor, jsx)`,
-   `ECMAScriptStandard(year, jsx)`.
+   `ECMAScriptStandard(year, jsx)`, `VerilogStandard(year, "SystemVerilog" or "Verilog")`.
 6. **Builders take specs.** A child's setter takes a syntax node, a builder, or a function given the property's kind's
    builder (one kind) or the language's `Builders` (a category); a kind whose only property is an attribute takes the
    value directly (`.name("f")` makes the `Identifier`). Lists have `add_<property>`.
@@ -61,7 +62,8 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    don't approximate. What the languages do differently (`%` of negatives, truthiness, number printing) is not
    emulated.
 9. **Parsers have documented gaps** (some C++23/26, Python 3.13+ and TypeScript 5.x constructs): such trees build and
-   print but don't parse. Check [languages.md](references/languages.md) before relying on one.
+   print but don't parse. Verilog's reader refuses what its kinds don't hold (verification constructs), by name. In
+   TypeScript, Verilog parses through the Python implementation, so it needs `python3/`'s environment. Check [languages.md](references/languages.md) before relying on one.
 10. **In TypeScript**, narrow syntax nodes with `instanceof` and `as`, make other versions with `new`, and expect
    strict null checks on optional children (`node.id!`).
 

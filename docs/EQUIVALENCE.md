@@ -6,17 +6,17 @@
 `python3/` and `typescript5/` implement the same package, and follow mbse-schemas' rules for equivalence
 ([mbse-schemas' equivalence](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
-specific to this package: the framework, the Ccpp, Python and TypeScript languages with their standards, and the
-transpilers.
+specific to this package: the framework, the Ccpp, Python, TypeScript and Verilog languages with their standards, and
+the transpilers.
 
 ## How it is checked
 
 | Check | Where |
 |---|---|
 | Every test case exists in both implementations, same ID, same order | `python3/tests/*.ipynb`, `typescript5/tests/*.ipynb` |
-| The kinds are the same: names, categories, properties, choices and availability | each language's grammar (`Ccpp.grammar.json`, `Python.grammar.json`, `TypeScript.grammar.json`), which CONF-02 compares byte for byte |
-| Parsing gives the same tree, and printing the same text | the snapshots and printed text of the corpus (`cpp20.cpp`, `python314.py`, `typescript59.ts`, `typescript59-jsx.tsx`), compared by CONF-02 and read back by CONF-03 |
-| Errors report the same message, line and column | PRS-12, PRT-06, PYPRS-12, PYPRT-06, TSPRS-12 and TSPRT-06, the same in both suites |
+| The kinds are the same: names, categories, properties, choices and availability | each language's grammar (`Ccpp.grammar.json`, `Python.grammar.json`, `TypeScript.grammar.json`, `Verilog.grammar.json`), which CONF-02 compares byte for byte |
+| Parsing gives the same tree, and printing the same text | the snapshots and printed text of the corpus (`cpp20.cpp`, `python314.py`, `typescript59.ts`, `typescript59-jsx.tsx`, `systemverilog2023.sv`), compared by CONF-02 and read back by CONF-03 |
+| Errors report the same message, line and column | PRS-12, PRT-06, PYPRS-12, PYPRT-06, TSPRS-12, TSPRT-06, VLGRD-10, VLGRD-11 and VLGPRT-05, the same in both suites |
 | Python trees mean what CPython reads | PYPRS-01, in the Python suite, reads the printed conformance source back with CPython's `ast` |
 | TypeScript trees are what typescript-estree reads | TSPRS-01, in the TypeScript suite, compares each conformance source's tree, and what typescript-estree reads of its print, with typescript-estree's own |
 | Transpiling gives the same tree, which means what the source means | TRN-01 checks each translation in `conformance/transpilers/` against what both implementations write, and that it prints what the source prints; TRN-02 to TRN-07 are the same tables in both suites |
@@ -57,11 +57,13 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Identifiers of TypeScript | `str.isidentifier()` with `$` read as `_` | a regular expression of Unicode's `XID_Start` and `XID_Continue`, with `$` read as `_` | as Python's identifiers | TS-02 |
 | Python identifiers | `str.isidentifier()` and `keyword.iskeyword()` | a regular expression of Unicode's `XID_Start` and `XID_Continue`, and Python's keywords | each runtime's own Unicode tables, which agree but for characters one runtime's Unicode version has and the other's lacks | PY-02 |
 | Positions | the text is passed to tree-sitter as UTF-16LE, and its byte offsets converted to code points | converted from UTF-16 units to code points | each runtime's own string offsets; tree-sitter reads UTF-16 in both, since its error recovery depends on the encoding | PRS-12, TSPRS-12 |
-| Import paths | `mbse.Programs.Framework`, `mbse.Programs.Ccpp` (`.Syntax`, `.Definitions`, `.Ccpp17`, `.Ccpp20`), `mbse.Programs.Python` (`.Syntax`, `.Definitions`, `.Python312`, `.Python314`) `mbse.Programs.TypeScript` (`.Syntax`, `.Definitions`, `.TypeScript50`, `.TypeScript59`, `.ECMAScript2020`, `.ECMAScript2025`) and `mbse.Programs.Transpilers` (`.TypeScriptToPython`), `mbse.Programs.Bridges` (`.Python`), in the shared `mbse` namespace package | `@mbse/programs/Framework`, `@mbse/programs/Ccpp`, `@mbse/programs/Python`, `@mbse/programs/TypeScript`, `@mbse/programs/Transpilers` and `@mbse/programs/Bridges`, with the same modules as paths; `@mbse/schemas` is a `file:` dependency on the sibling checkout | a module specifier is a path, not a dotted name | all |
+| Import paths | `mbse.Programs.Framework`, `mbse.Programs.Ccpp` (`.Syntax`, `.Definitions`, `.Ccpp17`, `.Ccpp20`), `mbse.Programs.Python` (`.Syntax`, `.Definitions`, `.Python312`, `.Python314`) `mbse.Programs.TypeScript` (`.Syntax`, `.Definitions`, `.TypeScript50`, `.TypeScript59`, `.ECMAScript2020`, `.ECMAScript2025`), `mbse.Programs.Verilog` (`.Syntax`, `.Definitions`, `.Verilog2005`, `.SystemVerilog2017`, `.SystemVerilog2023`) and `mbse.Programs.Transpilers` (`.TypeScriptToPython`), `mbse.Programs.Bridges` (`.Python`), in the shared `mbse` namespace package | `@mbse/programs/Framework`, `@mbse/programs/Ccpp`, `@mbse/programs/Python`, `@mbse/programs/TypeScript`, `@mbse/programs/Verilog`, `@mbse/programs/Transpilers` and `@mbse/programs/Bridges`, with the same modules as paths; `@mbse/schemas` is a `file:` dependency on the sibling checkout | a module specifier is a path, not a dotted name | all |
 | TypeScript's meanings | `MEANINGS` maps an entity's kind to a `frozenset` of meanings | `MEANINGS` maps it to a `ReadonlySet` | each language's idiom | TSDEF-04 |
 | Running transpiled programs | TRN-01 runs each translation with `exec` and compares what it prints with `.out` | TRN-01 runs each TypeScript program in Node (compiled by `typescript`'s `transpileModule`, run by `vm`) and compares what it logs with `.out` | each implementation runs the language it is written in; together they check that the source and its translation print the same | TRN-01 |
 | Fluent builders' types | setters are generated, and `LANGUAGE.Builders` is untyped | setters are generated, and typed from the language's module: `LANGUAGE` is a `Language<typeof Syntax>`, whose `Builders` give each kind a `Fluent` builder whose setters take only the kinds their properties hold | TypeScript checks a tree's shape when it compiles; Python has no such check | SYN-04 |
 | Clearing a property with a fluent setter | `None` | `null` | each language's empty value | SYN-04 |
+| Reading Verilog | slang (`pyslang`) reads the text; `python -m mbse.Programs.Verilog.read` reads for the other implementation: a request of text, standard and options on standard input, the tree's snapshot or the error's message, line and column on standard output | `parse` runs that reader in Python, synchronously, and loads the snapshot, or throws the `ParseError` it reports; the interpreter is `MBSE_PROGRAMS_PYTHON`, or the virtual environment of the repository's `python3`, and an `Error` says so when it cannot run | slang runs only in Python; reading through it gives both implementations the same trees and errors. Printing, checking and definitions need no Python | VLGRD-01 to VLGRD-13 |
+| Verilog's reading options | `parse(text, include_paths=..., defines=...)` | `parse(text, includePaths, defines)` | no keyword arguments | VLGRD-08, VLGRD-09 |
 | Checking the Python bridge against Python | BRG-03 checks each source's term against the dialect's `parse`, BRG-04 each literal against `ast.literal_eval`, and BRG-05 runs the function the bridge writes | none | the dialect's `parse` and Python's literals and execution exist only in Python | BRG-03, BRG-04, BRG-05 |
 
 ## Tutorials

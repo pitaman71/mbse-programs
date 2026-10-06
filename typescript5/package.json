@@ -1,7 +1,7 @@
 {
   "name": "@mbse/programs",
-  "version": "0.2.7",
-  "description": "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++, Python, TypeScript and JavaScript, with their definitions, built for transpilers that never parse or print strings (TypeScript implementation)",
+  "version": "0.2.8",
+  "description": "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++, Python, TypeScript, JavaScript, Verilog and SystemVerilog, with their definitions, built for transpilers that never parse or print strings (TypeScript implementation)",
   "keywords": [
     "ast",
     "abstract syntax tree",
@@ -9,10 +9,13 @@
     "python",
     "typescript",
     "javascript",
+    "verilog",
+    "systemverilog",
     "c",
     "transpiler",
     "mbse",
     "tree-sitter",
+    "slang",
     "code generation"
   ],
   "type": "module",
@@ -27,6 +30,8 @@
     "./Python/*": "./src/Python/*.ts",
     "./TypeScript": "./src/TypeScript/index.ts",
     "./TypeScript/*": "./src/TypeScript/*.ts",
+    "./Verilog": "./src/Verilog/index.ts",
+    "./Verilog/*": "./src/Verilog/*.ts",
     "./Bridges": "./src/Bridges/index.ts",
     "./Bridges/*": "./src/Bridges/*.ts",
     "./Transpilers": "./src/Transpilers/index.ts",

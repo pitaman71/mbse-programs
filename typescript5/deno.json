@@ -18,6 +18,7 @@
     "@mbse/programs/Ccpp": "./src/Ccpp/index.ts",
     "@mbse/programs/Python": "./src/Python/index.ts",
     "@mbse/programs/TypeScript": "./src/TypeScript/index.ts",
+    "@mbse/programs/Verilog": "./src/Verilog/index.ts",
     "@mbse/programs/Bridges": "./src/Bridges/index.ts",
     "@mbse/programs/Transpilers": "./src/Transpilers/index.ts",
     "@mbse/expressions/Dialects/Excel": "../../mbse-expressions/typescript5/src/Dialects/Excel/index.ts"

@@ -6,7 +6,8 @@ rewrites without parsing or printing strings, each language covering the union o
 parse and print source text by delegating to an established parser. The languages are Ccpp (C and C++, with C++17 and
 C++20, parsed by tree-sitter-cpp), Python (kinds following `ast`, with Python 3.12 and 3.14, parsed by
 tree-sitter-python) and TypeScript (TypeScript and JavaScript, kinds following typescript-estree, with TypeScript 5.0
-and 5.9 and ES2020 and ES2025, with JSX or without, parsed by tree-sitter-typescript). A first transpiler translates a
+and 5.9 and ES2020 and ES2025, with JSX or without, parsed by tree-sitter-typescript) and Verilog (Verilog and
+SystemVerilog, with Verilog-2005 and SystemVerilog 2017 and 2023, read by slang). A first transpiler translates a
 subset of TypeScript into Python, and a bridge carries expressions between mbse-expressions' Python dialect and Python's
 trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
 
@@ -69,6 +70,10 @@ trees. Two equivalent implementations exist: `python3/` and `typescript5/`.
   checked against CPython's `ast` (PYPRS-01 does it for the conformance source); a TypeScript construct that
   tree-sitter-typescript reads unlike TypeScript is corrected likewise, and checked against typescript-estree, which
   the TypeScript suite runs (TSPRS-01). typescript-estree, an npm package, is the oracle for a TypeScript tree.
+- **Verilog reads through slang, in Python only.** pyslang 12.0.0 is pinned in `python3/pyproject.toml`; TypeScript's
+  `parse` runs the Python implementation's reader (`python -m mbse.Programs.Verilog.read`) and loads its snapshot, so
+  its tests need `uv sync` in `python3/` first. The reader converts slang's tree and refuses, by name and position, what
+  the kinds do not hold; it never rewrites source text.
 - **Behavior is decided in `docs/PROGRAMS.md`.** Record new decisions under Resolved, and put what stays undecided
   under Open questions.
 

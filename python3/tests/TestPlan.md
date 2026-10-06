@@ -3,8 +3,8 @@
 
 # Test plan — python3
 
-Scope: everything under `python3/mbse/Programs` (the framework, and the Ccpp, Python and TypeScript languages with their standards,
-parsers, printers and definitions, the transpilers and the bridges) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
+Scope: everything under `python3/mbse/Programs` (the framework, and the Ccpp, Python, TypeScript and Verilog languages with their
+standards, parsers, printers and definitions, the transpilers and the bridges) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
 TypeScript one mirror each other case for case, with the deliberate differences of `../../docs/EQUIVALENCE.md`.
 mbse-schemas is tested in mbse-schemas.
 
@@ -37,8 +37,12 @@ uv run python -m mbse.Programs.Conformance.write   # regenerate ../conformance/p
 | `15_PythonBridge.ipynb` | BRG | 7 | The bridge between mbse-expressions' Python dialect and Python's trees: every term writes what the dialect renders and reads back; constants as literals and negations; source read as the dialect's own `parse` reads it (checked against it); literals decoded as Python decodes them (checked against `ast.literal_eval`); a rule written as a function, run by Python and evaluated by the dialect alike; what the dialect cannot hold, at its path; the seam with mbse-expressions and mbse-schemas: rules round-trip through the translators, the bridge, the printer and the parser, and agree with Basic wherever it decides |
 | `16_Conformance.ipynb` | CONF | 3 | This implementation's corpus files are current, for every language; every other implementation wrote the same bytes; every snapshot reads back into a valid tree that prints the same text |
 | `17_Skill.ipynb` | SKL | 3 | The agent guides stay true: the packaged copy of the skill matches `skills/mbse-programs/`; the skill's complete Python program runs; every link in `AGENTS.md`, `llms.txt` and the skill resolves, anchors included |
+| `18_Verilog.ipynb` | VLG | 4 | Verilog's kinds, categories and grammar; simple and escaped identifiers and system names; where kinds and features exist in the two families, Verilog (1995, 2001, 2005) and SystemVerilog (2005 to 2023), and features that depend on properties' values; checking a whole tree by path |
+| `19_VerilogRead.ipynb` | VLGRD | 13 | Reading through slang: the conformance source reads to a valid tree with every kind, prints and reads back the same; design units and their headers, ports and parameters; data types and dimensions; declarations and items; generate constructs and instantiation; statements; expressions; directives, comments and conditional compilation as trees with their disabled text; macro uses and included files; slang's errors, the reader's refusals (each named, at its line and column) and what a standard lacks; corner cases; the request and response the other implementation reads through |
+| `20_VerilogPrint.ipynb` | VLGPRT | 7 | Precedence and the parentheses it adds; every expression and part printed alone; layout of statements, generate constructs, design units, declarations and directives, trailing comments and every option of headers, ports and declarations; printing validates and checks the standard |
+| `21_VerilogDefinitions.ipynb` | VLGDEF | 4 | Every entity of the conformance source; explicit and wildcard imports; ports, parameters, types, enumerators, functions and blocks, each in its scope; interfaces, modports, instances and out-of-block names |
 
-Total: 119 cases, with the same IDs in the same order in both implementations.
+Total: 147 cases, with the same IDs in the same order in both implementations.
 
 ---
 

@@ -3,8 +3,8 @@
 
 # Test plan — typescript5
 
-Scope: everything under `typescript5/src` (the framework, and the Ccpp, Python and TypeScript languages with their standards,
-parsers, printers and definitions, the transpilers and the bridges) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
+Scope: everything under `typescript5/src` (the framework, and the Ccpp, Python, TypeScript and Verilog languages with their
+standards, parsers, printers and definitions, the transpilers and the bridges) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
 Python one mirror each other case for case, with the deliberate differences of `../../docs/EQUIVALENCE.md`.
 mbse-schemas is tested in mbse-schemas.
 
@@ -37,8 +37,12 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `15_PythonBridge.ipynb` | BRG | 7 | as in Python, but for the checks against the dialect's `parse`, `ast.literal_eval` and running the function, which need Python |
 | `16_Conformance.ipynb` | CONF | 3 | as in Python, from this side |
 | `17_Skill.ipynb` | SKL | 3 | as in Python; SKL-02 type-checks the skill's TypeScript program strictly, then runs it |
+| `18_Verilog.ipynb` | VLG | 4 | as in Python |
+| `19_VerilogRead.ipynb` | VLGRD | 13 | as in Python, reading through the Python implementation; VLGRD-13 reads through it directly, and fails clearly when its interpreter cannot run |
+| `20_VerilogPrint.ipynb` | VLGPRT | 7 | as in Python |
+| `21_VerilogDefinitions.ipynb` | VLGDEF | 4 | as in Python |
 
-Total: 119 cases, with the same IDs in the same order in both implementations.
+Total: 147 cases, with the same IDs in the same order in both implementations.
 
 ---
 

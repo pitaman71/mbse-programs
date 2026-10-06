@@ -330,6 +330,64 @@ written: `space_of` tells which, and `referents` finds only the entities that ha
 interface named alike stay apart. `import a = b.c` has the entity `b.c` names as its `target`. Properties, imported
 modules' members and libraries' globals are not resolved.
 
+## Verilog and SystemVerilog
+
+Verilog and SystemVerilog are one tree language, Verilog, with two families: Verilog (IEEE 1364: 1995, 2001 and 2005)
+and SystemVerilog (IEEE 1800: 2005 to 2023). The kinds are organized as IEEE 1800's grammar is and cover its design
+subset: design units (modules, interfaces, programs and packages), ports and parameters, data types and dimensions,
+declarations, continuous assignments, procedural blocks and statements, generate constructs, instantiation, functions
+and tasks, immediate assertions, and compiler directives. Kinds and features record where they exist in both families:
+ANSI ports and `**` from Verilog-2001, `logic`, packages, interfaces and `always_ff` from SystemVerilog 2005, `unique0`
+from 2009, `final` assertions from 2012 and triple-quoted strings from 2023. Verilog has none of SystemVerilog's own.
+
+The tree is abstract where the grammar only spells:
+
+- Every binary operator is a `BinaryExpression`; parentheses written in the source stay, as `ParenthesizedExpression`.
+- Names are `Identifier`s, or `ScopedName`s (`p::x`), wherever they occur; a hierarchical name is `MemberExpression`s.
+- Literals keep their spelling: size, base and digits with their underscores (`8'b0000_0100`).
+- Equivalent spellings are normalized: `@*` is `@(*)`, events joined by `,` are joined by `or`, and `@e` is `@(e)`.
+- Comments and compiler directives are kept where items and statements are listed. Conditional compilation is a tree
+  of its branches, an `IfdefDirective`; a branch the reading did not take keeps its text as written, a `DisabledText`.
+- A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
+  as written; a macro used anywhere else is refused.
+
+Verification constructs (classes, constraints, properties and sequences, covergroups, clocking blocks) are not kinds
+yet, and neither are specify blocks, user-defined primitives and gate instances, strengths, nor the patterns of `matches`.
+
+### Reading Verilog
+
+The standards read with [slang](https://github.com/MikePopoloski/slang) 12.0.0, a complete SystemVerilog compiler front
+end, through its Python binding `pyslang`. slang reads every text as IEEE 1800-2023, preprocessing included: it searches
+`include_paths` for `` `include `` files and predefines `defines`; a standard then checks what it lacks, at the place
+of the first syntax node that has it. An included file's items stay in their file: the tree keeps the
+`IncludeDirective`. The reader converts slang's syntax tree to the kinds, and never rewrites the text. What it reads
+and the kinds cannot hold is refused with `ParseError`, which names slang's syntax kind (`unsupported syntax:
+ClassDeclaration`) at its line and column; the first error slang reports is raised as it reports it. Positions count
+characters.
+
+slang runs only in Python. TypeScript's standards read through the Python implementation: `parse` runs `python -m
+mbse.Programs.Verilog.read`, which takes the text, the standard and the options as JSON and answers with the tree's
+snapshot or the error's message, line and column, so both implementations read the same trees and raise the same
+errors. The interpreter is `MBSE_PROGRAMS_PYTHON`, or by default the virtual environment of this repository's
+`python3`. Printing, checking and definitions run in TypeScript alone.
+
+### Printing Verilog
+
+The printer writes four spaces per level, `begin` on the line that opens it and `end else`, one item or statement per
+line, a design unit's parameters and ports one per line (a non-ANSI header's names on one), directives at the start of
+their line, and a blank line around items that span several lines. Parentheses are added by the precedence of
+IEEE 1800's Table 11-2, where `?:`, `->` and `<->` associate to the right.
+
+### Verilog definitions
+
+`Verilog.Definitions.define(unit)` follows IEEE 1800's scopes: the compilation unit (design units and `$unit`'s
+declarations), each package, design unit, function and task, and each block, generate block and `for` loop, named or
+not. An enumeration's members are declared where the enumeration is. A non-ANSI port is one entity, which the header
+names and a port declaration declares. `import p::x` declares an entity whose `target` is `p::x`, and `import p::*`
+makes the package's names visible where nothing nearer declares them. A package's names are qualified with `::`
+(`logger_pkg::FIELDS`), a design unit's and a block's with `.` (`sampler.counter.count`). A member after `.` and what
+an instance's module declares are not resolved.
+
 ## Transpiling
 
 A transpiler reads a tree with `walk` or a `Visitor`, finds where a syntax node is with `Parents` (its parent, property,
@@ -453,10 +511,9 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
 ## Open questions
 
 - **Moving to reference front ends.** Each language moves from tree-sitter to its own reference front end (see
-  Resolved), one at a time: SystemVerilog first, as a new language on slang, then Python, TypeScript and Ccpp. Until a
-  language moves, its tree-sitter parser stays, with the pre-pass and gaps described above. Open: how the TypeScript
-  implementation obtains trees from front ends that run in Python (a subprocess exchanging JSON snapshots, or another
-  channel), and whether printing can move to the front ends' own printers where they print trees, not only text.
+  Resolved), one at a time: SystemVerilog first, built on slang as a new language, then Python, TypeScript and Ccpp.
+  Until a language moves, its tree-sitter parser stays, with the pre-pass and gaps described above. Open: whether
+  printing can move to the front ends' own printers where they print trees, not only text.
 - **Value objects in lists.** Children are linked through the relation `Programs.Children` rather than as nested value
   objects in an indexed list, which mbse-schemas now has (`as_indexed`). Linking keeps parity with mbse-expressions'
   arguments, and gives every syntax node an identity; nesting would make snapshots smaller and their order explicit.
@@ -475,9 +532,10 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **More languages.** Verilog and SystemVerilog are in progress, as one tree language on slang (see above).
-- **More bridges.** Ccpp, TypeScript and, once the language exists here, SystemVerilog have dialects in
-  mbse-expressions; each would have a bridge as Python's does.
+- **Verilog's verification constructs.** Classes, constraints, properties and sequences, covergroups and clocking
+  blocks, which slang reads and the reader refuses, are the next kinds of Verilog.
+- **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
+  Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from
   a checker run on the source, or from definitions that resolve members.
 
@@ -496,6 +554,9 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   reporting them. They go when each language moves to its front end, not separately. Corrections of how a parser
   groups or reads a tree, made on the tree, are kept, and so are converters from a parser's tree to the language's
   kinds.
+- A front end that runs in one implementation's runtime reads for the other through a subprocess: the other
+  implementation runs it with the text and options as JSON, and loads the snapshot it answers with, or raises the
+  error it reports. Verilog's TypeScript standards read through the Python implementation this way.
 - Printers stay hand-written for now. slang's `SyntaxPrinter` writes tokens and trivia only (no parentheses, no
   layout); `ast.unparse` and the TypeScript compiler's printer print fully; nothing prints C++ from a tree.
 - Bridges between mbse-expressions' dialects and the languages live here, in `Bridges`, so that mbse-expressions

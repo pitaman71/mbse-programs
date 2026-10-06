@@ -1,0 +1,4001 @@
+{
+ "language": "Verilog",
+ "base": {
+  "Verilog": 1995,
+  "SystemVerilog": 2005
+ },
+ "categories": [
+  {
+   "name": "Name",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Item",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Port",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "DataType",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Dimension",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Connection",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Statement",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "TimingControl",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Expression",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Literal",
+   "base": "Expression"
+  },
+  {
+   "name": "Range",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Directive",
+   "base": "SyntaxNode"
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "Comment",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "block",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "trailing",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "Identifier",
+   "category": "Name",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ScopedName",
+   "category": "Name",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "scope",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SourceText",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ModuleDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {
+    "lifetime": {
+     "true": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    },
+    "imports": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    },
+    "labeled": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "module",
+      "macromodule"
+     ]
+    },
+    {
+     "name": "lifetime",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "static",
+      "automatic"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "imports",
+     "type": [
+      "ImportDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "ParameterDeclaration",
+      "TypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "ports",
+     "type": [
+      "Port"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "InterfaceDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "imports": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "lifetime",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "static",
+      "automatic"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "imports",
+     "type": [
+      "ImportDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "ParameterDeclaration",
+      "TypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "ports",
+     "type": [
+      "Port"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ProgramDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "imports": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "lifetime",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "static",
+      "automatic"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "imports",
+     "type": [
+      "ImportDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "ParameterDeclaration",
+      "TypeParameterDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "ports",
+     "type": [
+      "Port"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "PackageDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "lifetime",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "static",
+      "automatic"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "AnsiPort",
+   "category": "Port",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "var": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "value": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "direction": {
+     "ref": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "direction",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "input",
+      "output",
+      "inout",
+      "ref"
+     ]
+    },
+    {
+     "name": "net_type",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "wire",
+      "tri",
+      "tri0",
+      "tri1",
+      "triand",
+      "trior",
+      "trireg",
+      "wand",
+      "wor",
+      "supply0",
+      "supply1",
+      "uwire",
+      "interconnect"
+     ]
+    },
+    {
+     "name": "var",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "InterfacePort",
+   "category": "Port",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "interface",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "modport",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "PortReference",
+   "category": "Port",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PortDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {
+    "var": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "direction": {
+     "ref": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "direction",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "input",
+      "output",
+      "inout",
+      "ref"
+     ]
+    },
+    {
+     "name": "net_type",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "wire",
+      "tri",
+      "tri0",
+      "tri1",
+      "triand",
+      "trior",
+      "trireg",
+      "wand",
+      "wor",
+      "supply0",
+      "supply1",
+      "uwire",
+      "interconnect"
+     ]
+    },
+    {
+     "name": "var",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "declarators",
+     "type": [
+      "VariableDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ParameterDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "localparam": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "parameter",
+      "localparam"
+     ]
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "assignments",
+     "type": [
+      "ParamAssignment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ParamAssignment",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TypeParameterDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "parameter",
+      "localparam"
+     ]
+    },
+    {
+     "name": "assignments",
+     "type": [
+      "TypeAssignment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "TypeAssignment",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IntegerVectorType",
+   "category": "DataType",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "bit": {
+      "SystemVerilog": 2005
+     },
+     "logic": {
+      "SystemVerilog": 2005
+     }
+    },
+    "signing": {
+     "signed": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     },
+     "unsigned": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "bit",
+      "logic",
+      "reg"
+     ]
+    },
+    {
+     "name": "signing",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "signed",
+      "unsigned"
+     ]
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "IntegerAtomType",
+   "category": "DataType",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "byte": {
+      "SystemVerilog": 2005
+     },
+     "shortint": {
+      "SystemVerilog": 2005
+     },
+     "int": {
+      "SystemVerilog": 2005
+     },
+     "longint": {
+      "SystemVerilog": 2005
+     }
+    },
+    "signing": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "byte",
+      "shortint",
+      "int",
+      "longint",
+      "integer",
+      "time"
+     ]
+    },
+    {
+     "name": "signing",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "signed",
+      "unsigned"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "NonIntegerType",
+   "category": "DataType",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "shortreal": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "shortreal",
+      "real",
+      "realtime"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "KeywordType",
+   "category": "DataType",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "string": {
+      "SystemVerilog": 2005
+     },
+     "chandle": {
+      "SystemVerilog": 2005
+     },
+     "void": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "string",
+      "chandle",
+      "event",
+      "void"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "NamedType",
+   "category": "DataType",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ImplicitType",
+   "category": "DataType",
+   "since": null,
+   "extension": false,
+   "features": {
+    "signing": {
+     "signed": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     },
+     "unsigned": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "signing",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "signed",
+      "unsigned"
+     ]
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "StructType",
+   "category": "DataType",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "struct",
+      "union"
+     ]
+    },
+    {
+     "name": "packed",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "signing",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "signed",
+      "unsigned"
+     ]
+    },
+    {
+     "name": "members",
+     "type": [
+      "StructMember"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "StructMember",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "declarators",
+     "type": [
+      "VariableDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "EnumType",
+   "category": "DataType",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "base",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "members",
+     "type": [
+      "EnumMember"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "EnumMember",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RangeDimension",
+   "category": "Dimension",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "SizeDimension",
+   "category": "Dimension",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "size",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UnsizedDimension",
+   "category": "Dimension",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "AssociativeDimension",
+   "category": "Dimension",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "QueueDimension",
+   "category": "Dimension",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "bound",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NetDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {
+    "net_type": {
+     "uwire": {
+      "Verilog": 2005,
+      "SystemVerilog": 2005
+     },
+     "interconnect": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "net_type",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "wire",
+      "tri",
+      "tri0",
+      "tri1",
+      "triand",
+      "trior",
+      "trireg",
+      "wand",
+      "wor",
+      "supply0",
+      "supply1",
+      "uwire",
+      "interconnect"
+     ]
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "delay",
+     "type": [
+      "DelayControl"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "declarators",
+     "type": [
+      "VariableDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "VariableDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {
+    "const": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "var": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "lifetime": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "const",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "var",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "lifetime",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "static",
+      "automatic"
+     ]
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "declarators",
+     "type": [
+      "VariableDeclarator"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "VariableDeclarator",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TypedefDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "GenvarDeclaration",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "names",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ImportDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "ImportItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ImportItem",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "package",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ModportDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "ModportItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ModportItem",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "ModportPort"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ModportPort",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "direction",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "input",
+      "output",
+      "inout",
+      "ref"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ContinuousAssign",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "delay",
+     "type": [
+      "DelayControl"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "assignments",
+     "type": [
+      "AssignmentExpression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AlwaysConstruct",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {
+    "keyword": {
+     "always_comb": {
+      "SystemVerilog": 2005
+     },
+     "always_ff": {
+      "SystemVerilog": 2005
+     },
+     "always_latch": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "always",
+      "always_comb",
+      "always_ff",
+      "always_latch"
+     ]
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "InitialConstruct",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "FinalConstruct",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "FunctionDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {
+    "lifetime": {
+     "true": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    },
+    "labeled": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "lifetime",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "static",
+      "automatic"
+     ]
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "TfPort"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Item",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "TaskDeclaration",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {
+    "lifetime": {
+     "true": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    },
+    "labeled": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "lifetime",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "static",
+      "automatic"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "TfPort"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Item",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "TfPort",
+   "category": "SyntaxNode",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "var": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "value": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    },
+    "direction": {
+     "ref": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "direction",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "input",
+      "output",
+      "inout",
+      "ref"
+     ]
+    },
+    {
+     "name": "var",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "GenerateRegion",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "GenerateFor",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "genvar": {
+     "true": {
+      "Verilog": 2005,
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "genvar",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "start",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "step",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Item"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "GenerateIf",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequence",
+     "type": [
+      "Item"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "Item"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "GenerateCase",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "CaseItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "GenerateBlock",
+   "category": "Item",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "labeled": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ModuleInstantiation",
+   "category": "Item",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "module",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "Expression",
+      "DataType",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "instances",
+     "type": [
+      "Instance"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Instance",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "connections",
+     "type": [
+      "Expression",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "NamedConnection",
+   "category": "Connection",
+   "since": null,
+   "extension": false,
+   "features": {
+    "implicit": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression",
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "implicit",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "WildcardConnection",
+   "category": "Connection",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "AssignmentStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "operator": {
+     "+=": {
+      "SystemVerilog": 2005
+     },
+     "-=": {
+      "SystemVerilog": 2005
+     },
+     "*=": {
+      "SystemVerilog": 2005
+     },
+     "/=": {
+      "SystemVerilog": 2005
+     },
+     "%=": {
+      "SystemVerilog": 2005
+     },
+     "&=": {
+      "SystemVerilog": 2005
+     },
+     "|=": {
+      "SystemVerilog": 2005
+     },
+     "^=": {
+      "SystemVerilog": 2005
+     },
+     "<<=": {
+      "SystemVerilog": 2005
+     },
+     ">>=": {
+      "SystemVerilog": 2005
+     },
+     "<<<=": {
+      "SystemVerilog": 2005
+     },
+     ">>>=": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "=",
+      "<=",
+      "+=",
+      "-=",
+      "*=",
+      "/=",
+      "%=",
+      "&=",
+      "|=",
+      "^=",
+      "<<=",
+      ">>=",
+      "<<<=",
+      ">>>="
+     ]
+    },
+    {
+     "name": "timing",
+     "type": [
+      "TimingControl"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ExpressionStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NullStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "SeqBlock",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "labeled": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ParBlock",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "join": {
+     "join_any": {
+      "SystemVerilog": 2005
+     },
+     "join_none": {
+      "SystemVerilog": 2005
+     }
+    },
+    "labeled": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "join",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "join",
+      "join_any",
+      "join_none"
+     ]
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "IfStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "qualifier": {
+     "unique": {
+      "SystemVerilog": 2005
+     },
+     "priority": {
+      "SystemVerilog": 2005
+     },
+     "unique0": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "qualifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "unique",
+      "unique0",
+      "priority"
+     ]
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequence",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CaseStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "qualifier": {
+     "unique": {
+      "SystemVerilog": 2005
+     },
+     "priority": {
+      "SystemVerilog": 2005
+     },
+     "unique0": {
+      "SystemVerilog": 2009
+     }
+    },
+    "inside": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "qualifier",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "unique",
+      "unique0",
+      "priority"
+     ]
+    },
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "case",
+      "casez",
+      "casex"
+     ]
+    },
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "inside",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "CaseItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "CaseItem",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "expressions",
+     "type": [
+      "Expression",
+      "Range"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement",
+      "Item"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "initializers",
+     "type": [
+      "VariableDeclaration",
+      "AssignmentExpression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "steps",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "WhileStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DoWhileStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RepeatStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "count",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForeverStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ForeachStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "array",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "variables",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BreakStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "ContinueStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "ReturnStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TimedStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "timing",
+     "type": [
+      "TimingControl"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "WaitStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "body",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "EventTrigger",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {
+    "nonblocking": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "nonblocking",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "event",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DisableStatement",
+   "category": "Statement",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ImmediateAssertion",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "deferral": {
+     "#0": {
+      "SystemVerilog": 2009
+     },
+     "final": {
+      "SystemVerilog": 2012
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "assert",
+      "assume",
+      "cover"
+     ]
+    },
+    {
+     "name": "deferral",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "#0",
+      "final"
+     ]
+    },
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pass_action",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "fail_action",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DelayControl",
+   "category": "TimingControl",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "EventControl",
+   "category": "TimingControl",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "events",
+     "type": [
+      "EventExpression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "EventExpression",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {
+    "edge": {
+     "edge": {
+      "SystemVerilog": 2005
+     }
+    },
+    "condition": {
+     "true": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "edge",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "posedge",
+      "negedge",
+      "edge"
+     ]
+    },
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "NameExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Name"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MemberExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "member",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IndexExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "index",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RangeSelect",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "operator": {
+     "+:": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     },
+     "-:": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      ":",
+      "+:",
+      "-:"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IntegerLiteral",
+   "category": "Literal",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "RealLiteral",
+   "category": "Literal",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "TimeLiteral",
+   "category": "Literal",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "spelling",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "UnbasedUnsizedLiteral",
+   "category": "Literal",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "0",
+      "1",
+      "x",
+      "z",
+      "X",
+      "Z"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "StringLiteral",
+   "category": "Literal",
+   "since": null,
+   "extension": false,
+   "features": {
+    "triple": {
+     "true": {
+      "SystemVerilog": 2023
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "triple",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "UnaryExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "+",
+      "-",
+      "!",
+      "~",
+      "&",
+      "~&",
+      "|",
+      "~|",
+      "^",
+      "~^",
+      "^~"
+     ]
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "IncrementExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "++",
+      "--"
+     ]
+    },
+    {
+     "name": "postfix",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinaryExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "operator": {
+     "**": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     },
+     "<<<": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     },
+     ">>>": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     },
+     "==?": {
+      "SystemVerilog": 2005
+     },
+     "!=?": {
+      "SystemVerilog": 2005
+     },
+     "->": {
+      "SystemVerilog": 2009
+     },
+     "<->": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "**",
+      "*",
+      "/",
+      "%",
+      "+",
+      "-",
+      "<<",
+      ">>",
+      "<<<",
+      ">>>",
+      "<",
+      "<=",
+      ">",
+      ">=",
+      "==",
+      "!=",
+      "===",
+      "!==",
+      "==?",
+      "!=?",
+      "&",
+      "^",
+      "^~",
+      "~^",
+      "|",
+      "&&",
+      "||",
+      "->",
+      "<->"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AssignmentExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {
+    "operator": {
+     "+=": {
+      "SystemVerilog": 2005
+     },
+     "-=": {
+      "SystemVerilog": 2005
+     },
+     "*=": {
+      "SystemVerilog": 2005
+     },
+     "/=": {
+      "SystemVerilog": 2005
+     },
+     "%=": {
+      "SystemVerilog": 2005
+     },
+     "&=": {
+      "SystemVerilog": 2005
+     },
+     "|=": {
+      "SystemVerilog": 2005
+     },
+     "^=": {
+      "SystemVerilog": 2005
+     },
+     "<<=": {
+      "SystemVerilog": 2005
+     },
+     ">>=": {
+      "SystemVerilog": 2005
+     },
+     "<<<=": {
+      "SystemVerilog": 2005
+     },
+     ">>>=": {
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "target",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "=",
+      "+=",
+      "-=",
+      "*=",
+      "/=",
+      "%=",
+      "&=",
+      "|=",
+      "^=",
+      "<<=",
+      ">>=",
+      "<<<=",
+      ">>>="
+     ]
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConditionalExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequence",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "InsideExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "set",
+     "type": [
+      "Expression",
+      "Range"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ValueRange",
+   "category": "Range",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "Concatenation",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "items",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "Replication",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "count",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "AssignmentPattern",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Expression",
+      "PatternItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "PatternItem",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "key",
+     "type": [
+      "Expression",
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CallExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "callee",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "Connection"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "SystemCall",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "arguments",
+     "type": [
+      "Expression",
+      "DataType"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "CastExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "type",
+     "type": [
+      "DataType",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParenthesizedExpression",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "MacroUsage",
+   "category": "Expression",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "arguments",
+     "type": "str",
+     "optional": true
+    }
+   ]
+  },
+  {
+   "kind": "DollarExpression",
+   "category": "Expression",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "IncludeDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {
+    "system": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "path",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "system",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "DefineDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "function_like",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "parameters",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "UndefDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "TimescaleDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "unit",
+     "type": "str",
+     "optional": false
+    },
+    {
+     "name": "precision",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "DefaultNettypeDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {
+    "net_type": {
+     "none": {
+      "Verilog": 2001,
+      "SystemVerilog": 2005
+     },
+     "uwire": {
+      "Verilog": 2005,
+      "SystemVerilog": 2005
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "net_type",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "wire",
+      "tri",
+      "tri0",
+      "tri1",
+      "triand",
+      "trior",
+      "trireg",
+      "wand",
+      "wor",
+      "uwire",
+      "none"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "IfdefDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "negated",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "branches",
+     "type": [
+      "ElsifDirective"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "Item",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "has_else",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "ElsifDirective",
+   "category": "Directive",
+   "since": {
+    "Verilog": 2001,
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Statement",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DisabledText",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "OtherDirective",
+   "category": "Directive",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "text",
+     "type": "str",
+     "optional": false
+    }
+   ]
+  }
+ ]
+}

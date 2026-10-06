@@ -2,7 +2,7 @@
 
 Each language is a set of kinds covering the union of its recent standards, each kind and feature recording which
 standards have it (`SINCE`, by family: a year for C, C++ and ECMAScript, `100 * major + minor` for Python and
-TypeScript). Standards parse with tree-sitter and print one fixed layout. `LANGUAGE.grammar()` describes every kind,
+TypeScript). Standards parse with tree-sitter, or for Verilog with slang, and print one fixed layout. `LANGUAGE.grammar()` describes every kind,
 category, property and availability as data: read it rather than guessing a property's name.
 
 | Language | Kinds | Standards | Tree follows |
@@ -10,6 +10,7 @@ category, property and availability as data: read it rather than guessing a prop
 | Ccpp: C and C++ | 171, through C++26 and C23 | `Ccpp17`, `Ccpp20`, `CcppStandard(year, "C++" or "C")` | the C++ grammar: specifiers, declarators, statements |
 | Python | 86, Python 3.0 to 3.15 | `Python312`, `Python314`, `PythonStandard(major, minor)` | Python's `ast`, names as `Identifier`s |
 | TypeScript: TypeScript and JavaScript | 163, through TypeScript 5.9 and ES2025, with JSX | `TypeScript50`, `TypeScript59`, `ECMAScript2020`, `ECMAScript2025`, each with `.JSX`; `TypeScriptStandard(major, minor, jsx)`, `ECMAScriptStandard(year, jsx)` | typescript-estree (TSESTree) |
+| Verilog: Verilog and SystemVerilog | 117, the design subset of SystemVerilog 2023 | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
 
 ## Ccpp
 
@@ -66,6 +67,28 @@ Definitions.define(program).space_of(name)    # 'value', 'type' or 'namespace': 
   type, ``f<T>`x` ``. Comments inside expressions and most types are dropped.
 - Definitions keep values, types and namespaces apart, merge declarations as TypeScript does, and leave properties
   and imported members unresolved.
+
+## Verilog and SystemVerilog
+
+```python fragment
+from mbse.Programs.Verilog import SystemVerilog2023, Verilog2005, VerilogStandard, Definitions, Syntax as V
+unit = SystemVerilog2023.parse(text, include_paths=["rtl/include"], defines=["SIM"])   # V.SourceText; unit.items
+module = unit.items[0]; module.ports; module.items              # AnsiPort/InterfacePort/PortReference; items
+Verilog2005.check(unit)                       # ['items[0]: PackageDeclaration is not Verilog', ...]
+Definitions.define(unit).lookup("logger_pkg::FIELDS")           # packages qualify with ::, design units with .
+```
+
+- Read by slang 12.0.0 (`pyslang`), preprocessing included: `include_paths` and `defines` are slang's. TypeScript's
+  `parse(text, includePaths, defines)` runs the Python implementation's reader, so it needs `python3/`'s environment
+  (or `MBSE_PROGRAMS_PYTHON`); printing, checking and definitions don't.
+- Kept as written: parentheses, literals' spelling, comments and directives where items and statements are listed,
+  `` `ifdef `` as a tree whose untaken branches keep their text (`DisabledText`), a macro use that is a whole
+  expression (`MacroUsage`). An included file's items are not spliced in: the `IncludeDirective` stays.
+- Refused, by slang's kind name at its line and column (`unsupported syntax: ClassDeclaration`): verification
+  constructs (classes, constraints, properties and sequences, covergroups), strengths, `with` clauses, streaming
+  concatenation, and a macro used where a whole expression isn't.
+- Definitions: packages, design units, functions and tasks, and blocks as scopes; `import p::x` aliases, `import p::*`
+  is found where nothing nearer is; members after `.` and instances' contents unresolved.
 
 ## Printing
 

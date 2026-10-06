@@ -6,7 +6,8 @@
  * https://github.com/pitaman71/mbse-programs.
  *
  * The framework is `@mbse/programs/Framework`, and the languages are modules beside it: `@mbse/programs/Ccpp` for C
- * and C++, `@mbse/programs/Python` for Python, and `@mbse/programs/TypeScript` for TypeScript and JavaScript.
+ * and C++, `@mbse/programs/Python` for Python, `@mbse/programs/TypeScript` for TypeScript and JavaScript, and
+ * `@mbse/programs/Verilog` for Verilog and SystemVerilog.
  * `@mbse/programs/Transpilers` translates between them, and `@mbse/programs/Bridges` between them and mbse-expressions'
  * dialects.
  *
@@ -19,3 +20,4 @@ export * as Framework from "./Framework/index.js";
 export * as Python from "./Python/index.js";
 export * as Transpilers from "./Transpilers/index.js";
 export * as TypeScript from "./TypeScript/index.js";
+export * as Verilog from "./Verilog/index.js";
