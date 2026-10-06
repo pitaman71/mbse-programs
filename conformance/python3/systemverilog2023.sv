@@ -183,6 +183,44 @@ module sampler
 
     final
         $display("done");
+
+    // The datapath's properties, checked on every clock.
+    default clocking sample_clk @(posedge clk);
+        default input #1step output #0;
+        input reading, count;
+        output negedge #1 flush;
+        input #1 output #2 state_probe = state;
+    endclocking : sample_clk
+
+    default disable iff (!rst_n);
+    let in_band(v, lo = 200, hi = 800) = v >= lo && v <= hi;
+
+    sequence sent(local input int n = 1);
+        int seen;
+        (state == SEND, seen = n) ##1 out.ready[->1] ##[1:3] !out.valid;
+    endsequence : sent
+
+    sequence burst;
+        @(posedge clk) out.valid[*2:4] ##1 (out.ready throughout out.valid[*1:$]) intersect first_match(##[0:$] !out.valid) or reading.status[=1] and sent(2) within out.valid ##[1:$] out.ready[*1:$];
+    endsequence
+
+    property counts(sequence s, untyped bound);
+        @(posedge clk) disable iff (!rst_n) s |=> count < bound and s_eventually [1:4] state == IDLE;
+    endproperty
+
+    property stays_in_band;
+        if (state == SAMPLE) strong(in_band(reading.raw)) else weak(1'b1) implies nexttime [2] state != SEND iff always [0:3] rst_n;
+    endproperty
+
+    property safe;
+        accept_on (!rst_n) (not out.valid until out.ready) or reject_on (state == SEND) count s_until_with state == IDLE and (sent #-# 1) or s_nexttime state == IDLE until_with out.ready or (sent #=# 1) or (case (state) IDLE, SAMPLE: s_always [1:2] 1; default: eventually [1:2] out.valid; endcase);
+    endproperty
+
+    sent_once: assert property (counts(sent(1), 16)) else $error("count did not rise");
+    assume property (@(posedge clk) stays_in_band or @(negedge clk) out.ready |-> 1);
+    cover sequence (burst);
+    restrict property (@(posedge clk) disable iff (!rst_n) safe);
+    in_range: assert #0 (count < 16);
 endmodule
 
 module counter #(
@@ -201,9 +239,17 @@ endmodule
 program automatic test_program (
     input logic clk
 );
+    clocking tick @(posedge clk);
+    endclocking
+
+    default clocking tick;
+
     initial begin
         repeat (3) @(posedge clk);
-        $display("time %t", $time);
+        ##2;
+        settle: ##1 $display("time %t", $time);
+        expect (@(posedge clk) ##[1:5] clk) else $display("no clock");
+        @(posedge clk) assert property (@(posedge clk) clk |-> ##1 !clk);
     end
 endprogram
 

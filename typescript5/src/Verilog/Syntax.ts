@@ -5,10 +5,10 @@
  * The kinds cover SystemVerilog (IEEE 1800-2023)'s design subset and its classes: design units, ports and parameters,
  * data types, declarations, continuous assignments, procedural blocks and statements, generate constructs,
  * instantiation, functions and tasks, classes with their properties, methods and objects, constraints and
- * randomization, immediate assertions and compiler directives. Verilog (IEEE 1364) is a family of its own whose
- * standards have fewer of them: each kind and feature records where it exists in both families (`SINCE`, `FEATURES`),
- * which `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023` and `VerilogStandard(year, family)` check. Properties
- * and sequences, and covergroups are not kinds yet.
+ * randomization, immediate and concurrent assertions with their properties and sequences, clocking blocks and compiler
+ * directives. Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and feature
+ * records where it exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`,
+ * `SystemVerilog2023` and `VerilogStandard(year, family)` check. Covergroups are not kinds yet.
  *
  * The tree is abstract where the grammar only spells and concrete where a transpiler needs to see what was written:
  *
@@ -68,7 +68,7 @@ export const ATOM_KEYWORDS = ["byte", "shortint", "int", "longint", "integer", "
 export type AtomKeyword = (typeof ATOM_KEYWORDS)[number];
 export const REAL_KEYWORDS = ["shortreal", "real", "realtime"] as const;
 export type RealKeyword = (typeof REAL_KEYWORDS)[number];
-export const SIMPLE_KEYWORDS = ["string", "chandle", "event", "void"] as const;
+export const SIMPLE_KEYWORDS = ["string", "chandle", "event", "void", "sequence", "property", "untyped"] as const;
 export type SimpleKeyword = (typeof SIMPLE_KEYWORDS)[number];
 export const ALWAYS_KEYWORDS = ["always", "always_comb", "always_ff", "always_latch"] as const;
 export type AlwaysKeyword = (typeof ALWAYS_KEYWORDS)[number];
@@ -115,6 +115,32 @@ export const RANDOM_QUALIFIERS = ["rand", "randc"] as const;
 export type RandomQualifier = (typeof RANDOM_QUALIFIERS)[number];
 export const DIST_OPERATORS = [":=", ":/"] as const;
 export type DistOperator = (typeof DIST_OPERATORS)[number];
+export const CONCURRENT_KEYWORDS = ["assert", "assume", "cover", "restrict"] as const;
+export type ConcurrentKeyword = (typeof CONCURRENT_KEYWORDS)[number];
+export const REPETITION_OPERATORS = ["*", "->", "="] as const;
+export type RepetitionOperator = (typeof REPETITION_OPERATORS)[number];
+export const SEQUENCE_OPERATORS = ["and", "or", "intersect", "within", "throughout"] as const;
+export type SequenceOperator = (typeof SEQUENCE_OPERATORS)[number];
+export const IMPLICATION_OPERATORS = ["|->", "|=>", "#-#", "#=#"] as const;
+export type ImplicationOperator = (typeof IMPLICATION_OPERATORS)[number];
+export const PROPERTY_OPERATORS = [
+  "and", "or", "iff", "implies", "until", "s_until", "until_with", "s_until_with"
+] as const;
+export type PropertyOperator = (typeof PROPERTY_OPERATORS)[number];
+export const UNARY_PROPERTY_OPERATORS = [
+  "not", "nexttime", "s_nexttime", "always", "s_always", "eventually", "s_eventually"
+] as const;
+export type UnaryPropertyOperator = (typeof UNARY_PROPERTY_OPERATORS)[number];
+export const STRENGTH_KEYWORDS = ["strong", "weak"] as const;
+export type StrengthKeyword = (typeof STRENGTH_KEYWORDS)[number];
+export const ABORT_KEYWORDS = ["accept_on", "reject_on", "sync_accept_on", "sync_reject_on"] as const;
+export type AbortKeyword = (typeof ABORT_KEYWORDS)[number];
+export const PORT_DIRECTIONS = ["input", "output", "inout"] as const;
+export type PortDirection = (typeof PORT_DIRECTIONS)[number];
+export const CLOCKING_DIRECTIONS = ["input", "output", "inout", "input output"] as const;
+export type ClockingDirection = (typeof CLOCKING_DIRECTIONS)[number];
+export const CLOCKING_SCOPES = ["default", "global"] as const;
+export type ClockingScope = (typeof CLOCKING_SCOPES)[number];
 export const PROTOTYPE_QUALIFIERS = ["extern", "pure"] as const;
 export type PrototypeQualifier = (typeof PROTOTYPE_QUALIFIERS)[number];
 export const FORWARD_KEYWORDS = ["enum", "struct", "union", "class", "interface class"] as const;
@@ -173,6 +199,18 @@ export abstract class Directive extends SyntaxNode {}
 
 /** A constraint on random variables, in a constraint block (18.5, A.1.10). */
 export abstract class Constraint extends SyntaxNode {}
+
+/**
+ * A property: what a concurrent assertion checks (16.12, A.2.10). A sequence, and an expression, is a property
+ * too: a position that holds a property holds a `Property` or an `Expression`.
+ */
+export abstract class Property extends SyntaxNode {}
+
+/**
+ * A sequence: a pattern of values over clock ticks (16.7, A.2.10). An expression is a sequence of one tick too: a
+ * position that holds a sequence holds a `Sequence` or an `Expression`.
+ */
+export abstract class Sequence extends Property {}
 
 // === Lexical conventions (5) ===
 
@@ -498,10 +536,18 @@ const KeywordTypeSpec = {
   keyword: choice(...SIMPLE_KEYWORDS),
 };
 export interface KeywordType extends Properties<typeof KeywordTypeSpec> {}
-/** `string`, `chandle`, `event` or `void` (6.16, 6.14, 6.17, 6.13). */
+/**
+ * `string`, `chandle`, `event` or `void` (6.16, 6.14, 6.17, 6.13), or the type of an assertion's port:
+ * `sequence`, `property` or `untyped` (16.8).
+ */
 export class KeywordType extends DataType {
   static override SPEC = KeywordTypeSpec;
-  static override FEATURES: Features = { keyword: [["string", sv()], ["chandle", sv()], ["void", sv()]] };
+  static override FEATURES: Features = {
+    keyword: [
+      ["string", sv()], ["chandle", sv()], ["void", sv()], ["sequence", sv(2009)], ["property", sv(2009)],
+      ["untyped", sv(2009)]
+    ],
+  };
 }
 
 const NamedTypeSpec = {
@@ -1478,6 +1524,20 @@ export class RandCaseItem extends SyntaxNode {
   static override SINCE: Availability | null = sv();
 }
 
+const LabeledStatementSpec = {
+  label: one(() => [Identifier]),
+  statement: one(() => [Statement]),
+};
+export interface LabeledStatement extends Properties<typeof LabeledStatementSpec> {}
+/**
+ * `label: statement`, a statement named for `disable` and for its assertions' messages (9.3.5). A labeled block
+ * is a named one instead: `x: begin ... end` is `begin : x ... end`.
+ */
+export class LabeledStatement extends Statement {
+  static override SPEC = LabeledStatementSpec;
+  static override SINCE: Availability | null = sv();
+}
+
 const ImmediateAssertionSpec = {
   keyword: choice(...ASSERTION_KEYWORDS),
   deferral: optionalChoice(...DEFERRALS),
@@ -1496,6 +1556,454 @@ export class ImmediateAssertion extends Statement {
   static override FEATURES: Features = { deferral: [["#0", sv(2009)], ["final", sv(2012)]] };
 }
 
+// === Assertions (16) ===
+
+const ConcurrentAssertionSpec = {
+  keyword: choice(...CONCURRENT_KEYWORDS),
+  sequence: flag(),
+  spec: one(() => [PropertySpec]),
+  pass_action: optional(() => [Statement]),
+  fail_action: optional(() => [Statement]),
+};
+export interface ConcurrentAssertion extends Properties<typeof ConcurrentAssertionSpec> {}
+/**
+ * `assert property (spec) pass else fail`, or `assume`, `cover` (of a property, or with `sequence` of a
+ * sequence) or `restrict` (16.14). `cover` has no `fail`, and `restrict` no action.
+ */
+export class ConcurrentAssertion extends Statement {
+  static override SPEC = ConcurrentAssertionSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { keyword: [["restrict", sv(2009)]] };
+}
+
+const ExpectStatementSpec = {
+  spec: one(() => [PropertySpec]),
+  pass_action: optional(() => [Statement]),
+  fail_action: optional(() => [Statement]),
+};
+export interface ExpectStatement extends Properties<typeof ExpectStatementSpec> {}
+/** `expect (spec) pass else fail`, which waits until a property passes or fails (16.17). */
+export class ExpectStatement extends Statement {
+  static override SPEC = ExpectStatementSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const AssertionItemSpec = {
+  label: optional(() => [Identifier]),
+  assertion: one(() => [ConcurrentAssertion, ImmediateAssertion]),
+};
+export interface AssertionItem extends Properties<typeof AssertionItemSpec> {}
+/** `label: assertion` among items: a concurrent assertion, or a deferred immediate one (16.4, 16.14). */
+export class AssertionItem extends Item {
+  static override SPEC = AssertionItemSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const PropertySpecSpec = {
+  clock: optional(() => [EventControl]),
+  disable: optional(() => [Expression]),
+  property: one(() => [Property, Expression]),
+};
+export interface PropertySpec extends Properties<typeof PropertySpecSpec> {}
+/** `@(clock) disable iff (disable) property`: a property with its clock and its reset (16.12). */
+export class PropertySpec extends SyntaxNode {
+  static override SPEC = PropertySpecSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const PropertyDeclarationSpec = {
+  name: one(() => [Identifier]),
+  ports: many(() => [AssertionPort]),
+  variables: many(() => [VariableDeclaration]),
+  spec: one(() => [PropertySpec]),
+  labeled: flag(),
+};
+export interface PropertyDeclaration extends Properties<typeof PropertyDeclarationSpec> {}
+/**
+ * `property name(ports); variables spec; endproperty` (16.12). `labeled` repeats the name after `endproperty`;
+ * without ports, the name has no parentheses.
+ */
+export class PropertyDeclaration extends Item {
+  static override SPEC = PropertyDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const SequenceDeclarationSpec = {
+  name: one(() => [Identifier]),
+  ports: many(() => [AssertionPort]),
+  variables: many(() => [VariableDeclaration]),
+  sequence: one(() => [Sequence, Expression]),
+  labeled: flag(),
+};
+export interface SequenceDeclaration extends Properties<typeof SequenceDeclarationSpec> {}
+/** `sequence name(ports); variables sequence; endsequence` (16.8). */
+export class SequenceDeclaration extends Item {
+  static override SPEC = SequenceDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const LetDeclarationSpec = {
+  name: one(() => [Identifier]),
+  ports: many(() => [AssertionPort]),
+  value: one(() => [Expression]),
+};
+export interface LetDeclaration extends Properties<typeof LetDeclarationSpec> {}
+/** `let name(ports) = value;`, an expression with arguments, expanded where it is used (11.12). */
+export class LetDeclaration extends Item {
+  static override SPEC = LetDeclarationSpec;
+  static override SINCE: Availability | null = sv(2009);
+}
+
+const AssertionPortSpec = {
+  local: flag(),
+  direction: optionalChoice(...PORT_DIRECTIONS),
+  type: optional(() => [DataType]),
+  name: one(() => [Identifier]),
+  dimensions: many(() => [Dimension]),
+  value: optional(() => [Property, Expression]),
+};
+export interface AssertionPort extends Properties<typeof AssertionPortSpec> {}
+/**
+ * `local direction type name dimensions = default`, a port of a property, a sequence or a `let` (16.8). Without a
+ * type it is untyped, as `untyped` makes it.
+ */
+export class AssertionPort extends SyntaxNode {
+  static override SPEC = AssertionPortSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { local: [[true, sv(2009)]] };
+}
+
+// --- Sequences (16.7) ---
+
+const DelaySequenceSpec = {
+  first: optional(() => [Sequence, Expression]),
+  steps: many(() => [DelayStep]),
+};
+export interface DelaySequence extends Properties<typeof DelaySequenceSpec> {}
+/** `first ##delay sequence ##delay sequence ...`, or without `first` a sequence that starts with a delay (16.7). */
+export class DelaySequence extends Sequence {
+  static override SPEC = DelaySequenceSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const DelayStepSpec = {
+  delay: one(() => [Expression, CycleRange]),
+  sequence: one(() => [Sequence, Expression]),
+};
+export interface DelayStep extends Properties<typeof DelayStepSpec> {}
+/** `##delay sequence` in a `DelaySequence`: a number of ticks, or a range of them (16.7). */
+export class DelayStep extends SyntaxNode {
+  static override SPEC = DelayStepSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const CycleRangeSpec = {
+  low: one(() => [Expression]),
+  high: one(() => [Expression]),
+};
+export interface CycleRange extends Properties<typeof CycleRangeSpec> {}
+/**
+ * `[low:high]`, a range of ticks or of repetitions, `high` `$` when unbounded. `##[*]`, `[*]` and `[+]` are
+ * `[0:$]`, `[*0:$]` and `[*1:$]` (16.7, 16.9.2).
+ */
+export class CycleRange extends SyntaxNode {
+  static override SPEC = CycleRangeSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const RepetitionSequenceSpec = {
+  sequence: one(() => [Sequence, Expression]),
+  operator: choice(...REPETITION_OPERATORS),
+  count: one(() => [Expression, CycleRange]),
+};
+export interface RepetitionSequence extends Properties<typeof RepetitionSequenceSpec> {}
+/**
+ * `sequence[*count]` (consecutive), `[->count]` (goto) or `[=count]` (nonconsecutive), of a number or a range of
+ * repetitions (16.9.2).
+ */
+export class RepetitionSequence extends Sequence {
+  static override SPEC = RepetitionSequenceSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const BinarySequenceSpec = {
+  left: one(() => [Sequence, Expression]),
+  operator: choice(...SEQUENCE_OPERATORS),
+  right: one(() => [Sequence, Expression]),
+};
+export interface BinarySequence extends Properties<typeof BinarySequenceSpec> {}
+/** `left operator right`: `and`, `or`, `intersect`, `within` or `throughout` (16.9). */
+export class BinarySequence extends Sequence {
+  static override SPEC = BinarySequenceSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ParenthesizedSequenceSpec = {
+  sequence: one(() => [Sequence, Expression]),
+  items: many(() => [Expression]),
+};
+export interface ParenthesizedSequence extends Properties<typeof ParenthesizedSequenceSpec> {}
+/**
+ * `(sequence, items)`: a sequence in parentheses, with the match items (assignments, calls) it runs when it
+ * matches (16.10).
+ */
+export class ParenthesizedSequence extends Sequence {
+  static override SPEC = ParenthesizedSequenceSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const FirstMatchSequenceSpec = {
+  sequence: one(() => [Sequence, Expression]),
+  items: many(() => [Expression]),
+};
+export interface FirstMatchSequence extends Properties<typeof FirstMatchSequenceSpec> {}
+/** `first_match(sequence, items)`: the sequence's first match only (16.9.8). */
+export class FirstMatchSequence extends Sequence {
+  static override SPEC = FirstMatchSequenceSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ClockedSequenceSpec = {
+  clock: one(() => [EventControl]),
+  sequence: one(() => [Sequence, Expression]),
+};
+export interface ClockedSequence extends Properties<typeof ClockedSequenceSpec> {}
+/** `@(clock) sequence`, a sequence on its own clock (16.16). */
+export class ClockedSequence extends Sequence {
+  static override SPEC = ClockedSequenceSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+// --- Properties (16.12) ---
+
+const ImplicationPropertySpec = {
+  antecedent: one(() => [Sequence, Expression]),
+  operator: choice(...IMPLICATION_OPERATORS),
+  consequent: one(() => [Property, Expression]),
+};
+export interface ImplicationProperty extends Properties<typeof ImplicationPropertySpec> {}
+/**
+ * `antecedent |-> consequent` (overlapping), `|=>` (on the next tick), or `#-#` and `#=#`, which also need the
+ * antecedent to match (16.12.7, 16.12.9).
+ */
+export class ImplicationProperty extends Property {
+  static override SPEC = ImplicationPropertySpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { operator: [["#-#", sv(2009)], ["#=#", sv(2009)]] };
+}
+
+const BinaryPropertySpec = {
+  left: one(() => [Property, Expression]),
+  operator: choice(...PROPERTY_OPERATORS),
+  right: one(() => [Property, Expression]),
+};
+export interface BinaryProperty extends Properties<typeof BinaryPropertySpec> {}
+/**
+ * `left operator right`: `and`, `or`, `iff`, `implies`, `until`, `s_until`, `until_with` or `s_until_with`
+ * (16.12).
+ */
+export class BinaryProperty extends Property {
+  static override SPEC = BinaryPropertySpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = {
+    operator: [
+      ["iff", sv(2009)], ["implies", sv(2009)], ["until", sv(2009)], ["s_until", sv(2009)], ["until_with", sv(2009)],
+      ["s_until_with", sv(2009)]
+    ],
+  };
+}
+
+const UnaryPropertySpec = {
+  operator: choice(...UNARY_PROPERTY_OPERATORS),
+  range: optional(() => [Expression, CycleRange]),
+  operand: one(() => [Property, Expression]),
+};
+export interface UnaryProperty extends Properties<typeof UnaryPropertySpec> {}
+/**
+ * `operator [range] operand`: `not`, `nexttime`, `s_nexttime`, `always`, `s_always`, `eventually` or
+ * `s_eventually`, with a number of ticks or a range of them for those that take one (16.12).
+ */
+export class UnaryProperty extends Property {
+  static override SPEC = UnaryPropertySpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = {
+    operator: [
+      ["nexttime", sv(2009)], ["s_nexttime", sv(2009)], ["always", sv(2009)], ["s_always", sv(2009)],
+      ["eventually", sv(2009)], ["s_eventually", sv(2009)]
+    ],
+  };
+}
+
+const StrengthPropertySpec = {
+  keyword: choice(...STRENGTH_KEYWORDS),
+  sequence: one(() => [Sequence, Expression]),
+};
+export interface StrengthProperty extends Properties<typeof StrengthPropertySpec> {}
+/** `strong(sequence)` or `weak(sequence)` (16.12.2). */
+export class StrengthProperty extends Property {
+  static override SPEC = StrengthPropertySpec;
+  static override SINCE: Availability | null = sv(2009);
+}
+
+const AbortPropertySpec = {
+  keyword: choice(...ABORT_KEYWORDS),
+  condition: one(() => [Expression]),
+  operand: one(() => [Property, Expression]),
+};
+export interface AbortProperty extends Properties<typeof AbortPropertySpec> {}
+/** `accept_on(condition) operand`, or `reject_on`, `sync_accept_on` or `sync_reject_on` (16.12.14). */
+export class AbortProperty extends Property {
+  static override SPEC = AbortPropertySpec;
+  static override SINCE: Availability | null = sv(2009);
+}
+
+const ConditionalPropertySpec = {
+  condition: one(() => [Expression]),
+  consequence: one(() => [Property, Expression]),
+  alternative: optional(() => [Property, Expression]),
+};
+export interface ConditionalProperty extends Properties<typeof ConditionalPropertySpec> {}
+/** `if (condition) consequence else alternative` (16.12.8). */
+export class ConditionalProperty extends Property {
+  static override SPEC = ConditionalPropertySpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const CasePropertySpec = {
+  expression: one(() => [Expression]),
+  items: many(() => [PropertyCaseItem]),
+};
+export interface CaseProperty extends Properties<typeof CasePropertySpec> {}
+/** `case (expression) items endcase` (16.12.8). */
+export class CaseProperty extends Property {
+  static override SPEC = CasePropertySpec;
+  static override SINCE: Availability | null = sv(2009);
+}
+
+const PropertyCaseItemSpec = {
+  expressions: many(() => [Expression]),
+  body: one(() => [Property, Expression]),
+};
+export interface PropertyCaseItem extends Properties<typeof PropertyCaseItemSpec> {}
+/** `expressions: body;`, or `default: body;` without expressions, in a case property (16.12.8). */
+export class PropertyCaseItem extends SyntaxNode {
+  static override SPEC = PropertyCaseItemSpec;
+  static override SINCE: Availability | null = sv(2009);
+}
+
+const ParenthesizedPropertySpec = {
+  property: one(() => [Property, Expression]),
+};
+export interface ParenthesizedProperty extends Properties<typeof ParenthesizedPropertySpec> {}
+/** `(property)`: a property in parentheses (16.12). */
+export class ParenthesizedProperty extends Property {
+  static override SPEC = ParenthesizedPropertySpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ClockedPropertySpec = {
+  clock: one(() => [EventControl]),
+  property: one(() => [Property, Expression]),
+};
+export interface ClockedProperty extends Properties<typeof ClockedPropertySpec> {}
+/** `@(clock) property`, a property on its own clock (16.16). */
+export class ClockedProperty extends Property {
+  static override SPEC = ClockedPropertySpec;
+  static override SINCE: Availability | null = sv();
+}
+
+// --- Clocking blocks (14) ---
+
+const ClockingDeclarationSpec = {
+  scope: optionalChoice(...CLOCKING_SCOPES),
+  name: optional(() => [Identifier]),
+  clock: one(() => [EventControl]),
+  items: many(() => [DefaultSkew, ClockingSignals, PropertyDeclaration, SequenceDeclaration, LetDeclaration, Directive, Comment]),
+  labeled: flag(),
+};
+export interface ClockingDeclaration extends Properties<typeof ClockingDeclarationSpec> {}
+/**
+ * `default clocking name @(event); items endclocking`, or `global` (14.3, 14.12, 14.14). A default clocking block
+ * may have no name. `labeled` repeats the name after `endclocking`.
+ */
+export class ClockingDeclaration extends Item {
+  static override SPEC = ClockingDeclarationSpec;
+  static override SINCE: Availability | null = sv();
+  static override FEATURES: Features = { scope: [["global", sv(2009)]] };
+}
+
+const DefaultSkewSpec = {
+  input: optional(() => [ClockingSkew]),
+  output: optional(() => [ClockingSkew]),
+};
+export interface DefaultSkew extends Properties<typeof DefaultSkewSpec> {}
+/** `default input skew output skew;` in a clocking block (14.3). */
+export class DefaultSkew extends Item {
+  static override SPEC = DefaultSkewSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ClockingSignalsSpec = {
+  direction: choice(...CLOCKING_DIRECTIONS),
+  input_skew: optional(() => [ClockingSkew]),
+  output_skew: optional(() => [ClockingSkew]),
+  signals: many(() => [ClockingSignal]),
+};
+export interface ClockingSignals extends Properties<typeof ClockingSignalsSpec> {}
+/**
+ * `direction input_skew output_skew signals;` in a clocking block (14.3). Both skews are for `input output`;
+ * `inout` has none.
+ */
+export class ClockingSignals extends Item {
+  static override SPEC = ClockingSignalsSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ClockingSignalSpec = {
+  name: one(() => [Identifier]),
+  value: optional(() => [Expression]),
+};
+export interface ClockingSignal extends Properties<typeof ClockingSignalSpec> {}
+/** `name = value` in a clocking block: a signal, or with `value` an expression it stands for (14.5). */
+export class ClockingSignal extends SyntaxNode {
+  static override SPEC = ClockingSignalSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const ClockingSkewSpec = {
+  edge: optionalChoice(...EDGES),
+  delay: optional(() => [DelayControl]),
+};
+export interface ClockingSkew extends Properties<typeof ClockingSkewSpec> {}
+/**
+ * `edge #delay`: when a clocking block samples or drives, relative to its clock (14.4). `#1step` is the time
+ * literal `1step`.
+ */
+export class ClockingSkew extends SyntaxNode {
+  static override SPEC = ClockingSkewSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const DefaultClockingSpec = {
+  name: one(() => [Identifier]),
+};
+export interface DefaultClocking extends Properties<typeof DefaultClockingSpec> {}
+/** `default clocking name;`: the clocking block a scope's assertions and cycle delays use (14.12). */
+export class DefaultClocking extends Item {
+  static override SPEC = DefaultClockingSpec;
+  static override SINCE: Availability | null = sv();
+}
+
+const DefaultDisableSpec = {
+  condition: one(() => [Expression]),
+};
+export interface DefaultDisable extends Properties<typeof DefaultDisableSpec> {}
+/** `default disable iff condition;`: the reset of a scope's concurrent assertions (16.15). */
+export class DefaultDisable extends Item {
+  static override SPEC = DefaultDisableSpec;
+  static override SINCE: Availability | null = sv(2009);
+}
+
 // === Timing controls (9.4) ===
 
 const DelayControlSpec = {
@@ -1505,6 +2013,16 @@ export interface DelayControl extends Properties<typeof DelayControlSpec> {}
 /** `#value`: a number, a time literal, a name or a parenthesized expression (9.4.1). */
 export class DelayControl extends TimingControl {
   static override SPEC = DelayControlSpec;
+}
+
+const CycleDelaySpec = {
+  value: one(() => [Expression]),
+};
+export interface CycleDelay extends Properties<typeof CycleDelaySpec> {}
+/** `##value`: a number of ticks of the default clocking block (14.11). */
+export class CycleDelay extends TimingControl {
+  static override SPEC = CycleDelaySpec;
+  static override SINCE: Availability | null = sv();
 }
 
 const EventControlSpec = {
@@ -2063,9 +2581,14 @@ export const KINDS = [
   SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
   ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
   ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
-  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, IncludeDirective,
-  DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective, ElsifDirective,
-  DisabledText, OtherDirective,
+  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
+  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
+  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
+  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
+  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
+  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
+  DefaultDisable, CycleDelay, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective,
+  DefaultNettypeDirective, IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

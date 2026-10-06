@@ -433,7 +433,8 @@ class _Reader:
             if signing is None and not dimensions:
                 return None
             return self.made(node, S.ImplicitType(signing=signing, dimensions=dimensions))
-        if hasattr(node, "keyword") and kind.endswith("Type") and kind not in ("EnumType", "StructType", "UnionType"):
+        if hasattr(node, "keyword") and (kind.endswith("Type") or kind == "Untyped") \
+                and kind not in ("EnumType", "StructType", "UnionType"):
             keyword = self.token_text(node.keyword)
             if keyword in _VECTORS:
                 dimensions = [self.dimension(d) for d in _nodes(node.dimensions)]
@@ -870,10 +871,10 @@ class _Reader:
             raise self.unsupported(node)
         out = method(self, node)
         if label is not None:
-            if isinstance(out, (S.SeqBlock, S.ParBlock)) and out.name is None:
+            if isinstance(out, (S.SeqBlock, S.ParBlock)) and out.name is None:  # `x: begin` is `begin : x`
                 out.name = self.identifier(label.name)
             else:
-                raise self.error(node, "unsupported syntax: a statement label")
+                out = S.LabeledStatement(label=self.identifier(label.name), statement=self.made(node, out))
         return self.made(node, out)
 
     def optional_statement(self, node: Any) -> S.Statement | None:
@@ -1021,6 +1022,215 @@ class _Reader:
             out.fail_action = self.optional_statement(node.action.elseClause.clause)
         return out
 
+    # Assertions
+
+    def actions(self, node: Any, out: Any) -> Any:
+        """`out` with the actions of an action block: what passes, and after `else` what fails."""
+        out.pass_action = self.optional_statement(node.statement)  # at least `;`
+        if node.elseClause is not None:
+            out.fail_action = self.optional_statement(node.elseClause.clause)
+        return out
+
+    def concurrent(self, node: Any) -> S.ConcurrentAssertion:
+        return self.actions(node.action, S.ConcurrentAssertion(
+            keyword=node.keyword.rawText, sequence=node.propertyOrSequence.rawText == "sequence",
+            spec=self.property_spec(node.propertySpec)))
+
+    def expect(self, node: Any) -> S.ExpectStatement:
+        return self.actions(node.action, S.ExpectStatement(spec=self.property_spec(node.propertySpec)))
+
+    def assertion_item(self, node: Any) -> S.AssertionItem:
+        """A concurrent or a deferred immediate assertion among items, with its label."""
+        statement = node.statement
+        convert = self.assertion if node.kind.name == "ImmediateAssertionMember" else self.concurrent
+        out = S.AssertionItem(assertion=self.made(statement, convert(statement)))
+        if statement.label is not None:
+            out.label = self.identifier(statement.label.name)
+        return out
+
+    def property_spec(self, node: Any) -> S.PropertySpec:
+        out = S.PropertySpec(property=self.property(node.expr))
+        if node.clocking is not None:
+            out.clock = self.timing(node.clocking)
+        if node.disable is not None:
+            out.disable = self.expression(node.disable.expr)  # its parentheses are the clause's own
+        return self.made(node, out)
+
+    def assertion_ports(self, node: Any) -> list[S.AssertionPort]:
+        out = []
+        for port in [] if node is None else _nodes(node.ports):
+            item = S.AssertionPort(local=bool(port.local), direction=_text(port.direction) or None,
+                                   type=self.data_type(port.type), name=self.identifier(port.name),
+                                   dimensions=[self.dimension(d) for d in _nodes(port.dimensions)])
+            if port.defaultValue is not None:
+                item.value = self.property(port.defaultValue.expr)
+            out.append(self.made(port, item))
+        return out
+
+    def local_variables(self, node: Any) -> list[S.VariableDeclaration]:
+        return [self.made(v, S.VariableDeclaration(var=bool(v.var), type=self.data_type(v.type),
+                                                   declarators=self.declarators(v.declarators)))
+                for v in _nodes(node.variables)]
+
+    def property_declaration(self, node: Any) -> S.PropertyDeclaration:
+        return S.PropertyDeclaration(name=self.identifier(node.name), ports=self.assertion_ports(node.portList),
+                                     variables=self.local_variables(node), spec=self.property_spec(node.propertySpec),
+                                     labeled=node.endBlockName is not None)
+
+    def sequence_declaration(self, node: Any) -> S.SequenceDeclaration:
+        return S.SequenceDeclaration(name=self.identifier(node.name), ports=self.assertion_ports(node.portList),
+                                     variables=self.local_variables(node), sequence=self.sequence(node.seqExpr),
+                                     labeled=node.endBlockName is not None)
+
+    def let_declaration(self, node: Any) -> S.LetDeclaration:
+        return S.LetDeclaration(name=self.identifier(node.identifier), ports=self.assertion_ports(node.portList),
+                                value=self.expression(node.expr))
+
+    def cycle_range(self, node: Any) -> Any:
+        """A number of ticks or repetitions, `[n]`, or a range of them, `[low:high]`."""
+        if node.kind.name == "BitSelect":
+            return self.expression(node.expr)
+        # a SimpleRangeSelect: slang refuses any other range of ticks
+        return self.made(node, S.CycleRange(low=self.expression(node.left), high=self.expression(node.right)))
+
+    def unbounded(self, at: Any, low: str) -> S.CycleRange:
+        """`[low:$]`, which `[*]` and `[+]` stand for."""
+        return self.made(at, S.CycleRange(low=self.made(at, S.IntegerLiteral(spelling=low)),
+                                          high=self.made(at, S.DollarExpression())))
+
+    def sequence(self, node: Any) -> Any:
+        """A sequence, or an expression where the sequence is one."""
+        kind = node.kind.name
+        if kind == "SimplePropertyExpr":
+            return self.sequence(node.expr)
+        if kind == "SimpleSequenceExpr":
+            return self.repeated(node, self.expression(node.expr))
+        if kind == "DelayedSequenceExpr":
+            out: Any = S.DelaySequence(first=None if node.first is None else self.sequence(node.first))
+            for element in _nodes(node.elements):
+                if element.delayVal is not None:
+                    delay = self.expression(element.delayVal)
+                elif element.range is not None:
+                    delay = self.cycle_range(element.range)
+                else:  # `##[*]`, `##[+]`
+                    delay = self.unbounded(element, "0" if element.op.rawText == "*" else "1")
+                out.steps.append(self.made(element, S.DelayStep(delay=delay, sequence=self.sequence(element.expr))))
+        elif kind in ("AndSequenceExpr", "OrSequenceExpr", "IntersectSequenceExpr", "WithinSequenceExpr",
+                      "ThroughoutSequenceExpr"):
+            out = S.BinarySequence(left=self.sequence(node.left), operator=node.op.rawText,
+                                   right=self.sequence(node.right))
+        elif kind == "ParenthesizedSequenceExpr":
+            out = S.ParenthesizedSequence(sequence=self.sequence(node.expr), items=self.match_items(node.matchList))
+            return self.repeated(node, self.made(node, out))
+        elif kind == "FirstMatchSequenceExpr":
+            out = S.FirstMatchSequence(sequence=self.sequence(node.expr), items=self.match_items(node.matchList))
+        else:  # a ClockingSequenceExpr: slang reads nothing else where a sequence is
+            out = S.ClockedSequence(clock=self.timing(node.event), sequence=self.sequence(node.expr))
+        return self.made(node, out)
+
+    def repeated(self, node: Any, out: Any) -> Any:
+        """`out` with the repetition `node` gives it, if any: `[*n]`, `[->n]`, `[=n]`, `[*]` or `[+]`."""
+        repetition = node.repetition
+        if repetition is None:
+            return out
+        operator = repetition.op.rawText
+        if repetition.selector is not None:
+            count = self.cycle_range(repetition.selector)
+        else:
+            count = self.unbounded(repetition, "0" if operator == "*" else "1")
+            operator = "*"
+        return self.made(node, S.RepetitionSequence(sequence=out, operator=operator, count=count))
+
+    def match_items(self, node: Any) -> list[Any]:
+        return [] if node is None else [self.expression(i) for i in _nodes(node.items)]
+
+    def property(self, node: Any) -> Any:
+        """A property, or a sequence or an expression where the property is one (in a SimplePropertyExpr)."""
+        kind = node.kind.name
+        if kind == "SimplePropertyExpr":
+            return self.sequence(node.expr)
+        if kind in ("ImplicationPropertyExpr", "FollowedByPropertyExpr"):
+            out: Any = S.ImplicationProperty(antecedent=self.sequence(node.left), operator=node.op.rawText,
+                                             consequent=self.property(node.right))
+        elif node.__class__.__name__ == "BinaryPropertyExprSyntax":
+            out = S.BinaryProperty(left=self.property(node.left), operator=node.op.rawText,
+                                   right=self.property(node.right))
+        elif kind == "UnaryPropertyExpr":
+            out = S.UnaryProperty(operator=node.op.rawText, operand=self.property(node.expr))
+        elif kind == "UnarySelectPropertyExpr":
+            out = S.UnaryProperty(operator=node.op.rawText, operand=self.property(node.expr),
+                                  range=None if node.selector is None else self.cycle_range(node.selector))
+        elif kind == "StrongWeakPropertyExpr":
+            out = S.StrengthProperty(keyword=node.keyword.rawText, sequence=self.sequence(node.expr))
+        elif kind == "AcceptOnPropertyExpr":
+            out = S.AbortProperty(keyword=node.keyword.rawText, condition=self.expression(node.condition),
+                                  operand=self.property(node.expr))
+        elif kind == "ConditionalPropertyExpr":
+            out = S.ConditionalProperty(condition=self.expression(node.condition), consequence=self.property(node.expr))
+            if node.elseClause is not None:
+                out.alternative = self.property(node.elseClause.expr)
+        elif kind == "CasePropertyExpr":
+            items = []
+            for item in _nodes(node.items):
+                expressions = [] if item.kind.name == "DefaultPropertyCaseItem" else [
+                    self.expression(e) for e in _nodes(item.expressions)]
+                body = self.property(item.expr)
+                items.append(self.made(item, S.PropertyCaseItem(expressions=expressions, body=body)))
+            out = S.CaseProperty(expression=self.expression(node.expr), items=items)
+        elif kind == "ParenthesizedPropertyExpr":
+            if node.matchList is not None:
+                raise self.unsupported(node)
+            out = S.ParenthesizedProperty(property=self.property(node.expr))
+        else:  # a ClockingPropertyExpr: slang wraps a sequence where a property is in a SimplePropertyExpr
+            out = S.ClockedProperty(clock=self.timing(node.event), property=self.property(node.expr))
+        return self.made(node, out)
+
+    # Clocking blocks
+
+    def clocking_declaration(self, node: Any) -> S.ClockingDeclaration:
+        out = S.ClockingDeclaration(scope=_text(node.globalOrDefault) or None, labeled=node.endBlockName is not None,
+                                    clock=self.made(node.event, S.EventControl(events=self.events(node.event))))
+        if node.blockName.rawText:  # a default clocking block may have no name
+            out.name = self.identifier(node.blockName)
+        out.items = self.items(_nodes(node.items), node.endClocking, convert=self.clocking_item)
+        return out
+
+    def clocking_item(self, node: Any) -> Any:
+        kind = node.kind.name
+        if kind == "DefaultSkewItem":
+            direction = node.direction
+            out: Any = S.DefaultSkew(input=self.skew(direction.inputSkew), output=self.skew(direction.outputSkew))
+        elif kind == "ClockingItem":
+            direction = node.direction
+            words = [t.rawText for t in (direction.input, direction.output) if t]
+            out = S.ClockingSignals(direction=" ".join(words), input_skew=self.skew(direction.inputSkew),
+                                    output_skew=self.skew(direction.outputSkew))
+            for declaration in _nodes(node.decls):
+                signal = S.ClockingSignal(name=self.identifier(declaration.name))
+                if declaration.value is not None:
+                    signal.value = self.expression(declaration.value.expr)
+                out.signals.append(self.made(declaration, signal))
+        else:
+            return self.item(node)
+        return self.made(node, out)
+
+    def skew(self, node: Any) -> S.ClockingSkew | None:
+        if node is None:
+            return None
+        out = S.ClockingSkew(edge=_text(node.edge) or None)
+        delay = node.delay
+        if delay is not None:
+            value = self.made(delay, S.TimeLiteral(spelling="1step")) if delay.kind.name == "OneStepDelay" \
+                else self.expression(delay.delayValue)
+            out.delay = self.made(delay, S.DelayControl(value=value))
+        return self.made(node, out)
+
+    def default_clocking(self, node: Any) -> S.DefaultClocking:
+        return S.DefaultClocking(name=self.identifier(node.name))
+
+    def default_disable(self, node: Any) -> S.DefaultDisable:
+        return S.DefaultDisable(condition=self.expression(node.expr))
+
     # Timing controls
 
     def timing(self, node: Any) -> S.TimingControl:
@@ -1034,6 +1244,8 @@ class _Reader:
             return self.made(node, S.EventControl(events=self.events(node.expr)))
         if kind == "ImplicitEventControl":
             return self.made(node, S.EventControl())
+        if kind == "CycleDelay":
+            return self.made(node, S.CycleDelay(value=self.expression(node.delayValue)))
         raise self.unsupported(node)
 
     def delay(self, node: Any) -> S.DelayControl:
@@ -1307,12 +1519,19 @@ class _Reader:
         "ClassPropertyDeclaration": class_property, "ClassMethodDeclaration": class_method,
         "ClassMethodPrototype": class_prototype, "ForwardTypedefDeclaration": forward_typedef,
         "ConstraintDeclaration": constraint_declaration, "ConstraintPrototype": constraint_prototype,
+        "ConcurrentAssertionMember": assertion_item, "ImmediateAssertionMember": assertion_item,
+        "PropertyDeclaration": property_declaration, "SequenceDeclaration": sequence_declaration,
+        "LetDeclaration": let_declaration, "ClockingDeclaration": clocking_declaration,
+        "DefaultClockingReference": default_clocking, "DefaultDisableDeclaration": default_disable,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,
         "SequentialBlockStatement": block, "ParallelBlockStatement": block, "ConditionalStatement": conditional,
         "CaseStatement": case, "LoopStatement": loop, "DoWhileStatement": do_while, "ForeverStatement": forever,
         "ForLoopStatement": for_loop, "ForeachLoopStatement": foreach, "RandCaseStatement": randcase,
+        "AssertPropertyStatement": concurrent, "AssumePropertyStatement": concurrent,
+        "CoverPropertyStatement": concurrent, "CoverSequenceStatement": concurrent,
+        "RestrictPropertyStatement": concurrent, "ExpectPropertyStatement": expect,
         "VoidCastedCallStatement": void_call, "JumpStatement": jump,
         "ReturnStatement": return_statement, "TimingControlStatement": timing_statement, "WaitStatement": wait,
         "BlockingEventTriggerStatement": trigger, "NonblockingEventTriggerStatement": trigger,

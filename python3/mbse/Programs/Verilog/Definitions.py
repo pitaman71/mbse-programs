@@ -6,8 +6,8 @@
   `for` loops, named or not.
 - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
-  'class', 'constraint' and 'import'. An enumeration's members are declared where the enumeration is, as
-  SystemVerilog does.
+  'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label' and 'import'. An enumeration's
+  members are declared where the enumeration is, as SystemVerilog does.
 - A non-ANSI port is one entity, which the header names and a port declaration declares.
 - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
   where nothing nearer declares them, as wildcard imports do.
@@ -15,6 +15,8 @@
   classes it extends. A method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`)
   is the entity its prototype declares, and its body sees the class's members. A `foreach` constraint's index
   variables are its own; `local::x` in `randomize() with` is `x` where the call is.
+- A property, a sequence and a `let` have scopes of their own, where their ports are arguments; a named clocking block
+  has one, where its signals are clockvars. A statement's label, and an assertion's, names a 'label'.
 - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
   argument gives it (`find(x) with (x > 0)`), or `item`.
 - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
@@ -251,6 +253,45 @@ class _Definer:
             iterator.declarations.append(node)
         self.visit(node.expression, inner)
 
+    def assertion_declaration(self, node: Any, scope: Scope) -> None:
+        kind = {S.PropertyDeclaration: "property", S.SequenceDeclaration: "sequence"}.get(type(node), "let")
+        inner = self.scoped(scope, kind, node.name, node, kind)
+        self.program.located(node.name, scope)
+        for port in node.ports:
+            self.visit_all([*([port.type] if port.type is not None else []), *port.dimensions,
+                            *([port.value] if port.value is not None else [])], inner)
+            self.program.located(port, inner)
+            self.program.located(port.name, inner)
+            self.entity(inner, "argument", port.name, port)
+        body = node.spec if isinstance(node, S.PropertyDeclaration) else \
+            node.sequence if isinstance(node, S.SequenceDeclaration) else node.value
+        self.visit_all([*getattr(node, "variables", []), body], inner)
+
+    def clocking_declaration(self, node: S.ClockingDeclaration, scope: Scope) -> None:
+        self.visit(node.clock, scope)
+        inner = self.scoped(scope, "clocking", node.name, node, "clocking")
+        if node.name is not None:
+            self.program.located(node.name, scope)
+        self.visit_all(node.items, inner)
+
+    def clocking_signals(self, node: S.ClockingSignals, scope: Scope) -> None:
+        for skew in (node.input_skew, node.output_skew):
+            if skew is not None:
+                self.visit(skew, scope)
+        for signal in node.signals:
+            self.program.located(signal, scope)
+            self.program.located(signal.name, scope)
+            if signal.value is not None:
+                self.visit(signal.value, scope.parent)  # what it stands for is outside the block
+            self.entity(scope, "clockvar", signal.name, signal)
+
+    def labeled(self, node: Any, scope: Scope) -> None:
+        label = node.label
+        if label is not None:
+            self.program.located(label, scope)
+            self.entity(scope, "label", label, node)
+        self.visit(node.statement if isinstance(node, S.LabeledStatement) else node.assertion, scope)
+
     def constraint_prototype(self, node: S.ConstraintPrototype, scope: Scope) -> None:
         self.program.located(node.name, scope)
         self.entity(scope, "constraint", node.name, node)
@@ -305,7 +346,10 @@ class _Definer:
         S.GenerateFor: generate_for, S.ForStatement: for_statement, S.ForeachStatement: foreach,
         S.ClassDeclaration: class_declaration, S.ConstraintDeclaration: constraint_declaration,
         S.ConstraintPrototype: constraint_prototype, S.ForeachConstraint: foreach,
-        S.ArrayMethodWithExpression: array_method_with,
+        S.ArrayMethodWithExpression: array_method_with, S.PropertyDeclaration: assertion_declaration,
+        S.SequenceDeclaration: assertion_declaration, S.LetDeclaration: assertion_declaration,
+        S.ClockingDeclaration: clocking_declaration, S.ClockingSignals: clocking_signals, S.LabeledStatement: labeled,
+        S.AssertionItem: labeled,
     }
 
     def resolve_imports(self) -> None:

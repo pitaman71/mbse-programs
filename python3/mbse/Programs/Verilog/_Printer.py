@@ -26,7 +26,13 @@ _BINARY = {
     ">>>": SHIFT, "+": ADDITIVE, "-": ADDITIVE, "*": MULTIPLICATIVE, "/": MULTIPLICATIVE, "%": MULTIPLICATIVE,
     "**": POWER,
 }
-_RIGHT = {IMPLY, CONDITIONAL}  # right-associative levels
+# Sequences and properties (Table 16-3) bind looser than any expression operator.
+REPEAT, DELAY, THROUGHOUT, WITHIN, INTERSECT, SEQUENCE_AND, SEQUENCE_OR, NOT, PROPERTY_AND, PROPERTY_OR, IFF, UNTIL, \
+    IMPLICATION, TEMPORAL = range(-1, -15, -1)
+_SEQUENCE = {"throughout": THROUGHOUT, "within": WITHIN, "intersect": INTERSECT, "and": SEQUENCE_AND, "or": SEQUENCE_OR}
+_PROPERTY = {"and": PROPERTY_AND, "or": PROPERTY_OR, "iff": IFF, "implies": UNTIL, "until": UNTIL, "s_until": UNTIL,
+             "until_with": UNTIL, "s_until_with": UNTIL}
+_RIGHT = {IMPLY, CONDITIONAL, THROUGHOUT, IFF, UNTIL, IMPLICATION}  # right-associative levels
 
 
 def _precedence(node: Any) -> int:
@@ -40,6 +46,20 @@ def _precedence(node: Any) -> int:
         return UNARY
     if isinstance(node, S.AssignmentExpression):
         return 0
+    if isinstance(node, S.RepetitionSequence):
+        return REPEAT
+    if isinstance(node, S.DelaySequence):
+        return DELAY
+    if isinstance(node, S.BinarySequence):
+        return _SEQUENCE[node.operator]
+    if isinstance(node, S.BinaryProperty):
+        return _PROPERTY[node.operator]
+    if isinstance(node, S.UnaryProperty):
+        return NOT if node.operator in ("not", "nexttime", "s_nexttime") else TEMPORAL
+    if isinstance(node, S.ImplicationProperty):
+        return IMPLICATION
+    if isinstance(node, (S.ConditionalProperty, S.AbortProperty, S.ClockedProperty, S.ClockedSequence)):
+        return TEMPORAL  # they reach as far right as they can
     return PRIMARY
 
 
@@ -52,7 +72,8 @@ def _multiline(node: Any) -> bool:
     if isinstance(node, (S.FunctionDeclaration, S.TaskDeclaration)):
         return not _prototype(node)
     return isinstance(node, (S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-                             S.ClassDeclaration, S.ConstraintDeclaration, S.AlwaysConstruct, S.InitialConstruct,
+                             S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration,
+                             S.SequenceDeclaration, S.ClockingDeclaration, S.AlwaysConstruct, S.InitialConstruct,
                              S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf, S.GenerateCase,
                              S.GenerateBlock, S.IfdefDirective))
 
@@ -703,9 +724,22 @@ class Printer:
         return self.headed(head, node.body, level)
 
     def assertion(self, node: S.ImmediateAssertion, level: int) -> list[str]:
-        pad = _INDENT * level
         deferral = f" {node.deferral}" if node.deferral else ""
-        head = f"{pad}{node.keyword}{deferral} ({self.text(node.expression)})"
+        return self.actions(f"{_INDENT * level}{node.keyword}{deferral} ({self.text(node.expression)})", node, level)
+
+    def concurrent(self, node: S.ConcurrentAssertion, level: int) -> list[str]:
+        kind = "sequence" if node.sequence else "property"
+        return self.actions(f"{_INDENT * level}{node.keyword} {kind} ({self.spec(node.spec)})", node, level)
+
+    def expect(self, node: S.ExpectStatement, level: int) -> list[str]:
+        return self.actions(f"{_INDENT * level}expect ({self.spec(node.spec)})", node, level)
+
+    def labeled(self, node: S.LabeledStatement, level: int) -> list[str]:
+        lines = self.statement(node.statement, level)
+        return [f"{_INDENT * level}{node.label.spelling}: {lines[0].strip()}", *lines[1:]]
+
+    def actions(self, head: str, node: Any, level: int) -> list[str]:
+        """An assertion's head, then what passes and after `else` what fails."""
         if node.pass_action is None and node.fail_action is None:
             return [head + ";"]
         lines: list[str] = []
@@ -727,6 +761,145 @@ class Printer:
                 lines.extend(tail[1:])
         return lines
 
+    # Assertions
+
+    def assertion_item(self, node: S.AssertionItem, level: int) -> list[str]:
+        lines = self.statement(node.assertion, level)
+        if node.label is not None:
+            lines[0] = f"{_INDENT * level}{node.label.spelling}: {lines[0].strip()}"
+        return lines
+
+    def spec(self, node: S.PropertySpec) -> str:
+        """`@(clock) disable iff (disable) property`."""
+        return " ".join(p for p in (self.timing_text(node.clock) if node.clock is not None else None,
+                                    f"disable iff ({self.text(node.disable)})" if node.disable is not None else None,
+                                    self.text(node.property)) if p)
+
+    def assertion_ports(self, ports: list[S.AssertionPort]) -> str:
+        """`(ports)`, or nothing without ports."""
+        if not ports:
+            return ""
+        texts = [" ".join(p for p in ("local" if q.local else None, q.direction,
+                                      self.type_text(q.type) if q.type is not None else None,
+                                      q.name.spelling + "".join(self.dimension(d) for d in q.dimensions)) if p)
+                 + (f" = {self.text(q.value)}" if q.value is not None else "") for q in ports]
+        return "(" + ", ".join(texts) + ")"
+
+    def assertion_declaration(self, node: Any, level: int) -> list[str]:
+        pad = _INDENT * level
+        keyword = "property" if isinstance(node, S.PropertyDeclaration) else "sequence"
+        lines = [f"{pad}{keyword} {node.name.spelling}{self.assertion_ports(node.ports)};"]
+        lines.extend(self.declaration(v, level + 1)[0] for v in node.variables)
+        body = self.spec(node.spec) if isinstance(node, S.PropertyDeclaration) else self.text(node.sequence)
+        lines.append(f"{pad}{_INDENT}{body};")
+        lines.append(f"{pad}end{keyword}" + (f" : {node.name.spelling}" if node.labeled else ""))
+        return lines
+
+    def let_declaration(self, node: S.LetDeclaration, level: int) -> list[str]:
+        ports = self.assertion_ports(node.ports)
+        return [f"{_INDENT * level}let {node.name.spelling}{ports} = {self.text(node.value)};"]
+
+    def cycles(self, node: Any) -> str:
+        """A number of ticks or repetitions, or `low:high`."""
+        return f"{self.text(node.low)}:{self.text(node.high)}" if isinstance(node, S.CycleRange) else self.text(node)
+
+    def delay_step(self, node: S.DelayStep, last: bool) -> str:
+        delay = node.delay
+        if isinstance(delay, S.CycleRange):
+            text = f"##[{self.cycles(delay)}]"
+        else:
+            simple = isinstance(delay, (S.IntegerLiteral, S.NameExpression, S.ParenthesizedExpression, S.MacroUsage))
+            text = f"##{self.text(delay)}" if simple else f"##({self.text(delay)})"
+        return f"{text} {self.part(node.sequence, DELAY + 1, last)}"
+
+    def part(self, node: Any, level: int, last: bool) -> str:
+        """An operand of a sequence or property operator, in parentheses where it would bind otherwise. One that
+        reaches as far right as it can (`always p`, `if`, `@(clock) p`) needs none where nothing follows it: `last`."""
+        if not isinstance(node, (S.Sequence, S.Property)):
+            return self.operand(node, level)
+        if _precedence(node) == TEMPORAL and last or _precedence(node) >= level:
+            return self.property_text(node, last)
+        return f"({self.property_text(node)})"
+
+    def property_text(self, node: Any, last: bool = True) -> str:
+        """A sequence or a property; `last` when nothing follows it."""
+        if isinstance(node, S.DelaySequence):
+            first = f"{self.part(node.first, DELAY, False)} " if node.first is not None else ""
+            final = len(node.steps) - 1
+            return first + " ".join(self.delay_step(s, last and i == final) for i, s in enumerate(node.steps))
+        if isinstance(node, S.RepetitionSequence):
+            return f"{self.part(node.sequence, REPEAT, False)}[{node.operator}{self.cycles(node.count)}]"
+        if isinstance(node, (S.BinarySequence, S.BinaryProperty)):
+            level = _precedence(node)
+            left, right = (level + 1, level) if level in _RIGHT else (level, level + 1)
+            return f"{self.part(node.left, left, False)} {node.operator} {self.part(node.right, right, last)}"
+        if isinstance(node, (S.ParenthesizedSequence, S.FirstMatchSequence)):
+            inner = ", ".join([self.text(node.sequence), *(self.text(i) for i in node.items)])
+            return f"first_match({inner})" if isinstance(node, S.FirstMatchSequence) else f"({inner})"
+        if isinstance(node, S.ClockedSequence):
+            return f"{self.timing_text(node.clock)} {self.part(node.sequence, TEMPORAL, last)}"
+        if isinstance(node, S.ClockedProperty):
+            return f"{self.timing_text(node.clock)} {self.part(node.property, TEMPORAL, last)}"
+        if isinstance(node, S.ImplicationProperty):
+            return (f"{self.part(node.antecedent, IMPLICATION + 1, False)} {node.operator} "
+                    f"{self.part(node.consequent, IMPLICATION, last)}")
+        if isinstance(node, S.UnaryProperty):
+            cycles = f" [{self.cycles(node.range)}]" if node.range is not None else ""
+            return f"{node.operator}{cycles} {self.part(node.operand, _precedence(node), last)}"
+        if isinstance(node, S.StrengthProperty):
+            return f"{node.keyword}({self.text(node.sequence)})"
+        if isinstance(node, S.AbortProperty):
+            return f"{node.keyword} ({self.text(node.condition)}) {self.part(node.operand, TEMPORAL, last)}"
+        if isinstance(node, S.ConditionalProperty):
+            if node.alternative is None:
+                return f"if ({self.text(node.condition)}) {self.part(node.consequence, TEMPORAL, last)}"
+            return (f"if ({self.text(node.condition)}) {self.part(node.consequence, TEMPORAL + 1, False)} "
+                    f"else {self.part(node.alternative, TEMPORAL, last)}")
+        if isinstance(node, S.CaseProperty):
+            items = " ".join((", ".join(self.text(e) for e in i.expressions) if i.expressions else "default")
+                             + f": {self.text(i.body)};" for i in node.items)
+            return f"case ({self.text(node.expression)}) {items} endcase"
+        return f"({self.text(node.property)})"  # a ParenthesizedProperty
+
+    # Clocking blocks
+
+    def clocking_declaration(self, node: S.ClockingDeclaration, level: int) -> list[str]:
+        pad = _INDENT * level
+        name = f" {node.name.spelling}" if node.name is not None else ""
+        scope = f"{node.scope} " if node.scope else ""
+        lines = [f"{pad}{scope}clocking{name} {self.timing_text(node.clock)};"]
+        body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        end = f" : {node.name.spelling}" if node.labeled and node.name is not None else ""
+        return [*lines, *body, f"{pad}endclocking{end}"]
+
+    def skew(self, node: S.ClockingSkew | None) -> str | None:
+        if node is None:
+            return None
+        return " ".join(p for p in (node.edge, self.timing_text(node.delay) if node.delay is not None else None) if p)
+
+    def default_skew(self, node: S.DefaultSkew, level: int) -> list[str]:
+        words = ["default", *(["input", self.skew(node.input)] if node.input is not None else []),
+                 *(["output", self.skew(node.output)] if node.output is not None else [])]
+        return [_INDENT * level + " ".join(w for w in words if w) + ";"]
+
+    def clocking_signals(self, node: S.ClockingSignals, level: int) -> list[str]:
+        words: list[str | None] = []
+        if node.direction in ("input", "input output"):
+            words += ["input", self.skew(node.input_skew)]
+        if node.direction in ("output", "input output"):
+            words += ["output", self.skew(node.output_skew)]
+        if node.direction == "inout":
+            words.append("inout")
+        signals = ", ".join(s.name.spelling + (f" = {self.text(s.value)}" if s.value is not None else "")
+                            for s in node.signals)
+        return [_INDENT * level + " ".join(w for w in words if w) + f" {signals};"]
+
+    def default_clocking(self, node: S.DefaultClocking, level: int) -> list[str]:
+        return [f"{_INDENT * level}default clocking {node.name.spelling};"]
+
+    def default_disable(self, node: S.DefaultDisable, level: int) -> list[str]:
+        return [f"{_INDENT * level}default disable iff {self.text(node.condition)};"]
+
     # Timing controls
 
     def timing_text(self, node: Any) -> str:
@@ -736,6 +909,10 @@ class Printer:
             simple = isinstance(value, (S.IntegerLiteral, S.RealLiteral, S.TimeLiteral, S.NameExpression,
                                         S.ParenthesizedExpression, S.MacroUsage))
             return f"#{text}" if simple else f"#({text})"
+        if isinstance(node, S.CycleDelay):
+            simple = isinstance(node.value, (S.IntegerLiteral, S.NameExpression, S.ParenthesizedExpression,
+                                             S.MacroUsage))
+            return f"##{self.text(node.value)}" if simple else f"##({self.text(node.value)})"
         if not node.events:
             return "@(*)"
         return "@(" + " or ".join(self.event(e) for e in node.events) + ")"
@@ -817,6 +994,8 @@ class Printer:
             return "$"
         if isinstance(node, S.NullLiteral):
             return "null"
+        if isinstance(node, (S.Sequence, S.Property)):
+            return self.property_text(node)
         if isinstance(node, S.DistExpression):
             items = ", ".join((self.range_text(i.value) if i.value is not None else "default")
                               + (f" {i.operator} {self.text(i.weight)}" if i.operator is not None else "")
@@ -866,11 +1045,15 @@ class Printer:
         S.GenerateIf: generate_if, S.GenerateCase: generate_case, S.GenerateBlock: generate_block,
         S.ModuleInstantiation: instantiation, S.ClassDeclaration: class_declaration,
         S.ForwardTypedefDeclaration: forward_typedef, S.ConstraintDeclaration: constraint_declaration,
-        S.ConstraintPrototype: constraint_prototype,
+        S.ConstraintPrototype: constraint_prototype, S.AssertionItem: assertion_item,
+        S.PropertyDeclaration: assertion_declaration, S.SequenceDeclaration: assertion_declaration,
+        S.LetDeclaration: let_declaration, S.ClockingDeclaration: clocking_declaration, S.DefaultSkew: default_skew,
+        S.ClockingSignals: clocking_signals, S.DefaultClocking: default_clocking, S.DefaultDisable: default_disable,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,
         S.ForStatement: loop, S.WhileStatement: loop, S.RepeatStatement: loop, S.ForeverStatement: loop,
         S.ForeachStatement: loop, S.DoWhileStatement: loop, S.TimedStatement: timed, S.WaitStatement: wait,
-        S.ImmediateAssertion: assertion, S.RandCaseStatement: randcase,
+        S.ImmediateAssertion: assertion, S.RandCaseStatement: randcase, S.ConcurrentAssertion: concurrent,
+        S.ExpectStatement: expect, S.LabeledStatement: labeled,
     }

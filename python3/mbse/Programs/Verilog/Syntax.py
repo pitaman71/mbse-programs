@@ -3,11 +3,11 @@ grammar is.
 
 The kinds cover SystemVerilog (IEEE 1800-2023)'s design subset and its classes: design units, ports and parameters,
 data types, declarations, continuous assignments, procedural blocks and statements, generate constructs, instantiation,
-functions and tasks, classes with their properties, methods and objects, constraints and randomization, immediate
-assertions and compiler directives.
+functions and tasks, classes with their properties, methods and objects, constraints and randomization, immediate and
+concurrent assertions with their properties and sequences, clocking blocks and compiler directives.
 Verilog (IEEE 1364) is a family of its own whose standards have fewer of them: each kind and feature records where it
 exists in both families (`SINCE`, `FEATURES`), which `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023` and
-`VerilogStandard(year, family)` check. Properties and sequences, and covergroups are not kinds yet.
+`VerilogStandard(year, family)` check. Covergroups are not kinds yet.
 
 The tree is abstract where the grammar only spells and concrete where a transpiler needs to see what was written:
 
@@ -56,7 +56,7 @@ Lifetime = Choice["static", "automatic"]
 VectorKeyword = Choice["bit", "logic", "reg"]
 AtomKeyword = Choice["byte", "shortint", "int", "longint", "integer", "time"]
 RealKeyword = Choice["shortreal", "real", "realtime"]
-SimpleKeyword = Choice["string", "chandle", "event", "void"]
+SimpleKeyword = Choice["string", "chandle", "event", "void", "sequence", "property", "untyped"]
 AlwaysKeyword = Choice["always", "always_comb", "always_ff", "always_latch"]
 CaseKeyword = Choice["case", "casez", "casex"]
 Qualifier = Choice["unique", "unique0", "priority"]
@@ -78,6 +78,17 @@ ModuleKeyword = Choice["module", "macromodule"]
 Visibility = Choice["local", "protected"]
 RandomQualifier = Choice["rand", "randc"]
 DistOperator = Choice[":=", ":/"]
+ConcurrentKeyword = Choice["assert", "assume", "cover", "restrict"]
+RepetitionOperator = Choice["*", "->", "="]
+SequenceOperator = Choice["and", "or", "intersect", "within", "throughout"]
+ImplicationOperator = Choice["|->", "|=>", "#-#", "#=#"]
+PropertyOperator = Choice["and", "or", "iff", "implies", "until", "s_until", "until_with", "s_until_with"]
+UnaryPropertyOperator = Choice["not", "nexttime", "s_nexttime", "always", "s_always", "eventually", "s_eventually"]
+StrengthKeyword = Choice["strong", "weak"]
+AbortKeyword = Choice["accept_on", "reject_on", "sync_accept_on", "sync_reject_on"]
+PortDirection = Choice["input", "output", "inout"]
+ClockingDirection = Choice["input", "output", "inout", "input output"]
+ClockingScope = Choice["default", "global"]
 PrototypeQualifier = Choice["extern", "pure"]
 ForwardKeyword = Choice["enum", "struct", "union", "class", "interface class"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
@@ -139,6 +150,16 @@ class Directive(SyntaxNode):
 
 class Constraint(SyntaxNode):
     """A constraint on random variables, in a constraint block (18.5, A.1.10)."""
+
+
+class Property(SyntaxNode):
+    """A property: what a concurrent assertion checks (16.12, A.2.10). A sequence, and an expression, is a property
+    too: a position that holds a property holds a `Property` or an `Expression`."""
+
+
+class Sequence(Property):
+    """A sequence: a pattern of values over clock ticks (16.7, A.2.10). An expression is a sequence of one tick too: a
+    position that holds a sequence holds a `Sequence` or an `Expression`."""
 
 
 # === Lexical conventions (5) ===
@@ -373,10 +394,12 @@ class NonIntegerType(DataType):
 
 
 class KeywordType(DataType):
-    """`string`, `chandle`, `event` or `void` (6.16, 6.14, 6.17, 6.13)."""
+    """`string`, `chandle`, `event` or `void` (6.16, 6.14, 6.17, 6.13), or the type of an assertion's port:
+    `sequence`, `property` or `untyped` (16.8)."""
 
     keyword: SimpleKeyword
-    FEATURES = {"keyword": {"string": sv(), "chandle": sv(), "void": sv()}}
+    FEATURES = {"keyword": {"string": sv(), "chandle": sv(), "void": sv(), "sequence": sv(2009), "property": sv(2009),
+                            "untyped": sv(2009)}}
 
 
 class NamedType(DataType):
@@ -1091,6 +1114,15 @@ class RandCaseItem(SyntaxNode):
     SINCE = sv()
 
 
+class LabeledStatement(Statement):
+    """`label: statement`, a statement named for `disable` and for its assertions' messages (9.3.5). A labeled block
+    is a named one instead: `x: begin ... end` is `begin : x ... end`."""
+
+    label: Identifier
+    statement: Statement
+    SINCE = sv()
+
+
 class ImmediateAssertion(Statement):
     """`assert (expression) pass else fail`, or `assume` or `cover`, deferred with `#0` or `final` (16.3, 16.4).
     `cover` has no `fail`."""
@@ -1104,6 +1136,328 @@ class ImmediateAssertion(Statement):
     FEATURES = {"deferral": {"#0": sv(2009), "final": sv(2012)}}
 
 
+# === Assertions (16) ===
+
+
+class ConcurrentAssertion(Statement):
+    """`assert property (spec) pass else fail`, or `assume`, `cover` (of a property, or with `sequence` of a
+    sequence) or `restrict` (16.14). `cover` has no `fail`, and `restrict` no action."""
+
+    keyword: ConcurrentKeyword
+    sequence: bool
+    spec: PropertySpec
+    pass_action: Statement | None
+    fail_action: Statement | None
+    SINCE = sv()
+    FEATURES = {"keyword": {"restrict": sv(2009)}}
+
+
+class ExpectStatement(Statement):
+    """`expect (spec) pass else fail`, which waits until a property passes or fails (16.17)."""
+
+    spec: PropertySpec
+    pass_action: Statement | None
+    fail_action: Statement | None
+    SINCE = sv()
+
+
+class AssertionItem(Item):
+    """`label: assertion` among items: a concurrent assertion, or a deferred immediate one (16.4, 16.14)."""
+
+    label: Identifier | None
+    assertion: ConcurrentAssertion | ImmediateAssertion
+    SINCE = sv()
+
+
+class PropertySpec(SyntaxNode):
+    """`@(clock) disable iff (disable) property`: a property with its clock and its reset (16.12)."""
+
+    clock: EventControl | None
+    disable: Expression | None
+    property: Property | Expression
+    SINCE = sv()
+
+
+class PropertyDeclaration(Item):
+    """`property name(ports); variables spec; endproperty` (16.12). `labeled` repeats the name after `endproperty`;
+    without ports, the name has no parentheses."""
+
+    name: Identifier
+    ports: list[AssertionPort]
+    variables: list[VariableDeclaration]
+    spec: PropertySpec
+    labeled: bool
+    SINCE = sv()
+
+
+class SequenceDeclaration(Item):
+    """`sequence name(ports); variables sequence; endsequence` (16.8)."""
+
+    name: Identifier
+    ports: list[AssertionPort]
+    variables: list[VariableDeclaration]
+    sequence: Sequence | Expression
+    labeled: bool
+    SINCE = sv()
+
+
+class LetDeclaration(Item):
+    """`let name(ports) = value;`, an expression with arguments, expanded where it is used (11.12)."""
+
+    name: Identifier
+    ports: list[AssertionPort]
+    value: Expression
+    SINCE = sv(2009)
+
+
+class AssertionPort(SyntaxNode):
+    """`local direction type name dimensions = default`, a port of a property, a sequence or a `let` (16.8). Without a
+    type it is untyped, as `untyped` makes it."""
+
+    local: bool
+    direction: PortDirection | None
+    type: DataType | None
+    name: Identifier
+    dimensions: list[Dimension]
+    value: Property | Expression | None
+    SINCE = sv()
+    FEATURES = {"local": {True: sv(2009)}}
+
+
+# --- Sequences (16.7) ---
+
+
+class DelaySequence(Sequence):
+    """`first ##delay sequence ##delay sequence ...`, or without `first` a sequence that starts with a delay (16.7)."""
+
+    first: Sequence | Expression | None
+    steps: list[DelayStep]
+    SINCE = sv()
+
+
+class DelayStep(SyntaxNode):
+    """`##delay sequence` in a `DelaySequence`: a number of ticks, or a range of them (16.7)."""
+
+    delay: Expression | CycleRange
+    sequence: Sequence | Expression
+    SINCE = sv()
+
+
+class CycleRange(SyntaxNode):
+    """`[low:high]`, a range of ticks or of repetitions, `high` `$` when unbounded. `##[*]`, `[*]` and `[+]` are
+    `[0:$]`, `[*0:$]` and `[*1:$]` (16.7, 16.9.2)."""
+
+    low: Expression
+    high: Expression
+    SINCE = sv()
+
+
+class RepetitionSequence(Sequence):
+    """`sequence[*count]` (consecutive), `[->count]` (goto) or `[=count]` (nonconsecutive), of a number or a range of
+    repetitions (16.9.2)."""
+
+    sequence: Sequence | Expression
+    operator: RepetitionOperator
+    count: Expression | CycleRange
+    SINCE = sv()
+
+
+class BinarySequence(Sequence):
+    """`left operator right`: `and`, `or`, `intersect`, `within` or `throughout` (16.9)."""
+
+    left: Sequence | Expression
+    operator: SequenceOperator
+    right: Sequence | Expression
+    SINCE = sv()
+
+
+class ParenthesizedSequence(Sequence):
+    """`(sequence, items)`: a sequence in parentheses, with the match items (assignments, calls) it runs when it
+    matches (16.10)."""
+
+    sequence: Sequence | Expression
+    items: list[Expression]
+    SINCE = sv()
+
+
+class FirstMatchSequence(Sequence):
+    """`first_match(sequence, items)`: the sequence's first match only (16.9.8)."""
+
+    sequence: Sequence | Expression
+    items: list[Expression]
+    SINCE = sv()
+
+
+class ClockedSequence(Sequence):
+    """`@(clock) sequence`, a sequence on its own clock (16.16)."""
+
+    clock: EventControl
+    sequence: Sequence | Expression
+    SINCE = sv()
+
+
+# --- Properties (16.12) ---
+
+
+class ImplicationProperty(Property):
+    """`antecedent |-> consequent` (overlapping), `|=>` (on the next tick), or `#-#` and `#=#`, which also need the
+    antecedent to match (16.12.7, 16.12.9)."""
+
+    antecedent: Sequence | Expression
+    operator: ImplicationOperator
+    consequent: Property | Expression
+    SINCE = sv()
+    FEATURES = {"operator": {"#-#": sv(2009), "#=#": sv(2009)}}
+
+
+class BinaryProperty(Property):
+    """`left operator right`: `and`, `or`, `iff`, `implies`, `until`, `s_until`, `until_with` or `s_until_with`
+    (16.12)."""
+
+    left: Property | Expression
+    operator: PropertyOperator
+    right: Property | Expression
+    SINCE = sv()
+    FEATURES = {"operator": {op: sv(2009) for op in ("iff", "implies", "until", "s_until", "until_with",
+                                                     "s_until_with")}}
+
+
+class UnaryProperty(Property):
+    """`operator [range] operand`: `not`, `nexttime`, `s_nexttime`, `always`, `s_always`, `eventually` or
+    `s_eventually`, with a number of ticks or a range of them for those that take one (16.12)."""
+
+    operator: UnaryPropertyOperator
+    range: Expression | CycleRange | None
+    operand: Property | Expression
+    SINCE = sv()
+    FEATURES = {"operator": {op: sv(2009) for op in ("nexttime", "s_nexttime", "always", "s_always", "eventually",
+                                                     "s_eventually")}}
+
+
+class StrengthProperty(Property):
+    """`strong(sequence)` or `weak(sequence)` (16.12.2)."""
+
+    keyword: StrengthKeyword
+    sequence: Sequence | Expression
+    SINCE = sv(2009)
+
+
+class AbortProperty(Property):
+    """`accept_on(condition) operand`, or `reject_on`, `sync_accept_on` or `sync_reject_on` (16.12.14)."""
+
+    keyword: AbortKeyword
+    condition: Expression
+    operand: Property | Expression
+    SINCE = sv(2009)
+
+
+class ConditionalProperty(Property):
+    """`if (condition) consequence else alternative` (16.12.8)."""
+
+    condition: Expression
+    consequence: Property | Expression
+    alternative: Property | Expression | None
+    SINCE = sv()
+
+
+class CaseProperty(Property):
+    """`case (expression) items endcase` (16.12.8)."""
+
+    expression: Expression
+    items: list[PropertyCaseItem]
+    SINCE = sv(2009)
+
+
+class PropertyCaseItem(SyntaxNode):
+    """`expressions: body;`, or `default: body;` without expressions, in a case property (16.12.8)."""
+
+    expressions: list[Expression]
+    body: Property | Expression
+    SINCE = sv(2009)
+
+
+class ParenthesizedProperty(Property):
+    """`(property)`: a property in parentheses (16.12)."""
+
+    property: Property | Expression
+    SINCE = sv()
+
+
+class ClockedProperty(Property):
+    """`@(clock) property`, a property on its own clock (16.16)."""
+
+    clock: EventControl
+    property: Property | Expression
+    SINCE = sv()
+
+
+# --- Clocking blocks (14) ---
+
+
+class ClockingDeclaration(Item):
+    """`default clocking name @(event); items endclocking`, or `global` (14.3, 14.12, 14.14). A default clocking block
+    may have no name. `labeled` repeats the name after `endclocking`."""
+
+    scope: ClockingScope | None
+    name: Identifier | None
+    clock: EventControl
+    items: list[DefaultSkew | ClockingSignals | PropertyDeclaration | SequenceDeclaration | LetDeclaration | Directive
+                | Comment]
+    labeled: bool
+    SINCE = sv()
+    FEATURES = {"scope": {"global": sv(2009)}}
+
+
+class DefaultSkew(Item):
+    """`default input skew output skew;` in a clocking block (14.3)."""
+
+    input: ClockingSkew | None
+    output: ClockingSkew | None
+    SINCE = sv()
+
+
+class ClockingSignals(Item):
+    """`direction input_skew output_skew signals;` in a clocking block (14.3). Both skews are for `input output`;
+    `inout` has none."""
+
+    direction: ClockingDirection
+    input_skew: ClockingSkew | None
+    output_skew: ClockingSkew | None
+    signals: list[ClockingSignal]
+    SINCE = sv()
+
+
+class ClockingSignal(SyntaxNode):
+    """`name = value` in a clocking block: a signal, or with `value` an expression it stands for (14.5)."""
+
+    name: Identifier
+    value: Expression | None
+    SINCE = sv()
+
+
+class ClockingSkew(SyntaxNode):
+    """`edge #delay`: when a clocking block samples or drives, relative to its clock (14.4). `#1step` is the time
+    literal `1step`."""
+
+    edge: Edge | None
+    delay: DelayControl | None
+    SINCE = sv()
+
+
+class DefaultClocking(Item):
+    """`default clocking name;`: the clocking block a scope's assertions and cycle delays use (14.12)."""
+
+    name: Identifier
+    SINCE = sv()
+
+
+class DefaultDisable(Item):
+    """`default disable iff condition;`: the reset of a scope's concurrent assertions (16.15)."""
+
+    condition: Expression
+    SINCE = sv(2009)
+
+
 # === Timing controls (9.4) ===
 
 
@@ -1111,6 +1465,13 @@ class DelayControl(TimingControl):
     """`#value`: a number, a time literal, a name or a parenthesized expression (9.4.1)."""
 
     value: Expression
+
+
+class CycleDelay(TimingControl):
+    """`##value`: a number of ticks of the default clocking block (14.11)."""
+
+    value: Expression
+    SINCE = sv()
 
 
 class EventControl(TimingControl):
@@ -1510,6 +1871,12 @@ KINDS: list[type[SyntaxNode]] = [
     ConstraintDeclaration, ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint,
     ConditionalConstraint, ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint,
     RandCaseStatement, RandCaseItem,
+    LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration,
+    SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence,
+    BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty,
+    UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem,
+    ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal,
+    ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay,
     IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
     ElsifDirective, DisabledText, OtherDirective,
 ]
@@ -1518,4 +1885,4 @@ LANGUAGE = Language("Verilog", KINDS, base={VERILOG: 1995, SV: 2005})
 
 __all__ += [k.__name__ for k in KINDS] + [
     "Name", "Expression", "Literal", "DataType", "Dimension", "Item", "Port", "Statement", "TimingControl",
-    "Connection", "Range", "Directive", "Constraint", "sv", "verilog", "VERILOG", "SV"]
+    "Connection", "Range", "Directive", "Constraint", "Property", "Sequence", "sv", "verilog", "VERILOG", "SV"]

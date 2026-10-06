@@ -24,7 +24,17 @@ const BINARY: Record<string, number> = {
   ">>>": SHIFT, "+": ADDITIVE, "-": ADDITIVE, "*": MULTIPLICATIVE, "/": MULTIPLICATIVE, "%": MULTIPLICATIVE,
   "**": POWER,
 };
-const RIGHT = new Set<number>([IMPLY, CONDITIONAL]); // right-associative levels
+// Sequences and properties (Table 16-3) bind looser than any expression operator.
+const [REPEAT, DELAY, THROUGHOUT, WITHIN, INTERSECT, SEQUENCE_AND, SEQUENCE_OR, NOT, PROPERTY_AND, PROPERTY_OR, IFF, UNTIL,
+  IMPLICATION, TEMPORAL] = [-1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14] as const;
+const SEQUENCE: Record<string, number> = {
+  throughout: THROUGHOUT, within: WITHIN, intersect: INTERSECT, and: SEQUENCE_AND, or: SEQUENCE_OR,
+};
+const PROPERTY: Record<string, number> = {
+  and: PROPERTY_AND, or: PROPERTY_OR, iff: IFF, implies: UNTIL, until: UNTIL, s_until: UNTIL, until_with: UNTIL,
+  s_until_with: UNTIL,
+};
+const RIGHT = new Set<number>([IMPLY, CONDITIONAL, THROUGHOUT, IFF, UNTIL, IMPLICATION]); // right-associative levels
 
 const isAny = (node: unknown, kinds: Function[]) => kinds.some((k) => node instanceof k);
 const joined = (parts: (string | null | undefined)[], separator = " ") => parts.filter((p) => p).join(separator);
@@ -35,6 +45,14 @@ function precedence(node: unknown): number {
   if (node instanceof S.ConditionalExpression) return CONDITIONAL;
   if (isAny(node, [S.UnaryExpression, S.IncrementExpression])) return UNARY;
   if (node instanceof S.AssignmentExpression) return 0;
+  if (node instanceof S.RepetitionSequence) return REPEAT;
+  if (node instanceof S.DelaySequence) return DELAY;
+  if (node instanceof S.BinarySequence) return SEQUENCE[node.operator as string] as number;
+  if (node instanceof S.BinaryProperty) return PROPERTY[node.operator as string] as number;
+  if (node instanceof S.UnaryProperty) return ["not", "nexttime", "s_nexttime"].includes(node.operator as string) ? NOT : TEMPORAL;
+  if (node instanceof S.ImplicationProperty) return IMPLICATION;
+  // they reach as far right as they can
+  if (isAny(node, [S.ConditionalProperty, S.AbortProperty, S.ClockedProperty, S.ClockedSequence])) return TEMPORAL;
   return PRIMARY;
 }
 
@@ -46,7 +64,8 @@ function prototype(node: any): boolean {
 function multiline(node: unknown): boolean {
   if (isAny(node, [S.FunctionDeclaration, S.TaskDeclaration])) return !prototype(node);
   return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
-    S.ClassDeclaration, S.ConstraintDeclaration, S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
+    S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration, S.SequenceDeclaration, S.ClockingDeclaration,
+    S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
     S.GenerateIf, S.GenerateCase, S.GenerateBlock, S.IfdefDirective]);
 }
 
@@ -719,7 +738,25 @@ export class Printer {
 
   assertion(node: any, level: number): string[] {
     const deferral = node.deferral ? ` ${node.deferral}` : "";
-    const head = `${pad(level)}${node.keyword}${deferral} (${this.text(node.expression)})`;
+    return this.actions(`${pad(level)}${node.keyword}${deferral} (${this.text(node.expression)})`, node, level);
+  }
+
+  concurrent(node: any, level: number): string[] {
+    return this.actions(`${pad(level)}${node.keyword} ${node.sequence ? "sequence" : "property"} (${this.spec(node.spec)})`,
+      node, level);
+  }
+
+  expect(node: any, level: number): string[] {
+    return this.actions(`${pad(level)}expect (${this.spec(node.spec)})`, node, level);
+  }
+
+  labeled(node: any, level: number): string[] {
+    const lines = this.statement(node.statement, level);
+    return [`${pad(level)}${node.label.spelling}: ${(lines[0] as string).trim()}`, ...lines.slice(1)];
+  }
+
+  /** An assertion's head, then what passes and after `else` what fails. */
+  actions(head: string, node: any, level: number): string[] {
     if (node.pass_action === null && node.fail_action === null) return [head + ";"];
     let lines: string[];
     if (node.pass_action !== null) {
@@ -741,6 +778,152 @@ export class Printer {
     return lines;
   }
 
+  // Assertions
+
+  assertionItem(node: any, level: number): string[] {
+    const lines = this.statement(node.assertion, level);
+    if (node.label !== null) lines[0] = `${pad(level)}${node.label.spelling}: ${(lines[0] as string).trim()}`;
+    return lines;
+  }
+
+  /** `@(clock) disable iff (disable) property`. */
+  spec(node: any): string {
+    return joined([node.clock !== null ? this.timingText(node.clock) : null,
+      node.disable !== null ? `disable iff (${this.text(node.disable)})` : null, this.text(node.property)]);
+  }
+
+  /** `(ports)`, or nothing without ports. */
+  assertionPorts(ports: readonly any[]): string {
+    if (ports.length === 0) return "";
+    return "(" + ports.map((q) => joined([q.local ? "local" : null, q.direction, q.type !== null ? this.typeText(q.type) : null,
+      q.name.spelling + q.dimensions.map((d: any) => this.dimension(d)).join("")])
+      + (q.value !== null ? ` = ${this.text(q.value)}` : "")).join(", ") + ")";
+  }
+
+  assertionDeclaration(node: any, level: number): string[] {
+    const p = pad(level);
+    const keyword = node instanceof S.PropertyDeclaration ? "property" : "sequence";
+    const lines = [`${p}${keyword} ${node.name.spelling}${this.assertionPorts(node.ports)};`];
+    lines.push(...node.variables.map((v: any) => this.declaration(v, level + 1)[0]));
+    const body = node instanceof S.PropertyDeclaration ? this.spec(node.spec) : this.text(node.sequence);
+    lines.push(`${p}${INDENT}${body};`);
+    lines.push(`${p}end${keyword}` + (node.labeled ? ` : ${node.name.spelling}` : ""));
+    return lines;
+  }
+
+  letDeclaration(node: any, level: number): string[] {
+    return [`${pad(level)}let ${node.name.spelling}${this.assertionPorts(node.ports)} = ${this.text(node.value)};`];
+  }
+
+  /** A number of ticks or repetitions, or `low:high`. */
+  cycles(node: any): string {
+    return node instanceof S.CycleRange ? `${this.text(node.low)}:${this.text(node.high)}` : this.text(node);
+  }
+
+  delayStep(node: any, last: boolean): string {
+    const delay = node.delay;
+    let text: string;
+    if (delay instanceof S.CycleRange) {
+      text = `##[${this.cycles(delay)}]`;
+    } else {
+      const simple = isAny(delay, [S.IntegerLiteral, S.NameExpression, S.ParenthesizedExpression, S.MacroUsage]);
+      text = simple ? `##${this.text(delay)}` : `##(${this.text(delay)})`;
+    }
+    return `${text} ${this.part(node.sequence, DELAY + 1, last)}`;
+  }
+
+  /** An operand of a sequence or property operator, in parentheses where it would bind otherwise. One that reaches as
+   * far right as it can (`always p`, `if`, `@(clock) p`) needs none where nothing follows it: `last`. */
+  part(node: any, level: number, last: boolean): string {
+    if (!isAny(node, [S.Sequence, S.Property])) return this.operand(node, level);
+    if (precedence(node) === TEMPORAL && last || precedence(node) >= level) return this.propertyText(node, last);
+    return `(${this.propertyText(node)})`;
+  }
+
+  /** A sequence or a property; `last` when nothing follows it. */
+  propertyText(node: any, last = true): string {
+    if (node instanceof S.DelaySequence) {
+      const first = node.first !== null ? `${this.part(node.first, DELAY, false)} ` : "";
+      return first + node.steps.map((s, i) => this.delayStep(s, last && i === node.steps.length - 1)).join(" ");
+    }
+    if (node instanceof S.RepetitionSequence) {
+      return `${this.part(node.sequence, REPEAT, false)}[${node.operator}${this.cycles(node.count)}]`;
+    }
+    if (isAny(node, [S.BinarySequence, S.BinaryProperty])) {
+      const level = precedence(node);
+      const [left, right] = RIGHT.has(level) ? [level + 1, level] : [level, level + 1];
+      return `${this.part(node.left, left, false)} ${node.operator} ${this.part(node.right, right, last)}`;
+    }
+    if (isAny(node, [S.ParenthesizedSequence, S.FirstMatchSequence])) {
+      const inner = [this.text(node.sequence), ...node.items.map((i: any) => this.text(i))].join(", ");
+      return node instanceof S.FirstMatchSequence ? `first_match(${inner})` : `(${inner})`;
+    }
+    if (node instanceof S.ClockedSequence) return `${this.timingText(node.clock)} ${this.part(node.sequence, TEMPORAL, last)}`;
+    if (node instanceof S.ClockedProperty) return `${this.timingText(node.clock)} ${this.part(node.property, TEMPORAL, last)}`;
+    if (node instanceof S.ImplicationProperty) {
+      return `${this.part(node.antecedent, IMPLICATION + 1, false)} ${node.operator} `
+        + `${this.part(node.consequent, IMPLICATION, last)}`;
+    }
+    if (node instanceof S.UnaryProperty) {
+      const cycles = node.range !== null ? ` [${this.cycles(node.range)}]` : "";
+      return `${node.operator}${cycles} ${this.part(node.operand, precedence(node), last)}`;
+    }
+    if (node instanceof S.StrengthProperty) return `${node.keyword}(${this.text(node.sequence)})`;
+    if (node instanceof S.AbortProperty) {
+      return `${node.keyword} (${this.text(node.condition)}) ${this.part(node.operand, TEMPORAL, last)}`;
+    }
+    if (node instanceof S.ConditionalProperty) {
+      if (node.alternative === null) return `if (${this.text(node.condition)}) ${this.part(node.consequence, TEMPORAL, last)}`;
+      return `if (${this.text(node.condition)}) ${this.part(node.consequence, TEMPORAL + 1, false)} `
+        + `else ${this.part(node.alternative, TEMPORAL, last)}`;
+    }
+    if (node instanceof S.CaseProperty) {
+      const items = node.items.map((i: any) => (i.expressions.length > 0 ? i.expressions.map((e: any) => this.text(e)).join(", ")
+        : "default") + `: ${this.text(i.body)};`).join(" ");
+      return `case (${this.text(node.expression)}) ${items} endcase`;
+    }
+    return `(${this.text(node.property)})`; // a ParenthesizedProperty
+  }
+
+  // Clocking blocks
+
+  clockingDeclaration(node: any, level: number): string[] {
+    const p = pad(level);
+    const name = node.name !== null ? ` ${node.name.spelling}` : "";
+    const lines = [`${p}${node.scope ? `${node.scope} ` : ""}clocking${name} ${this.timingText(node.clock)};`];
+    const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+    const end = node.labeled && node.name !== null ? ` : ${node.name.spelling}` : "";
+    return [...lines, ...body, `${p}endclocking${end}`];
+  }
+
+  skew(node: any): string | null {
+    if (node === null) return null;
+    return joined([node.edge, node.delay !== null ? this.timingText(node.delay) : null]);
+  }
+
+  defaultSkew(node: any, level: number): string[] {
+    const words = ["default", ...(node.input !== null ? ["input", this.skew(node.input)] : []),
+      ...(node.output !== null ? ["output", this.skew(node.output)] : [])];
+    return [pad(level) + joined(words) + ";"];
+  }
+
+  clockingSignals(node: any, level: number): string[] {
+    const words: (string | null)[] = [];
+    if (node.direction === "input" || node.direction === "input output") words.push("input", this.skew(node.input_skew));
+    if (node.direction === "output" || node.direction === "input output") words.push("output", this.skew(node.output_skew));
+    if (node.direction === "inout") words.push("inout");
+    const signals = node.signals.map((s: any) => s.name.spelling + (s.value !== null ? ` = ${this.text(s.value)}` : "")).join(", ");
+    return [pad(level) + joined(words) + ` ${signals};`];
+  }
+
+  defaultClocking(node: any, level: number): string[] {
+    return [`${pad(level)}default clocking ${node.name.spelling};`];
+  }
+
+  defaultDisable(node: any, level: number): string[] {
+    return [`${pad(level)}default disable iff ${this.text(node.condition)};`];
+  }
+
   // Timing controls
 
   timingText(node: any): string {
@@ -750,6 +933,10 @@ export class Printer {
       const simple = isAny(value, [S.IntegerLiteral, S.RealLiteral, S.TimeLiteral, S.NameExpression,
         S.ParenthesizedExpression, S.MacroUsage]);
       return simple ? `#${text}` : `#(${text})`;
+    }
+    if (node instanceof S.CycleDelay) {
+      const simple = isAny(node.value, [S.IntegerLiteral, S.NameExpression, S.ParenthesizedExpression, S.MacroUsage]);
+      return simple ? `##${this.text(node.value)}` : `##(${this.text(node.value)})`;
     }
     if (node.events.length === 0) return "@(*)";
     return "@(" + node.events.map((e: any) => this.event(e)).join(" or ") + ")";
@@ -828,6 +1015,7 @@ export class Printer {
     if (node instanceof S.MacroUsage) return `\`${node.name?.spelling}` + (node.arguments !== null ? `(${node.arguments})` : "");
     if (node instanceof S.DollarExpression) return "$";
     if (node instanceof S.NullLiteral) return "null";
+    if (isAny(node, [S.Sequence, S.Property])) return this.propertyText(node);
     if (node instanceof S.DistExpression) {
       const items = node.items.map((i: any) => (i.value !== null ? this.rangeText(i.value) : "default")
         + (i.operator !== null ? ` ${i.operator} ${this.text(i.weight)}` : "")).join(", ");
@@ -883,6 +1071,14 @@ const items: [Function[], Method][] = [
   [[S.ForwardTypedefDeclaration], (s, n, l) => s.forwardTypedef(n, l)],
   [[S.ConstraintDeclaration], (s, n, l) => s.constraintDeclaration(n, l)],
   [[S.ConstraintPrototype], (s, n, l) => s.constraintPrototype(n, l)],
+  [[S.AssertionItem], (s, n, l) => s.assertionItem(n, l)],
+  [[S.PropertyDeclaration, S.SequenceDeclaration], (s, n, l) => s.assertionDeclaration(n, l)],
+  [[S.LetDeclaration], (s, n, l) => s.letDeclaration(n, l)],
+  [[S.ClockingDeclaration], (s, n, l) => s.clockingDeclaration(n, l)],
+  [[S.DefaultSkew], (s, n, l) => s.defaultSkew(n, l)],
+  [[S.ClockingSignals], (s, n, l) => s.clockingSignals(n, l)],
+  [[S.DefaultClocking], (s, n, l) => s.defaultClocking(n, l)],
+  [[S.DefaultDisable], (s, n, l) => s.defaultDisable(n, l)],
 ];
 for (const [kinds, method] of items) for (const kind of kinds) Printer.ITEMS.set(kind, method);
 const statements: [Function[], Method][] = [
@@ -895,5 +1091,8 @@ const statements: [Function[], Method][] = [
   [[S.WaitStatement], (s, n, l) => s.wait(n, l)],
   [[S.ImmediateAssertion], (s, n, l) => s.assertion(n, l)],
   [[S.RandCaseStatement], (s, n, l) => s.randcase(n, l)],
+  [[S.ConcurrentAssertion], (s, n, l) => s.concurrent(n, l)],
+  [[S.ExpectStatement], (s, n, l) => s.expect(n, l)],
+  [[S.LabeledStatement], (s, n, l) => s.labeled(n, l)],
 ];
 for (const [kinds, method] of statements) for (const kind of kinds) Printer.STATEMENTS.set(kind, method);

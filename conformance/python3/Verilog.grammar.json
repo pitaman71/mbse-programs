@@ -54,6 +54,14 @@
    "base": "SyntaxNode"
   },
   {
+   "name": "Property",
+   "base": "SyntaxNode"
+  },
+  {
+   "name": "Sequence",
+   "base": "Property"
+  },
+  {
    "name": "Directive",
    "base": "SyntaxNode"
   }
@@ -956,6 +964,15 @@
      },
      "void": {
       "SystemVerilog": 2005
+     },
+     "sequence": {
+      "SystemVerilog": 2009
+     },
+     "property": {
+      "SystemVerilog": 2009
+     },
+     "untyped": {
+      "SystemVerilog": 2009
      }
     }
    },
@@ -968,7 +985,10 @@
       "string",
       "chandle",
       "event",
-      "void"
+      "void",
+      "sequence",
+      "property",
+      "untyped"
      ]
     }
    ]
@@ -4675,6 +4695,1267 @@
      "name": "body",
      "type": [
       "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "LabeledStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "statement",
+     "type": [
+      "Statement"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConcurrentAssertion",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "keyword": {
+     "restrict": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "assert",
+      "assume",
+      "cover",
+      "restrict"
+     ]
+    },
+    {
+     "name": "sequence",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "spec",
+     "type": [
+      "PropertySpec"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pass_action",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "fail_action",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ExpectStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "spec",
+     "type": [
+      "PropertySpec"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "pass_action",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "fail_action",
+     "type": [
+      "Statement"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AssertionItem",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "label",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "assertion",
+     "type": [
+      "ConcurrentAssertion",
+      "ImmediateAssertion"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PropertySpec",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "clock",
+     "type": [
+      "EventControl"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "disable",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "property",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PropertyDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "AssertionPort"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "variables",
+     "type": [
+      "VariableDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "spec",
+     "type": [
+      "PropertySpec"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "SequenceDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "AssertionPort"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "variables",
+     "type": [
+      "VariableDeclaration"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "sequence",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "LetDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "AssertionPort"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AssertionPort",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "local": {
+     "true": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "local",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "direction",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "input",
+      "output",
+      "inout"
+     ]
+    },
+    {
+     "name": "type",
+     "type": [
+      "DataType"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "dimensions",
+     "type": [
+      "Dimension"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "value",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DelaySequence",
+   "category": "Sequence",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "first",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "steps",
+     "type": [
+      "DelayStep"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "DelayStep",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "delay",
+     "type": [
+      "Expression",
+      "CycleRange"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "sequence",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CycleRange",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "low",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "high",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "RepetitionSequence",
+   "category": "Sequence",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "sequence",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "*",
+      "->",
+      "="
+     ]
+    },
+    {
+     "name": "count",
+     "type": [
+      "Expression",
+      "CycleRange"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinarySequence",
+   "category": "Sequence",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "left",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "and",
+      "or",
+      "intersect",
+      "within",
+      "throughout"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParenthesizedSequence",
+   "category": "Sequence",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "sequence",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "FirstMatchSequence",
+   "category": "Sequence",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "sequence",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ClockedSequence",
+   "category": "Sequence",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "clock",
+     "type": [
+      "EventControl"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "sequence",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ImplicationProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "operator": {
+     "#-#": {
+      "SystemVerilog": 2009
+     },
+     "#=#": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "antecedent",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "|->",
+      "|=>",
+      "#-#",
+      "#=#"
+     ]
+    },
+    {
+     "name": "consequent",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "BinaryProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "operator": {
+     "iff": {
+      "SystemVerilog": 2009
+     },
+     "implies": {
+      "SystemVerilog": 2009
+     },
+     "until": {
+      "SystemVerilog": 2009
+     },
+     "s_until": {
+      "SystemVerilog": 2009
+     },
+     "until_with": {
+      "SystemVerilog": 2009
+     },
+     "s_until_with": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "left",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "and",
+      "or",
+      "iff",
+      "implies",
+      "until",
+      "s_until",
+      "until_with",
+      "s_until_with"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "UnaryProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "operator": {
+     "nexttime": {
+      "SystemVerilog": 2009
+     },
+     "s_nexttime": {
+      "SystemVerilog": 2009
+     },
+     "always": {
+      "SystemVerilog": 2009
+     },
+     "s_always": {
+      "SystemVerilog": 2009
+     },
+     "eventually": {
+      "SystemVerilog": 2009
+     },
+     "s_eventually": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "not",
+      "nexttime",
+      "s_nexttime",
+      "always",
+      "s_always",
+      "eventually",
+      "s_eventually"
+     ]
+    },
+    {
+     "name": "range",
+     "type": [
+      "Expression",
+      "CycleRange"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "StrengthProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "strong",
+      "weak"
+     ]
+    },
+    {
+     "name": "sequence",
+     "type": [
+      "Sequence",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "AbortProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "accept_on",
+      "reject_on",
+      "sync_accept_on",
+      "sync_reject_on"
+     ]
+    },
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "operand",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ConditionalProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "consequence",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "alternative",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CaseProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "expression",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "PropertyCaseItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "PropertyCaseItem",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "expressions",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "body",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ParenthesizedProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "property",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ClockedProperty",
+   "category": "Property",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "clock",
+     "type": [
+      "EventControl"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "property",
+     "type": [
+      "Property",
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ClockingDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {
+    "scope": {
+     "global": {
+      "SystemVerilog": 2009
+     }
+    }
+   },
+   "properties": [
+    {
+     "name": "scope",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "default",
+      "global"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "clock",
+     "type": [
+      "EventControl"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "items",
+     "type": [
+      "DefaultSkew",
+      "ClockingSignals",
+      "PropertyDeclaration",
+      "SequenceDeclaration",
+      "LetDeclaration",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
+   "kind": "DefaultSkew",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "input",
+     "type": [
+      "ClockingSkew"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "output",
+     "type": [
+      "ClockingSkew"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ClockingSignals",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "direction",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "input",
+      "output",
+      "inout",
+      "input output"
+     ]
+    },
+    {
+     "name": "input_skew",
+     "type": [
+      "ClockingSkew"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "output_skew",
+     "type": [
+      "ClockingSkew"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "signals",
+     "type": [
+      "ClockingSignal"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ClockingSignal",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ClockingSkew",
+   "category": "SyntaxNode",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "edge",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "posedge",
+      "negedge",
+      "edge"
+     ]
+    },
+    {
+     "name": "delay",
+     "type": [
+      "DelayControl"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DefaultClocking",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "DefaultDisable",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "condition",
+     "type": [
+      "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CycleDelay",
+   "category": "TimingControl",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "value",
+     "type": [
+      "Expression"
      ],
      "optional": false,
      "many": false

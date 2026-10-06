@@ -334,10 +334,11 @@ modules' members and libraries' globals are not resolved.
 
 Verilog and SystemVerilog are one tree language, Verilog, with two families: Verilog (IEEE 1364: 1995, 2001 and 2005)
 and SystemVerilog (IEEE 1800: 2005 to 2023). The kinds are organized as IEEE 1800's grammar is and cover its design
-subset, its classes and its randomization: design units (modules, interfaces, programs and packages), ports and
-parameters, data types and dimensions, declarations, continuous assignments, procedural blocks and statements, generate
-constructs, instantiation, functions and tasks, classes with their properties, methods and objects, constraints and
-`randomize() with`, immediate assertions, and compiler directives. Kinds and features record where they exist in both
+subset, its classes, its randomization and its assertions: design units (modules, interfaces, programs and packages),
+ports and parameters, data types and dimensions, declarations, continuous assignments, procedural blocks and
+statements, generate constructs, instantiation, functions and tasks, classes with their properties, methods and
+objects, constraints and `randomize() with`, sequences, properties and concurrent assertions, clocking blocks, `let`,
+immediate assertions, and compiler directives. Kinds and features record where they exist in both
 families: ANSI ports and `**` from Verilog-2001, `logic`, packages, interfaces and `always_ff` from SystemVerilog 2005, `unique0`
 from 2009, `final` assertions from 2012 and triple-quoted strings from 2023. Verilog has none of SystemVerilog's own.
 
@@ -354,6 +355,12 @@ The tree is abstract where the grammar only spells:
   `solve before`, `disable soft`, `unique` and a block of them. `randomize() with { ... }` is a
   `RandomizeWithExpression` of the call and its inline constraints, and an array method's `with (expression)` an
   `ArrayMethodWithExpression`. `void'(f());` is an `ExpressionStatement` of a cast to `void`.
+- Sequences and properties are categories of their own, `Sequence` and `Property`; a sequence is a property, and an
+  expression stands for a sequence of one tick, so where a property goes, a `Property` or an `Expression` does. A chain
+  of delays is one `DelaySequence` of its steps, as IEEE 1800's grammar writes it; `##[*]`, `##[+]`, `[*]` and `[+]`
+  are `##[0:$]`, `##[1:$]`, `[*0:$]` and `[*1:$]`. A concurrent assertion is a statement, and `AssertionItem` puts one
+  (or a deferred immediate assertion) among items, with its label; any other statement's label is a
+  `LabeledStatement`.
 - Literals keep their spelling: size, base and digits with their underscores (`8'b0000_0100`).
 - Equivalent spellings are normalized: `@*` is `@(*)`, events joined by `,` are joined by `or`, and `@e` is `@(e)`.
 - Comments and compiler directives are kept where items, statements and constraints are listed. Conditional compilation is a tree
@@ -361,8 +368,7 @@ The tree is abstract where the grammar only spells:
 - A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
   as written; a macro used anywhere else is refused.
 
-Properties and sequences with concurrent assertions, clocking blocks, covergroups and `randsequence` are not kinds yet,
-and neither are attributes (`(* keep *)`), specify blocks, user-defined primitives and gate instances, strengths, nor
+Covergroups, checkers and `randsequence` are not kinds yet, and neither are attributes (`(* keep *)`), specify blocks, user-defined primitives and gate instances, strengths, nor
 the patterns of `matches`.
 
 ### Reading Verilog
@@ -390,7 +396,10 @@ line, a design unit's parameters and ports one per line (a non-ANSI header's nam
 their line, and a blank line around items that span several lines. Parentheses are added by the precedence of
 IEEE 1800's Table 11-2, where `?:`, `->` and `<->` associate to the right, and `dist` binds as `inside` does. A
 constraint declaration's constraints are laid out as statements are, one per line; inline constraints are written on
-the line of their `randomize() with`, where a line comment or a directive among them ends its line.
+the line of their `randomize() with`, where a line comment or a directive among them ends its line. Sequences and
+properties are parenthesized by the precedence of Table 16-3, below every expression operator; an operator that
+reaches as far right as it can (`always`, `if`, `accept_on`, `@(clock)`) is parenthesized only where something follows
+it.
 
 ### Verilog definitions
 
@@ -400,7 +409,8 @@ named or not. A class's lookup goes on to its base class, or an interface class'
 extends; a method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`) is the entity
 its prototype declares, and its body sees the class's members. A `foreach` loop's or constraint's index variables, and
 an array method's iterator (`item`, or the name its argument gives), have scopes of their own; `local::x` is `x` where
-`randomize` is called. An enumeration's members are declared where the enumeration is. A non-ANSI port is one entity,
+`randomize` is called. Properties, sequences and `let`s have scopes where their ports are arguments, and a named
+clocking block one where its signals are clockvars; a label names a 'label'. An enumeration's members are declared where the enumeration is. A non-ANSI port is one entity,
 which the header names and a port declaration declares. `import p::x` declares an entity whose `target` is `p::x`, and
 `import p::*` makes the package's names visible where nothing nearer declares them. A package's and a class's names
 are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
@@ -550,9 +560,8 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **Verilog's verification constructs.** Properties and sequences with concurrent assertions and clocking blocks, and
-  covergroups, which slang reads and the reader refuses, are the next kinds of Verilog; then `randsequence`, and
-  attributes, which every item, statement and operator may carry.
+- **Verilog's verification constructs.** Covergroups, which slang reads and the reader refuses, are the next kinds of
+  Verilog; then checkers, `randsequence`, and attributes, which every item, statement and operator may carry.
 - **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
   Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from

@@ -7,7 +7,7 @@
  *   `for` loops, named or not.
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
  *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance', 'block',
- *   'class', 'constraint' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
+ *   'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does.
  * - A non-ANSI port is one entity, which the header names and a port declaration declares.
  * - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
  *   where nothing nearer declares them, as wildcard imports do.
@@ -15,6 +15,8 @@
  *   classes it extends. A method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`)
  *   is the entity its prototype declares, and its body sees the class's members. A `foreach` constraint's index
  *   variables are its own; `local::x` in `randomize() with` is `x` where the call is.
+ * - A property, a sequence and a `let` have scopes of their own, where their ports are arguments; a named clocking
+ *   block has one, where its signals are clockvars. A statement's label, and an assertion's, names a 'label'.
  * - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
  *   argument gives it (`find(x) with (x > 0)`), or `item`.
  * - Lookup goes outward from a block to its design unit, then to the compilation unit. A package's and a class's names
@@ -244,6 +246,47 @@ class Definer {
     this.entity(scope, "constraint", node.name, node);
   }
 
+  assertionDeclaration(node: any, scope: Scope): void {
+    const kind = node instanceof S.PropertyDeclaration ? "property" : node instanceof S.SequenceDeclaration ? "sequence" : "let";
+    const inner = this.scoped(scope, kind, node.name, node, kind);
+    this.program.located(node.name, scope);
+    for (const port of node.ports) {
+      this.visitAll([...(port.type !== null ? [port.type] : []), ...port.dimensions, ...(port.value !== null ? [port.value] : [])],
+        inner);
+      this.program.located(port, inner);
+      this.program.located(port.name, inner);
+      this.entity(inner, "argument", port.name, port);
+    }
+    const body = node instanceof S.PropertyDeclaration ? node.spec : node instanceof S.SequenceDeclaration ? node.sequence
+      : node.value;
+    this.visitAll([...(node.variables ?? []), body], inner);
+  }
+
+  clockingDeclaration(node: any, scope: Scope): void {
+    this.visit(node.clock, scope);
+    const inner = this.scoped(scope, "clocking", node.name, node, "clocking");
+    if (node.name !== null) this.program.located(node.name, scope);
+    this.visitAll(node.items, inner);
+  }
+
+  clockingSignals(node: any, scope: Scope): void {
+    for (const skew of [node.input_skew, node.output_skew]) if (skew !== null) this.visit(skew, scope);
+    for (const signal of node.signals) {
+      this.program.located(signal, scope);
+      this.program.located(signal.name, scope);
+      if (signal.value !== null) this.visit(signal.value, scope.parent as Scope); // what it stands for is outside the block
+      this.entity(scope, "clockvar", signal.name, signal);
+    }
+  }
+
+  labeled(node: any, scope: Scope): void {
+    if (node.label !== null) {
+      this.program.located(node.label, scope);
+      this.entity(scope, "label", node.label, node);
+    }
+    this.visit(node instanceof S.LabeledStatement ? node.statement : node.assertion, scope);
+  }
+
   arrayMethodWith(node: any, scope: Scope): void {
     const inner = new Scope("with", null, scope, node);
     const call = node.call;
@@ -359,6 +402,10 @@ const methods: [Function[], Method][] = [
   [[S.ConstraintPrototype], (d, n, s) => d.constraintPrototype(n, s)],
   [[S.ForeachConstraint], (d, n, s) => d.foreach(n, s)],
   [[S.ArrayMethodWithExpression], (d, n, s) => d.arrayMethodWith(n, s)],
+  [[S.PropertyDeclaration, S.SequenceDeclaration, S.LetDeclaration], (d, n, s) => d.assertionDeclaration(n, s)],
+  [[S.ClockingDeclaration], (d, n, s) => d.clockingDeclaration(n, s)],
+  [[S.ClockingSignals], (d, n, s) => d.clockingSignals(n, s)],
+  [[S.LabeledStatement, S.AssertionItem], (d, n, s) => d.labeled(n, s)],
 ];
 for (const [kinds, method] of methods) for (const kind of kinds) Definer.METHODS.set(kind, method);
 
