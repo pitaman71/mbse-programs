@@ -373,6 +373,10 @@ The tree is abstract where the grammar only spells:
   (`u i(a, , b)`, `$display(a,, b)`) is an `EmptyArgument`. A repeated assignment pattern (`'{2{a, b}}`) is an
   `AssignmentPattern` with a `count`, and a tolerance range a `ValueRange` with an `operator`. `$root` is a
   `RootExpression`, `$unit::x` a `ScopedName` whose scope is a `UnitName`, and `type(e)` a `TypeReference`.
+- A non-ANSI header's port is a `PortReference` (a name, or a part of one: `w[1:0]`), a `PortConcatenation`
+  (`{a, b}`), an `ExplicitPort` (`.p(x)`) or an `EmptyPort`; an ANSI header's `.p(expression)` is an
+  `ExplicitAnsiPort`. A modport's ports are `ModportPort`s, explicit ones included (`input .a(b)`),
+  `ModportSubroutine`s (`import f`, `export task t(int a)`) and `ModportClocking`s (`clocking cb`).
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
@@ -420,21 +424,22 @@ it.
 ### Verilog definitions
 
 `Verilog.Definitions.define(unit)` follows IEEE 1800's scopes: the compilation unit (design units and `$unit`'s
-declarations), each package, design unit, class, function and task, and each block, generate block and `for` loop,
-named or not. A class's lookup goes on to its base class, or an interface class's to the interface classes it
-extends; a method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`) is the entity
-its prototype declares, and its body sees the class's members. A `foreach` loop's or constraint's index variables, and
-an array method's iterator (`item`, or the name its argument gives), have scopes of their own; `local::x` is `x` where
+declarations), each package, design unit, class, function and task, and each block, generate block and `for` loop, named
+or not. A class's lookup goes on to its base class, or an interface class's to the interface classes it extends; a
+method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`) is the entity its prototype
+declares, and its body sees the class's members. A `foreach` loop's or constraint's index variables, and an array
+method's iterator (`item`, or the name its argument gives), have scopes of their own; `local::x` is `x` where
 `randomize` is called. Properties, sequences and `let`s have scopes where their ports are arguments, and a named
-clocking block one where its signals are clockvars; a label names a 'label'. A covergroup has a scope of its
-arguments (the `sample` function's too), a coverpoint and a cross scopes of their bins, and a bin's filter one where
-`item` is; `option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration is. A non-ANSI port is one entity,
-which the header names and a port declaration declares. `import p::x` declares an entity whose `target` is `p::x`, and
-`import p::*` makes the package's names visible where nothing nearer declares them; `$unit::x` finds `x` in the
-compilation unit. An enumeration's member `name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`;
-a `nettype` declares a type. A package's and a class's names
-are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
-(`sampler.counter.count`). A member after `.` and what an instance's module declares are not resolved.
+clocking block one where its signals are clockvars; a label names a 'label'. A covergroup has a scope of its arguments
+(the `sample` function's too), a coverpoint and a cross scopes of their bins, and a bin's filter one where `item` is;
+`option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration
+is. A non-ANSI port is one entity, which the header names and a port declaration declares. `import p::x` declares an
+entity whose `target` is `p::x`, and `import p::*` makes the package's names visible where nothing nearer declares them;
+`$unit::x` finds `x` in the compilation unit. An explicit port's own name (`.p(x)`) is not looked up: what it connects
+is. An enumeration's member `name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype`
+declares a type. A package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design
+unit's and a block's with `.` (`sampler.counter.count`). A member after `.` and what an instance's module declares are
+not resolved.
 
 ## Transpiling
 

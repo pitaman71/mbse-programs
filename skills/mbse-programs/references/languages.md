@@ -10,7 +10,7 @@ category, property and availability as data: read it rather than guessing a prop
 | Ccpp: C and C++ | 171, through C++26 and C23 | `Ccpp17`, `Ccpp20`, `CcppStandard(year, "C++" or "C")` | the C++ grammar: specifiers, declarators, statements |
 | Python | 86, Python 3.0 to 3.15 | `Python312`, `Python314`, `PythonStandard(major, minor)` | Python's `ast`, names as `Identifier`s |
 | TypeScript: TypeScript and JavaScript | 163, through TypeScript 5.9 and ES2025, with JSX | `TypeScript50`, `TypeScript59`, `ECMAScript2020`, `ECMAScript2025`, each with `.JSX`; `TypeScriptStandard(major, minor, jsx)`, `ECMAScriptStandard(year, jsx)` | typescript-estree (TSESTree) |
-| Verilog: Verilog and SystemVerilog | 217, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
+| Verilog: Verilog and SystemVerilog | 223, SystemVerilog 2023's design subset and verification constructs | `Verilog2005`, `SystemVerilog2017`, `SystemVerilog2023`, `VerilogStandard(year, "SystemVerilog" or "Verilog")` | IEEE 1800's grammar: design units, items, statements, expressions |
 
 ## Ccpp
 
@@ -108,6 +108,9 @@ Definitions.define(unit).lookup("logger_pkg::FIELDS")           # packages quali
   (`{}`), `UnitName` (`$unit::x`), `TypeReference` (`type(a)`); a repeated pattern is an `AssignmentPattern` with a
   `count`, a tolerance range a `ValueRange` with an `operator`, and `#(rise, fall, turnoff)` a `DelayControl` with a
   `fall` and a `turnoff`.
+- Ports: non-ANSI `PortReference` (with a select: `w[1:0]`), `PortConcatenation`, `ExplicitPort` (`.p(x)`),
+  `EmptyPort`; ANSI `ExplicitAnsiPort` (`input .p(x + 1)`). Modports: `ModportPort` (`explicit`: `input .a(b)`),
+  `ModportSubroutine` (`import f`, or a prototype), `ModportClocking`.
 - Declarations: a `NetDeclaration` has a `strength` (`DriveStrength`, or a trireg's `ChargeStrength`) and an
   `expansion` (`vectored`, `scalared`), and a `ContinuousAssign` a `strength`; `NetTypeDeclaration`, `NetAlias`,
   `DefParam`, `TimeUnitsDeclaration`; `EnumMember`'s `left` and `right` (`A[2]`, `A[1:3]`); `StructMember`'s `random`;

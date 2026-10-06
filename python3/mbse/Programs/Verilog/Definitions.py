@@ -10,7 +10,8 @@
   'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog does;
   a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal numbers).
   A `nettype` declares a 'type'.
-- A non-ANSI port is one entity, which the header names and a port declaration declares.
+- A non-ANSI port is one entity, which the header names and a port declaration declares. An explicit port's own name
+  (`.p(x)`) is outside the module: what it connects is found inside.
 - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
   where nothing nearer declares them, as wildcard imports do.
 - A class's members are found in it, then in its base class (`extends`), or for an interface class in the interface
@@ -156,6 +157,10 @@ class _Definer:
 
     def variable(self, node: S.VariableDeclaration, scope: Scope) -> None:
         self.declarators(node, scope, "variable")
+
+    def explicit_port(self, node: Any, scope: Scope) -> None:
+        if node.value is not None:  # its name is outside, and not looked up
+            self.visit(node.value, scope)
 
     def port_declaration(self, node: S.PortDeclaration, scope: Scope) -> None:
         self.declarators(node, scope, "port")
@@ -402,6 +407,7 @@ class _Definer:
         S.ModuleDeclaration: design_unit, S.InterfaceDeclaration: design_unit, S.ProgramDeclaration: design_unit,
         S.PackageDeclaration: design_unit, S.ImportDeclaration: import_declaration, S.ParameterDeclaration: parameter,
         S.TypeParameterDeclaration: parameter, S.AnsiPort: port, S.InterfacePort: port, S.PortReference: port,
+        S.ExplicitPort: explicit_port, S.ExplicitAnsiPort: explicit_port,
         S.NetDeclaration: net, S.VariableDeclaration: variable, S.PortDeclaration: port_declaration,
         S.TypedefDeclaration: typedef, S.NetTypeDeclaration: net_type, S.EnumType: enum, S.GenvarDeclaration: genvar,
         S.ModportDeclaration: modport,

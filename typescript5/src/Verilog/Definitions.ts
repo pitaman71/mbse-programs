@@ -11,7 +11,8 @@
  *   'cross', 'bins' and 'import'. An enumeration's members are declared where the enumeration is, as SystemVerilog
  *   does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares `name1` to `name3` (with decimal
  *   numbers). A `nettype` declares a 'type'.
- * - A non-ANSI port is one entity, which the header names and a port declaration declares.
+ * - A non-ANSI port is one entity, which the header names and a port declaration declares. An explicit port's own name
+ *   (`.p(x)`) is outside the module: what it connects is found inside.
  * - `import p::x` declares an 'import' entity whose `target` is `p::x`; `import p::*` makes the package's names visible
  *   where nothing nearer declares them, as wildcard imports do.
  * - A class's members are found in it, then in its base class (`extends`), or for an interface class in the interface
@@ -137,6 +138,10 @@ class Definer {
       this.program.located(assignment.name, scope);
       this.entity(scope, node.keyword, assignment.name, assignment);
     }
+  }
+
+  explicitPort(node: any, scope: Scope): void {
+    if (node.value !== null) this.visit(node.value, scope); // its name is outside, and not looked up
   }
 
   port(node: any, scope: Scope): void {
@@ -450,6 +455,7 @@ const methods: [Function[], Method][] = [
   [[S.ImportDeclaration], (d, n, s) => d.importDeclaration(n, s)],
   [[S.ParameterDeclaration, S.TypeParameterDeclaration], (d, n, s) => d.parameter(n, s)],
   [[S.AnsiPort, S.InterfacePort, S.PortReference], (d, n, s) => d.port(n, s)],
+  [[S.ExplicitPort, S.ExplicitAnsiPort], (d, n, s) => d.explicitPort(n, s)],
   [[S.NetDeclaration], (d, n, s) => d.declarators(n, s, "net")],
   [[S.VariableDeclaration], (d, n, s) => d.declarators(n, s, "variable")],
   [[S.PortDeclaration], (d, n, s) => d.declarators(n, s, "port")],

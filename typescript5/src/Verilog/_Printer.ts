@@ -37,6 +37,7 @@ const PROPERTY: Record<string, number> = {
 const RIGHT = new Set<number>([IMPLY, CONDITIONAL, THROUGHOUT, IFF, UNTIL, IMPLICATION]); // right-associative levels
 
 const isAny = (node: unknown, kinds: Function[]) => kinds.some((k) => node instanceof k);
+const NON_ANSI = [S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort];
 const joined = (parts: (string | null | undefined)[], separator = " ") => parts.filter((p) => p).join(separator);
 
 function precedence(node: unknown): number {
@@ -203,8 +204,8 @@ export class Printer {
       head = p + ")";
     }
     const tail = `${p}${end}` + (node.labeled ? ` : ${node.name.spelling}` : "");
-    if (ports.length > 0 && ports.every((q) => q instanceof S.PortReference)) { // a non-ANSI header's names, on one line
-      const names = ports.map((q) => q.name?.spelling).join(", ");
+    if (ports.length > 0 && ports.every((q) => isAny(q, NON_ANSI))) { // a non-ANSI header's ports, on one line
+      const names = ports.map((q) => this.port(q)).join(", ");
       lines.push((head.trim() ? head + " (" : head + "(") + names + ");");
       lines.push(...this.items(node.items, level + 1, lines));
       lines.push(tail);
@@ -222,7 +223,19 @@ export class Printer {
   }
 
   port(node: any): string {
-    if (node instanceof S.PortReference) return node.name?.spelling as string;
+    if (node instanceof S.PortReference) {
+      if (node.left === null) return node.name?.spelling as string;
+      const operator = node.operator === null ? "" : node.operator === ":" ? node.operator : ` ${node.operator} `;
+      const right = node.right !== null ? this.text(node.right) : "";
+      return `${node.name?.spelling}[${this.text(node.left)}${operator}${right}]`;
+    }
+    if (node instanceof S.PortConcatenation) return "{" + node.references.map((r) => this.port(r)).join(", ") + "}";
+    if (node instanceof S.EmptyPort) return "";
+    if (isAny(node, [S.ExplicitPort, S.ExplicitAnsiPort])) {
+      const value = node.value === null ? "" : node instanceof S.ExplicitPort ? this.port(node.value) : this.text(node.value);
+      const direction = node instanceof S.ExplicitAnsiPort && node.direction ? `${node.direction} ` : "";
+      return `${direction}.${node.name.spelling}(${value})`;
+    }
     if (node instanceof S.AttributedPort) return `${this.attributeText(node.attributes)} ${this.port(node.port)}`;
     const dimensions = node.dimensions.map((d: any) => this.dimension(d)).join("");
     if (node instanceof S.InterfacePort) {
@@ -390,8 +403,17 @@ export class Printer {
   }
 
   modport(node: any, level: number): string[] {
-    const items = node.items.map((i: any) => `${i.name.spelling} (${i.ports.map((p: any) => `${p.direction} ${p.name.spelling}`).join(", ")})`);
+    const items = node.items.map((i: any) => `${i.name.spelling} (${i.ports.map((p: any) => this.modportPort(p)).join(", ")})`);
     return [`${pad(level)}modport ${items.join(", ")};`];
+  }
+
+  modportPort(node: any): string {
+    if (node instanceof S.ModportClocking) return `clocking ${node.name?.spelling}`;
+    if (node instanceof S.ModportSubroutine) {
+      return `${node.keyword} ` + (node.name !== null ? node.name.spelling : this.subroutineHead(node.prototype));
+    }
+    if (node.explicit) return `${node.direction} .${node.name.spelling}(${node.value !== null ? this.text(node.value) : ""})`;
+    return `${node.direction} ${node.name.spelling}`;
   }
 
   continuousAssign(node: any, level: number): string[] {
@@ -424,15 +446,21 @@ export class Printer {
     return this.headed(pad(level) + keyword, node.body, level);
   }
 
-  subroutine(node: any, level: number): string[] {
-    const p = pad(level);
+  /** A function's or a task's header, without its `;`. */
+  subroutineHead(node: any): string {
     const task = node instanceof S.TaskDeclaration;
     const parts = [node.extern ? "extern" : null, node.pure ? "pure" : null, node.virtual ? "virtual" : null,
       node.visibility, node.static ? "static" : null, task ? "task" : "function", node.lifetime];
     if (!task && node.type !== null) parts.push(this.typeText(node.type));
     let head = joined(parts) + " " + this.name(node.name);
     if (node.ports.length > 0) head += "(" + node.ports.map((q: any) => this.tfPort(q)).join(", ") + ")";
-    const lines = [p + head + ";"];
+    return head;
+  }
+
+  subroutine(node: any, level: number): string[] {
+    const p = pad(level);
+    const task = node instanceof S.TaskDeclaration;
+    const lines = [p + this.subroutineHead(node) + ";"];
     if (prototype(node)) return lines;
     lines.push(...this.items(node.body, level + 1, lines));
     lines.push(p + (task ? "endtask" : "endfunction") + (node.labeled ? ` : ${this.name(node.name)}` : ""));

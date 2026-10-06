@@ -99,6 +99,7 @@ Strength = Choice["supply0", "strong0", "pull0", "weak0", "highz0", "supply1", "
 ChargeSize = Choice["small", "medium", "large"]
 NetExpansion = Choice["vectored", "scalared"]
 TimeUnitKeyword = Choice["timeunit", "timeprecision"]
+ImportExport = Choice["import", "export"]
 DefaultNettype = Choice["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none"]
 
 
@@ -366,9 +367,46 @@ class InterfacePort(Port):
 
 
 class PortReference(Port):
-    """A non-ANSI header's port, named in the header and declared by a `PortDeclaration` item (23.2.2.1)."""
+    """A non-ANSI header's port, named in the header and declared by a `PortDeclaration` item (23.2.2.1), or a part of
+    it: `name[left]`, or `name[left operator right]`."""
 
     name: Identifier
+    left: Expression | None
+    operator: SelectOperator | None
+    right: Expression | None
+
+    def check(self) -> list[str]:
+        if (self.operator is None) != (self.right is None) or self.left is None and self.operator is not None:
+            return ["a PortReference's select has a left, and an operator and a right, or neither"]
+        return []
+
+
+class PortConcatenation(Port):
+    """`{references}`, a non-ANSI header's port made of several (23.2.2.1)."""
+
+    references: list[PortReference]
+
+
+class ExplicitPort(Port):
+    """`.name(value)`, a non-ANSI header's port named apart from what it connects, or connecting nothing
+    (23.2.2.1)."""
+
+    name: Identifier
+    value: PortReference | PortConcatenation | None
+
+
+class EmptyPort(Port):
+    """A non-ANSI header's port left out: `module m (a, , b)` (23.2.2.1)."""
+
+
+class ExplicitAnsiPort(Port):
+    """`direction .name(value)`, an ANSI header's port named apart from the expression it is (23.2.2.2). Without a
+    direction, it follows another ANSI port and inherits its direction."""
+
+    direction: Direction | None
+    name: Identifier
+    value: Expression | None
+    SINCE = sv()
 
 
 class PortDeclaration(Item):
@@ -730,13 +768,41 @@ class ModportItem(SyntaxNode):
     """`name (ports)` in a modport declaration (25.5)."""
 
     name: Identifier
-    ports: list[ModportPort]
+    ports: list[ModportPort | ModportSubroutine | ModportClocking]
 
 
 class ModportPort(SyntaxNode):
-    """`direction name` in a modport (25.5)."""
+    """`direction name` in a modport, or `explicit`ly `direction .name(value)`, a port named apart from the expression
+    it is, or that is nothing (25.5.4)."""
 
     direction: Direction
+    explicit: bool
+    name: Identifier
+    value: Expression | None
+
+    def check(self) -> list[str]:
+        if self.value is not None and self.explicit is not True:
+            return ["a ModportPort with a value is explicit"]
+        return []
+
+
+class ModportSubroutine(SyntaxNode):
+    """`import name` or `export name` in a modport, or with a `prototype`, a function's or a task's without its body
+    (`import task t(int a)`) (25.7)."""
+
+    keyword: ImportExport
+    name: Identifier | None
+    prototype: FunctionDeclaration | TaskDeclaration | None
+
+    def check(self) -> list[str]:
+        if (self.name is None) == (self.prototype is None):
+            return ["a ModportSubroutine has a name or a prototype"]
+        return []
+
+
+class ModportClocking(SyntaxNode):
+    """`clocking name` in a modport: a clocking block's signals, as it gives them (25.5.5)."""
+
     name: Identifier
 
 
@@ -2271,7 +2337,8 @@ KINDS: list[type[SyntaxNode]] = [
     Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
     AttributedStatement, AttributedPort,
     SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration, PackageDeclaration,
-    AnsiPort, InterfacePort, PortReference, PortDeclaration,
+    AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort, EmptyPort, ExplicitAnsiPort,
+    PortDeclaration,
     ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment,
     IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType, ImplicitType,
     StructType, StructMember,
@@ -2280,7 +2347,7 @@ KINDS: list[type[SyntaxNode]] = [
     NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration, VariableDeclarator,
     ForwardTypedefDeclaration, TypedefDeclaration, GenvarDeclaration, ImportDeclaration, ImportItem,
     NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem,
-    ModportPort, ContinuousAssign, AlwaysConstruct, InitialConstruct,
+    ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
     FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
     GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
     ModuleInstantiation, Instance, NamedConnection, WildcardConnection,

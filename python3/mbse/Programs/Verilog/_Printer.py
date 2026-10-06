@@ -63,6 +63,9 @@ def _precedence(node: Any) -> int:
     return PRIMARY
 
 
+_NON_ANSI = (S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort)
+
+
 def _prototype(node: Any) -> bool:
     """Whether a function or task is a prototype, without a body: `extern` or `pure`."""
     return node.extern or node.pure
@@ -214,8 +217,8 @@ class Printer:
             lines.extend(f"{pad}{_INDENT}{self.parameter_text(p)}{',' if i < len(parameters) - 1 else ''}"
                          for i, p in enumerate(parameters))
             head = pad + ")"
-        if ports and all(isinstance(p, S.PortReference) for p in ports):  # a non-ANSI header's names, on one line
-            names = ", ".join(p.name.spelling for p in ports)
+        if ports and all(isinstance(p, _NON_ANSI) for p in ports):  # a non-ANSI header's ports, on one line
+            names = ", ".join(self.port(p) for p in ports)
             lines.append((head + " (" if head.strip() else head + "(") + names + ");")
             lines.extend(self.items(node.items, level + 1, after=lines))
             lines.append(f"{pad}{end}" + (f" : {node.name.spelling}" if node.labeled else ""))
@@ -232,7 +235,20 @@ class Printer:
 
     def port(self, node: Any) -> str:
         if isinstance(node, S.PortReference):
-            return node.name.spelling
+            if node.left is None:
+                return node.name.spelling
+            operator = "" if node.operator is None else node.operator if node.operator == ":" else f" {node.operator} "
+            right = self.text(node.right) if node.right is not None else ""
+            return f"{node.name.spelling}[{self.text(node.left)}{operator}{right}]"
+        if isinstance(node, S.PortConcatenation):
+            return "{" + ", ".join(self.port(r) for r in node.references) + "}"
+        if isinstance(node, S.EmptyPort):
+            return ""
+        if isinstance(node, (S.ExplicitPort, S.ExplicitAnsiPort)):
+            value = "" if node.value is None else self.port(node.value) if isinstance(node, S.ExplicitPort) \
+                else self.text(node.value)
+            direction = f"{node.direction} " if isinstance(node, S.ExplicitAnsiPort) and node.direction else ""
+            return f"{direction}.{node.name.spelling}({value})"
         if isinstance(node, S.AttributedPort):
             return f"{self.attribute_text(node.attributes)} {self.port(node.port)}"
         dimensions = "".join(self.dimension(d) for d in node.dimensions)
@@ -398,9 +414,19 @@ class Printer:
         return [_INDENT * level + self.import_text(node) + ";"]
 
     def modport(self, node: S.ModportDeclaration, level: int) -> list[str]:
-        items = ", ".join(f"{i.name.spelling} ({', '.join(f'{p.direction} {p.name.spelling}' for p in i.ports)})"
+        items = ", ".join(f"{i.name.spelling} ({', '.join(self.modport_port(p) for p in i.ports)})"
                           for i in node.items)
         return [f"{_INDENT * level}modport {items};"]
+
+    def modport_port(self, node: Any) -> str:
+        if isinstance(node, S.ModportClocking):
+            return f"clocking {node.name.spelling}"
+        if isinstance(node, S.ModportSubroutine):
+            return f"{node.keyword} " + (node.name.spelling if node.name is not None
+                                         else self.subroutine_head(node.prototype))
+        if node.explicit:
+            return f"{node.direction} .{node.name.spelling}({self.text(node.value) if node.value is not None else ''})"
+        return f"{node.direction} {node.name.spelling}"
 
     def continuous_assign(self, node: S.ContinuousAssign, level: int) -> list[str]:
         strength = f" {self.strength(node.strength)}" if node.strength is not None else ""
@@ -427,8 +453,8 @@ class Printer:
             "initial" if isinstance(node, S.InitialConstruct) else "final")
         return self.headed(_INDENT * level + keyword, node.body, level)
 
-    def subroutine(self, node: Any, level: int) -> list[str]:
-        pad = _INDENT * level
+    def subroutine_head(self, node: Any) -> str:
+        """A function's or a task's header, without its `;`."""
         task = isinstance(node, S.TaskDeclaration)
         parts = ["extern" if node.extern else None, "pure" if node.pure else None, "virtual" if node.virtual else None,
                  node.visibility, "static" if node.static else None, "task" if task else "function", node.lifetime]
@@ -437,7 +463,12 @@ class Printer:
         head = " ".join(p for p in parts if p) + " " + self.name(node.name)
         if node.ports:
             head += "(" + ", ".join(self.tf_port(p) for p in node.ports) + ")"
-        lines = [pad + head + ";"]
+        return head
+
+    def subroutine(self, node: Any, level: int) -> list[str]:
+        pad = _INDENT * level
+        task = isinstance(node, S.TaskDeclaration)
+        lines = [pad + self.subroutine_head(node) + ";"]
         if _prototype(node):
             return lines
         lines.extend(self.items(node.body, level + 1, after=lines))

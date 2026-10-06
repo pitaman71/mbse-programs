@@ -378,13 +378,27 @@ class _Reader:
                 out.append(self.made(port, S.AttributedPort(attributes=attributes, port=converted))
                            if attributes else converted)
             elif kind == "ImplicitNonAnsiPort":
-                reference = port.expr
-                if reference.kind.name != "PortReference" or reference.select is not None:
-                    raise self.unsupported(port)
-                out.append(self.made(port, S.PortReference(name=self.identifier(reference.name))))
-            else:
-                raise self.unsupported(port)
+                out.append(self.port_expression(port.expr))
+            elif kind == "ExplicitNonAnsiPort":
+                value = self.port_expression(port.expr) if port.expr is not None else None
+                out.append(self.made(port, S.ExplicitPort(name=self.identifier(port.name), value=value)))
+            elif kind == "EmptyNonAnsiPort":
+                out.append(self.made(port, S.EmptyPort()))
+            else:  # an ExplicitAnsiPort
+                value = self.expression(port.expr) if port.expr is not None else None
+                out.append(self.made(port, S.ExplicitAnsiPort(direction=_text(port.direction) or None,
+                                                              name=self.identifier(port.name), value=value)))
         return out
+
+    def port_expression(self, node: Any) -> S.PortReference | S.PortConcatenation:
+        """A non-ANSI port's references: a name, a part of one, or a concatenation of them."""
+        if node.kind.name == "PortConcatenation":
+            return self.made(node, S.PortConcatenation(references=[self.port_expression(r)
+                                                                   for r in _nodes(node.references)]))
+        out = S.PortReference(name=self.identifier(node.name))
+        if node.select is not None:
+            self.selection(out, node.select.selector)
+        return self.made(node, out)
 
     def ansi_port(self, port: Any) -> S.Port:
         header = port.header
@@ -643,14 +657,27 @@ class _Reader:
         for item in _nodes(node.items):
             out = S.ModportItem(name=self.identifier(item.name))
             for group in _nodes(item.ports.ports):
-                if group.kind.name != "ModportSimplePortList":
-                    raise self.unsupported(group)
-                direction = group.direction.rawText
-                for port in _nodes(group.ports):
-                    if port.kind.name != "ModportNamedPort":
-                        raise self.unsupported(port)
-                    name = self.identifier(port.name)
-                    out.ports.append(self.made(port, S.ModportPort(direction=direction, name=name)))
+                kind = group.kind.name
+                if kind == "ModportClockingPort":
+                    out.ports.append(self.made(group, S.ModportClocking(name=self.identifier(group.name))))
+                elif kind == "ModportSubroutinePortList":
+                    keyword = group.importExport.rawText
+                    for port in _nodes(group.ports):
+                        subroutine = S.ModportSubroutine(keyword=keyword)
+                        if port.kind.name == "ModportNamedPort":
+                            subroutine.name = self.identifier(port.name)
+                        else:  # a ModportSubroutinePort
+                            subroutine.prototype = self.made(port.prototype, self.prototype(port.prototype))
+                        out.ports.append(self.made(port, subroutine))
+                else:  # a ModportSimplePortList
+                    direction = group.direction.rawText
+                    for port in _nodes(group.ports):
+                        explicit = port.kind.name == "ModportExplicitPort"
+                        modport_port = S.ModportPort(direction=direction, explicit=explicit,
+                                                     name=self.identifier(port.name))
+                        if modport_port.explicit and port.expr is not None:
+                            modport_port.value = self.expression(port.expr)
+                        out.ports.append(self.made(port, modport_port))
             items.append(self.made(item, out))
         return S.ModportDeclaration(items=items)
 
@@ -1686,15 +1713,18 @@ class _Reader:
         for stream in _nodes(node.expressions):
             item = S.StreamItem(expression=self.expression(stream.expression))
             if stream.withRange is not None:
-                selector = stream.withRange.range.selector
-                if selector.kind.name == "BitSelect":
-                    item.left = self.expression(selector.expr)
-                else:
-                    item.left = self.expression(selector.left)
-                    item.operator = selector.range.rawText
-                    item.right = self.expression(selector.right)
+                self.selection(item, stream.withRange.range.selector)
             out.items.append(self.made(stream, item))
         return out
+
+    def selection(self, out: Any, selector: Any) -> None:
+        """Sets the `left`, `operator` and `right` of `out` from `[left]` or `[left operator right]`."""
+        if selector.kind.name == "BitSelect":
+            out.left = self.expression(selector.expr)
+        else:
+            out.left = self.expression(selector.left)
+            out.operator = selector.range.rawText
+            out.right = self.expression(selector.right)
 
     def min_typ_max(self, node: Any) -> S.MinTypMaxExpression:
         return S.MinTypMaxExpression(min=self.expression(node.min), typ=self.expression(node.typ),

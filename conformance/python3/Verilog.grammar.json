@@ -754,6 +754,121 @@
      ],
      "optional": false,
      "many": false
+    },
+    {
+     "name": "left",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "operator",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      ":",
+      "+:",
+      "-:"
+     ]
+    },
+    {
+     "name": "right",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "PortConcatenation",
+   "category": "Port",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "references",
+     "type": [
+      "PortReference"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ExplicitPort",
+   "category": "Port",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "PortReference",
+      "PortConcatenation"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "EmptyPort",
+   "category": "Port",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": []
+  },
+  {
+   "kind": "ExplicitAnsiPort",
+   "category": "Port",
+   "since": {
+    "SystemVerilog": 2005
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "direction",
+     "type": "str",
+     "optional": true,
+     "choices": [
+      "input",
+      "output",
+      "inout",
+      "ref"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
     }
    ]
   },
@@ -2080,7 +2195,9 @@
     {
      "name": "ports",
      "type": [
-      "ModportPort"
+      "ModportPort",
+      "ModportSubroutine",
+      "ModportClocking"
      ],
      "optional": true,
      "many": true
@@ -2105,6 +2222,71 @@
       "ref"
      ]
     },
+    {
+     "name": "explicit",
+     "type": "bool",
+     "optional": false
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "value",
+     "type": [
+      "Expression"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ModportSubroutine",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "keyword",
+     "type": "str",
+     "optional": false,
+     "choices": [
+      "import",
+      "export"
+     ]
+    },
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": true,
+     "many": false
+    },
+    {
+     "name": "prototype",
+     "type": [
+      "FunctionDeclaration",
+      "TaskDeclaration"
+     ],
+     "optional": true,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "ModportClocking",
+   "category": "SyntaxNode",
+   "since": null,
+   "extension": false,
+   "features": {},
+   "properties": [
     {
      "name": "name",
      "type": [

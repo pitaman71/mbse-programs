@@ -64,6 +64,16 @@ interface bus_if #(
     logic valid, ready;
     modport source (output data, output valid, input ready);
     modport sink (input data, input valid, output ready);
+
+    clocking cb @(posedge clk);
+        input data;
+    endclocking
+
+    task automatic pulse;
+        valid = 1'b1;
+    endtask
+
+    modport bench (clocking cb, import pulse, import task settle(int n), export probe, input .seen(valid), output .spare());
 endinterface
 
 module sampler
@@ -270,6 +280,19 @@ endmodule
             count = 0;
         else
             count = #1 count + STEP;
+endmodule
+
+// A probe's halves, wired by name, and its tap.
+module probe_pair (.halves({lo, hi}), .first(lo[0]), .pair(hi[1:0]), , .unused());
+    input [3:0] lo, hi;
+endmodule
+
+module probe_tap (
+    input .sum(probe + 1),
+    .raw(probe),
+    output logic level
+);
+    logic [3:0] probe;
 endmodule
 
 program automatic test_program (
