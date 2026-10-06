@@ -63,6 +63,11 @@ def _precedence(node: Any) -> int:
     return PRIMARY
 
 
+def _import_items(items: list[S.ImportItem]) -> str:
+    """`package::name, package::*`."""
+    return ", ".join(f"{i.package.spelling}::{i.name.spelling if i.name is not None else '*'}" for i in items)
+
+
 def _loop_variables(variables: list[Any]) -> str:
     """`foreach`'s variables, of which a skipped one is empty."""
     return ", ".join("" if isinstance(v, S.EmptyArgument) else v.spelling for v in variables)
@@ -86,6 +91,7 @@ def _multiline(node: Any) -> bool:
     if isinstance(node, S.CoverCross):
         return bool(node.body)
     return isinstance(node, (S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
+                             S.CheckerDeclaration,
                              S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration,
                              S.SequenceDeclaration, S.ClockingDeclaration, S.CovergroupDeclaration, S.AlwaysConstruct,
                              S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor, S.GenerateIf,
@@ -426,8 +432,10 @@ class Printer:
         return [f"{_INDENT * level}genvar {', '.join(n.spelling for n in node.names)};"]
 
     def import_text(self, node: S.ImportDeclaration) -> str:
-        return "import " + ", ".join(f"{i.package.spelling}::{i.name.spelling if i.name is not None else '*'}"
-                                     for i in node.items)
+        return "import " + _import_items(node.items)
+
+    def export_declaration(self, node: S.ExportDeclaration, level: int) -> list[str]:
+        return [f"{_INDENT * level}export {'*::*' if node.all else _import_items(node.items)};"]
 
     def import_declaration(self, node: S.ImportDeclaration, level: int) -> list[str]:
         return [_INDENT * level + self.import_text(node) + ";"]
@@ -697,7 +705,7 @@ class Printer:
         instances = ", ".join(
             i.name.spelling + "".join(self.dimension(d) for d in i.dimensions)
             + " (" + ", ".join(self.connection(c) for c in i.connections) + ")" for i in node.instances)
-        return [f"{_INDENT * level}{node.module.spelling}{parameters} {instances};"]
+        return [f"{_INDENT * level}{self.name(node.module)}{parameters} {instances};"]
 
     def connection(self, node: Any) -> str:
         if isinstance(node, S.WildcardConnection):
@@ -755,6 +763,8 @@ class Printer:
             return f"{node.keyword} {self.text(node.target)};"
         if isinstance(node, S.WaitForkStatement):
             return "wait fork;"
+        if isinstance(node, S.CheckerStatement):
+            return self.instantiation(node.instantiation, 0)[0]
         return f"disable {self.text(node.target) if node.target is not None else 'fork'};"  # a DisableStatement
 
     def block(self, node: Any, level: int) -> list[str]:
@@ -989,6 +999,12 @@ class Printer:
         lines.append(f"{pad}{_INDENT}{body};")
         lines.append(f"{pad}end{keyword}" + (f" : {node.name.spelling}" if node.labeled else ""))
         return lines
+
+    def checker_declaration(self, node: S.CheckerDeclaration, level: int) -> list[str]:
+        pad = _INDENT * level
+        lines = [f"{pad}checker {node.name.spelling}{self.assertion_ports(node.ports)};"]
+        body = self.items(node.items, level + 1, after=lines)  # after `lines` takes a trailing comment
+        return [*lines, *body, f"{pad}endchecker" + (f" : {node.name.spelling}" if node.labeled else "")]
 
     def let_declaration(self, node: S.LetDeclaration, level: int) -> list[str]:
         ports = self.assertion_ports(node.ports)
@@ -1374,7 +1390,9 @@ class Printer:
         S.CoverageBins: coverage_bins, S.CoverCross: cover_cross, S.BinsSelection: bins_selection,
         S.AttributedItem: attributed, S.NetTypeDeclaration: net_type_declaration, S.NetAlias: net_alias,
         S.DefParam: defparam, S.TimeUnitsDeclaration: time_units, S.EmptyItem: empty_item,
-        S.ElaborationTask: elaboration_task, S.DpiImport: dpi_import, S.DpiExport: dpi_export, S.BindDirective: bind,
+        S.ElaborationTask: elaboration_task, S.CheckerDeclaration: checker_declaration,
+        S.ExportDeclaration: export_declaration, S.DpiImport: dpi_import, S.DpiExport: dpi_export,
+        S.BindDirective: bind,
     }
     STATEMENTS = {
         S.SeqBlock: block, S.ParBlock: block, S.IfStatement: if_statement, S.CaseStatement: case,

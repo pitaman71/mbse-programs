@@ -46,10 +46,16 @@ package logger_pkg;
     import "DPI-C" pure function real c_sqrt(input real x);
     import "DPI-C" context task c_log(input string message);
     nettype logic [1:0] level_t;
+    export *::*;
 
     function automatic void tally(const ref int total, ref static int seen);
         seen += total;
     endfunction
+
+    // A reading in its band, checked wherever it is.
+    checker in_band(input real level, input logic clk);
+        assert property (@(posedge clk) level > 0.0);
+    endchecker
 
     task automatic wait_cycles(input int n);
         repeat (n) @(posedge tb.clk);
@@ -111,6 +117,7 @@ module sampler
     wire (strong0, pull1) vectored [3:0] driven = nibble2;
     trireg (medium) held;
     tri scalared [1:0] pair;
+    level_t #1 levels;
     wire [1:0] low_pair;
     var type(nibble2) shadow;
     event done;
@@ -190,6 +197,13 @@ module sampler
 
     counter #(WIDTH, 1) u_counter (.clk, .rst_n(rst_n), .count());
     checker_unit u_check (.*);
+    logger_pkg::in_band band_check (average, clk);
+
+    always @(posedge clk) begin
+        checker_unit u_watch (clk, count);
+        logger_pkg::in_band step_check (average, clk);
+    end
+
     fifo #(.DEPTH(DEPTH)) u_fifo[1:0] (clk, rst_n, out.data);
     fifo spare (clk, , out.data);
 
@@ -310,6 +324,15 @@ endmodule
             count = #1 count + STEP;
 endmodule
 
+// The datapath's checker: its count holds while a free variable, which formal tools choose, says so.
+checker checker_unit(input logic clk, input logic [15:0] count, sequence settle = ##1 1'b1);
+    default clocking @(posedge clk);
+    endclocking
+
+    rand bit hold;
+    assert property (hold |=> $stable(count));
+endchecker : checker_unit
+
 // The watchdog, declared before its body, whose ports its declaration gives.
 extern module watchdog #(
     parameter int LIMIT = 8
@@ -372,6 +395,7 @@ endprogram
 // The testbench's transactions and drivers.
 package logger_tb_pkg;
     import logger_pkg::*;
+    export logger_pkg::reading_t, logger_pkg::*;
     typedef class driver;
     typedef struct {
         rand bit [7:0] gap;

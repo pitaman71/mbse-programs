@@ -474,6 +474,23 @@ export class ProgramDeclaration extends Item {
   }
 }
 
+const CheckerDeclarationSpec = {
+  name: one(() => [Identifier]),
+  ports: many(() => [AssertionPort]),
+  items: many(() => [Item, Directive, Comment]),
+  labeled: flag(),
+};
+export interface CheckerDeclaration extends Properties<typeof CheckerDeclarationSpec> {}
+/**
+ * `checker name(ports); items endchecker`: assertions with their modeling code, instantiated as a module is, or in
+ * a procedure (17). Its ports are as a property's; its variables may be `rand`, free for formal tools to choose
+ * (17.7). `labeled` repeats the name after `endchecker`.
+ */
+export class CheckerDeclaration extends Item {
+  static override SPEC = CheckerDeclarationSpec;
+  static override SINCE: Availability | null = sv(2009);
+}
+
 const PackageDeclarationSpec = {
   lifetime: optionalChoice(...LIFETIMES),
   name: one(() => [Identifier]),
@@ -881,7 +898,7 @@ export class QueueDimension extends Dimension {
 // === Declarations (A.2) ===
 
 const NetDeclarationSpec = {
-  net_type: choice(...NET_TYPES),
+  net_type: optionalChoice(...NET_TYPES),
   strength: optional(() => [DriveStrength, ChargeStrength]),
   expansion: optionalChoice(...NET_EXPANSIONS),
   type: optional(() => [DataType]),
@@ -891,7 +908,8 @@ const NetDeclarationSpec = {
 export interface NetDeclaration extends Properties<typeof NetDeclarationSpec> {}
 /**
  * `net_type strength expansion type #delay declarators;` (6.7): a drive strength, or a `trireg`'s charge
- * strength, and `vectored` or `scalared`.
+ * strength, and `vectored` or `scalared`. Without a `net_type`, its `type` is a user-defined net type, a
+ * `NamedType` (`nt #1 w;`) (6.6.7).
  */
 export class NetDeclaration extends Item {
   static override SPEC = NetDeclarationSpec;
@@ -899,6 +917,9 @@ export class NetDeclaration extends Item {
   override check(): string[] {
     if (this.strength instanceof ChargeStrength && this.net_type !== "trireg") {
       return ["a NetDeclaration with a charge strength is a trireg"];
+    }
+    if (this.net_type === null && (!(this.type instanceof NamedType) || this.strength !== null || this.expansion !== null)) {
+      return ["a NetDeclaration without a net type has a user-defined one, a NamedType, alone"];
     }
     return [];
   }
@@ -1084,6 +1105,23 @@ export interface ImportDeclaration extends Properties<typeof ImportDeclarationSp
 export class ImportDeclaration extends Item {
   static override SPEC = ImportDeclarationSpec;
   static override SINCE: Availability | null = sv();
+}
+
+const ExportDeclarationSpec = {
+  all: flag(),
+  items: many(() => [ImportItem]),
+};
+export interface ExportDeclaration extends Properties<typeof ExportDeclarationSpec> {}
+/**
+ * `export package::name, ...;` or `export *::*;` (`all`) in a package: names it imports that the packages which
+ * import it see too (26.6).
+ */
+export class ExportDeclaration extends Item {
+  static override SPEC = ExportDeclarationSpec;
+  static override SINCE: Availability | null = sv(2009);
+  override check(): string[] {
+    return (this.all === true) === (this.items.length > 0) ? ["an ExportDeclaration exports all or items"] : [];
+  }
 }
 
 const ImportItemSpec = {
@@ -1655,14 +1693,15 @@ export class GenerateBlock extends Item {
 // --- Instantiation (23.3) ---
 
 const ModuleInstantiationSpec = {
-  module: one(() => [Identifier]),
+  module: one(() => [Identifier, ScopedName]),
   parameters: many(() => [Expression, DataType, Connection]),
   instances: many(() => [Instance]),
 };
 export interface ModuleInstantiation extends Properties<typeof ModuleInstantiationSpec> {}
 /**
- * `module #(parameters) instance (connections), ...;`, of a module, an interface or a program (23.3).
- * Parameters and connections are ordered expressions or `NamedConnection`s.
+ * `module #(parameters) instance (connections), ...;`, of a module, an interface, a program or a checker (23.3,
+ * 17.3), which a package may hold (`p::c`). Parameters and connections are ordered expressions or
+ * `NamedConnection`s.
  */
 export class ModuleInstantiation extends Item {
   static override SPEC = ModuleInstantiationSpec;
@@ -1962,6 +2001,16 @@ export interface ReleaseStatement extends Properties<typeof ReleaseStatementSpec
 /** `release target;` or `deassign target;`, which ends a `force` or a procedural `assign` (10.6). */
 export class ReleaseStatement extends Statement {
   static override SPEC = ReleaseStatementSpec;
+}
+
+const CheckerStatementSpec = {
+  instantiation: one(() => [ModuleInstantiation]),
+};
+export interface CheckerStatement extends Properties<typeof CheckerStatementSpec> {}
+/** A checker instantiated in a procedure, as its statement (17.3). */
+export class CheckerStatement extends Statement {
+  static override SPEC = CheckerStatementSpec;
+  static override SINCE: Availability | null = sv(2009);
 }
 
 const WaitForkStatementSpec = {};
@@ -3609,42 +3658,42 @@ function conditionProblems(directive: IfdefDirective | ElsifDirective): string[]
 export const KINDS = [
   Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
   AttributedStatement, AttributedPort, SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration,
-  PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort, WildcardPort,
-  EmptyPort, ExplicitAnsiPort, PortDeclaration, ParameterDeclaration, ParamAssignment, TypeParameterDeclaration,
-  TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType, NamedType, VirtualInterfaceType,
-  ImplicitType, StructType, StructMember, EnumType, EnumMember, RangeDimension, SizeDimension, UnsizedDimension,
-  AssociativeDimension, QueueDimension, NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration,
-  VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, DpiImport, DpiExport, BindDirective,
-  ElaborationTask, GenvarDeclaration, ImportDeclaration, ImportItem, NetTypeDeclaration, NetAlias, DefParam,
-  DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem, ModportPort, ModportSubroutine,
-  ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct, FinalConstruct, FunctionDeclaration,
-  TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor, GenerateIf, GenerateCase, GenerateBlock,
-  ModuleInstantiation, Instance, NamedConnection, WildcardConnection, AssignmentStatement, ExpressionStatement,
-  NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem, ForStatement, WhileStatement,
-  DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement, ContinueStatement,
-  ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement, ReleaseStatement,
-  WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production, ProductionRule, ProductionCall,
-  ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem, ImmediateAssertion,
-  DelayControl, RepeatEventControl, EventControl, EventExpression, NameExpression, MemberExpression, IndexExpression,
-  RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral, StringLiteral, UnaryExpression,
-  IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression, InsideExpression, ValueRange,
-  Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression, SystemCall, CastExpression,
-  ParenthesizedExpression, MacroUsage, DollarExpression, StreamingConcatenation, StreamItem, MinTypMaxExpression,
-  EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName, TypeReference, NullLiteral, ThisExpression,
-  SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression, RandomizeWithExpression,
-  ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration, ConstraintPrototype,
-  ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint, ForeachConstraint,
-  SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem, LabeledStatement,
-  ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration, SequenceDeclaration,
-  LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence, BinarySequence,
-  ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty, UnaryProperty,
-  StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem, ParenthesizedProperty,
-  ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal, ClockingSkew, DefaultClocking,
-  DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption, Coverpoint, CoverageBins,
-  BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault, BinsExpression, CoverCross,
-  BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect, FilteredBinsSelect,
-  IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective, IfdefDirective,
-  ElsifDirective, DisabledText, OtherDirective,
+  CheckerDeclaration, PackageDeclaration, AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort,
+  WildcardPort, EmptyPort, ExplicitAnsiPort, PortDeclaration, ParameterDeclaration, ParamAssignment,
+  TypeParameterDeclaration, TypeAssignment, IntegerVectorType, IntegerAtomType, NonIntegerType, KeywordType,
+  NamedType, VirtualInterfaceType, ImplicitType, StructType, StructMember, EnumType, EnumMember, RangeDimension,
+  SizeDimension, UnsizedDimension, AssociativeDimension, QueueDimension, NetDeclaration, DriveStrength,
+  ChargeStrength, VariableDeclaration, VariableDeclarator, ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem,
+  DpiImport, DpiExport, BindDirective, ElaborationTask, GenvarDeclaration, ImportDeclaration, ExportDeclaration,
+  ImportItem, NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration,
+  ModportItem, ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
+  FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration, GenerateRegion, GenerateFor,
+  GenerateIf, GenerateCase, GenerateBlock, ModuleInstantiation, Instance, NamedConnection, WildcardConnection,
+  AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
+  ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement, BreakStatement,
+  ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement, ForceStatement,
+  ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production,
+  ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,
+  ImmediateAssertion, DelayControl, RepeatEventControl, EventControl, EventExpression, NameExpression,
+  MemberExpression, IndexExpression, RangeSelect, IntegerLiteral, RealLiteral, TimeLiteral, UnbasedUnsizedLiteral,
+  StringLiteral, UnaryExpression, IncrementExpression, BinaryExpression, AssignmentExpression, ConditionalExpression,
+  InsideExpression, ValueRange, Concatenation, Replication, AssignmentPattern, PatternItem, CallExpression,
+  SystemCall, CastExpression, ParenthesizedExpression, MacroUsage, DollarExpression, StreamingConcatenation,
+  StreamItem, MinTypMaxExpression, EmptyArgument, RootExpression, EmptyQueue, InterfaceTypeName, UnitName,
+  TypeReference, NullLiteral, ThisExpression, SuperExpression, NewExpression, NewCopyExpression, NewArrayExpression,
+  RandomizeWithExpression, ArrayMethodWithExpression, DistExpression, DistItem, LocalName, ConstraintDeclaration,
+  ConstraintPrototype, ConstraintBlock, ExpressionConstraint, ImplicationConstraint, ConditionalConstraint,
+  ForeachConstraint, SolveBeforeConstraint, DisableSoftConstraint, UniqueConstraint, RandCaseStatement, RandCaseItem,
+  LabeledStatement, ConcurrentAssertion, ExpectStatement, AssertionItem, PropertySpec, PropertyDeclaration,
+  SequenceDeclaration, LetDeclaration, AssertionPort, DelaySequence, DelayStep, CycleRange, RepetitionSequence,
+  BinarySequence, ParenthesizedSequence, FirstMatchSequence, ClockedSequence, ImplicationProperty, BinaryProperty,
+  UnaryProperty, StrengthProperty, AbortProperty, ConditionalProperty, CaseProperty, PropertyCaseItem,
+  ParenthesizedProperty, ClockedProperty, ClockingDeclaration, DefaultSkew, ClockingSignals, ClockingSignal,
+  ClockingSkew, DefaultClocking, DefaultDisable, CycleDelay, CovergroupDeclaration, SampleFunction, CoverageOption,
+  Coverpoint, CoverageBins, BinsValues, BinsTransitions, TransitionSequence, TransitionStep, BinsDefault,
+  BinsExpression, CoverCross, BinsSelection, BinsOf, BinaryBinsSelect, NotBinsSelect, ParenthesizedBinsSelect,
+  FilteredBinsSelect, IncludeDirective, DefineDirective, UndefDirective, TimescaleDirective, DefaultNettypeDirective,
+  IfdefDirective, ElsifDirective, DisabledText, OtherDirective,
 ];
 
 /** The language, whose `Builders` are typed from this module's kinds. */

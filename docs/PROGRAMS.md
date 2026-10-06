@@ -395,6 +395,10 @@ The tree is abstract where the grammar only spells:
 - `randsequence` is a `RandSequenceStatement` of `Production`s, each of `ProductionRule`s (with a weight and code, or
   `rand join`) whose items are a category of their own, `ProductionItem`: calls of productions, code blocks, and their
   `if`, `repeat` and `case`. A production prints on a line, but for code that spans lines.
+- A checker is a `CheckerDeclaration` with property ports (`AssertionPort`s); its `rand` variables are
+  `VariableDeclaration`s with `random`, and it is instantiated as a module is (`ModuleInstantiation`, whose `module` may
+  be a package's: `p::c`), or in a procedure, a `CheckerStatement`. `export p::x;` and `export *::*;` are
+  `ExportDeclaration`s, and a net of a user-defined net type (`nt #1 w;`) a `NetDeclaration` without a `net_type`.
 - A net's strengths are a `DriveStrength`, its two values in the order written (`(weak1, strong0)`), or a `trireg`'s
   `ChargeStrength`; a continuous assignment may have a `DriveStrength` too. An enumeration's member `name[2]` or
   `name[1:3]` has a `left` and a `right`; a structure's member may be `rand` or `randc`; a task's or function's
@@ -406,7 +410,7 @@ The tree is abstract where the grammar only spells:
 - A macro use is a `MacroUsage` where it expands to a whole expression (`` `WIDTH ``, `` `SUM(1, 2) ``), its arguments
   as written; a macro used anywhere else is refused.
 
-Checkers, `covergroup extends` and `@@` block events are not kinds yet, and neither are specify
+`covergroup extends` and `@@` block events are not kinds yet, and neither are specify
 blocks, user-defined primitives and gate instances, nor tagged unions and the patterns of `matches`.
 
 ### Reading Verilog
@@ -453,13 +457,14 @@ clocking block one where its signals are clockvars; a label names a 'label'. A c
 `option` and `type_option` are built in, and not entities. An enumeration's members are declared where the enumeration
 is. A non-ANSI port is one entity, which the header names and a port declaration declares. `import p::x` declares an
 entity whose `target` is `p::x`, and `import p::*` makes the package's names visible where nothing nearer declares them;
-A `randsequence`'s productions are entities of its scope, and a production's ports its arguments. An `extern` unit
-declares nothing: the unit of its name does, with its ports for `.*`. `bind`'s instances and
-connections are found in its target. A macro's name in an `` `ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x`
-in the compilation unit. An explicit port's own name (`.p(x)`) is not looked up: what it connects is. An enumeration's
-member `name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A
-package's and a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a
-block's with `.` (`sampler.counter.count`). A member after `.` and what an instance's module declares are not resolved.
+A checker has a scope where its ports are arguments; what a package exports is not followed. A `randsequence`'s
+productions are entities of its scope, and a production's ports its arguments. An `extern` unit declares nothing: the
+unit of its name does, with its ports for `.*`. `bind`'s instances and connections are found in its target. A macro's
+name in an `` `ifdef `` condition, and an interface's type (`bus.t`), are not looked up. `$unit::x` finds `x` in the
+compilation unit. An explicit port's own name (`.p(x)`) is not looked up: what it connects is. An enumeration's member
+`name[2]` declares `name0` and `name1`, and `name[1:3]` `name1` to `name3`; a `nettype` declares a type. A package's and
+a class's names are qualified with `::` (`logger_pkg::FIELDS`, `packet::new`), a design unit's and a block's with `.`
+(`sampler.counter.count`). A member after `.` and what an instance's module declares are not resolved.
 
 ## Transpiling
 
@@ -605,8 +610,8 @@ Python314.print(B.function_("is_contactable", ["age", "email"], rule))
   tree-sitter-typescript would close the gap, and the converter is the only part that would change.
 - **Comments in types and expressions.** Comments are kept in object types, but dropped in other types and in
   expressions, as in the other languages.
-- **Verilog's verification constructs.** Checkers, which slang reads and the reader refuses, are the next kinds of
-  Verilog.
+- **The rest of Verilog.** Tagged unions and `matches`, user-defined primitives and gate instances, and specify
+  blocks, which slang reads and the reader refuses, are the next kinds of Verilog.
 - **More bridges.** Ccpp, TypeScript and SystemVerilog have dialects in mbse-expressions; each would have a bridge as
   Python's does.
 - **Types for transpilers.** Mapping methods by name is a guess where a type checker would know. Types could come from

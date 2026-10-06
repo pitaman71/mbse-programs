@@ -362,6 +362,18 @@ def _unit_problems(unit: ModuleDeclaration | InterfaceDeclaration | ProgramDecla
     return []
 
 
+class CheckerDeclaration(Item):
+    """`checker name(ports); items endchecker`: assertions with their modeling code, instantiated as a module is, or in
+    a procedure (17). Its ports are as a property's; its variables may be `rand`, free for formal tools to choose
+    (17.7). `labeled` repeats the name after `endchecker`."""
+
+    name: Identifier
+    ports: list[AssertionPort]
+    items: list[Item | Directive | Comment]
+    labeled: bool
+    SINCE = sv(2009)
+
+
 class PackageDeclaration(Item):
     """`package name; items endpackage` (26.2)."""
 
@@ -650,9 +662,10 @@ class QueueDimension(Dimension):
 
 class NetDeclaration(Item):
     """`net_type strength expansion type #delay declarators;` (6.7): a drive strength, or a `trireg`'s charge
-    strength, and `vectored` or `scalared`."""
+    strength, and `vectored` or `scalared`. Without a `net_type`, its `type` is a user-defined net type, a
+    `NamedType` (`nt #1 w;`) (6.6.7)."""
 
-    net_type: NetType
+    net_type: NetType | None
     strength: DriveStrength | ChargeStrength | None
     expansion: NetExpansion | None
     type: DataType | None
@@ -663,6 +676,9 @@ class NetDeclaration(Item):
     def check(self) -> list[str]:
         if isinstance(self.strength, ChargeStrength) and self.net_type != "trireg":
             return ["a NetDeclaration with a charge strength is a trireg"]
+        if self.net_type is None and (not isinstance(self.type, NamedType) or self.strength is not None
+                                      or self.expansion is not None):
+            return ["a NetDeclaration without a net type has a user-defined one, a NamedType, alone"]
         return []
 
 
@@ -796,6 +812,18 @@ class ImportDeclaration(Item):
 
     items: list[ImportItem]
     SINCE = sv()
+
+
+class ExportDeclaration(Item):
+    """`export package::name, ...;` or `export *::*;` (`all`) in a package: names it imports that the packages which
+    import it see too (26.6)."""
+
+    all: bool
+    items: list[ImportItem]
+    SINCE = sv(2009)
+
+    def check(self) -> list[str]:
+        return ["an ExportDeclaration exports all or items"] if (self.all is True) == bool(self.items) else []
 
 
 class ImportItem(SyntaxNode):
@@ -1229,10 +1257,11 @@ class GenerateBlock(Item):
 
 
 class ModuleInstantiation(Item):
-    """`module #(parameters) instance (connections), ...;`, of a module, an interface or a program (23.3).
-    Parameters and connections are ordered expressions or `NamedConnection`s."""
+    """`module #(parameters) instance (connections), ...;`, of a module, an interface, a program or a checker (23.3,
+    17.3), which a package may hold (`p::c`). Parameters and connections are ordered expressions or
+    `NamedConnection`s."""
 
-    module: Identifier
+    module: Identifier | ScopedName
     parameters: list[Expression | DataType | Connection]
     instances: list[Instance]
 
@@ -1446,6 +1475,13 @@ class ReleaseStatement(Statement):
 
     keyword: ReleaseKeyword
     target: Expression
+
+
+class CheckerStatement(Statement):
+    """A checker instantiated in a procedure, as its statement (17.3)."""
+
+    instantiation: ModuleInstantiation
+    SINCE = sv(2009)
 
 
 class WaitForkStatement(Statement):
@@ -2625,7 +2661,7 @@ class OtherDirective(Directive):
 KINDS: list[type[SyntaxNode]] = [
     Comment, Identifier, ScopedName, ParameterizedName, AttributeInstance, AttributeSpec, AttributedItem,
     AttributedStatement, AttributedPort,
-    SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration, PackageDeclaration,
+    SourceText, ModuleDeclaration, InterfaceDeclaration, ProgramDeclaration, CheckerDeclaration, PackageDeclaration,
     AnsiPort, InterfacePort, PortReference, PortConcatenation, ExplicitPort, WildcardPort, EmptyPort, ExplicitAnsiPort,
     PortDeclaration,
     ParameterDeclaration, ParamAssignment, TypeParameterDeclaration, TypeAssignment,
@@ -2636,7 +2672,7 @@ KINDS: list[type[SyntaxNode]] = [
     NetDeclaration, DriveStrength, ChargeStrength, VariableDeclaration, VariableDeclarator,
     ForwardTypedefDeclaration, TypedefDeclaration, EmptyItem, DpiImport, DpiExport, BindDirective,
     ElaborationTask, GenvarDeclaration, ImportDeclaration,
-    ImportItem,
+    ExportDeclaration, ImportItem,
     NetTypeDeclaration, NetAlias, DefParam, DefParamAssignment, TimeUnitsDeclaration, ModportDeclaration, ModportItem,
     ModportPort, ModportSubroutine, ModportClocking, ContinuousAssign, AlwaysConstruct, InitialConstruct,
     FinalConstruct, FunctionDeclaration, TaskDeclaration, TfPort, ClassDeclaration,
@@ -2645,7 +2681,8 @@ KINDS: list[type[SyntaxNode]] = [
     AssignmentStatement, ExpressionStatement, NullStatement, SeqBlock, ParBlock, IfStatement, CaseStatement, CaseItem,
     ForStatement, WhileStatement, DoWhileStatement, RepeatStatement, ForeverStatement, ForeachStatement,
     BreakStatement, ContinueStatement, ReturnStatement, TimedStatement, WaitStatement, EventTrigger, DisableStatement,
-    ForceStatement, ReleaseStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement, Production,
+    ForceStatement, ReleaseStatement, CheckerStatement, WaitForkStatement, WaitOrderStatement, RandSequenceStatement,
+    Production,
     ProductionRule, ProductionCall, ProductionCode, ProductionIf, ProductionRepeat, ProductionCase, ProductionCaseItem,
     ImmediateAssertion,
     DelayControl, RepeatEventControl, EventControl, EventExpression,

@@ -38,6 +38,8 @@ const RIGHT = new Set<number>([IMPLY, CONDITIONAL, THROUGHOUT, IFF, UNTIL, IMPLI
 
 const isAny = (node: unknown, kinds: Function[]) => kinds.some((k) => node instanceof k);
 /** `foreach`'s variables, of which a skipped one is empty. */
+/** `package::name, package::*`. */
+const importItems = (items: any[]) => items.map((i) => `${i.package.spelling}::${i.name !== null ? i.name.spelling : "*"}`).join(", ");
 const loopVariables = (variables: any[]) => variables.map((v) => (v instanceof S.EmptyArgument ? "" : v.spelling)).join(", ");
 const NON_ANSI = [S.PortReference, S.PortConcatenation, S.ExplicitPort, S.EmptyPort, S.WildcardPort];
 const joined = (parts: (string | null | undefined)[], separator = " ") => parts.filter((p) => p).join(separator);
@@ -69,7 +71,7 @@ function multiline(node: unknown): boolean {
   if (isAny(node, [S.FunctionDeclaration, S.TaskDeclaration])) return !prototype(node);
   if (node instanceof S.Coverpoint) return node.items.length > 0;
   if (node instanceof S.CoverCross) return node.body.length > 0;
-  return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration,
+  return isAny(node, [S.ModuleDeclaration, S.InterfaceDeclaration, S.ProgramDeclaration, S.PackageDeclaration, S.CheckerDeclaration,
     S.ClassDeclaration, S.ConstraintDeclaration, S.PropertyDeclaration, S.SequenceDeclaration, S.ClockingDeclaration,
     S.CovergroupDeclaration,
     S.AlwaysConstruct, S.InitialConstruct, S.FinalConstruct, S.GenerateRegion, S.GenerateFor,
@@ -407,7 +409,11 @@ export class Printer {
   }
 
   importText(node: any): string {
-    return "import " + node.items.map((i: any) => `${i.package.spelling}::${i.name !== null ? i.name.spelling : "*"}`).join(", ");
+    return "import " + importItems(node.items);
+  }
+
+  exportDeclaration(node: any, level: number): string[] {
+    return [`${pad(level)}export ${node.all ? "*::*" : importItems(node.items)};`];
   }
 
   importDeclaration(node: any, level: number): string[] {
@@ -698,7 +704,7 @@ export class Printer {
     const parameters = this.parameterValues(node.parameters);
     const instances = node.instances.map((i: any) => i.name.spelling + i.dimensions.map((d: any) => this.dimension(d)).join("")
       + " (" + i.connections.map((c: any) => this.connection(c)).join(", ") + ")").join(", ");
-    return [`${pad(level)}${node.module.spelling}${parameters} ${instances};`];
+    return [`${pad(level)}${this.name(node.module)}${parameters} ${instances};`];
   }
 
   connection(node: any): string {
@@ -752,6 +758,7 @@ export class Printer {
     if (node instanceof S.ForceStatement) return `${node.keyword} ${this.text(node.target)} = ${this.text(node.value)};`;
     if (node instanceof S.ReleaseStatement) return `${node.keyword} ${this.text(node.target)};`;
     if (node instanceof S.WaitForkStatement) return "wait fork;";
+    if (node instanceof S.CheckerStatement) return this.instantiation(node.instantiation, 0)[0] as string;
     return `disable ${node.target !== null ? this.text(node.target) : "fork"};`; // a DisableStatement
   }
 
@@ -994,6 +1001,13 @@ export class Printer {
     lines.push(`${p}${INDENT}${body};`);
     lines.push(`${p}end${keyword}` + (node.labeled ? ` : ${node.name.spelling}` : ""));
     return lines;
+  }
+
+  checkerDeclaration(node: any, level: number): string[] {
+    const p = pad(level);
+    const lines = [`${p}checker ${node.name.spelling}${this.assertionPorts(node.ports)};`];
+    const body = this.items(node.items, level + 1, lines); // after `lines` takes a trailing comment
+    return [...lines, ...body, `${p}endchecker` + (node.labeled ? ` : ${node.name.spelling}` : "")];
   }
 
   letDeclaration(node: any, level: number): string[] {
@@ -1406,6 +1420,8 @@ const items: [Function[], Method][] = [
   [[S.TimeUnitsDeclaration], (s, n, l) => s.timeUnits(n, l)],
   [[S.EmptyItem], (_s, _n, l) => [`${pad(l)};`]],
   [[S.ElaborationTask], (s, n, l) => s.elaborationTask(n, l)],
+  [[S.CheckerDeclaration], (s, n, l) => s.checkerDeclaration(n, l)],
+  [[S.ExportDeclaration], (s, n, l) => s.exportDeclaration(n, l)],
   [[S.DpiImport], (s, n, l) => s.dpiImport(n, l)],
   [[S.DpiExport], (s, n, l) => s.dpiExport(n, l)],
   [[S.BindDirective], (s, n, l) => s.bind(n, l)],

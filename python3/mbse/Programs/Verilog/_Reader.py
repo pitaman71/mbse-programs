@@ -653,6 +653,28 @@ class _Reader:
             out.function = self.name(node.withFunction.name)
         return out
 
+    def export_declaration(self, node: Any) -> S.ExportDeclaration:
+        if node.kind.name == "PackageExportAllDeclaration":
+            return S.ExportDeclaration(all=True)
+        return S.ExportDeclaration(items=self.import_declaration(node).items)
+
+    def user_net(self, node: Any) -> S.NetDeclaration:
+        """A net of a user-defined net type, which a delay tells from a variable."""
+        kind = self.made(node.netType, S.NamedType(name=self.identifier(node.netType)))
+        return S.NetDeclaration(type=kind, delay=self.delay(node.delay) if node.delay is not None else None,
+                                declarators=self.declarators(node.declarators))
+
+    def checker_declaration(self, node: Any) -> S.CheckerDeclaration:
+        return S.CheckerDeclaration(name=self.identifier(node.name), ports=self.assertion_ports(node.portList),
+                                    items=self.items(_nodes(node.members), node.end),
+                                    labeled=node.endBlockName is not None)
+
+    def checker_data(self, node: Any) -> S.VariableDeclaration:
+        """A checker's variable, `rand` when formal tools choose it."""
+        out = self.data_declaration(node.data)
+        out.random = _text(node.rand) or None
+        return out
+
     def dpi_import(self, node: Any) -> S.DpiImport:
         out = S.DpiImport(spec=node.specString.rawText[1:-1], property=_text(node.property) or None,
                           prototype=self.made(node.method, self.prototype(node.method)))
@@ -989,8 +1011,9 @@ class _Reader:
         return out
 
     def instantiation(self, node: Any) -> S.ModuleInstantiation:
-        out = S.ModuleInstantiation(module=self.identifier(node.type),
-                                    parameters=self.parameter_values(node.parameters))
+        # a checker's type is a name, which a package may qualify
+        module = self.identifier(node.type) if isinstance(node.type, parsing.Token) else self.name(node.type)
+        out = S.ModuleInstantiation(module=module, parameters=self.parameter_values(node.parameters))
         for instance in _nodes(node.instances):
             declaration = instance.decl
             item = S.Instance(name=self.identifier(declaration.name),
@@ -1025,10 +1048,7 @@ class _Reader:
     def statement(self, node: Any) -> S.Statement:
         label = getattr(node, "label", None)
         kind = node.kind.name
-        method = self.STATEMENTS.get(kind)
-        if method is None:
-            raise self.unsupported(node)
-        out = method(self, node)
+        out = self.STATEMENTS[kind](self, node)  # where statements are, slang reads no other syntax
         attributes = self.attributes(node)
         if attributes:
             out = S.AttributedStatement(attributes=attributes, statement=self.made(node, out))
@@ -1220,6 +1240,9 @@ class _Reader:
                 out.items.append(self.made(item, S.ProductionCaseItem(values=values,
                                                                       item=self.production_item(item.item))))
         return self.made(node, out)
+
+    def checker_statement(self, node: Any) -> S.CheckerStatement:
+        return S.CheckerStatement(instantiation=self.made(node.instance, self.instantiation(node.instance)))
 
     def wait_fork(self, node: Any) -> S.WaitForkStatement:
         return S.WaitForkStatement()
@@ -1885,6 +1908,7 @@ class _Reader:
         "FinalBlock": procedural_block, "FunctionDeclaration": subroutine, "TaskDeclaration": subroutine,
         "GenerateRegion": generate_region, "GenerateBlock": generate_block, "LoopGenerate": loop_generate,
         "IfGenerate": if_generate, "CaseGenerate": case_generate, "HierarchyInstantiation": instantiation,
+        "CheckerInstantiation": instantiation,
         "PortDeclaration": port_declaration, "ClassDeclaration": class_declaration,
         "ClassPropertyDeclaration": class_property, "ClassMethodDeclaration": class_method,
         "ClassMethodPrototype": class_prototype, "ForwardTypedefDeclaration": forward_typedef,
@@ -1897,6 +1921,9 @@ class _Reader:
         "DefParam": defparam, "TimeUnitsDeclaration": time_units, "EmptyMember": empty_member,
         "ElabSystemTask": elaboration_task, "ExternModuleDecl": extern_unit, "DPIImport": dpi_import,
         "DPIExport": dpi_export, "BindDirective": bind,
+        "CheckerDeclaration": checker_declaration, "CheckerDataDeclaration": checker_data,
+        "PackageExportDeclaration": export_declaration, "PackageExportAllDeclaration": export_declaration,
+        "UserDefinedNetDeclaration": user_net,
     }
     STATEMENTS = {
         "ExpressionStatement": expression_statement, "EmptyStatement": empty,
@@ -1913,7 +1940,7 @@ class _Reader:
         "ImmediateAssumeStatement": assertion, "ImmediateCoverStatement": assertion,
         "ProceduralForceStatement": force, "ProceduralAssignStatement": force, "ProceduralReleaseStatement": release,
         "ProceduralDeassignStatement": release, "WaitForkStatement": wait_fork, "WaitOrderStatement": wait_order,
-        "RandSequenceStatement": randsequence,
+        "RandSequenceStatement": randsequence, "CheckerInstanceStatement": checker_statement,
     }
     EXPRESSIONS = {
         "IdentifierName": identifier_name, "IdentifierSelectName": identifier_select, "ScopedName": scoped,

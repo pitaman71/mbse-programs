@@ -8,9 +8,9 @@
  * - Entity kinds: 'module', 'interface', 'program', 'package', 'parameter', 'localparam', 'type parameter', 'port',
  *   'net', 'variable', 'type', 'enumerator', 'genvar', 'modport', 'function', 'task', 'argument', 'instance',
  *   'block', 'class', 'constraint', 'property', 'sequence', 'let', 'clocking', 'clockvar', 'label', 'covergroup',
- *   'coverpoint', 'cross', 'bins', 'production' and 'import'. An enumeration's members are declared where the
- *   enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]` declares
- *   `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
+ *   'coverpoint', 'cross', 'bins', 'production', 'checker' and 'import'. An enumeration's members are declared where
+ *   the enumeration is, as SystemVerilog does; a member `name[2]` declares `name0` and `name1`, and `name[1:3]`
+ *   declares `name1` to `name3` (with decimal numbers). A `nettype` declares a 'type'.
  * - An `extern` design unit declares nothing: the unit of its name does, and with `.*` takes the extern's parameters
  *   and ports. A DPI import declares its function or task; a C name is not looked up. `bind` finds its target where it
  *   is, and its instances and connections in the target; what it instantiates is declared nowhere.
@@ -22,9 +22,9 @@
  *   classes it extends. A method or a constraint defined outside its class (`function void c::f()`, `constraint c::k`)
  *   is the entity its prototype declares, and its body sees the class's members. A `foreach` constraint's index
  *   variables are its own; `local::x` in `randomize() with` is `x` where the call is.
- * - A property, a sequence, a `let` and a `randsequence`'s production have scopes of their own, where their ports
- *   are arguments, and a `randsequence` one where its productions are; a named clocking block has one, where its
- *   signals are clockvars. A statement's label, and an assertion's, names a 'label'.
+ * - A property, a sequence, a `let`, a checker and a `randsequence`'s production have scopes of their own, where
+ *   their ports are arguments, and a `randsequence` one where its productions are; a named clocking block has one,
+ *   where its signals are clockvars. A statement's label, and an assertion's, names a 'label'.
  * - A covergroup has a scope, where its ports and its `sample` function's are arguments; a coverpoint and a cross have
  *   scopes, where their bins are, and a labeled one is an entity. A bin's `with (filter)` has a scope where `item` is.
  * - An array method's `with (expression)` has its own scope, where the iterator is a variable: the name the call's
@@ -416,6 +416,19 @@ class Definer {
     this.visit(node.expression, inner);
   }
 
+  checkerDeclaration(node: any, scope: Scope): void {
+    const inner = this.scoped(scope, "checker", node.name, node, "checker");
+    this.program.located(node.name, scope);
+    for (const port of node.ports) {
+      this.visitAll([...(port.type !== null ? [port.type] : []), ...port.dimensions,
+        ...(port.value !== null ? [port.value] : [])], inner);
+      this.program.located(port, inner);
+      this.program.located(port.name, inner);
+      this.entity(inner, "argument", port.name, port);
+    }
+    this.visitAll(node.items, inner);
+  }
+
   instance(node: any, scope: Scope): void {
     this.program.located(node.module, scope);
     this.visitAll(node.parameters, scope);
@@ -532,6 +545,8 @@ const methods: [Function[], Method][] = [
   [[S.InterfaceTypeName], (d, n, s) => d.interfaceType(n, s)],
   [[S.DpiImport], (d, n, s) => d.dpiImport(n, s)],
   [[S.RandSequenceStatement], (d, n, s) => d.randsequence(n, s)],
+  [[S.CheckerDeclaration], (d, n, s) => d.checkerDeclaration(n, s)],
+  [[S.ExportDeclaration], () => undefined], // what a package exports is not followed: its names are not looked up
   [[S.DpiExport], (d, n, s) => d.dpiExport(n, s)],
   [[S.BindDirective], (d, n, s) => d.bind(n, s)],
   [[S.NetDeclaration], (d, n, s) => d.declarators(n, s, "net")],

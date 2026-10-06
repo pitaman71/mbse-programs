@@ -583,6 +583,48 @@
    ]
   },
   {
+   "kind": "CheckerDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "name",
+     "type": [
+      "Identifier"
+     ],
+     "optional": false,
+     "many": false
+    },
+    {
+     "name": "ports",
+     "type": [
+      "AssertionPort"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "items",
+     "type": [
+      "Item",
+      "Directive",
+      "Comment"
+     ],
+     "optional": true,
+     "many": true
+    },
+    {
+     "name": "labeled",
+     "type": "bool",
+     "optional": false
+    }
+   ]
+  },
+  {
    "kind": "PackageDeclaration",
    "category": "Item",
    "since": {
@@ -1674,7 +1716,7 @@
     {
      "name": "net_type",
      "type": "str",
-     "optional": false,
+     "optional": true,
      "choices": [
       "wire",
       "tri",
@@ -2207,6 +2249,30 @@
    "extension": false,
    "features": {},
    "properties": [
+    {
+     "name": "items",
+     "type": [
+      "ImportItem"
+     ],
+     "optional": true,
+     "many": true
+    }
+   ]
+  },
+  {
+   "kind": "ExportDeclaration",
+   "category": "Item",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "all",
+     "type": "bool",
+     "optional": false
+    },
     {
      "name": "items",
      "type": [
@@ -3322,7 +3388,8 @@
     {
      "name": "module",
      "type": [
-      "Identifier"
+      "Identifier",
+      "ScopedName"
      ],
      "optional": false,
      "many": false
@@ -4159,6 +4226,25 @@
      "name": "target",
      "type": [
       "Expression"
+     ],
+     "optional": false,
+     "many": false
+    }
+   ]
+  },
+  {
+   "kind": "CheckerStatement",
+   "category": "Statement",
+   "since": {
+    "SystemVerilog": 2009
+   },
+   "extension": false,
+   "features": {},
+   "properties": [
+    {
+     "name": "instantiation",
+     "type": [
+      "ModuleInstantiation"
      ],
      "optional": false,
      "many": false
