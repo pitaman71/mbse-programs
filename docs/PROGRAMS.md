@@ -48,7 +48,9 @@ The languages so far:
 - **Trees.** A syntax node has at most one parent. `Language.validate` reports what is wrong with a tree, by path:
   required properties that are unset, children of a category the property does not accept, attributes of the wrong type,
   choices out of range, a syntax node shared by two parents, cycles, and each kind's own checks (an `Identifier`'s
-  spelling).
+  spelling). A tree holds any spelling: a name its language cannot spell (not an identifier, or a keyword) is built and
+  kept as given, and validation flags it, so that whoever wrote it, a person or a transform, can still configure it;
+  printing it is the caller's to refuse (mbse-codegen-python refuses to give source with any left).
 - **Serialization.** Each kind has a meta-schema: an mbse-schemas reference-object schema tagged `kind`, with one
   property per attribute. Children are entries of the adjacency `children` to the shared relation `Programs.Children`,
   which links a `parent` to a `child` with the child's `property` and, in a list, its `index`. `Language.grammar()` writes
@@ -694,6 +696,11 @@ SystemVerilog2023.print(B.constraint("c_age", constraint))                    # 
   a checker run on the source, or from definitions that resolve members.
 
 ## Resolved
+
+- A tree holds any spelling, and validation flags a name its language cannot spell, rather than a builder refusing it:
+  a name is configured where it comes from (a schema, a person, a transform), and a tree that keeps it lets that
+  source be fixed and the tree written again, where a refusal would lose the step that wrote it. Code generators
+  refuse to print a tree with such a name, and never rename it.
 
 - tree-sitter was a bootstrap, not the foundation. It is an editor's parser: it approximates each grammar, lags the
   standards, and only reads. Each language moves to its reference front end, parsing in the runtime that has it, and

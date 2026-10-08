@@ -1,6 +1,6 @@
 {
   "name": "@mbse/programs",
-  "version": "0.3.26",
+  "version": "0.3.27",
   "description": "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++, Python, TypeScript, JavaScript, Verilog and SystemVerilog, with their definitions, built for transpilers that never parse or print strings (TypeScript implementation)",
   "keywords": [
     "ast",
