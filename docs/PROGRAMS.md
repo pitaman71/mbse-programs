@@ -668,10 +668,19 @@ SystemVerilog2023.print(B.constraint("c_age", constraint))                    # 
 
 ## Open questions
 
-- **Moving to reference front ends.** Each language moves from tree-sitter to its own reference front end (see
-  Resolved), one at a time: SystemVerilog first, built on slang as a new language, then Python, TypeScript and Ccpp.
-  Until a language moves, its tree-sitter parser stays, with the pre-pass and gaps described above. Open: whether
-  printing can move to the front ends' own printers where they print trees, not only text.
+- **Moving to reference front ends** (applies mbse-basis C-021). tree-sitter is an editor's parser: it approximates
+  each grammar, lags the standards, and only reads. Each language moves to its reference front end, one at a time:
+  SystemVerilog first, built on slang as a new language, then Python, TypeScript and Ccpp. A front end parses in the
+  runtime that has it, and the implementations exchange trees as JSON snapshots, which are byte-identical. New
+  languages are built on their front end directly. Until a language moves, its tree-sitter parser stays, with the
+  pre-pass and gaps described above. Open: whether printing can move to the front ends' own printers where they print
+  trees, not only text.
+- **Ccpp's front end.** Clang (`clang.cindex`) would read with the code's real compile flags (from
+  `compile_commands.json`: include paths and `-std`), but probed with libclang 18.1.1 it drops declarations and
+  statements that name undeclared things, whatever recovery flags it is given. Refusing to parse when Clang reports an
+  error keeps anything from being dropped silently, but then fragments and code without its headers cannot be read,
+  which conflicts with mbse-basis C-003. C++'s grammar depends on whether a name is a type, so any parser must
+  resolve names; EDG copes but is commercial, so tree-sitter stays defensible for Ccpp.
 - **Value objects in lists.** Children are linked through the relation `Programs.Children` rather than as nested value
   objects in an indexed list, which mbse-schemas now has (`as_indexed`). Linking keeps parity with mbse-expressions'
   arguments, and gives every syntax node an identity; nesting would make snapshots smaller and their order explicit.
@@ -702,15 +711,6 @@ SystemVerilog2023.print(B.constraint("c_age", constraint))                    # 
   source be fixed and the tree written again, where a refusal would lose the step that wrote it. Code generators
   refuse to print a tree with such a name, and never rename it.
 
-- tree-sitter was a bootstrap, not the foundation. It is an editor's parser: it approximates each grammar, lags the
-  standards, and only reads. Each language moves to its reference front end, parsing in the runtime that has it, and
-  the implementations exchange trees as JSON snapshots, which are byte-identical: SystemVerilog on slang (`pyslang`),
-  Python on CPython's `ast`, TypeScript and JavaScript on the TypeScript compiler API, and C and C++ on Clang
-  (`clang.cindex`). New languages are built on their front end directly, never on tree-sitter.
-- Ccpp reads with `clang.cindex` given the code's real compile flags (from `compile_commands.json`: include paths and
-  `-std`), and refuses to parse when Clang reports an error, so that nothing is dropped silently: probed with libclang
-  18.1.1, Clang drops declarations and statements that name undeclared things, whatever recovery flags it is given.
-  Spec fidelity and compilable code come first; fragments and code without its headers are out of scope.
 - Text pre-passes, which rewrite source text before a parser reads it, are bugs: they hide a parser's gaps instead of
   reporting them. They go when each language moves to its front end, not separately. Corrections of how a parser
   groups or reads a tree, made on the tree, are kept, and so are converters from a parser's tree to the language's
