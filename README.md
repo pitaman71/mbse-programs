@@ -92,32 +92,32 @@ package), TypeScript from `@mbse/programs` (next to `@mbse/schemas`).
 ## Getting started
 
 mbse-programs depends on [mbse-schemas](https://github.com/pitaman71/mbse-schemas) and
-[mbse-expressions](https://github.com/pitaman71/mbse-expressions), which live beside it as sibling checkouts. Clone this
-repository, then the siblings at the commits it pins (`siblings.json`):
+[mbse-expressions](https://github.com/pitaman71/mbse-expressions), which live beside it as sibling checkouts. Clone
+mbse-basis, which keeps the tool, and this repository, then the siblings at the commits it pins (`siblings.json`):
 
 ```sh
+git clone git@github.com:pitaman71/mbse-basis.git
 git clone git@github.com:pitaman71/mbse-programs.git
-python3 mbse-programs/scripts/siblings.py clone   # mbse-schemas and mbse-expressions, at their pinned commits
 cd mbse-programs
+python3 ../mbse-basis/scripts/polyrepo.py clone # mbse-schemas and mbse-expressions, at their pinned commits
 ```
 
-`clone` skips a sibling that is already there, so repositories cloned side by side by hand are used as they are.
-A sibling it clones is checked out at its pinned commit, in detached HEAD; to change it, switch to a branch first
-(`git -C ../mbse-schemas switch main`). `python3 scripts/siblings.py check` reports when it has moved past its
-pinned commit, which is expected while developing; see `scripts/siblings.py help` for `check --strict` and `pin`.
-`scripts/siblings.py` runs the tool kept in mbse-schemas (`../mbse-schemas/scripts/siblings.py`), cloning
-mbse-schemas first if it is missing.
+`clone` skips a sibling that is already there, so repositories cloned side by side by hand are used as they are. A
+sibling it clones is checked out at its pinned commit, in detached HEAD; to change it, switch to a branch first
+(`git -C ../mbse-schemas switch main`). `python3 ../mbse-basis/scripts/polyrepo.py check` reports when it has moved past
+its pinned commit, which is expected while developing; see `polyrepo.py help` for `check --strict` and `pin`. The tool
+is kept in mbse-basis, as `scripts/polyrepo.py`.
 
 For parallel work (several agents, or several tasks at once), give each its own workspace: worktrees of this
 repository and of its siblings, side by side, so that each installs its own siblings and none sees another's
 half-finished changes. A worktree of this repository alone does not work, since its siblings would not be beside it.
 
 ```sh
-python3 scripts/siblings.py workspace ../worktrees/a --branch a                     # this repository on a
-python3 scripts/siblings.py workspace ../worktrees/b --branch b --edit mbse-schemas # and mbse-schemas too
-python3 scripts/siblings.py land ../worktrees/b                                     # once done: merged, tagged, removed
-python3 scripts/siblings.py push                                                    # then published, siblings first
-python3 scripts/siblings.py remove ../worktrees/a                                   # or abandoned (branches are kept)
+python3 ../mbse-basis/scripts/polyrepo.py workspace ../worktrees/a --branch a                     # this repository on a
+python3 ../mbse-basis/scripts/polyrepo.py workspace ../worktrees/b --branch b --edit mbse-schemas # and mbse-schemas too
+python3 ../mbse-basis/scripts/polyrepo.py land ../worktrees/b                                     # once done: merged, tagged, removed
+python3 ../mbse-basis/scripts/polyrepo.py push                                                    # then published, siblings first
+python3 ../mbse-basis/scripts/polyrepo.py remove ../worktrees/a                                   # or abandoned (branches are kept)
 ```
 
 `land` fast-forwards each repository's checkout to its workspace branch, siblings before their dependents, tags each

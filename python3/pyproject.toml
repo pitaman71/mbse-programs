@@ -41,7 +41,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-# the sibling checkouts: scripts/siblings.py
+# the sibling checkouts: ../mbse-basis/scripts/polyrepo.py
 mbse-expressions = { path = "../../mbse-expressions/python3", editable = true }
 mbse-schemas = { path = "../../mbse-schemas/python3", editable = true }
 
