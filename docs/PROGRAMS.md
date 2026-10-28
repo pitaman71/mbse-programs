@@ -668,7 +668,7 @@ SystemVerilog2023.print(B.constraint("c_age", constraint))                    # 
 
 ## Open questions
 
-- **Moving to reference front ends** (applies mbse-basis C-021). tree-sitter is an editor's parser: it approximates
+- **Moving to reference front ends** (applies mbse-basis CAP-044). tree-sitter is an editor's parser: it approximates
   each grammar, lags the standards, and only reads. Each language moves to its reference front end, one at a time:
   SystemVerilog first, built on slang as a new language, then Python, TypeScript and Ccpp. A front end parses in the
   runtime that has it, and the implementations exchange trees as JSON snapshots, which are byte-identical. New
@@ -679,7 +679,7 @@ SystemVerilog2023.print(B.constraint("c_age", constraint))                    # 
   `compile_commands.json`: include paths and `-std`), but probed with libclang 18.1.1 it drops declarations and
   statements that name undeclared things, whatever recovery flags it is given. Refusing to parse when Clang reports an
   error keeps anything from being dropped silently, but then fragments and code without its headers cannot be read,
-  which conflicts with mbse-basis C-003. C++'s grammar depends on whether a name is a type, so any parser must
+  which conflicts with mbse-basis CAP-026. C++'s grammar depends on whether a name is a type, so any parser must
   resolve names; EDG copes but is commercial, so tree-sitter stays defensible for Ccpp.
 - **Value objects in lists.** Children are linked through the relation `Programs.Children` rather than as nested value
   objects in an indexed list, which mbse-schemas now has (`as_indexed`). Linking keeps parity with mbse-expressions'
