@@ -132,5 +132,5 @@ JSON.ToJSON(P.LANGUAGE.Builders).Reachable(P.Module.Schema, tree)           # fr
 | Topic | Read |
 |---|---|
 | Learning it by example: trees, rewriting, standards, names, languages, snapshots, transpiling, bridges | [the tutorial, nine case studies](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/README.md) |
-| The design: trees, standards, each language, parsing gaps, printing, definitions, transpiling, bridges | [PROGRAMS.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md) |
+| The design: trees, standards, each language, parsing gaps, printing, definitions, transpiling, bridges | [FEA-008: expressive program models](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-008.md), in mbse-basis, and its capabilities |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-programs/blob/main/python3/tests/TestPlan.md) |

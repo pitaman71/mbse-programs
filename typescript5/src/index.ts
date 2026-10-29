@@ -2,8 +2,8 @@
  *
  * Complete abstract syntax trees for programming languages, as plain in-memory objects that serialize through
  * mbse-schemas, with the entities they declare, and standards that parse source text into trees and print trees into
- * source text. A transpiler written against these trees never parses or prints strings. See docs/PROGRAMS.md at
- * https://github.com/pitaman71/mbse-programs.
+ * source text. A transpiler written against these trees never parses or prints strings. See mbse-basis
+ * [FEA-008: expressive program models](../../../mbse-basis/docs/features/FEA-008.md).
  *
  * The framework is `@mbse/programs/Framework`, and the languages are modules beside it: `@mbse/programs/Ccpp` for C
  * and C++, `@mbse/programs/Python` for Python, `@mbse/programs/TypeScript` for TypeScript and JavaScript, and

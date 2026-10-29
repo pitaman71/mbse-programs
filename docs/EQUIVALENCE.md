@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Programs design](PROGRAMS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 9 · Constraints in hardware (TypeScript)](../typescript5/tutorials/09_Constraints_In_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
 
 # Equivalence of the implementations
 
@@ -77,4 +77,4 @@ Both are run as tests and committed with outputs (Python's from its kernel, Type
 ---
 
 <!-- nav -->
-[← Programs design](PROGRAMS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 9 · Constraints in hardware (TypeScript)](../typescript5/tutorials/09_Constraints_In_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)

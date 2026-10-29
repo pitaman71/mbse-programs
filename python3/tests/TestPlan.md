@@ -4,7 +4,7 @@
 # Test plan — python3
 
 Scope: everything under `python3/mbse/Programs` (the framework, and the Ccpp, Python, TypeScript and Verilog languages with their
-standards, parsers, printers and definitions, the transpilers and the bridges) and cross-implementation conformance. The design reference is `../../docs/PROGRAMS.md`; this plan and the
+standards, parsers, printers and definitions, the transpilers and the bridges) and cross-implementation conformance. The design reference is mbse-basis [FEA-008: expressive program models](../../../mbse-basis/docs/features/FEA-008.md), with its capabilities; this plan and the
 TypeScript one mirror each other case for case, with the deliberate differences of `../../docs/EQUIVALENCE.md`.
 mbse-schemas is tested in mbse-schemas.
 

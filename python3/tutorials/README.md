@@ -11,7 +11,7 @@ It's written for Python programmers who write code that reads, changes or writes
 code generators, transpilers. A TypeScript port with the same case studies and the same answers is the
 [TypeScript tutorial](../../typescript5/tutorials/README.md). The constraints of case studies 8 and 9 are
 mbse-expressions'; its [tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md)
-explains them. The [design document](../../docs/PROGRAMS.md) is the reference for everything here.
+explains them. mbse-basis [FEA-008: expressive program models](../../../mbse-basis/docs/features/FEA-008.md), with its capabilities, is the reference for everything here.
 
 ## Running the notebooks
 

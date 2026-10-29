@@ -166,5 +166,5 @@ parses.
 
 | Topic | Read |
 |---|---|
-| Every kind, standard, parsing gap and printing decision | [PROGRAMS.md](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md) |
+| Every kind, standard, parsing gap and printing decision | [FEA-008: expressive program models](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-008.md), in mbse-basis, and its capabilities |
 | Standards, names and three languages, by example | [the tutorial](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/README.md), case studies 3 to 5 |
