@@ -89,6 +89,6 @@ programs belong in `conformance/transpilers/<transpiler>/`: the source, what it 
 
 | Topic | Read |
 |---|---|
-| Transpiling and bridges, in the design | [PROGRAMS.md, Transpiling](https://github.com/pitaman71/mbse-programs/blob/main/docs/PROGRAMS.md#transpiling) |
+| Transpiling and bridges, in the design | [CAP-088: TypeScript transpiled to Python](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-088.md#transpiling), in mbse-basis |
 | Changing code, by example | [the tutorial's case study 2](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/02_Changing_Code_Safely.ipynb) |
 | Transpiling and bridges, by example | [case study 7](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/07_From_One_Language_To_Another.ipynb) and [case study 8](https://github.com/pitaman71/mbse-programs/blob/main/python3/tutorials/08_From_Constraints_To_Code.ipynb) |

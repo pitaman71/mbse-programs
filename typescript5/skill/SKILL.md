@@ -78,6 +78,7 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 | Rewrite trees, transpile between languages, or bridge constraints and code | [references/transpiling.md](references/transpiling.md) |
 
 Deeper material is in the repository: `python3/tutorials/` and `typescript5/tutorials/` teach it in nine case
-studies, with outputs, and `docs/PROGRAMS.md` holds the design, every parser's gaps and the open questions. Links use
+studies, with outputs, and mbse-basis
+[FEA-008: expressive program models](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-008.md) holds the design, with its capabilities: every parser's gaps and the open questions. Links use
 `https://github.com/pitaman71/mbse-programs/blob/main/<path>`; in a checkout, `<path>` is relative to the repository
 root.

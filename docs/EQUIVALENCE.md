@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Programs design](PROGRAMS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 9 · Constraints in hardware (TypeScript)](../typescript5/tutorials/09_Constraints_In_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
 
 # Equivalence of the implementations
 
@@ -8,6 +8,8 @@
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
 specific to this package: the framework, the Ccpp, Python, TypeScript and Verilog languages with their standards, and
 the transpilers.
+Its deliberate differences are the list mbse-basis [CAP-032: deliberate differences listed](../../mbse-basis/docs/capabilities/README.md#CAP-032)
+asks every repository to keep.
 
 ## How it is checked
 
@@ -77,4 +79,4 @@ Both are run as tests and committed with outputs (Python's from its kernel, Type
 ---
 
 <!-- nav -->
-[← Programs design](PROGRAMS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 9 · Constraints in hardware (TypeScript)](../typescript5/tutorials/09_Constraints_In_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)

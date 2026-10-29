@@ -9,8 +9,8 @@ specification: parsed, changed, checked, resolved, shared and translated as tree
 
 It's written for TypeScript programmers who write code that reads, changes or writes code: refactoring tools, linters,
 code generators, transpilers. It's a port of the [Python tutorial](../../python3/tutorials/README.md), with the same case
-studies and the same answers: case study 6's snapshot has the same digest in both. The [design document](../../docs/PROGRAMS.md)
-is the reference for everything here.
+studies and the same answers: case study 6's snapshot has the same digest in both. mbse-basis [FEA-008: expressive program models](../../../mbse-basis/docs/features/FEA-008.md), with its
+capabilities, is the reference for everything here.
 
 Where the bindings differ, the code follows TypeScript idioms:
 

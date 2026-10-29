@@ -150,7 +150,7 @@ npm test                       # type-check and run the test suites and the tuto
 | Read | For |
 |---|---|
 | [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Nine case studies, from code as text to code generated from constraints: trees, rewriting, standards, names, three languages, snapshots, transpiling, and bridges into Python and into hardware. Start here. |
-| [Programs design](docs/PROGRAMS.md) | The design: trees, standards, Ccpp, Python and TypeScript, parsing and its gaps, printing, definitions, transpiling, bridges to mbse-expressions, and open questions |
+| mbse-basis [FEA-008: expressive program models](../mbse-basis/docs/features/FEA-008.md) | The design, as its capabilities' detail files: trees, standards, each language, parsing and its gaps, printing, definitions, transpiling, bridges to mbse-expressions, and open questions |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-programs/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
 | [Python test plan](python3/tests/TestPlan.md), [TypeScript test plan](typescript5/tests/TestPlan.md) | The test suites |
@@ -159,7 +159,7 @@ npm test                       # type-check and run the test suites and the tuto
 ## Repository layout
 
 ```
-docs/                     the design (PROGRAMS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
+docs/                     how the implementations are kept equivalent (EQUIVALENCE.md); the design is mbse-basis FEA-008's
 python3/                  Python implementation: mbse/Programs (Framework, Ccpp, Python, TypeScript, Transpilers, Bridges, Conformance), tests and tutorials
 typescript5/              TypeScript implementation: src (Framework, Ccpp, Python, TypeScript, Transpilers, Bridges, Conformance), tests and tutorials
 skills/                   the agent skill (SKILL.md plus per-task references); skills/sync.sh copies it into both packages
@@ -201,8 +201,7 @@ And two bridges, between mbse-expressions' Python and SystemVerilog dialects and
 both ways: a constraint stored as data becomes a Python expression or function, or a SystemVerilog function,
 `constraint` block or assertion, and source becomes a constraint, in TypeScript too.
 
-Not built yet: the constructs the parsers cannot read ([Parsing, in the design](docs/PROGRAMS.md#parsing), [Parsing
-Python](docs/PROGRAMS.md#parsing-python), [Parsing TypeScript](docs/PROGRAMS.md#parsing-typescript)) are built and
+Not built yet: the constructs the parsers cannot read (mbse-basis [CAP-038: every construct of Python's standards](../mbse-basis/docs/capabilities/CAP-038.md#blocked), [CAP-092: every construct of TypeScript's standards](../mbse-basis/docs/capabilities/CAP-092.md#blocked) and [CAP-093: every construct of C's and C++'s standards](../mbse-basis/docs/capabilities/CAP-093.md#blocked), Blocked) are built and
 printed but not parsed; overloads, dependent names, attributes and properties are not resolved; transpilers beyond the
 first are planned.
 
