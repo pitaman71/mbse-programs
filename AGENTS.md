@@ -70,7 +70,7 @@ dialects and the languages' trees. Two equivalent implementations exist: `python
 - **The parsers are pinned.** tree-sitter-cpp 0.23.4, tree-sitter-python 0.25.0 and tree-sitter-typescript 0.23.2, in
   both implementations (the Python wheels and the npm packages' wasm), so their trees are the same; both pass tree-sitter
   UTF-16, so its error recovery is the same too. Upgrading one is a change to both, and to the gaps and corrections in
-  mbse-basis [CAP-026: Python, TypeScript and C and C++ read as written](../mbse-basis/docs/capabilities/CAP-026.md) and [CAP-038: every construct of the standards](../mbse-basis/docs/capabilities/CAP-038.md#blocked). A Python construct that tree-sitter-python reads unlike CPython is corrected in the converter, and
+  mbse-basis [CAP-026: Python, TypeScript and C and C++ read as written](../mbse-basis/docs/capabilities/CAP-026.md) and [CAP-038: every construct of Python's standards](../mbse-basis/docs/capabilities/CAP-038.md#blocked), [CAP-092: every construct of TypeScript's standards](../mbse-basis/docs/capabilities/CAP-092.md#blocked) and [CAP-093: every construct of C's and C++'s standards](../mbse-basis/docs/capabilities/CAP-093.md#blocked). A Python construct that tree-sitter-python reads unlike CPython is corrected in the converter, and
   checked against CPython's `ast` (PYPRS-01 does it for the conformance source); a TypeScript construct that
   tree-sitter-typescript reads unlike TypeScript is corrected likewise, and checked against typescript-estree, which
   the TypeScript suite runs (TSPRS-01). typescript-estree, an npm package, is the oracle for a TypeScript tree.

@@ -201,7 +201,7 @@ And two bridges, between mbse-expressions' Python and SystemVerilog dialects and
 both ways: a constraint stored as data becomes a Python expression or function, or a SystemVerilog function,
 `constraint` block or assertion, and source becomes a constraint, in TypeScript too.
 
-Not built yet: the constructs the parsers cannot read (mbse-basis [CAP-038: every construct of the standards](../mbse-basis/docs/capabilities/CAP-038.md#blocked), Blocked) are built and
+Not built yet: the constructs the parsers cannot read (mbse-basis [CAP-038: every construct of Python's standards](../mbse-basis/docs/capabilities/CAP-038.md#blocked), [CAP-092: every construct of TypeScript's standards](../mbse-basis/docs/capabilities/CAP-092.md#blocked) and [CAP-093: every construct of C's and C++'s standards](../mbse-basis/docs/capabilities/CAP-093.md#blocked), Blocked) are built and
 printed but not parsed; overloads, dependent names, attributes and properties are not resolved; transpilers beyond the
 first are planned.
 
