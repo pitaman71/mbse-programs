@@ -8,7 +8,7 @@
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
 specific to this package: the framework, the Ccpp, Python, TypeScript and Verilog languages with their standards, and
 the transpilers.
-Its deliberate differences are the list mbse-basis [CAP-032: deliberate differences listed](../../mbse-basis/docs/capabilities/README.md#CAP-032)
+Its deliberate differences are the list mbse-basis [PRI-040: deliberate differences listed](../../mbse-basis/docs/PRINCIPLES.md#PRI-040)
 asks every repository to keep.
 
 ## How it is checked
