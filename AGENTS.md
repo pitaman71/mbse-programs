@@ -24,62 +24,25 @@ dialects and the languages' trees. Two equivalent implementations exist: `python
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
 | Model the data trees are stored with | [mbse-schemas' AGENTS.md](https://github.com/pitaman71/mbse-schemas/blob/main/AGENTS.md), in the sibling checkout |
 
-## Invariants when changing code
+## Read before any work
 
-- **One vocabulary across the mbse repositories.** A kind's or schema's named members are *properties*, never
-  "fields" (a field is only the host language's class member that holds one). An element of an expression tree is
-  a *term* (mbse-expressions), and of a program tree a *syntax node* (mbse-programs); never a bare "node" in code,
-  docs or messages. What a specification requires is a *constraint*, never a "rule"; a constraint is checked,
-  resolved or generated from, never executed ([MBSE.md, What a specification is made
-  of](https://github.com/pitaman71/mbse-basis/blob/main/MBSE.md#what-a-specification-is-made-of)). Across this many languages, terms collide (an SVA
-  `property`, a C++ template parameter, a SystemVerilog `constraint` block): wherever ours meets a language's own,
-  in docs and examples, qualify the colliding term with whose it is.
-- **The README opens with why.** Its first sentence or paragraph says, TL;DR style, why this repository exists, in
-  the terms of `MBSE.md`; what it is comes after. Keep that opening true as the repository changes.
-- **Every human-facing document has navigation.** A `{previous, home, next}` line heads and ends each document in
-  reading order (README, MBSE.md, tutorials, design, conformance, packages and test plans); after adding, renaming or
-  retitling one, run `python3 ../mbse-basis/scripts/update_doc_links.py`. Link text is human-readable, never a path.
-- **Parallel work happens in workspaces.** Agents working at the same time each get a workspace from
-  `python3 ../mbse-basis/scripts/polyrepo.py workspace <dir> --branch <name>` (with `--edit <sibling>` for a change that
-  spans repositories), install there, and `land` it when done. A worktree of this repository alone, such as an agent's
-  built-in worktree isolation, breaks the relative paths to the siblings.
-- **The two implementations are equivalent.** Change both in the same commit, with the same names, the same error
-  classes and byte-identical messages. Each language's `Syntax.ts` mirrors its `Syntax.py` kind for kind and property
-  for property, in the same order. JSON output must be byte-identical: regenerate the corpora and let CONF-02 compare
-  them. A difference not listed in `docs/EQUIVALENCE.md` is a bug.
-- **Tutorials are tested too.** `pytest` and `npm test` run `tutorials/` beside `tests/`; the two languages tell the
-  same case studies with the same answers. Re-execute a tutorial after a change that alters its output, and commit it
-  with its outputs.
-- **The skill is packaged with each implementation.** After editing `skills/mbse-programs/`, run `skills/sync.sh`;
-  SKL-01 fails until the copies match. Every fenced block tagged `python` or `typescript` in the skill is a complete
-  program that SKL-02 runs; tag fragments `python fragment` or `typescript fragment`. SKL-03 checks every link in this
-  file, `llms.txt` and the skill.
-- **Tests are Jupyter notebooks**, one suite per notebook, with the same case IDs in the same order in both
-  languages. Each case is a markdown cell `## ID · title` followed by one code cell. Notebooks are JSON written with
-  `indent=1`, `sort_keys=True` and `ensure_ascii=False`.
-- **Coverage is 100%** in both languages (statements and branches; in TypeScript also functions and lines). Close a gap
-  with an assertion in the shared case, in both suites. Remove code no input reaches rather than excluding it.
-- **Trees are complete.** A construct of any standard of the language is a tree of its kinds, whether or not the parser
-  reads it. A new kind records where it exists (`SINCE`, `FEATURES`, or `EXTENSION`), and the printer prints it.
-- **Transpilers never touch text.** Everything a transpiler needs is on the tree, in `Framework.Syntax`'s traversals or
-  in `Definitions`; only standards parse and print. Transpilers build syntax nodes with the target language's fluent
-  builders (`LANGUAGE.Builders.<Kind>()`), not with constructors or helpers of their own. A transpiler's programs are in
-  `conformance/transpilers/`: a program's `.out` is what Node prints when it runs, and its translation (`.py`) is
-  regenerated with the corpora. A construct outside the transpiler's subset raises `TranspileError`, never translates
-  into code that means otherwise.
-- **The parsers are pinned.** tree-sitter-cpp 0.23.4, tree-sitter-python 0.25.0 and tree-sitter-typescript 0.23.2, in
-  both implementations (the Python wheels and the npm packages' wasm), so their trees are the same; both pass tree-sitter
-  UTF-16, so its error recovery is the same too. Upgrading one is a change to both, and to the gaps and corrections in
-  mbse-basis [CAP-026: Python, TypeScript and C and C++ read as written](../mbse-basis/docs/capabilities/CAP-026.md) and [CAP-038: every construct of Python's standards](../mbse-basis/docs/capabilities/CAP-038.md#blocked), [CAP-092: every construct of TypeScript's standards](../mbse-basis/docs/capabilities/CAP-092.md#blocked) and [CAP-093: every construct of C's and C++'s standards](../mbse-basis/docs/capabilities/CAP-093.md#blocked). A Python construct that tree-sitter-python reads unlike CPython is corrected in the converter, and
-  checked against CPython's `ast` (PYPRS-01 does it for the conformance source); a TypeScript construct that
-  tree-sitter-typescript reads unlike TypeScript is corrected likewise, and checked against typescript-estree, which
-  the TypeScript suite runs (TSPRS-01). typescript-estree, an npm package, is the oracle for a TypeScript tree.
-- **Verilog reads through slang, in Python only.** pyslang 12.0.0 is pinned in `python3/pyproject.toml`; TypeScript's
-  `parse` runs the Python implementation's reader (`python -m mbse.Programs.Verilog.read`) and loads its snapshot, so
-  its tests need `uv sync` in `python3/` first. The reader converts slang's tree and refuses, by name and position, what
-  the kinds do not hold; it never rewrites source text.
-- **Behavior is decided in the detail files of mbse-basis [FEA-008: expressive program models](../mbse-basis/docs/features/FEA-008.md)'s capabilities**, kept as mbse-basis'
-  [`docs/README.md`](../mbse-basis/docs/README.md#detail-files) says (Detail files).
+Agents must read these mbse-basis documents before doing any work:
+
+- [The mbse basis](../mbse-basis/docs/README.md)
+- [Principles](../mbse-basis/docs/PRINCIPLES.md)
+- [Features](../mbse-basis/docs/features/README.md)
+- [Capabilities](../mbse-basis/docs/capabilities/README.md)
+
+These may be read selectively, on demand: [Vocabulary](../mbse-basis/docs/VOCABULARY.md) and
+[Qualities](../mbse-basis/docs/QUALITIES.md).
+
+Never write to `~/.claude/projects/*/memory/` or any hidden memory: what is worth keeping goes in the repository.
+
+## This repository
+
+- The printer prints every kind, a new one included.
+- A transpiler finds everything it needs on the tree, in `Framework.Syntax`'s traversals or in `Definitions`.
+- Upgrading a pinned parser changes the gaps listed, as blocked, in the capabilities for each language's standards.
 
 ## Commands
 
@@ -90,9 +53,11 @@ cd python3 && uv sync --all-extras              # Python: use uv, never pip
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
 uv run python -m mbse.Programs.Conformance.write
 
-cd typescript5 && nvm use && npm install        # TypeScript: Node 22 or later
+cd typescript5 && nvm use && npm install        # TypeScript: Node 22 or later; Verilog's tests need python3's uv sync
 npm run coverage                                # type-checks, runs every notebook, gates at 100%
 npm run conformance
+
+skills/sync.sh                                  # after editing skills/mbse-programs/: the packaged copies (SKL-01)
 ```
 
 ## Related repositories
@@ -101,4 +66,4 @@ npm run conformance
   checkout, `../mbse-schemas`, pinned by version and commit in `siblings.json` (see mbse-basis' `scripts/polyrepo.py`).
 - [mbse-expressions](https://github.com/pitaman71/mbse-expressions): expressions as data, whose dialects the bridges
   (`Bridges`) carry to and from the languages' trees. It is a sibling checkout, `../mbse-expressions`, pinned in
-  `siblings.json`, and this repository's conventions follow it.
+  `siblings.json`.
