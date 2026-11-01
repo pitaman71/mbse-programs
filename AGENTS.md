@@ -38,9 +38,8 @@ only what differs here.
 - **Behavior is decided in mbse-basis items**: the capabilities of [FEA-008: expressive program models](../mbse-basis/docs/features/FEA-008.md), recorded as the basis says ([Detail files](../mbse-basis/docs/README.md#detail-files)).
 - **Trees are complete** ([CAP-036: complete kinds for Python, TypeScript and C and C++](../mbse-basis/docs/capabilities/CAP-036.md)). A construct of any standard of the language is a tree of its kinds, whether or not the parser
   reads it. A new kind records where it exists (`SINCE`, `FEATURES`, or `EXTENSION`), and the printer prints it.
-- **Transpilers never touch text** ([PRI-006: text is one more dialect](../mbse-basis/docs/PRINCIPLES.md#PRI-006); [PRI-019: fluent builder syntax](../mbse-basis/docs/PRINCIPLES.md#PRI-019)). Everything a transpiler needs is on the tree, in `Framework.Syntax`'s traversals or
-  in `Definitions`; only standards parse and print. Transpilers build syntax nodes with the target language's fluent
-  builders (`LANGUAGE.Builders.<Kind>()`), not with constructors or helpers of their own. A transpiler's programs are in
+- **Transpilers**: [PRI-006: text is one more dialect](../mbse-basis/docs/PRINCIPLES.md#PRI-006) and [PRI-019: fluent builder syntax](../mbse-basis/docs/PRINCIPLES.md#PRI-019). Everything a transpiler needs is on the tree, in `Framework.Syntax`'s traversals
+  or in `Definitions`, and the target language's builders are `LANGUAGE.Builders.<Kind>()`. A transpiler's programs are in
   `conformance/transpilers/`: a program's `.out` is what Node prints when it runs, and its translation (`.py`) is
   regenerated with the corpora. A construct outside the transpiler's subset raises `TranspileError`, never translates
   into code that means otherwise.

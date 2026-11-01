@@ -108,8 +108,8 @@ sibling it clones is checked out at its pinned commit, in detached HEAD; to chan
 its pinned commit, which is expected while developing; see `polyrepo.py help` for `check --strict` and `pin`. The tool
 is kept in mbse-basis, as `scripts/polyrepo.py`.
 
-For parallel work (several agents, or several tasks at once), give each its own workspace, as
-[PRI-029: parallel work in polyrepo workspaces](../mbse-basis/docs/PRINCIPLES.md#PRI-029) says: worktrees of this repository and of its siblings, side by side.
+For parallel work (several agents, or several tasks at once), give each its own workspace
+([PRI-029: parallel work in polyrepo workspaces](../mbse-basis/docs/PRINCIPLES.md#PRI-029)).
 
 ```sh
 python3 ../mbse-basis/scripts/polyrepo.py workspace ../worktrees/a --branch a                     # this repository on a
