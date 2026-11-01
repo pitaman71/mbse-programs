@@ -24,28 +24,25 @@ dialects and the languages' trees. Two equivalent implementations exist: `python
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
 | Model the data trees are stored with | [mbse-schemas' AGENTS.md](https://github.com/pitaman71/mbse-schemas/blob/main/AGENTS.md), in the sibling checkout |
 
-## Invariants when changing code
+## Read before any work
 
-The conventions every mbse repository shares are stated once in mbse-basis; this file cites them and keeps
-only what differs here.
+Agents must read these mbse-basis documents before doing any work:
 
-- **Vocabulary**: [VOC-007: property](../mbse-basis/docs/VOCABULARY.md#VOC-007), [VOC-026: schema](../mbse-basis/docs/VOCABULARY.md#VOC-026), [VOC-008: term](../mbse-basis/docs/VOCABULARY.md#VOC-008), [VOC-009: syntax node](../mbse-basis/docs/VOCABULARY.md#VOC-009) and [VOC-002: constraint](../mbse-basis/docs/VOCABULARY.md#VOC-002), each qualified with whose it is where it meets a language's own term ([the vocabulary](../mbse-basis/docs/VOCABULARY.md), its introduction).
-- **Documents**: navigation lines, the README opening with why, and what this file holds ([Rules for every document](../mbse-basis/docs/README.md#rules-for-every-document)).
-- **Equivalence**: [PRI-028: both implementations change together](../mbse-basis/docs/PRINCIPLES.md#PRI-028), [PRI-037: the same conformance corpora](../mbse-basis/docs/PRINCIPLES.md#PRI-037), [PRI-038: the same cases in both languages](../mbse-basis/docs/PRINCIPLES.md#PRI-038), [PRI-039: 100% coverage of both](../mbse-basis/docs/PRINCIPLES.md#PRI-039) and [PRI-040: deliberate differences listed](../mbse-basis/docs/PRINCIPLES.md#PRI-040); how this repository keeps them, and its deliberate differences: `docs/EQUIVALENCE.md`.
-- **Tests and tutorials**: [PRI-035: tests are notebooks: one suite each, the same case IDs in the same order in both languages](../mbse-basis/docs/PRINCIPLES.md#PRI-035); [PRI-034: tutorials run as tests, committed with their outputs](../mbse-basis/docs/PRINCIPLES.md#PRI-034).
-- **The skill**: [PRI-036: every program in a skill is complete and run; fragments are tagged as fragments](../mbse-basis/docs/PRINCIPLES.md#PRI-036).
-- **Work**: [PRI-029: parallel work in polyrepo workspaces](../mbse-basis/docs/PRINCIPLES.md#PRI-029), [PRI-031: the version is the contract](../mbse-basis/docs/PRINCIPLES.md#PRI-031), [PRI-032: a sibling's gap is reported, not worked around](../mbse-basis/docs/PRINCIPLES.md#PRI-032) and [PRI-033: work lands by branch and pull request](../mbse-basis/docs/PRINCIPLES.md#PRI-033).
-- **Behavior is decided in mbse-basis items**: the capabilities of [FEA-008: expressive program models](../mbse-basis/docs/features/FEA-008.md), recorded as the basis says ([Detail files](../mbse-basis/docs/README.md#detail-files)).
-- **Trees are complete**: [CAP-036: complete kinds for Python, TypeScript and C and C++](../mbse-basis/docs/capabilities/CAP-036.md) and [CAP-085: standards record availability](../mbse-basis/docs/capabilities/CAP-085.md); the printer prints every
-  new kind.
-- **Transpilers**: [PRI-006: text is one more dialect](../mbse-basis/docs/PRINCIPLES.md#PRI-006), [PRI-019: fluent builder syntax](../mbse-basis/docs/PRINCIPLES.md#PRI-019), [CAP-084: program trees as data](../mbse-basis/docs/capabilities/CAP-084.md) and [CAP-088: TypeScript transpiled to Python](../mbse-basis/docs/capabilities/CAP-088.md#transpiling). Everything a
-  transpiler needs is on the tree, in `Framework.Syntax`'s traversals or in `Definitions`.
-- **The parsers are pinned**: [CAP-026: Python, TypeScript and C and C++ read as written](../mbse-basis/docs/capabilities/CAP-026.md); how each implementation is checked
-  against CPython and typescript-estree: `docs/EQUIVALENCE.md`. Upgrading one changes the gaps listed in
-  [CAP-038: every construct of Python's standards](../mbse-basis/docs/capabilities/CAP-038.md#blocked), [CAP-092: every construct of TypeScript's standards](../mbse-basis/docs/capabilities/CAP-092.md#blocked) and [CAP-093: every construct of C's and C++'s standards](../mbse-basis/docs/capabilities/CAP-093.md#blocked).
-- **Verilog reads through slang, in Python only**: [CAP-044: Verilog and SystemVerilog read by slang](../mbse-basis/docs/capabilities/CAP-044.md); how TypeScript reads it:
-  the Reading Verilog row of `docs/EQUIVALENCE.md`.
-- Never write to `~/.claude/projects/*/memory/` or any hidden memory: what is worth keeping goes in the repository.
+- [The mbse basis](../mbse-basis/docs/README.md)
+- [Principles](../mbse-basis/docs/PRINCIPLES.md)
+- [Features](../mbse-basis/docs/features/README.md)
+- [Capabilities](../mbse-basis/docs/capabilities/README.md)
+
+These may be read selectively, on demand: [Vocabulary](../mbse-basis/docs/VOCABULARY.md) and
+[Qualities](../mbse-basis/docs/QUALITIES.md).
+
+Never write to `~/.claude/projects/*/memory/` or any hidden memory: what is worth keeping goes in the repository.
+
+## This repository
+
+- The printer prints every kind, a new one included.
+- A transpiler finds everything it needs on the tree, in `Framework.Syntax`'s traversals or in `Definitions`.
+- Upgrading a pinned parser changes the gaps listed, as blocked, in the capabilities for each language's standards.
 
 ## Commands
 
