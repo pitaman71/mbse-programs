@@ -195,6 +195,11 @@ was built. let's use refinement from `Statement` to dialect-specific kinds like 
 refine `Programs.Framework.Statement`: each inherits its members, `Schemas.is_a` accepts it wherever a `Statement` is
 linked, a store's `Statement`s include it, and the wire tags it by its schema's name where several fill a link.
 
+On dialect names, asked how C and C++ divide into major versions: "Maybe C11, C17, C23 Cpp17, cpp20, cpp23" (tentative;
+noted to the user: C17 adds no syntax over C11, being technical corrigenda, so `C11` and `C17` would be identical). On
+Verilog: "yes keep verilog as a subset of systemverilog, presuming that is how the standards are partitioned" (it is:
+IEEE 1800-2009 merged IEEE 1364 Verilog into SystemVerilog, and 1364 was withdrawn).
+
 It settles question 4 (files, scopes and statements are owned reference objects) and answers the grouping question
 (tagging by relation names; growth by relations and schema extension).
 
@@ -302,22 +307,23 @@ answered in part.
 
 ## Stages (proposed, once decided)
 
-Each on the branch `port-schemas`, with both gates at 100% and the corpora regenerated in both languages; a stage
-touching a sibling is made in a workspace (`polyrepo.py workspace <dir> --edit <sibling>`), since a gap found there
-is reported, not worked around ([PRI-032: a sibling's gap is reported, not worked around](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-032)).
+Redrawn after the user's decisions (2026-11-02): expressions are mbse-expressions' dialects, complete, so they come
+first. Each stage passes both gates at 100% with the corpora regenerated, in the repository it changes.
 
-1. **The decisions**: this proposal decided; the decisions recorded in mbse-basis, in the detail files of the
-   capabilities they settle (program trees as data, definitions, the two bridges), in a pull request there.
-2. **The framework and Python** (question 10's (b)): pins mbse-schemas 0.26.5 and mbse-expressions 0.7.0
-   (`siblings.json`, `pyproject.toml`, `package.json`); the framework's install, traversals, validation and standards'
-   checks; Python's install, parser, printer and definitions; `Bridges.Python`; SYN, PY, PYPRS, PYPRT, PYDEF, BRG,
-   CONF and SKL; Python's corpus as a Reachable transaction; the tutorials as far as they are the framework's and Python's.
-3. **TypeScript and the transpiler**: TS, TSPRS, TSPRT, TSDEF, TRN; tutorial 7; its corpora.
-4. **Ccpp**: CPP, PRS, PRT, DEF; its corpus; the README's example.
-5. **Verilog**: its install, reader (the exchange from Python to TypeScript as a Reachable transaction), printer and
-   definitions; `Bridges.Verilog`; VLG, VLGRD, VLGPRT, VLGDEF, BRV; tutorial 9; its corpus.
-6. **Tutorials, skill, README, EQUIVALENCE, AGENTS; release** 0.4.0, a minor bump since dependents must adapt
-   ([PRI-031: the version is the contract](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-031)). Then mbse-codegen-python.
+1. **mbse-expressions: complete dialects by major version** (its 0.8.0). Each dialect covers its language's whole
+   expression syntax across its minor versions and has its own `Expression` holder (`Expressions.<Dialect>.Expression`):
+   `Python3` (mbse-programs' Python expression kinds merged with mbse-expressions' Python dialect), `TypeScript5` (new),
+   C and C++ by standard (`C11`, `C17`, `C23`, `Cpp17`, `Cpp20`, `Cpp23`, tentative), `SystemVerilog` (Verilog its
+   subset). Evaluation may stay partial; the model, parsing and printing are complete. Proposed for the user's review
+   in mbse-expressions' own proposal before it is built.
+2. **mbse-programs: the framework and `Python3`.** `Programs.Framework` (`Provenance`, `File`, `Scope`, `Statement`,
+   `HasProvenance`, `HasScope`, `HasLocation`, `HasParent`); `Python3`'s statement kinds refining `Statement`, owned
+   through the parent-child relations; the parser from the native parser's tree to owned statements and the dialect's
+   expressions; printer; definitions; pins mbse-schemas 0.26.5 and mbse-expressions 0.8.0.
+3. **`TypeScript5`** and the transpiler.
+4. **C and C++** by standard.
+5. **`SystemVerilog`** (Verilog its subset), and the exchange from Python to TypeScript.
+6. **Tutorials, skill, README, EQUIVALENCE; release** 0.4.0. Then mbse-codegen-python.
 
 ## Risks
 
