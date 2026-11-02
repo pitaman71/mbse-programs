@@ -184,6 +184,17 @@ Revised by the user the same day (the framework's models, superseding the block 
 > the generic `Programs.Framework.HasParent`, or it may define
 > more specific relations for particular edges of the grammar.
 
+On ownership, the user: "yes, I replaced the language to clarify we are using ownership as mbse-schemas defines it":
+a node is owned through the parent-child relation that holds it, its identity its owner's and its key, up to its
+file.
+
+On question 4, shown the mechanisms mbse-schemas builds (refinement, a kind union grown by schema extension, a link
+filled by any schema declaring an adjacency on its relation; intersections as subtyping, CAP-034, not built) and
+refinement in an install (`Programs.Python3.If` `.refines([Statement])`), the user decided: "good. I didn't know that
+was built. let's use refinement from `Statement` to dialect-specific kinds like `If`." A dialect's statement kinds
+refine `Programs.Framework.Statement`: each inherits its members, `Schemas.is_a` accepts it wherever a `Statement` is
+linked, a store's `Statement`s include it, and the wire tags it by its schema's name where several fill a link.
+
 It settles question 4 (files, scopes and statements are owned reference objects) and answers the grouping question
 (tagging by relation names; growth by relations and schema extension).
 
