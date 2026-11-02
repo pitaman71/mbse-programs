@@ -313,7 +313,8 @@ first. Each stage passes both gates at 100% with the corpora regenerated, in the
 1. **mbse-expressions: complete dialects by major version** (its 0.8.0). Each dialect covers its language's whole
    expression syntax across its minor versions and has its own `Expression` holder (`Expressions.<Dialect>.Expression`):
    `Python3` (mbse-programs' Python expression kinds merged with mbse-expressions' Python dialect), `TypeScript5` (new),
-   C and C++ by standard (`C11`, `C17`, `C23`, `Cpp17`, `Cpp20`, `Cpp23`, tentative), `SystemVerilog` (Verilog its
+   `C` and `Cpp`, each covering its standards (C11 to C23, C++17 to C++23; decided on mbse-expressions' proposal,
+   question 3), `SystemVerilog` (Verilog its
    subset). Evaluation may stay shallow; the model and printing are complete, checked against each grammar's node list.
    Parsing stays here, in mbse-programs (stage 2 on), as the user decided on mbse-expressions' proposal ("yes fix that
    phrase"). Proposed and decided in mbse-expressions' `docs/proposals/dialects/README.md`.
@@ -322,7 +323,7 @@ first. Each stage passes both gates at 100% with the corpora regenerated, in the
    through the parent-child relations; the parser from the native parser's tree to owned statements and the dialect's
    expressions; printer; definitions; pins mbse-schemas 0.26.5 and mbse-expressions 0.8.0.
 3. **`TypeScript5`** and the transpiler.
-4. **C and C++** by standard.
+4. **`C` and `Cpp`**, each covering its standards.
 5. **`SystemVerilog`** (Verilog its subset), and the exchange from Python to TypeScript.
 6. **Tutorials, skill, README, EQUIVALENCE; release** 0.4.0. Then mbse-codegen-python.
 
