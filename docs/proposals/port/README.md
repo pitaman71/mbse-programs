@@ -110,6 +110,32 @@ meta-schemas overhaul was never made. No earlier port or overhaul work exists.
 - **"Do not invent another DSL by wrapping builder syntax"**: models are written in the builders' fluent syntax
   itself ([PRI-019: fluent builder syntax](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-019)).
 
+## Decided
+
+As the user decided (2026-11-02), on questions 1 to 3 (each answer quoted as written):
+
+1. **A syntax node is a model.** "A syntax node is a model. This means there the mbse-schema definitions cover every
+   kind of node of any possible AST in the standards."
+2. **Files, scopes and statements are reference objects; expression terms are value objects.** "Files, scopes, and
+   statements should be reference objects. When parsed from "native" AST (such as Python `ast`), the parser should
+   generate an identity so path references are not necessary." "Expression terms are value objects. An instance of
+   OfSchemas.Expression holds the expression root."
+3. **Expressions are mbse-expressions' dialects, complete.** "Expression terms are value objects. `mbse-schemas` should
+   make use of `mbse-expressions.Dialects.<lang_ver>.Expression`. Yes, this means the expression dialect must
+   completely cover the AST. Rather than using schema-extension, if there are any gaps in the dialect as modeled in
+   `mbse-expressions.Dialects.<lang_ver>`, they should be added into `mbse-expressions`. There is no reason for an
+   expression dialect to exist that is ia subset of the corresponding node of AST in the real langauge." On the
+   question of kind grouping, the user asked "To what end are you inquiring about kind grouping?"; answered (each slot
+   names the schema of what it accepts: a union of kinds), not yet decided.
+
+Open on these, asked of the user: (a) what a parser-generated identity is in mbse-schemas' identity modes (a singleton,
+an owned object by path, a counted object with none): an owned object keyed by the generated id, or a new mode; (b)
+"`mbse-schemas` should make use of" read as mbse-programs; (c) dialects by language version (`<lang_ver>`), where
+mbse-expressions' dialects are by language today, and a TypeScript dialect, which mbse-expressions does not have; (d)
+`Dialects.<lang_ver>.Expression`, each dialect's own expression holder, where mbse-expressions has one,
+`Expressions.Framework.Expression`, whose root is any dialect's term. Questions 1 and 2 below are superseded; 3 is
+answered in part.
+
 ## Questions for the user
 
 1. **What a syntax node is.** (a) Model first: kinds defined by installs, trees store data built through mbse-schemas'
