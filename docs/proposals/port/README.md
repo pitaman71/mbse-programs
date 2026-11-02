@@ -314,8 +314,9 @@ first. Each stage passes both gates at 100% with the corpora regenerated, in the
    expression syntax across its minor versions and has its own `Expression` holder (`Expressions.<Dialect>.Expression`):
    `Python3` (mbse-programs' Python expression kinds merged with mbse-expressions' Python dialect), `TypeScript5` (new),
    C and C++ by standard (`C11`, `C17`, `C23`, `Cpp17`, `Cpp20`, `Cpp23`, tentative), `SystemVerilog` (Verilog its
-   subset). Evaluation may stay partial; the model, parsing and printing are complete. Proposed for the user's review
-   in mbse-expressions' own proposal before it is built.
+   subset). Evaluation may stay shallow; the model and printing are complete, checked against each grammar's node list.
+   Parsing stays here, in mbse-programs (stage 2 on), as the user decided on mbse-expressions' proposal ("yes fix that
+   phrase"). Proposed and decided in mbse-expressions' `docs/proposals/dialects/README.md`.
 2. **mbse-programs: the framework and `Python3`.** `Programs.Framework` (`Provenance`, `File`, `Scope`, `Statement`,
    `HasProvenance`, `HasScope`, `HasLocation`, `HasParent`); `Python3`'s statement kinds refining `Statement`, owned
    through the parent-child relations; the parser from the native parser's tree to owned statements and the dialect's
