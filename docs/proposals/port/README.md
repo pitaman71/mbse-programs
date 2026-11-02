@@ -166,6 +166,24 @@ reached:
 >
 > To what end are you inquiring about kind grouping?
 
+Revised by the user the same day (the framework's models, superseding the block above; then ownership):
+
+> ```python3
+> OBJECT Programs.Framework.Provenance # captures file name, path, repository link and hash, etc.
+> OBJECT Programs.Framework.File # represents a file or translation unit
+> RELATION Programs.Framework.HasProvenance(file, provenance)
+> OBJECT Programs.Framework.Scope # represents a scope
+> OBJECT Programs.Framework.Statement # represents a statement within a file
+> RELATION Programs.Framework.HasScope(statement, scope)
+> RELATION Programs.Framework.HasLocation(statement|scope, file, line)
+> RELATION Programs.Framework.HasParent(child, parent)
+> ```
+>
+> Dialects must establish complete ownership through relations that 
+> represent parent-child links in the AST. A dialect may choose to reuse
+> the generic `Programs.Framework.HasParent`, or it may define
+> more specific relations for particular edges of the grammar.
+
 It settles question 4 (files, scopes and statements are owned reference objects) and answers the grouping question
 (tagging by relation names; growth by relations and schema extension).
 
