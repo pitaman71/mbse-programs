@@ -243,7 +243,26 @@ an owned object by path, a counted object with none): an owned object keyed by t
 TypeScript dialect, which mbse-expressions does not have, and mbse-expressions' dialects renamed by major version. Questions 1 and 2 below are superseded; 3 is
 answered in part.
 
-## Questions for the user
+As the user decided (2026-11-02), on the questions below, once the consolidated statement above had answered or
+changed most of them:
+
+- **1, 2, 3 and 10**: answered by the decisions above (a syntax node is a model; files, scopes and statements owned
+  reference objects, expressions values; the framework's models, statement kinds refining `Statement`, edges named
+  relations, expressions grouped by mbse-expressions' unions; stages language by language, after mbse-expressions'
+  complete dialects). Their options below are superseded.
+- **4. What a language is**: "yes, you an make a singleton by name for the language": each language a singleton by
+  name (`Programs.Python3`), owning its statement kinds; its standards recorded as data, as for C and C++.
+- **5. The API that builds and rewrites trees**: "yes, P-019 applies": mbse-schemas' builders only, `parse` and
+  `transpile` each giving a spec that the caller writes in a transaction; `LANGUAGE.Builders` goes.
+- **6. Definitions**: "yes to (a)": `Entity`, name resolution and `Program` stay code over the stored tree for the
+  port, computed on demand and not stored (`Scope` is a model, as the framework has it); a model of their own is a
+  follow-up, which must anchor a use of a name on its statement and the term's path, since a term is a value.
+- **7, 8 and 9**: "7,8,9: confirmed": the bridges go, mbse-programs using mbse-expressions' dialects directly, nothing
+  left to translate; no `this` convention, SystemVerilog's own `this` a kind of its complete dialect; the scope now all
+  four languages (`Python3`, `TypeScript5`, `C` and `Cpp`, `SystemVerilog`) and the transpiler, not reference front
+  ends or mbse-patterns' transforms.
+
+## Questions for the user (as posed; answered above)
 
 1. **What a syntax node is.** (a) Model first: kinds defined by installs, trees store data built through mbse-schemas'
    builders and read through `Readers`, and every module rewritten to them; the kind classes, `Builder` and `OfStore`
