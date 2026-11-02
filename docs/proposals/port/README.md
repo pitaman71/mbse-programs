@@ -120,14 +120,18 @@ As the user decided (2026-11-02), on questions 1 to 3 (each answer quoted as wri
    statements should be reference objects. When parsed from "native" AST (such as Python `ast`), the parser should
    generate an identity so path references are not necessary." "Expression terms are value objects. An instance of
    OfSchemas.Expression holds the expression root."
-3. **Expressions are mbse-expressions' dialects, complete.** "Expression terms are value objects. `mbse-schemas` should
-   make use of `mbse-expressions.Dialects.<lang_ver>.Expression`. Yes, this means the expression dialect must
+3. **Expressions are mbse-expressions' dialects, complete.** "Expression terms are value objects. `mbse-programs` should
+   make use of `mbse-expressions.Dialects.<lang_ver>.Expression`. (As first written, "`mbse-schemas` should make use
+   of"; the user corrected it to mbse-programs.) Yes, this means the expression dialect must
    completely cover the AST. Rather than using schema-extension, if there are any gaps in the dialect as modeled in
    `mbse-expressions.Dialects.<lang_ver>`, they should be added into `mbse-expressions`. There is no reason for an
    expression dialect to exist that is ia subset of the corresponding node of AST in the real langauge." On the
    question of kind grouping, the user asked "To what end are you inquiring about kind grouping?"; answered (each slot
    names the schema of what it accepts: a union of kinds), not yet decided.
 
+   Asked whether each dialect has its own expression holder or the framework's one restricted to the dialect, the
+   user answered "3." with the same text, naming `mbse-expressions.Dialects.<lang_ver>.Expression`: each dialect
+   defines its own `Expression`, whose root holds that dialect's terms.
 4. **Dialects by major version, over a native parser** (asked whether dialects go by language version, "yes that's
    my answer to 2"): "`mbse-programs` creates language dialects each of which supports a major version of the target
    language and all of the minor versions in it, such as Python3 or Typescript5. This means each language dialect must
@@ -144,9 +148,7 @@ CAP-133; nothing is owned by one, CAP-118).
 
 Open on these, asked of the user: (a) what a parser-generated identity is in mbse-schemas' identity modes (a singleton,
 an owned object by path, a counted object with none): an owned object keyed by the generated id, or a new mode; (c) a
-TypeScript dialect, which mbse-expressions does not have, and mbse-expressions' dialects renamed by major version; (d)
-`Dialects.<lang_ver>.Expression`, each dialect's own expression holder, where mbse-expressions has one,
-`Expressions.Framework.Expression`, whose root is any dialect's term. Questions 1 and 2 below are superseded; 3 is
+TypeScript dialect, which mbse-expressions does not have, and mbse-expressions' dialects renamed by major version. Questions 1 and 2 below are superseded; 3 is
 answered in part.
 
 ## Questions for the user
