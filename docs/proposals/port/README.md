@@ -128,10 +128,23 @@ As the user decided (2026-11-02), on questions 1 to 3 (each answer quoted as wri
    question of kind grouping, the user asked "To what end are you inquiring about kind grouping?"; answered (each slot
    names the schema of what it accepts: a union of kinds), not yet decided.
 
+4. **Dialects by major version, over a native parser** (asked whether dialects go by language version, "yes that's
+   my answer to 2"): "`mbse-programs` creates language dialects each of which supports a major version of the target
+   language and all of the minor versions in it, such as Python3 or Typescript5. This means each language dialect must
+   correctly handle the closure of syntaxes across minor versions such as 3.11 - 3.14. `mbse-programs` typically uses
+   a "native parser" or "tree walker" that conforms to and tracks evolution of publish standards. To the degree that
+   the chosen "native parser" supports parsing and preserving invalid syntax, `mbse-programs` should also." And (b)
+   below: "`mbse-schemas` should make use of" means mbse-programs ("yes").
+
+Asked in turn, "do counted objects roundtrip through `Visitors` in general and serialization in particular?": their
+contents do (a document or snapshot writes the counted objects reachable from its root, numbered, and reading it
+recreates them with their properties and links), their identity does not ("A counted object read from a document is
+always a new one", CAP-127; a document cannot refer to one it does not hold, CAP-128; no durable references to them,
+CAP-133; nothing is owned by one, CAP-118).
+
 Open on these, asked of the user: (a) what a parser-generated identity is in mbse-schemas' identity modes (a singleton,
-an owned object by path, a counted object with none): an owned object keyed by the generated id, or a new mode; (b)
-"`mbse-schemas` should make use of" read as mbse-programs; (c) dialects by language version (`<lang_ver>`), where
-mbse-expressions' dialects are by language today, and a TypeScript dialect, which mbse-expressions does not have; (d)
+an owned object by path, a counted object with none): an owned object keyed by the generated id, or a new mode; (c) a
+TypeScript dialect, which mbse-expressions does not have, and mbse-expressions' dialects renamed by major version; (d)
 `Dialects.<lang_ver>.Expression`, each dialect's own expression holder, where mbse-expressions has one,
 `Expressions.Framework.Expression`, whose root is any dialect's term. Questions 1 and 2 below are superseded; 3 is
 answered in part.
