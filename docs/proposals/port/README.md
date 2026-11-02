@@ -112,6 +112,64 @@ meta-schemas overhaul was never made. No earlier port or overhaul work exists.
 
 ## Decided
 
+The user's consolidated statement (2026-11-02), the decision of record; the entries after it record how it was
+reached:
+
+> `mbse-programs` creates language dialects each of which supports
+> a major version of a target language and all of the minor versions
+> in it, such as Python3 or Typescript5. This means each language
+> dialect must correctly handle the closure of syntaxes across minor 
+> versions such as 3.11 - 3.14. 
+>
+> The `mbse-schema` definitions must cover every kind of node 
+> of any possible AST in the standards.
+>
+> A syntax node is a model. 
+>
+> Files, scopes, and statements should be owned reference objects. 
+>
+> Expression terms are value objects. 
+>
+> `mbse-programs` will have a framework of base models that are
+> language/dialect independent:
+>
+> ```python3
+> OBJECT Programs.Framework.Provenance # captures file name, path, repository link and hash, etc.
+> OBJECT Programs.Framework.File # represents a file or translation unit
+> RELATION Programs.Framework.HasProvenance(file, provenance)
+> OBJECT Programs.Framework.Statement # represents a statement within a file
+> RELATION Programs.Framework.HasLocation(statement, file, line)
+> RELATION Programs.Framework.HasParent(stmt1, stmt2)
+> ```
+>
+>
+> `mbse-programs` should make
+> use of `mbse-expressions.Dialects.<lang_ver>.Expression`. Yes, this
+> means the expression dialect must completely cover the AST. Rather
+> than using schema-extension, if there are any gaps in the dialect
+> as modeled in `mbse-expressions.Dialects.<lang_ver>`, they should
+> be added into `mbse-expressions`. There is no reason for an
+> expression dialect to exist that is ia subset of the corresponding
+> node of AST in the real langauge.
+>
+> Syntax tagging (for example between a file and a statement) should 
+> be clear based on the relation name which may hint at or take on the
+> syntax element name.
+>
+> Growth by extension is natural when relations are used and because
+> schema extension is explicitly supported in `mbse-schemas`.
+>
+> `mbse-programs` typically uses a "native parser" or "tree walker"
+> that conforms to and tracks evolution of publish standards. To
+> the degree that the chosen "native parser" supports parsing and
+> preserving invalid syntax, `mbse-programs` should also.
+>
+> To what end are you inquiring about kind grouping?
+
+It settles question 4 (files, scopes and statements are owned reference objects) and answers the grouping question
+(tagging by relation names; growth by relations and schema extension).
+
+
 As the user decided (2026-11-02), on questions 1 to 3 (each answer quoted as written):
 
 1. **A syntax node is a model.** "A syntax node is a model. This means there the mbse-schema definitions cover every
