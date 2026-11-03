@@ -94,7 +94,7 @@ meta-schemas overhaul was never made. No earlier port or overhaul work exists.
   objects" (there, Decided, 2026-10-29), held by a reference object, their root (Decided, 2). Dialects extend the union
   by schema extension: "refinement has been superseded by schema extension", and "ah, schema *extension* is the
   preferred form" ([its API](../../../../mbse-expressions/docs/proposals/port/API.md), Settled in stage 3).
-- **No domain on terms; type inference deferred**: "Terms do not designate their schema. Whatever reference object owns
+- **No domain on terms; domain inference deferred**: "Terms do not designate their schema. Whatever reference object owns
   the root term must specify its schema", and evaluation does without, "as that involves building a type inference
   system which should be a follow-up capability" (its port, Stage 3, Decided, 1 and 2).
 - **Each dialect a singleton by name, owning its vocabulary**: "yes, each dialect has a singleton by name" (its API,
