@@ -346,6 +346,56 @@ first. Each stage passes both gates at 100% with the corpora regenerated, in the
 5. **`SystemVerilog`** (Verilog its subset), and the exchange from Python to TypeScript.
 6. **Tutorials, skill, README, EQUIVALENCE; release** 0.4.0. Then mbse-codegen-python.
 
+## Stage 2, Python3: the design (for review, 2026-11-16)
+
+Redrawn for the siblings as they stand: mbse-schemas 0.27.0 (`c64cb18`, CAP-315 stage 2) and mbse-expressions 0.10.0,
+which still pins mbse-schemas `<0.27`. As the user decided (2026-11-16): CAP-312 and CAP-314 land in mbse-schemas first,
+as necessary to stabilize it with CAP-316; once they do and mbse-expressions is re-pinned to them, that pair of commits is
+this port's freeze point, and the siblings take only additive changes until the port lands. Work that parallelizes runs
+meanwhile. Python only; TypeScript and the equivalence gate follow in stage 3 (proposed).
+
+**Written to 0.27's rules from the start** ([CAP-315](../../../../mbse-basis/docs/capabilities/CAP-315.md), mbse-schemas'
+`tests/37_Lifetimes.ipynb`), so that the freeze point's bump changes no code:
+
+- every read and write of the tree within a transaction; a visitor never kept past the transaction that made it, nor
+  keyed by `id()` across transactions;
+- `singleton` and `extent` only in a transaction; transactions never nested;
+- between transactions, an object held as its `References.OfObject`, found again by navigation or by a symbol given
+  the reference; a frame read as references and `assigns`;
+- no counted objects: every object found again is a singleton or owned by key, as the stacked stores direct ("A model
+  should give every object it must find again a singleton or an owner+key"); counted identity is being deprecated.
+
+**The model.** As decided above: `Programs.Framework`'s models, `Programs.Python3` a singleton by name, its statement
+kinds (`Expr`, `Assign`, `AugAssign`, `AnnAssign`, `Assert`, `Pass`, `Delete`, `Return`, `Raise`, `Break`, `Continue`,
+`Import`, `ImportFrom`, `Global`, `Nonlocal`, `TypeAlias`, `If`, `While`, `For`, `AsyncFor`, `Try`, `TryStar`, `With`,
+`AsyncWith`, `Match`, `FunctionDef`, `AsyncFunctionDef`, `ClassDef`, `Comment`) refining `Statement`, each owned by its
+parent through `HasParent` (or a relation named for the edge) keyed by the property and index; `Module` a `File`. The
+parts that are not statements (`Alias`, `ExceptHandler`, `WithItem`, `MatchCase`) are value objects of the statement that
+holds them. Expressions are mbse-expressions' `Python3` terms; annotations, returns, type aliases' values and type
+parameters `Python Types` terms; a case's pattern a `Python Patterns` term; a function's parameters `Python3.Arguments`,
+a class's keywords `Python3.Keyword`, the dialect's own helpers. Gaps are fixed in mbse-expressions, never by extension
+here (CAP-226).
+
+**Reused from 0.3.28**, measured: about 40% of the Python language's 3,000 lines is independent of how a node is held
+and moves nearly verbatim (tree-sitter's source handling and pre-pass, error positions, the precedence ladder, the
+regrouping of binary operators, `SINCE` and `FEATURES`, the printer's layout, `Framework.Definitions` and Python's
+scoping rules); the converter and the printer keep their dispatch tables, one function per kind, rewriting only how a
+node is built and read. The expressions' printer is mbse-expressions' `Text.ToText`; its `Text.FromText` moves here
+(CAP-226).
+
+**Cost**, measured on 0.27: about 0.13 ms a node built in a transaction, about 0.1 ms written as a Reachable document;
+the Python corpus' 1,181 nodes, about 0.15 s.
+
+**Decided** by the user (2026-11-16), on the three questions as posed:
+
+1. **A statement's property holds the term**, a nested value (`If.test: Expressions.Python.Python3.Term`), owned with its
+   statement and reached by its path: "yes that is the obvs way". The holders (`Expressions.Python.Python3.Expression`),
+   counted objects with no path or reference under 0.27, stay for a constraint's root. Asked as (a) a nested value, or
+   (b) a holder per expression related to its statement.
+2. **A singleton `Programs.Framework.Workspace` owns the files**, keyed by path: "sure that works".
+3. **mbse-expressions moves to 0.27** by the session that built CAP-315 stage 2, after the CAP-316 re-pin of
+   mbse-expressions merges: "sure that works".
+
 ## Risks
 
 - **Size**: question 1's (a) rewrites about 21,000 lines a language, every test case's and tutorial's construction of
