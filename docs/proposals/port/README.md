@@ -386,6 +386,15 @@ node is built and read. The expressions' printer is mbse-expressions' `Text.ToTe
 **Cost**, measured on 0.27: about 0.13 ms a node built in a transaction, about 0.1 ms written as a Reachable document;
 the Python corpus' 1,181 nodes, about 0.15 s.
 
+**The corpora as the transactions that make them** *(agent, for review)*. A tree of owned objects is not carried by a
+`Reachable` transaction, which writes its root and the counted objects it reaches and refers to every other object by
+its path; a snapshot carries it, with every schema of the store (274 KB for a two-statement program, measured). So each
+corpus file is the transaction a parse gives, as `Plain.ToPlain(store).Transaction` writes it: the journal form that
+[the stacked stores proposal](../../../../mbse-basis/proposals/STACKED-STORES.md) names for the conformance corpora,
+which it leaves open. Measured on 0.27: a two-statement program's transaction is 2,980 bytes; read back by
+`Plain.FromPlain(store).Transaction` and executed in a fresh store holding the installs, it rebuilds the program, and
+written again it is byte-identical. Its frame gives the file and its statements by reference.
+
 **Decided** by the user (2026-11-16), on the three questions as posed:
 
 1. **A statement's property holds the term**, a nested value (`If.test: Expressions.Python.Python3.Term`), owned with its
