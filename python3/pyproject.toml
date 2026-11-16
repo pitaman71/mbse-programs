@@ -11,8 +11,8 @@ keywords = ["ast", "abstract syntax tree", "c++", "c", "python", "typescript", "
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mbse-expressions>=0.5.4,<0.6",
-    "mbse-schemas>=0.10.0,<0.11",
+    "mbse-expressions>=0.10.0,<0.11",
+    "mbse-schemas>=0.27.0,<0.28",
     "tree-sitter>=0.25",
     "tree-sitter-cpp==0.23.4",
     "tree-sitter-python==0.25.0",
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-yaml = ["mbse-schemas[yaml]>=0.10.0,<0.11"]
+yaml = ["mbse-schemas[yaml]>=0.27.0,<0.28"]
 
 [tool.setuptools.package-data]
 "mbse.Programs" = ["skill/*.md", "skill/references/*.md"]
@@ -39,6 +39,10 @@ dev = [
     "pytest>=9.1.1",
     "pyyaml>=6",
 ]
+
+[tool.uv]
+# Until mbse-expressions moves to mbse-schemas 0.27 (it pins <0.27): the port is written to 0.27's rules
+override-dependencies = ["mbse-schemas>=0.27.0,<0.28"]
 
 [tool.uv.sources]
 # the sibling checkouts: ../mbse-basis/scripts/polyrepo.py
