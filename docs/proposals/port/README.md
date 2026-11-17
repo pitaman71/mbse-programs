@@ -484,15 +484,33 @@ stage 2's model). What it means:
   its place in its file, as stage 2's `Definitions` anchors a use within a term.
 - **The crossover**: where a term holds statements, mbse-expressions' dialect gives the term a property typed by an
   open union of its own, which mbse-programs' dialect extends by schema extension with its block (shown in a scratch
-  store on mbse-schemas 0.28: a term's `body` holding mbse-programs' block, holding a statement holding a term). The
+  store on mbse-schemas 0.28, below). The
   dependency stays one way: mbse-expressions names nothing of mbse-programs'. For TypeScript5: its function, arrow and
   class expressions; later C's and C++'s statement expressions and lambdas.
 - **What goes**: `Programs.Framework.HasParent`, `HasLocation`, `Opens`, `HasScope` and `Scope` as a stored model, which
   a value cannot fill: nesting is ownership, a line is a property, and scopes are derived on demand, as `Definitions`
   already are (Decided, 6). `Statement`, `Clause` and `Error` stay, as value kinds the languages' kinds refine.
 
-Still to check, before building: that mbse-schemas reads such a tree back as written, and how a rewrite changes a value
-nested within a file (in place, or by replacing the file's tree).
+Checked on mbse-schemas 0.28, in a scratch store with stand-ins for both dialects (a reference object holding a function
+expression whose `body` is a block of statements holding terms):
+
+- **Read back as written**: read in a later transaction, the value is the one written, every node tagged by its branch.
+- **Rewritten in place**: a later upsert that writes part of a value merges into it. Setting only the function's name
+  kept its body. Writing one element of a list by its index (`body({1: ...})`) added it beside the element already
+  there. So a rewrite writes down to what it changes, without replacing the file's tree.
+- **The corpora as frames still hold** (Decided, "The corpora as frames"): a parse's frame binds the file, and its
+  `assigns` carry the file's whole tree as one nested value, each node tagged by its branch.
+
+What it changes beyond this repository's model, for the user's attention:
+
+- **Transforms** (mbse-transforms; mbse-codegen-python's transforms over Python trees): a pattern's symbols bind
+  reference objects, so a transform's prototype can no longer bind a statement or a class member. Its candidates come
+  per file, and its procedures navigate within the file's value: mbse-codegen-python's "from Python" direction, which
+  matches `ClassDef` and `TypeAlias` statements, will be written that way, when its port comes.
+- **Definitions' anchors** become a place within the file's value, its property and index steps then the term's path,
+  in place of a statement's object reference. The parked [sibling gaps](../sibling-gaps/README.md) item 10 (anchors
+  built from `HasParent`'s keys) and item 12's resolution of references may then no longer apply here; that proposal
+  is updated with the rework.
 
 The stages change with it (below): stage 3 reworks `Python3` to values, asks mbse-expressions for the open unions, then
 builds `TypeScript5` and the transpiler.
