@@ -10,8 +10,8 @@ A statement's expressions are mbse-expressions' terms, value objects its propert
 `Python Patterns` term (`Expressions.Python.Patterns.Term`) for a case's pattern; and the `Python3` dialect's own
 helpers for a function's parameters (`Arguments`) and a class's keywords (`Keyword`). A name a statement declares is a
 string, as `ast` has it (`FunctionDef.name`, `Global.names`, `alias.name`), but a type alias' name, which `ast` makes a
-`Name`, is a term. An `except` clause and a `case` hold statements, so they are statements too, owned by their `try`
-and their `match` *(agent, for review)*; an import's aliases and a `with` statement's items are value objects. A
+`Name`, is a term. An `except` clause and a `case` are clauses (`Programs.Framework.Clause`), owned by their `try` and
+their `match` (`handlers`, `cases`), never statements, as the user decided (2026-11-16); an import's aliases and a `with` statement's items are value objects. A
 comment is a statement, `trailing` where it ends the line of the statement before it.
 
 Kinds follow `ast`'s names and properties, without `ctx`, `type_comment` and positions; where a property is absent, it
@@ -25,8 +25,10 @@ LANGUAGE = "Programs.Python3"
 
 STATEMENTS = ("Comment", "Expr", "Assign", "AugAssign", "AnnAssign", "Assert", "Pass", "Delete", "Return", "Raise",
               "Break", "Continue", "Import", "ImportFrom", "Global", "Nonlocal", "TypeAlias", "If", "While", "For",
-              "AsyncFor", "Try", "TryStar", "ExceptHandler", "With", "AsyncWith", "Match", "MatchCase",
-              "FunctionDef", "AsyncFunctionDef", "ClassDef")
+              "AsyncFor", "Try", "TryStar", "With", "AsyncWith", "Match", "FunctionDef", "AsyncFunctionDef",
+              "ClassDef")
+CLAUSES = ("ExceptHandler", "MatchCase")
+KINDS = STATEMENTS + CLAUSES
 
 
 def install(txn: Any) -> Any:
@@ -39,9 +41,10 @@ def install(txn: Any) -> Any:
         return S.OfContainer(lambda c: c.index([S.OfInt]).element([element]))
 
     def kind(name: str, properties: Any = lambda _: {}) -> Any:
-        """A statement kind: a reference object refining `Statement`, with its own properties, made within its spec,
-        given the spec's symbols, so that each container is the kind's own."""
-        return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").ref(True).refines([F.Statement]).properties(
+        """A statement or clause kind: a reference object refining `Statement` or `Clause`, with its own properties,
+        made within its spec, given the spec's symbols, so that each container is the kind's own."""
+        base = F.Clause if name in CLAUSES else F.Statement
+        return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").ref(True).refines([base]).properties(
             properties(_))
 
     def function(_: Any) -> dict[str, Any]:
@@ -51,7 +54,7 @@ def install(txn: Any) -> Any:
 
     return txn.uid("mbse.Programs.Python3/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Language": S.OfObject, "Module": S.OfObject, "Alias": S.OfObject, "WithItem": S.OfObject,
-                  **{name: S.OfObject for name in STATEMENTS}})
+                  **{name: S.OfObject for name in KINDS}})
         .spec([
             lambda _: _.Language.name(f"{LANGUAGE}.Language").ref(True).singleton(LANGUAGE),
             lambda _: _.Module.name(f"{LANGUAGE}.Module").ref(True).refines([F.File]),

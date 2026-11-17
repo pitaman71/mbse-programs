@@ -369,9 +369,10 @@ meanwhile. Python only; TypeScript and the equivalence gate follow in stage 3 (p
 kinds (`Expr`, `Assign`, `AugAssign`, `AnnAssign`, `Assert`, `Pass`, `Delete`, `Return`, `Raise`, `Break`, `Continue`,
 `Import`, `ImportFrom`, `Global`, `Nonlocal`, `TypeAlias`, `If`, `While`, `For`, `AsyncFor`, `Try`, `TryStar`, `With`,
 `AsyncWith`, `Match`, `FunctionDef`, `AsyncFunctionDef`, `ClassDef`, `Comment`) refining `Statement`, each owned by its
-parent through `HasParent` (or a relation named for the edge) keyed by the property and index; `Module` a `File`. The
-parts that are not statements (`Alias`, `ExceptHandler`, `WithItem`, `MatchCase`) are value objects of the statement that
-holds them. Expressions are mbse-expressions' `Python3` terms; annotations, returns, type aliases' values and type
+parent through `HasParent` (or a relation named for the edge) keyed by the property and index; `Module` a `File`. An `except`
+clause and a `case` (`ExceptHandler`, `MatchCase`), which hold statements, refine a framework model of their own,
+`Programs.Framework.Clause`, owned as a statement is (decided below, 4); an import's aliases and a `with` statement's
+items (`Alias`, `WithItem`), which hold none, are value objects of the statement that holds them. Expressions are mbse-expressions' `Python3` terms; annotations, returns, type aliases' values and type
 parameters `Python Types` terms; a case's pattern a `Python Patterns` term; a function's parameters `Python3.Arguments`,
 a class's keywords `Python3.Keyword`, the dialect's own helpers. Gaps are fixed in mbse-expressions, never by extension
 here (CAP-226).
@@ -404,6 +405,10 @@ written again it is byte-identical. Its frame gives the file and its statements 
 2. **A singleton `Programs.Framework.Workspace` owns the files**, keyed by path: "sure that works".
 3. **mbse-expressions moves to 0.27** by the session that built CAP-315 stage 2, after the CAP-316 re-pin of
    mbse-expressions merges: "sure that works".
+4. **A clause is not a statement.** Shown a module whose `except` clause and `case` refined `Statement`, the user: "I
+   don't much like treating a clause as a statement when it can only appear in that place". Of the names offered for
+   the framework's model of a part of a statement that only it may hold, and that holds statements (`Clause`, `Arm`,
+   `Part`), the user chose `Programs.Framework.Clause`, with VOC-032 narrowed to it ("1.").
 
 ## Risks
 

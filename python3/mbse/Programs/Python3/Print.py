@@ -41,7 +41,7 @@ Decided by the agent where the port left it open, each *(agent)*:
   without bases or keywords is written without parentheses (`class C:`); an alias is written as its name is stored,
   `*` among them.
 - **A comment's `text`** is what follows its `#`, which the printer writes before it.
-- **Every kind prints** (`KINDS`, each of `Statements.STATEMENTS`); a statement of a kind not listed is refused,
+- **Every kind prints** (`KINDS`, each of `Statements.KINDS`: its statements and clauses); a statement of a kind not listed is refused,
   TypeError, rather than printed wrong.
 - **No validation**: the 0.3 printer validated a tree and checked it against a version before printing; this one
   prints what the store holds, validation being a check of its own, not yet ported.
@@ -401,7 +401,7 @@ _COMPOUND: dict[str, Callable[[Any, int], list[str]]] = {
 
 KINDS: tuple[str, ...] = (*_SIMPLE, *_COMPOUND)
 """The statement kinds the printer prints, by their names below `Programs.Python3`: every one of
-`Statements.STATEMENTS`."""
+`Statements.KINDS`."""
 
 
 # --- Entry points ---
