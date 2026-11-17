@@ -22,8 +22,10 @@ not used. tree-sitter-python builds a concrete syntax tree; `_Converter` rewrite
 Reused from mbse-programs 0.3 (`Python/_Parser.py`), as it was: the source and its offsets (`_Source`), counted in
 characters (code points), never bytes, so that every implementation reports the same line and column; the pre-pass
 (`_prepare`) for what tree-sitter-python 0.25 cannot parse (lazy imports, dict comprehensions that unpack, type
-parameters' defaults), which rewrites them keeping every other character where it was, the converter putting them
-back; the regrouping of binary operators by Python's precedence (`_LEVELS`); and comments' attachment.
+parameters' defaults, and a starred parenthesized operand, `a[*(b)]`, where its grammar takes `*` before a bare
+primary alone), which rewrites them keeping every other character where it was, the converter putting them back; the regrouping of binary operators by Python's precedence (`_LEVELS`); and comments' attachment. tree-sitter-python
+0.25 also misreads a starred primary that a postfix follows within a subscript (`a[*b.c]` as `(*b).c`, a starred
+operand Python never allows): the converter moves the star outward, `*(b.c)`, as Python reads it.
 
 Decided here *(agent, for review)*:
 
@@ -142,6 +144,7 @@ class _Prepared:
         self.lazy: set[int] = set()
         self.unpacking: set[int] = set()
         self.defaults: dict[int, tuple[int, str]] = {}
+        self.starred: set[int] = set()  # where each starred parenthesized operand starts, its `*` blanked
 
 
 def _tokens(source: _Source, root: _TS) -> list[tuple[int, int, str]]:
@@ -204,6 +207,10 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                 if comprehension:
                     blank(tokens[i + 1][0], tokens[i + 1][1])
                     found.unpacking.add(start)
+        elif word == "*" and following == "(" and i >= 1 and tokens[i - 1][2] in ("[", ",", "=", "(", "{", "in", "return", "yield"):
+            # `*(b)` where `*` unpacks: `a[*(b)]` becomes `a[ (b)]`, the converter starring the operand again
+            blank(start, end)
+            found.starred.add(tokens[i + 1][0])
         elif word == "[" and i >= 2 and tokens[i - 2][2] in ("def", "class", "type"):
             close = _closing(tokens, i)
             depth, parameter, equals = 0, None, None
@@ -316,6 +323,7 @@ class _Converter:
         self.made: list[_Statement] = [] if made is None else made
         self.retype = retype
         self.consumed: set[int] = set()
+        self.unstarred: set[int] = set()  # splats at the head of a postfix chain, read as their operand
 
     # Helpers
 
@@ -871,6 +879,14 @@ class _Converter:
         method = self.EXPRESSIONS.get(ts.type)
         if method is None:
             return self.invalid(ts)
+        if self.at(ts) in self.pre.starred and ts.type != "expression_list":  # where a blanked `*` stood, the outermost
+            # expression but an unparenthesized tuple (`x = *(b),`), which is its operand's, not the operand
+            self.pre.starred.discard(self.at(ts))
+            return P.starred(self.expression(ts))
+        head = self.splat_head(ts)
+        if head is not None:  # `(*b).c`, as tree-sitter-python reads `*b.c`: `*(b.c)`, as Python does
+            self.unstarred.add(head.id)
+            return P.starred(self.expression(ts))
         try:
             made = method(self, ts)
         except (Exception if ts.has_error else _Invalid):
@@ -1038,7 +1054,18 @@ class _Converter:
         return P.call(func, *args, *keywords)
 
     def splat(self, ts: _TS) -> P.Writer:
+        if ts.id in self.unstarred:  # its star moved out to the postfix chain it heads
+            return self.expression(self.named(ts)[0])
         return P.starred(self.expression(self.named(ts)[0]))
+
+    def splat_head(self, ts: _TS) -> _TS | None:
+        """The splat heading the postfix chain `ts` is (an attribute's object, a subscript's value or a call's function,
+        down to its first primary), where tree-sitter-python made one its operand and none has been moved out yet."""
+        fields = {"attribute": "object", "subscript": "value", "call": "function"}
+        node, chain = ts, False
+        while node.type in fields and node.child_by_field_name(fields[node.type]) is not None:
+            node, chain = node.child_by_field_name(fields[node.type]), True
+        return node if chain and node.type == "list_splat" and node.id not in self.unstarred else None
 
     def await_(self, ts: _TS) -> P.Writer:
         value = self.named(ts)[0]
