@@ -32,7 +32,9 @@ Decided here *(agent, for review)*:
   which names none, so `parse` takes the store for that (`parse(text, path, store)`), and then resolves through it.
 - **A tuple is a `tuple`, parenthesized or not.** The dialect's `tuple` carries its parentheses (its printer writes
   `(a, b)`), so `a, b` and `(a, b)` are both a `tuple`, never a `parenthesized` tuple, which would print twice; which
-  of the two the source wrote is lost (a gap, reported to mbse-expressions). `(a)` is a `parenthesized` name.
+  of the two the source wrote is lost (a gap, reported to mbse-expressions). `(a)` is a `parenthesized` name, `(x): int`
+  a `parenthesized` target. An `except` clause's types are a `tuple` whether written `except (A, B):` or, as Python
+  3.14 allows, `except A, B:`.
 - **What is absent is absent.** A property tree-sitter's tree gives no value (`Return.value`, an empty list, a flag
   that is false: `Comment.trailing`, `Import.is_lazy`) is not written; an absolute import's `level` (`ast`'s 0) is not
   written. A function's `args` is always written, an `Arguments`, empty where it has no parameters.
