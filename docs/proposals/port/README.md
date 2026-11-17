@@ -387,14 +387,20 @@ node is built and read. The expressions' printer is mbse-expressions' `Text.ToTe
 **Cost**, measured on 0.27: about 0.13 ms a node built in a transaction, about 0.1 ms written as a Reachable document;
 the Python corpus' 1,181 nodes, about 0.15 s.
 
-**The corpora as the transactions that make them** *(agent, for review)*. A tree of owned objects is not carried by a
-`Reachable` transaction, which writes its root and the counted objects it reaches and refers to every other object by
-its path; a snapshot carries it, with every schema of the store (274 KB for a two-statement program, measured). So each
-corpus file is the transaction a parse gives, as `Plain.ToPlain(store).Transaction` writes it: the journal form that
-[the stacked stores proposal](../../../../mbse-basis/proposals/STACKED-STORES.md) names for the conformance corpora,
-which it leaves open. Measured on 0.27: a two-statement program's transaction is 2,980 bytes; read back by
-`Plain.FromPlain(store).Transaction` and executed in a fresh store holding the installs, it rebuilds the program, and
-written again it is byte-identical. Its frame gives the file and its statements by reference.
+**The corpora as frames**, as the user decided (2026-11-16): "transaction is one representation but may be difficult
+to compare. Frame I think already has equality and comparison"; then, shown the frame measured, "yes". A tree of owned
+objects is not carried by a `Reachable` transaction, which writes its root and the counted objects it reaches and
+refers to every other object by its path; a snapshot carries it with every schema of the store (274 KB for a
+two-statement program). The transaction a parse gives carries it too (180 KB for the Python corpus, `Plain.ToPlain
+(store).Transaction`), but compares only as text. So each corpus file is the frame that transaction gives back, as a
+`References.OfFrame` (`References.of(store, frame)`) written by `Plain.ToPlain(store).Value`: each statement's
+reference, whose path is its place in the tree, in `binds`, and its properties, its terms among them, in `assigns`.
+Measured on 0.27 for the Python corpus: 146 KB; byte-identical when parsed in two stores; equal under `Comparison`
+once both are read into one store (a store's own schema objects make two stores' values incomparable); equal and
+byte-identical where only the source's layout differs; incomparable, and differing, where a value does. A frame
+witnesses a program and does not rebuild it: a program is rebuilt by parsing its source. `assigns` holds each value as
+a value of any schema, which names its schema, so the statement kinds' lists are named containers
+(`Programs.Python3.Terms`, ...).
 
 **Decided** by the user (2026-11-16), on the three questions as posed:
 
