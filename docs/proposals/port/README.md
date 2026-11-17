@@ -88,8 +88,8 @@ meta-schemas overhaul was never made. No earlier port or overhaul work exists.
   names this repository's corpora and its Verilog reader among their uses.
 - **Model first**, for mbse-expressions: "yes" to "the framework and each dialect defined by installs, terms stored in
   the store, the cases rewritten to it" ([its port](../../../../mbse-expressions/docs/proposals/port/README.md#decided),
-  Decided, 1). Backed by [PRI-018: no model needs code to read or write](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-018):
-  "No model should need code to read or write. Ever."
+  Decided, 1). Backed by [CAP-282: no model needs bespoke schema-aware code to read or write](../../../../mbse-basis/docs/capabilities/README.md#CAP-282):
+  "No model should need bespoke schema-aware code to read or write. Use mbse-schemas built-in serialization support."
 - **Terms are nested value objects of a union**: "there was some back and forth but I have landed on terms as value
   objects" (there, Decided, 2026-10-29), held by a reference object, their root (Decided, 2). Dialects extend the union
   by schema extension: "refinement has been superseded by schema extension", and "ah, schema *extension* is the
