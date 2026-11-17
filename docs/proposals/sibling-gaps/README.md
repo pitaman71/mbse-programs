@@ -50,9 +50,12 @@ CPython `ast` without them.
 
 ## mbse-schemas
 
-8. **No public way to ask whether a transaction is open on a store.** `Print`, `Definitions` and `Check` each join an
-   open transaction or open their own, telling which by calling `store.singleton` and catching its `ValueError`.
-   - Proposed: a public query, such as `store.in_transaction()`.
+8. **Whether a transaction is open is no flag on the store**, as the user decided, a visitor's life being lexically
+   scoped (mbse-basis [CAP-315](../../../../mbse-basis/docs/capabilities/CAP-315.md)): code is called within a
+   transaction and reads the visitors it is given, or is given references or plain data and opens its own. So `Print`,
+   `Definitions` and `Check` take a module's visitor within the caller's transaction (`print_file`, `define_file`,
+   `check_file`, `validate_file`), or the store and a path and open their own, called with none open. Nothing is asked of
+   mbse-schemas.
 9. **No public way to extend an object reference by an owned entry.** `Definitions` builds a statement's reference
    from its module's and each parent entry's keys by writing the plain form by hand, guarded by P3DEF-07, which
    compares it with `References.of` for every statement of the conformance source.

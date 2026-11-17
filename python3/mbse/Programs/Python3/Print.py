@@ -31,9 +31,10 @@ statement's place may take more, and there this printer writes it bare *(agent)*
 
 Decided by the agent where the port left it open, each *(agent)*:
 
-- **An open transaction is joined, else one is opened**: mbse-schemas 0.27 has no public query for whether one is
-  open on a store, so `print_module` reads the workspace and, where the store refuses the read as outside any
-  transaction (ValueError), reads again within one of its own.
+- **A transaction the caller's or its own**, as the user decided that whether one is open is no flag on the store, a
+  visitor's life being lexically scoped (mbse-basis CAP-315): `print_file` and `print_statement` read the visitors
+  they are given, within the caller's transaction; `print_module`, given the store and a path, reads within one of its
+  own, so it is called with none open, as transactions do not nest.
 - **An `except` clause's tuple is parenthesized** (`except (A, B):`), which every Python 3 parses; Python 3.14's bare
   form is not written, since the tree, as `ast` has it, does not record which was written.
 - **A clause's kind is its parent's**: an `except` clause is `except*` where its `try` is a `TryStar`.
@@ -421,11 +422,7 @@ def print_file(module: Any) -> str:
 
 
 def print_module(store: Any, path: str) -> str:
-    """The text of the module the workspace holds at `path` (`print_file`), read within the transaction open on
-    `store`, or within one of its own; LookupError where it holds no file there."""
-    try:
-        workspace = store.singleton(WORKSPACE)
-    except ValueError:  # "a store is read only within a transaction": none is open
-        with store.transaction():
-            return print_module(store, path)
-    return print_file(workspace.files({"path": path}))  # LookupError, where it holds none
+    """The text of the module the workspace holds at `path` (`print_file`), read within a transaction of its own, so
+    called with none open on `store`; LookupError where it holds no file there."""
+    with store.transaction():
+        return print_file(store.singleton(WORKSPACE).files({"path": path}))  # LookupError, where it holds none

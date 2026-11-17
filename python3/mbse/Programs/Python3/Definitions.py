@@ -69,10 +69,10 @@ Decided by the agent where the port left it open, each *(agent)*:
   and a name in a target its `variable` term. A `def`'s, a `class`'s and a `type`'s own statement is declared too, so
   that `entity_of(statement)` gives what it defines. A name of `global` or `nonlocal` is declared, not a
   declaration, as it binds nothing.
-- **The API is `define(store, path)`**, by the module's path in the workspace, as `Print.print_module` takes it, and
-  joins an open transaction as it does: mbse-schemas 0.27 has no public query for whether one is open, so `define`
-  reads the workspace and, where the store refuses the read as outside any transaction (ValueError), reads again
-  within one of its own. A program is one module's, as Python's scopes are.
+- **The API is `define(store, path)`**, by the module's path in the workspace, as `Print.print_module` takes it, read
+  within a transaction of its own, so called with none open; `define_file(store, module)` reads a module's visitor
+  within the caller's transaction, as the user decided that whether one is open is no flag on the store (mbse-basis
+  CAP-315). A program is one module's, as Python's scopes are.
 - **An anchor's reference is made on demand**: `References.of` costs about a millisecond a statement, a third of
   `define`'s time on the conformance source, so an anchor holds its statement's path, made from the module's reference
   and the property and index of each `HasParent` entry down to it, and makes the `References.OfObject` from it, through
@@ -588,16 +588,18 @@ class _Definer:
 
 
 def define(store: Any, path: str) -> Program:
-    """The entities the module at `path` binds, in their scopes, read within the transaction open on `store`, or
-    within one of its own; LookupError where the workspace holds no file at `path`."""
-    try:
-        workspace = store.singleton(WORKSPACE)
-    except ValueError:  # "a store is read only within a transaction": none is open
-        with store.transaction():
-            return define(store, path)
-    module = workspace.files({"path": path})  # LookupError, where it holds none
+    """The entities the module at `path` binds, in their scopes (`define_file`), read within a transaction of its own,
+    so called with none open on `store`; LookupError where the workspace holds no file at `path`."""
+    with store.transaction():
+        return define_file(store, store.singleton(WORKSPACE).files({"path": path}))  # LookupError, where it holds none
+
+
+def define_file(store: Any, module: Any) -> Program:
+    """The entities a module binds, in their scopes: its visitor, a `Programs.Python3.Module` of `store`, read within
+    the caller's transaction. The program holds no visitor, so it outlives the transaction."""
     reference = References.of(store, module)
     plain = Plain.ToPlain(store)(reference.as_schema(), reference)["path"]
+    path = plain["next"]["entry"]["properties"]["path"]  # its key in the workspace's files
     place = _Place(store, plain=plain)
     place.made = reference
     program = Program(path, Anchor(place, ""))

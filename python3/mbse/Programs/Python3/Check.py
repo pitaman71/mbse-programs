@@ -92,13 +92,10 @@ def _children(node: Any, adjacency: str = "children") -> list[tuple[str, int, An
 
 
 def _module(store: Any, path: str, read: Callable[[Any], list[str]]) -> list[str]:
-    """`read` of the module at `path`, within the transaction open on `store`, or within one of its own."""
-    try:
-        workspace = store.singleton(WORKSPACE)
-    except ValueError:  # "a store is read only within a transaction": none is open
-        with store.transaction():
-            return _module(store, path, read)
-    return read(workspace.files({"path": path}))  # LookupError, where it holds none
+    """`read` of the module at `path`, within a transaction of its own, so called with none open on `store`, as the
+    user decided that whether one is open is no flag on the store (mbse-basis CAP-315)."""
+    with store.transaction():
+        return read(store.singleton(WORKSPACE).files({"path": path}))  # LookupError, where it holds none
 
 
 def _statements(module: Any) -> Iterator[tuple[str, Any, Any]]:
@@ -284,10 +281,12 @@ def check(store: Any, path: str, version: Version | str) -> list[str]:
     located by its path: `body[2]: TypeAlias needs Python 3.12`. `version` is `(3, minor)` or a name the language
     covers a version by (`"Python 3.12"`). Raises LookupError where the workspace holds no file at `path`, or the
     language covers no such version (the store not prepared, `Standards.prepare`, among them)."""
-    def read(module: Any) -> list[str]:
-        return _check(_Availability(store, version), module)
+    return _module(store, path, lambda module: check_file(store, module, version))
 
-    return _module(store, path, read)
+
+def check_file(store: Any, module: Any, version: Version | str) -> list[str]:
+    """`check` of a module's visitor, a `Programs.Python3.Module` of `store`, read within the caller's transaction."""
+    return _check(_Availability(store, version), module)
 
 
 # --- Validity ---
@@ -422,4 +421,9 @@ def validate(store: Any, path: str) -> list[str]:
     """The problems of the module at `path` as a tree, in source order, each located by its path: its kinds' own rules,
     and its terms' problems as their dialects validate them. Raises LookupError where the workspace holds no file at
     `path`."""
-    return _module(store, path, _validate)
+    return _module(store, path, validate_file)
+
+
+def validate_file(module: Any) -> list[str]:
+    """`validate` of a module's visitor, read within the caller's transaction."""
+    return _validate(module)
