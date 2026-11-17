@@ -420,6 +420,31 @@ and mbse-schemas, its cost to the port, and an additive fix.
    don't much like treating a clause as a statement when it can only appear in that place". Of the names offered for
    the framework's model of a part of a statement that only it may hold, and that holds statements (`Clause`, `Arm`,
    `Part`), the user chose `Programs.Framework.Clause`, with VOC-032 narrowed to it ("1.").
+5. **Invalid syntax is kept, never raised** (2026-11-17), as far as tree-sitter-python's recovery allows ("To the degree
+   that the chosen native parser supports parsing and preserving invalid syntax, mbse-programs should also"). Where a
+   broken statement lands, (a): a framework kind, `Programs.Framework.Error`, the statement-level counterpart of
+   mbse-expressions' `error` term, holding the skipped source (`text`) and the statements recovered within it as owned
+   children through `HasParent`, every language's parser to use it. Whether to raise, (a): `parse` keeps invalid syntax
+   and never raises `ParseError` for it; `Check.validate` reports each `Error` and each `error` and `missing` term, each
+   located, so a caller who needs a clean tree validates it. Within an expression, the dialect's `error` (`text`,
+   `terms`) and `missing` (`kind`) terms, as mbse-basis CAP-226 decided. The pre-pass stays: only what remains after
+   it is invalid. Decided by the agent, in the modules' docstrings, each *(agent)*:
+   - an `Error`'s recovered statements are its children by `body` and index; a compound statement whose header or
+     clause is invalid is an `Error` as a whole, its blocks' statements recovered; an `Error` with no text stands for a
+     newline tree-sitter found missing (two statements on a line without `;`), which its API does not show;
+   - an `ERROR` is never taken as an operand: the innermost expression that holds it is an `error` term, its text as
+     written and its recovered terms each expression read within it; so are constructs `Python3` cannot hold (`a <> b`,
+     `10L`); a `MISSING` expression is a `missing` term of the node type expected; a `MISSING` token makes what holds it
+     invalid;
+   - Python 2's `print x` and `exec x`, a tuple parameter and a type parameter that is no name are `Error`s; `ParseError`
+     remains only for text that is no text (a lone surrogate);
+   - printing writes an `Error`'s text, its first line at its level and the others as written, and not its children,
+     so a parsed invalid file prints back as written where invalid and in the printer's layout elsewhere;
+   - `validate` words an `Error` as mbse-expressions words an `error` term, `body[1]: invalid syntax 'x = = 1'`; an
+     `Error` may stand where a statement or a clause may; `check` skips invalid syntax, which no standard lists, and
+     checks what was recovered within it;
+   - definitions descend into an `Error`'s recovered statements, in the scope it stands in; its text binds nothing,
+     and an `error` term's recovered terms are uses.
 
 ## Risks
 

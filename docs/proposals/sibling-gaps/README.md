@@ -47,16 +47,21 @@ CPython `ast` without them.
    3.13, unpacked comprehensions 3.15; and, of mbse-programs' own, `Import.is_lazy` 3.15 and `type_params` 3.12).
    - Proposed: a way to tag a property, or a value of one, with the standards that have it
      ([CAP-268: standards as tagged data](../../../../mbse-basis/docs/capabilities/CAP-268.md)).
+8. **No writers for invalid syntax.** `Expressions.Python.Python3` writes each of its kinds (`name`, `call`, ...) but
+   not the framework's `error` and `missing`, which every dialect's `Term` holds, so `Parse`, the first parser to keep
+   them, writes them on the union's branch itself (`P.Writer(lambda u: u.error(...))`), and `Python Types` and
+   `Python Patterns` terms through its `_term`.
+   - Proposed: `error(text, *terms)` and `missing(kind)` writers in the framework, which every dialect's writers reuse.
 
 ## mbse-schemas
 
-8. **Whether a transaction is open is no flag on the store**, as the user decided, a visitor's life being lexically
+9. **Whether a transaction is open is no flag on the store**, as the user decided, a visitor's life being lexically
    scoped (mbse-basis [CAP-315](../../../../mbse-basis/docs/capabilities/CAP-315.md)): code is called within a
    transaction and reads the visitors it is given, or is given references or plain data and opens its own. So `Print`,
    `Definitions` and `Check` take a module's visitor within the caller's transaction (`print_file`, `define_file`,
    `check_file`, `validate_file`), or the store and a path and open their own, called with none open. Nothing is asked of
    mbse-schemas.
-9. **No public way to extend an object reference by an owned entry.** `Definitions` builds a statement's reference
+10. **No public way to extend an object reference by an owned entry.** `Definitions` builds a statement's reference
    from its module's and each parent entry's keys by writing the plain form by hand, guarded by P3DEF-07, which
    compares it with `References.of` for every statement of the conformance source.
    - Proposed: a reference of an entry's owned object given its owner's reference and its keys.
@@ -64,7 +69,7 @@ CPython `ast` without them.
      bare path (mbse-basis [CAP-132](../../../../mbse-basis/docs/capabilities/CAP-132.md)), so the plain form
      `Definitions` writes is mbse-schemas' internal, and breaks if it changes: this is a dependency on internals until
      the proposed API exists.
-10. **Executing a parse's transaction costs about 6.5 ms a statement** (the Python conformance source, 151 statements,
+11. **Executing a parse's transaction costs about 6.5 ms a statement** (the Python conformance source, 151 statements,
     about 1.0 s), nearly all of it in the transaction's execution: fine for a file, slow for a suite that parses
     hundreds. Reported to the session that owns the store (2026-11-16); no fix proposed here.
 
