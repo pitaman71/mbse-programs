@@ -1,7 +1,7 @@
 """Parse: Python 3 source text as the transaction that writes its module, delegating to tree-sitter-python.
 
-`parse(text, path)` reads `text` at once, raising `ParseError` (its line and column) where it does not parse, and gives
-the transaction's callback, which a caller executes, `store.transaction(parse(text, path))`, or builds to write it,
+`parse(text, path)` reads `text` at once, keeping what does not parse as invalid syntax, and gives the transaction's
+callback, which a caller executes, `store.transaction(parse(text, path))`, or builds to write it,
 `Plain.ToPlain(store).Transaction(store.Mutations.OfTransaction(parse(text, path, store)))`. Executed in a store holding
 the installs (mbse-expressions' `Framework`, ISO/IEC 11404, IEEE 754, `Python3`, `Python Types`, `Python Patterns`, then
 `Programs.Framework.Model` and `Programs.Python3`), it is one upsert, `uid(path)`, whose symbols bind the workspace
@@ -23,7 +23,7 @@ Reused from mbse-programs 0.3 (`Python/_Parser.py`), as it was: the source and i
 characters (code points), never bytes, so that every implementation reports the same line and column; the pre-pass
 (`_prepare`) for what tree-sitter-python 0.25 cannot parse (lazy imports, dict comprehensions that unpack, type
 parameters' defaults), which rewrites them keeping every other character where it was, the converter putting them
-back; the regrouping of binary operators by Python's precedence (`_LEVELS`); comments' attachment; and the errors.
+back; the regrouping of binary operators by Python's precedence (`_LEVELS`); and comments' attachment.
 
 Decided here *(agent, for review)*:
 
@@ -44,8 +44,28 @@ Decided here *(agent, for review)*:
   Each keeps its spelling, as `Text.FromText` writes it.
 - **Positions**: each statement's line is written as its `location`, `Programs.Framework.HasLocation` to its module;
   an expression, a value, has none.
-- **Invalid syntax raises**, as 0.3 did: tree-sitter's `ERROR` and `MISSING` nodes raise `ParseError` at the first,
-  in source order, though the dialects have `error` and `missing` kinds that could hold them (a follow-up).
+
+Invalid syntax is kept, never raised, as the user decided (2026-11-17: a statement-level `Programs.Framework.Error`,
+"(a)"; "always keep, never raise", "(a)"), as far as tree-sitter-python's recovery allows; what the pre-pass rewrites
+is no longer invalid, and what remains after it is:
+
+- **Where a statement stands**, an `Error` (`Programs.Framework.Error`), with its line: tree-sitter skipped it
+  (`ERROR`), or it holds invalid syntax that no term holds (an `ERROR` beside its parts, as in `x = = 1`, or a
+  `MISSING` token, as in `def f(:`), or it is a construct the dialects cannot hold: Python 2's `print x` and `exec x`,
+  a tuple parameter, a type parameter that is no name. Its `text` is the statement's as written, before the pre-pass;
+  its children, by `body` and index *(agent)*, the statements tree-sitter read within it, each block's and each
+  statement's, themselves kept as here. A compound statement is an `Error` as a whole where its header or a clause
+  is invalid *(agent)*: its clauses (`except`, `case`) are no statements to recover.
+- **Within an expression**, the dialect's `error` term: an expression is one as a whole, its `text` as written and its
+  `terms` each expression tree-sitter read within it, where it holds an `ERROR` (`(1 + )`, `f(a,,b)`) or is a
+  construct `Python3` cannot hold (`a <> b`, `10L`, `a as b` outside a `with`, a lambda's tuple parameter) *(agent:
+  the innermost expression that holds it, never an `ERROR` as an operand, so that it prints as written)*. A type
+  parameter's default that does not parse is an `error` term of its text.
+- **`MISSING`**: where an expression stands, the dialect's `missing` term, its `kind` the node type tree-sitter
+  expected (`for in y:`'s target, `identifier`); a token (`)`, `:`) makes what holds it invalid as above. A newline
+  tree-sitter found missing between two statements on one line (`return return`) its API does not show; an `Error`
+  with no text stands for it, where a statement starts on the line the one before it ends without a `;` *(agent)*.
+- **`ParseError`** is raised only for text that is no text, a lone surrogate, which no encoding writes.
 """
 
 from __future__ import annotations
@@ -70,12 +90,16 @@ __all__ = ["parse", "ParseError", "WORKSPACE"]
 _PARSER = _TSParser(_Grammar(tree_sitter_python.language()))
 
 _EXTRAS = {"comment", "line_continuation"}
-_PYTHON2 = {"exec_statement"}
 _CLAUSES = {"elif_clause", "else_clause", "except_clause", "finally_clause", "case_clause"}
 # Python's binary operators, by precedence, the loosest first. tree-sitter-python 0.25 groups `^` and `&` as one level,
 # so the converter regroups chains of binary operators by these.
 _LEVELS = [("|",), ("^",), ("&",), ("<<", ">>"), ("+", "-"), ("*", "@", "/", "//", "%"), ("**",)]
 _LANGUAGE = "Programs.Python3"
+_ERROR = "Programs.Framework.Error"
+
+
+class _Invalid(Exception):
+    """A construct the converter cannot hold, which it keeps as invalid syntax: an `Error` or an `error` term."""
 
 
 # --- Source text ---
@@ -101,11 +125,6 @@ class _Source:
 
     def offset(self, byte: int) -> int:
         return byte // 2 if self._chars is None else self._chars[byte // 2]
-
-    def error(self, message: str, offset: int) -> ParseError:
-        line = self.text.count("\n", 0, offset) + 1
-        column = offset - (self.text.rfind("\n", 0, offset) + 1) + 1
-        return ParseError(message, line, column)
 
     def line(self, offset: int) -> int:
         return self.text.count("\n", 0, offset) + 1
@@ -226,6 +245,12 @@ def _term(kind: str, **fields: Any) -> FT.Writer:
     return FT.Writer(lambda union: getattr(union, kind)(record))
 
 
+def _error(text: str, terms: list[P.Writer]) -> P.Writer:
+    """An `error` term: the source it spans, as written, and the terms recovered within it."""
+    fields = _record({"text": text, "terms": terms})
+    return P.Writer(lambda u: u.error(fields))
+
+
 def _helper(kind: str, **fields: Any) -> P.Helper:
     """A value object that is no term (`Arguments`, `Arg`, `Alias`, `WithItem`), and its fields."""
     return P.Helper(kind, _record(fields))
@@ -281,7 +306,7 @@ class _Statement:
 
 class _Converter:
     """Rewrites a tree-sitter-python tree into statements and terms. `shift` and `origin` place a tree parsed from a
-    part of the text: its offsets are `shift` past those of the part, and its errors are located in `origin`.
+    part of the text: its offsets are `shift` past those of the part, and its text as written is `origin`'s.
     `statements` collects every statement made, in source order; `retype`, where given, is the offset of a name `Type`
     that the source spells `type`."""
 
@@ -290,6 +315,7 @@ class _Converter:
         self.source, self.pre, self.shift, self.origin = source, prepared, shift, origin or source
         self.made: list[_Statement] = [] if made is None else made
         self.retype = retype
+        self.consumed: set[int] = set()
 
     # Helpers
 
@@ -303,11 +329,10 @@ class _Converter:
         """The text between two byte offsets."""
         return self.source.data[start:end].decode("utf-16-le")
 
-    def error(self, ts: _TS, message: str) -> ParseError:
-        return self.origin.error(message, self.at(ts))
-
-    def unsupported(self, ts: _TS) -> ParseError:
-        return self.error(ts, f"unsupported syntax: {ts.type}")
+    def written(self, ts: _TS) -> str:
+        """The text of `ts` as the source wrote it, before the pre-pass rewrote any of it, and with `type` where
+        `reread` wrote `Type`."""
+        return self.origin.text[self.at(ts):self.shift + self.source.offset(ts.end_byte)]
 
     def new(self, ts: _TS, kind: str) -> _Statement:
         """A statement of `kind`, starting where `ts` does."""
@@ -317,12 +342,14 @@ class _Converter:
 
     @staticmethod
     def kids(ts: _TS) -> list[_TS]:
-        """The children of `ts`, without comments and line continuations."""
-        return [c for c in ts.children if c.type not in _EXTRAS]
+        """The children of `ts`, without comments, line continuations and what tree-sitter skipped (`ERROR`)."""
+        return [c for c in ts.children if c.type not in _EXTRAS and c.type != "ERROR"]
 
     @staticmethod
     def named(ts: _TS) -> list[_TS]:
-        return [c for c in ts.children if c.is_named and c.type not in _EXTRAS]
+        """The named children of `ts`, without comments, line continuations and what tree-sitter skipped (`ERROR`),
+        which is never taken as an operand: what holds it is invalid as a whole."""
+        return [c for c in ts.children if c.is_named and c.type not in _EXTRAS and c.type != "ERROR"]
 
     @staticmethod
     def field(ts: _TS, name: str) -> _TS | None:
@@ -349,38 +376,71 @@ class _Converter:
     def name(self, ts: _TS) -> P.Writer:
         return P.name(self.identifier(ts))
 
-    # Errors
+    # Invalid syntax
 
-    def check(self, ts: _TS) -> None:
-        """Raises for the first syntax error in `ts`, in source order, and for Python 2's statements."""
-        stack = [ts]
+    def unconsumed(self, ts: _TS) -> bool:
+        """Whether `ts` holds invalid syntax (an `ERROR` or a `MISSING` node) below it that nothing made holds: no
+        `error` or `missing` term, and no statement, which keeps its own."""
+        stack = list(ts.children)
         while stack:
             node = stack.pop()
-            if node.type == "ERROR":
-                raise self.error(node, "syntax error")
-            if node.is_missing:
-                raise self.error(node, f"expected {node.type}")
-            if node.type in _PYTHON2:
-                raise self.error(node, f"unsupported syntax: {node.type}, which is Python 2")
-            stack.extend(reversed(node.children))
+            if node.id in self.consumed:
+                continue
+            if node.type == "ERROR" or node.is_missing:
+                return True
+            stack.extend(node.children)
+        return False
+
+    def invalid(self, ts: _TS) -> P.Writer:
+        """An expression that is invalid syntax as a whole: an `error` term, its text as written, and the terms
+        recovered within it, each expression tree-sitter read there, in source order."""
+        terms = self.recovered_terms(ts)
+        self.consumed.add(ts.id)
+        return _error(self.written(ts), terms)
+
+    def recovered_terms(self, ts: _TS) -> list[P.Writer]:
+        out: list[P.Writer] = []
+        for c in ts.children:
+            if c.is_named and c.type in self.EXPRESSIONS:
+                out.append(self.expression(c))
+            else:
+                out += self.recovered_terms(c)
+        return out
+
+    def recovered(self, ts: _TS) -> list[_Statement]:
+        """The statements tree-sitter read within invalid syntax, in source order: each statement, and each block's."""
+        out: list[_Statement] = []
+        for c in ts.children:
+            if c.type == "block":
+                out += self.statements(c.children)
+            elif c.type in self.STATEMENTS:
+                out.append(self.statement(c))
+            else:
+                out += self.recovered(c)
+        return out
 
     # Statements
 
     def module(self, ts: _TS) -> list[_Statement]:
-        self.check(ts)
         return self.statements(ts.children)
 
     def statements(self, nodes: list[_TS], header: _TS | None = None) -> list[_Statement]:
         """The statements and comments among `nodes`. A comment is trailing on the line where the node before it
-        ends; for the first, that is `header`, the clause whose block the statements are."""
+        ends; for the first, that is `header`, the clause whose block the statements are. A statement that starts on
+        the line where the one before it ends, with no `;` between them, follows a newline tree-sitter found missing,
+        which its API does not show (`return return`): an `Error` with no text stands for it *(agent)*."""
         out: list[_Statement] = []
-        previous = header
+        previous, last = header, None
         for ts in nodes:
             if ts.type == "comment":
                 trailing = previous is not None and previous.end_point[0] == ts.start_point[0]
                 out.append(self.new(ts, "Comment").set(text=self.text(ts)[1:].rstrip("\r"), trailing=trailing))
-            elif ts.is_named and ts.type != "line_continuation":
+            elif (ts.is_named or ts.is_missing) and ts.type != "line_continuation":
+                if last is not None and last.end_point[0] == ts.start_point[0] and ";" not in self.between(
+                        last.end_byte, ts.start_byte):
+                    out.append(self.new(ts, "Error").set(text=""))
                 out.append(self.statement(ts))
+                last = ts
             else:
                 continue
             previous = ts
@@ -409,7 +469,27 @@ class _Converter:
         return out
 
     def statement(self, ts: _TS) -> _Statement:
-        return self.STATEMENTS[ts.type](self, ts)  # check() has raised for any other
+        """The statement `ts`, or, where it is invalid syntax, an `Error`: tree-sitter skipped it (`ERROR`) or found it
+        incomplete, or it holds what no `error` or `missing` term does, or it is a construct the converter cannot hold
+        (Python 2's `exec` and `print`, a tuple parameter). The error's text is the statement's, as written, and its
+        children the statements recovered within it."""
+        mark = len(self.made)
+        self.consumed.add(ts.id)
+        try:
+            made = self.convert(ts)
+            if not (ts.has_error and self.unconsumed(ts)):
+                return made
+        except (Exception if ts.has_error else _Invalid):  # what tree-sitter recovered, shaped as no grammar rule is
+            pass
+        del self.made[mark:]
+        error = self.new(ts, "Error").set(text=self.written(ts))
+        return error.hold("body", self.recovered(ts))
+
+    def convert(self, ts: _TS) -> _Statement:
+        method = self.STATEMENTS.get(ts.type)
+        if method is None:
+            raise _Invalid(ts.type)
+        return method(self, ts)
 
     def expression_statement(self, ts: _TS) -> _Statement:
         kids = self.named(ts)
@@ -514,7 +594,6 @@ class _Converter:
         source = _Source("Type" + self.text(ts)[4:])
         tree = _PARSER.parse(source.data, encoding="utf16le")
         converter = _Converter(source, _Prepared(), self.at(ts), self.origin, self.made, self.at(ts))
-        converter.check(tree.root_node)
         return converter.statement(converter.named(tree.root_node)[0])
 
     def print_statement(self, ts: _TS) -> _Statement:
@@ -522,7 +601,7 @@ class _Converter:
         reads it as Python 2's print statement, which without `>>` is not Python 3."""
         chevron = next((c for c in ts.children if c.type == "chevron"), None)
         if chevron is None:
-            raise self.error(ts, "unsupported syntax: print_statement, which is Python 2")
+            raise _Invalid("print_statement, which is Python 2")
         made = self.new(ts, "Expr")
         shift = P.binop(">>", P.name("print"), self.expression(self.named(chevron)[0]))
         values = [self.expression(a) for a in self.fields(ts, "argument")]
@@ -641,7 +720,7 @@ class _Converter:
 
     def decorated_definition(self, ts: _TS) -> _Statement:
         decorators = [self.expression(self.named(d)[0]) for d in self.named(ts) if d.type == "decorator"]
-        made = self.statement(self.require(ts, "definition"))
+        made = self.convert(self.require(ts, "definition"))
         properties = dict(made.properties)
         made.properties = {"decorator_list": decorators}
         return made.set(**properties)
@@ -696,10 +775,10 @@ class _Converter:
         if ts.type == "typed_parameter":
             return P.arg(self.identifier(self.named(ts)[0]), annotation=self.type(self.require(ts, "type")))
         if ts.type not in ("default_parameter", "typed_default_parameter"):
-            raise self.unsupported(ts)
+            raise _Invalid(ts.type)
         name = self.require(ts, "name")
         if name.type != "identifier":
-            raise self.unsupported(name)
+            raise _Invalid(name.type)
         annotation = self.field(ts, "type")
         return P.arg(self.identifier(name), self.expression(self.require(ts, "value")),
                      None if annotation is None else self.type(annotation))
@@ -721,15 +800,16 @@ class _Converter:
             elif inner.type == "identifier":
                 out.append(_term("typevar", name=self.identifier(inner), default_value=default_value))
             else:
-                raise self.unsupported(inner)
+                raise _Invalid(inner.type)
         return out
 
     def part(self, offset: int, text: str) -> P.Writer:
         """The expression `text`, at `offset` of the text, which the pre-pass removed."""
         source = _Source(f"({text})")
         tree = _PARSER.parse(source.data, encoding="utf16le")
+        if tree.root_node.has_error:
+            return _error(text, [])
         converter = _Converter(source, _Prepared(), offset - 1, self.origin, [])
-        converter.check(tree.root_node)
         statement = converter.named(tree.root_node)[0]
         return converter.expression(converter.named(converter.named(statement)[0])[0])
 
@@ -783,10 +863,19 @@ class _Converter:
     # Expressions
 
     def expression(self, ts: _TS) -> P.Writer:
+        """The term of the expression `ts`: a `missing` term where tree-sitter expected one and found none, an `error`
+        term where `ts` is invalid syntax (`invalid`), as for a statement, else its kind's."""
+        if ts.is_missing:
+            self.consumed.add(ts.id)
+            return P.Writer(lambda u: u.missing(lambda r: r.kind(ts.type)))
         method = self.EXPRESSIONS.get(ts.type)
         if method is None:
-            raise self.unsupported(ts)
-        return method(self, ts)
+            return self.invalid(ts)
+        try:
+            made = method(self, ts)
+        except (Exception if ts.has_error else _Invalid):
+            return self.invalid(ts)
+        return self.invalid(ts) if ts.has_error and self.unconsumed(ts) else made
 
     def constant(self, ts: _TS) -> P.Writer:
         text = self.text(ts)
@@ -797,7 +886,7 @@ class _Converter:
                 warnings.simplefilter("ignore")  # an invalid escape, `'\d'`, which Python warns of
                 value = ast.literal_eval(text)
         except (ValueError, SyntaxError):
-            raise self.error(ts, f"unsupported syntax: {text}") from None
+            raise _Invalid(text) from None
         return _literal(value, text)
 
     def string(self, ts: _TS) -> P.Writer:
@@ -1016,7 +1105,7 @@ class _Converter:
         for op, operand in zip(self.fields(ts, "operators"), operands[1:]):
             spelling = " ".join(self.text(op).split())
             if spelling == "<>":
-                raise self.error(op, "unsupported syntax: <>, which is Python 2")
+                raise _Invalid("<>, which is Python 2")
             links.append((spelling, self.expression(operand)))
         return P.compare(links[0][0], self.expression(operands[0]), links[0][1], *links[1:])
 
@@ -1240,9 +1329,14 @@ def _spec(statement: _Statement) -> Callable[[Any], Any]:
 def parse(text: str, path: str, store: Any = None) -> Callable[[Any], Any]:
     """The callback of the transaction that writes `text`, Python 3 source, as the module at `path` in the
     workspace: given to `store.transaction`, or, with `store`, to `store.Mutations.OfTransaction`. Raises
-    `ParseError` for text tree-sitter-python cannot parse, or a construct the dialects cannot hold, now, before any
-    transaction."""
-    source = _Source(text)
+    `ParseError` only for text that is no text, a lone surrogate (which no encoding writes), now, before any
+    transaction: invalid syntax is kept (`Programs.Framework.Error`, the dialects' `error` and `missing`)."""
+    try:
+        source = _Source(text)
+    except UnicodeEncodeError as error:  # a lone surrogate
+        at = error.start
+        line, column = text.count("\n", 0, at) + 1, at - (text.rfind("\n", 0, at) + 1) + 1
+        raise ParseError("not text: a lone surrogate", line, column) from None
     tree = _PARSER.parse(source.data, encoding="utf16le")
     prepared = _Prepared()
     if tree.root_node.has_error:
@@ -1260,7 +1354,8 @@ def parse(text: str, path: str, store: Any = None) -> Callable[[Any], Any]:
     def transaction(txn: Any) -> Any:
         schema = _resolver(txn, store)
         symbols = {"ws": schema("Programs.Framework.Workspace"), "module": schema(f"{_LANGUAGE}.Module"),
-                   **{statement.symbol: schema(f"{_LANGUAGE}.{statement.kind}") for statement in statements}}
+                   **{statement.symbol: schema(_ERROR if statement.kind == "Error" else f"{_LANGUAGE}.{statement.kind}")
+                      for statement in statements}}
         return txn.uid(path).mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
             .symbols(symbols)
             .spec([

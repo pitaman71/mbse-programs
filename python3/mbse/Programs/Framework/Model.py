@@ -18,11 +18,17 @@ defines, in a store:
   statement is, keyed by the statement's property that holds it (`handlers`, `cases`) and its index there; never a
   statement, as the user decided (2026-11-16): "I don't much like treating a clause as a statement when it can only
   appear in that place";
+- `Programs.Framework.Error`, invalid syntax where a statement stands: the statement-level counterpart of
+  mbse-expressions' `error` term, as the user decided (2026-11-17): every language's parser keeps what it cannot read,
+  never raising for it. It holds the source it spans, as written (`text`), and the statements the parser recovered
+  within it as its children, owned through `HasParent` as a statement's are (keyed by `body` and their index *(agent)*);
+  it is owned by its parent, a file, a statement, a clause or an error, as a statement is. It is neither a statement
+  nor a clause, opens no scope, and has a location;
 - `Programs.Framework.Scope`, a scope, owned by the file, statement or clause that opens it through
   `Programs.Framework.Opens(opener, scope)`, one at most *(agent, for review)*; a statement in it through
   `Programs.Framework.HasScope(statement, scope)`;
-- `Programs.Framework.HasLocation(located, file, line)`, where a statement, a clause or a scope begins: its file and
-  line.
+- `Programs.Framework.HasLocation(located, file, line)`, where a statement, a clause, an error or a scope begins: its
+  file and line.
 
 Run it in a transaction of its own (`store.transaction(install)`); run again, it writes nothing. A language's install
 runs after it. Every object of a program is a singleton or owned, never counted, so that each is found again by its
@@ -40,8 +46,8 @@ def install(txn: Any) -> Any:
     return txn.uid("mbse.Programs.Framework/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({
             "Workspace": S.OfObject, "Contains": S.OfRelation, "File": S.OfObject, "Provenance": S.OfObject,
-            "HasProvenance": S.OfRelation, "Statement": S.OfObject, "HasParent": S.OfRelation, "Clause": S.OfObject, "Scope": S.OfObject,
-            "Opens": S.OfRelation, "HasScope": S.OfRelation, "HasLocation": S.OfRelation})
+            "HasProvenance": S.OfRelation, "Statement": S.OfObject, "HasParent": S.OfRelation, "Clause": S.OfObject,
+            "Error": S.OfObject, "Scope": S.OfObject, "Opens": S.OfRelation, "HasScope": S.OfRelation, "HasLocation": S.OfRelation})
         .spec([
             lambda _: _.Workspace.name("Programs.Framework.Workspace").ref(True).singleton(WORKSPACE).adjacencies({
                 "files": lambda a: a.relation([_.Contains]).me("workspace")}),
@@ -70,9 +76,13 @@ def install(txn: Any) -> Any:
                 "scope": lambda a: a.relation([_.Opens]).me("opener"),
                 "location": lambda a: a.relation([_.HasLocation]).me("located")}).adjacencies([
                 lambda a: a.name("parent").relation([_.HasParent]).me("child").owner(True)]),
+            lambda _: _.Error.name("Programs.Framework.Error").ref(True).properties({"text": S.OfStr}).adjacencies({
+                "children": lambda a: a.relation([_.HasParent]).me("parent"),
+                "location": lambda a: a.relation([_.HasLocation]).me("located")}).adjacencies([
+                lambda a: a.name("parent").relation([_.HasParent]).me("child").owner(True)]),
             lambda _: _.HasParent.name("Programs.Framework.HasParent").links([
-                lambda t: t.name("child").schema([_.Statement, _.Clause]),
-                lambda t: t.name("parent").schema([_.Statement, _.Clause, _.File])
+                lambda t: t.name("child").schema([_.Statement, _.Clause, _.Error]),
+                lambda t: t.name("parent").schema([_.Statement, _.Clause, _.Error, _.File])
             ]).properties({"property": S.OfStr, "index": S.OfInt}).uniques([["parent", "property", "index"], ["child"]]),
             lambda _: _.Scope.name("Programs.Framework.Scope").ref(True).adjacencies({
                 "statements": lambda a: a.relation([_.HasScope]).me("scope"),
@@ -85,6 +95,6 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("statement").schema([_.Statement]), lambda t: t.name("scope").schema([_.Scope])
             ]).uniques([["statement"]]),
             lambda _: _.HasLocation.name("Programs.Framework.HasLocation").links([
-                lambda t: t.name("located").schema([_.Statement, _.Clause, _.Scope]), lambda t: t.name("file").schema([_.File])
+                lambda t: t.name("located").schema([_.Statement, _.Clause, _.Error, _.Scope]), lambda t: t.name("file").schema([_.File])
             ]).properties({"line": S.OfInt}).uniques([["located"]]),
         ])]))])

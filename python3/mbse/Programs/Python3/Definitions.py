@@ -77,6 +77,11 @@ Decided by the agent where the port left it open, each *(agent)*:
   `define`'s time on the conformance source, so an anchor holds its statement's path, made from the module's reference
   and the property and index of each `HasParent` entry down to it, and makes the `References.OfObject` from it, through
   `Plain.FromPlain`, when `node` is first read (P3DEF-07 checks it against `References.of` for every statement).
+- **Invalid syntax binds what tree-sitter recovered within it**: a `Programs.Framework.Error` is located in the scope
+  it stands in, and its children, the statements recovered within it, are defined in that scope as any statement is,
+  so that a name an invalid statement's recovered body binds is found; its own text binds nothing. An `error` term
+  binds nothing either: the terms recovered within it are visited as read, a name in them a use (`terms[0]`), never
+  a target *(agent)*.
 - **What a target binds is walked here**: mbse-expressions' `Python3.target_names` and `Patterns.bound_names` give the
   names a target or a pattern binds as a set, not where each is written, so the walk that anchors them is this
   module's, its kinds those `target_names` reads (the tests check that the two agree).

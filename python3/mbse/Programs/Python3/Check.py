@@ -18,7 +18,8 @@ property's, the statement's then the property, with its index where it holds a l
 What a version has is read from data, as mbse-expressions records it (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided)):
 a statement or clause kind is available where a standard of that version's name, among those `Programs.Python3`
 covers, lists its schema (`Standards`); a term's kind, where one of those of `Python3`, `Python Types` or `Python
-Patterns` does (`Standards.DIALECTS`). A kind no standard lists (an extension, invalid syntax, a helper) is not checked.
+Patterns` does (`Standards.DIALECTS`). A kind no standard lists (an extension, invalid syntax, a helper) is not checked: `check` skips invalid syntax, a
+`Programs.Framework.Error` and an `error` or `missing` term, which `validate` reports *(agent)*.
 A kind's problem is `<kind> needs <the first version that has it>`: a statement's kind by its name (`TypeAlias`), a
 term's by its tag (`namedexpr`).
 
@@ -49,6 +50,13 @@ Not checked: an `except` clause's types unparenthesized (3.14), which the tree d
 - where a statement is (new with the model, whose `HasParent` takes any property name) *(agent)*: each parent holds
   statements in the properties its kind has (`body`, `orelse`, `finalbody`), an `ExceptHandler` only in a `Try`'s or a
   `TryStar`'s `handlers` and a `MatchCase` only in a `Match`'s `cases`, and nothing else there;
+- invalid syntax, as the user decided that a parse keeps it and validation reports it (2026-11-17): each
+  `Programs.Framework.Error`, `invalid syntax '<its text>'`, as mbse-expressions words an `error` term's
+  (`Terms.invalid_problems`) *(agent)*, located at the error (`body[2]: invalid syntax 'x = = 1'`); an `Error` an
+  empty text, `invalid syntax ''`, where a newline was missing; an `error` or `missing` term as its dialect validates
+  it, below (`body[0].value: invalid syntax '(1 + )'`, `body[0].target: missing identifier`). So a caller who needs a
+  clean tree validates it. An `Error` may stand wherever a statement or a clause may, and holds statements in its
+  `body`, each of which is checked as one *(agent)*;
 - terms: each term a statement holds, as its dialect validates it (`Python3.DIALECT.validate`, which reads `Python
   Types` and `Python Patterns` too): a `matchor` of two patterns, a `set` of an element, a lambda's parameters without
   annotations, ... The names a term refers to are taken as bound *(agent)*: binding them is the program's, which
@@ -299,6 +307,9 @@ _BLOCKS = {"If": ("body", "orelse"), "While": ("body", "orelse"), "For": ("body"
 """The blocks of statements each kind holds, the first of which needs a statement other than a comment, and the others,
 where they hold any, too (a module's may be empty)."""
 
+_HOLDS = {**_BLOCKS, "Error": ("body",)}
+"""The properties of each kind that hold statements: its blocks, and an error's recovered statements."""
+
 _PLACES = {"Try": {"handlers": "ExceptHandler"}, "TryStar": {"handlers": "ExceptHandler"},
            "Match": {"cases": "MatchCase"}}
 """The clauses each kind holds, by the property that holds them."""
@@ -373,12 +384,13 @@ def _rules(kind: str, held: dict[str, Any], children: dict[str, list[Any]]) -> l
 
 
 def _placed(parent: str, prop: str, kind: str) -> list[str]:
-    """The problem of a statement or clause of `kind` held by a `parent`'s `prop`."""
+    """The problem of a statement, a clause or an error of `kind` held by a `parent`'s `prop`: an error stands where a
+    statement or a clause may, and holds statements in its `body`."""
     clause = _PLACES.get(parent, {}).get(prop)
     if clause is not None:
-        allowed = kind == clause
+        allowed = kind in (clause, "Error")
     else:
-        allowed = prop in _BLOCKS.get(parent, ()) and kind not in CLAUSES
+        allowed = prop in _HOLDS.get(parent, ()) and kind not in CLAUSES
     return [] if allowed else [f"{_a(parent)}'s {prop} cannot hold {_a(kind)}"]
 
 
@@ -407,6 +419,8 @@ def _validate(module: Any) -> list[str]:
         children: dict[str, list[Any]] = {}
         for prop, _, child in _children(node):
             children.setdefault(prop, []).append(child)
+        if kind == "Error":
+            problems += [f"{where}: {p}" for p in Terms.invalid_problems("error", held)]
         problems += [f"{where}: {p}" for p in _rules(kind, held, children)]
         problems += [f"{where}{at}: {p}" for at, p in _names(kind, held)]
         for at, value in _properties(node):

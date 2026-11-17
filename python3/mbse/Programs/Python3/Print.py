@@ -42,8 +42,12 @@ Decided by the agent where the port left it open, each *(agent)*:
   without bases or keywords is written without parentheses (`class C:`); an alias is written as its name is stored,
   `*` among them.
 - **A comment's `text`** is what follows its `#`, which the printer writes before it.
-- **Every kind prints** (`KINDS`, each of `Statements.KINDS`: its statements and clauses); a statement of a kind not listed is refused,
-  TypeError, rather than printed wrong.
+- **Every kind prints** (`KINDS`, each of `Statements.KINDS`: its statements and clauses, and the framework's `Error`);
+  a statement of a kind not listed is refused, TypeError, rather than printed wrong.
+- **Invalid syntax prints as written**, as the user decided that a parse keeps it (2026-11-17): an `Error`'s text, its
+  first line at its level and the others as the source indented them *(agent)*, and nothing for its children, which
+  its text holds already; an `error` or a `missing` term as `ToText` writes it, its text, and nothing. So a parsed
+  invalid file prints back as tree-sitter's recovery allows: each `Error` and `error` exactly, the rest in this layout.
 - **No validation**: the 0.3 printer validated a tree and checked it against a version before printing; this one
   prints what the store holds, validation being a check of its own, not yet ported.
 - **Within an expression, `ToText`'s choices stand**: a `yield`'s tuple is parenthesized (`yield (1, 2)`, where 0.3
@@ -245,6 +249,14 @@ def _suite(header: str, body: list[Any], level: int) -> list[str]:
     return lines + _block(body, level + 1)
 
 
+def _error(node: Any, level: int) -> list[str]:
+    """Invalid syntax where a statement stands, `Programs.Framework.Error`: its text as written, its first line at
+    `level` and the others as the source indented them; nothing where it has none. Its children, recovered within it,
+    are within its text, and are not printed again."""
+    text = node.text.get() or ""
+    return [_INDENT * level + line if i == 0 else line for i, line in enumerate(text.split("\n"))] if text else []
+
+
 def _statement(node: Any, level: int) -> list[str]:
     kind = _kind(node)
     compound = _COMPOUND.get(kind)
@@ -397,12 +409,12 @@ def _class(node: Any, level: int) -> list[str]:
 _COMPOUND: dict[str, Callable[[Any, int], list[str]]] = {
     "If": _if, "While": _while, "For": _for, "AsyncFor": _for, "Try": _try, "TryStar": _try,
     "ExceptHandler": _handler, "With": _with, "AsyncWith": _with, "Match": _match, "MatchCase": _case,
-    "FunctionDef": _function, "AsyncFunctionDef": _function, "ClassDef": _class,
+    "FunctionDef": _function, "AsyncFunctionDef": _function, "ClassDef": _class, "Error": _error,
 }
 
 KINDS: tuple[str, ...] = (*_SIMPLE, *_COMPOUND)
 """The statement kinds the printer prints, by their names below `Programs.Python3`: every one of
-`Statements.KINDS`."""
+`Statements.KINDS`, and the framework's `Error`."""
 
 
 # --- Entry points ---
