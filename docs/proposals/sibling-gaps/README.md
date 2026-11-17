@@ -60,6 +60,10 @@ CPython `ast` without them.
    from its module's and each parent entry's keys by writing the plain form by hand, guarded by P3DEF-07, which
    compares it with `References.of` for every statement of the conformance source.
    - Proposed: a reference of an entry's owned object given its owner's reference and its keys.
+   - Since then, the user decided that a path is internal to an object reference and that no API takes or returns a
+     bare path (mbse-basis [CAP-132](../../../../mbse-basis/docs/capabilities/CAP-132.md)), so the plain form
+     `Definitions` writes is mbse-schemas' internal, and breaks if it changes: this is a dependency on internals until
+     the proposed API exists.
 10. **Executing a parse's transaction costs about 6.5 ms a statement** (the Python conformance source, 151 statements,
     about 1.0 s), nearly all of it in the transaction's execution: fine for a file, slow for a suite that parses
     hundreds. Reported to the session that owns the store (2026-11-16); no fix proposed here.
