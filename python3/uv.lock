@@ -2,9 +2,6 @@ version = 1
 revision = 3
 requires-python = ">=3.11"
 
-[manifest]
-overrides = [{ name = "mbse-schemas", editable = "../../mbse-schemas/python3" }]
-
 [[package]]
 name = "appnope"
 version = "1.0.0"
@@ -463,7 +460,7 @@ wheels = [
 
 [[package]]
 name = "mbse-expressions"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "../../mbse-expressions/python3" }
 dependencies = [
     { name = "mbse-schemas" },
@@ -503,7 +500,7 @@ dependencies = [
 
 [package.optional-dependencies]
 yaml = [
-    { name = "mbse-schemas" },
+    { name = "mbse-schemas", extra = ["yaml"] },
 ]
 
 [package.dev-dependencies]
@@ -541,8 +538,13 @@ dev = [
 
 [[package]]
 name = "mbse-schemas"
-version = "0.27.0"
+version = "0.27.2"
 source = { editable = "../../mbse-schemas/python3" }
+
+[package.optional-dependencies]
+yaml = [
+    { name = "pyyaml" },
+]
 
 [package.metadata]
 requires-dist = [{ name = "pyyaml", marker = "extra == 'yaml'", specifier = ">=6" }]
