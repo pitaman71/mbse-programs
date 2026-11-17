@@ -344,7 +344,8 @@ first. Each stage passes both gates at 100% with the corpora regenerated, in the
 3. **`TypeScript5`** and the transpiler.
 4. **`C` and `Cpp`**, each covering its standards.
 5. **`SystemVerilog`** (Verilog its subset), and the exchange from Python to TypeScript.
-6. **Tutorials, skill, README, EQUIVALENCE; release** 0.4.0. Then mbse-codegen-python.
+6. **Tutorials, skill, README, EQUIVALENCE; release.** Then mbse-codegen-python. The version is 0.4.0 from stage 2,
+   which brings the new API, as the user decided ("bump the verion and no need to add 'dev' as a suffix").
 
 ## Stage 2, Python3: the design (for review, 2026-11-16)
 
