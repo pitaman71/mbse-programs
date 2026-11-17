@@ -5,10 +5,10 @@ callback, which a caller executes, `store.transaction(parse(text, path))`, or bu
 `Plain.ToPlain(store).Transaction(store.Mutations.OfTransaction(parse(text, path, store)))`. Executed in a store holding
 the installs (mbse-expressions' `Framework`, ISO/IEC 11404, IEEE 754, `Python3`, `Python Types`, `Python Patterns`, then
 `Programs.Framework.Model` and `Programs.Python3`), it is one upsert, `uid(path)`, whose symbols bind the workspace
-(`ws`, its singleton `Programs.Framework.TheWorkspace`), the module (`module`) and each statement (`s0`, `s1`, ... in
-source order); its spec puts the module in the workspace's `files` by `path`, sets each statement's properties and
-links each to its parent, the module's `body` or a statement's `children`, by the parent's property that holds it and
-its index there. Its frame gives the module and every statement by symbol.
+(`ws`, its singleton `Programs.Framework.TheWorkspace`) and the module (`module`); its spec puts the module in the
+workspace's `files` by `path` and writes its tree, the module's `body`, as one value: each statement a branch of
+`Programs.Python3.Statement`, holding its properties, its line and the statements of its blocks, nested (stage 3's
+design, "the whole tree as values"). Its frame binds the module, and assigns it its tree.
 
 As the port decided ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md#stage-2-python3-the-design-for-review-2026-11-16)),
 statements are `Programs.Python3`'s kinds, owned reference objects; expressions are mbse-expressions' `Python3` terms,
@@ -44,8 +44,7 @@ Decided here *(agent, for review)*:
 - **A literal's value** is what CPython reads its spelling as (`ast.literal_eval` of the literal alone): a string's or
   bytes' value, an int's, a float's; a complex number a `constant` with its `complex`; `None` and `...` `constant`s.
   Each keeps its spelling, as `Text.FromText` writes it.
-- **Positions**: each statement's line is written as its `location`, `Programs.Framework.HasLocation` to its module;
-  an expression, a value, has none.
+- **Positions**: each statement's, clause's and error's line is written as its `line`; an expression has none.
 
 Invalid syntax is kept, never raised, as the user decided (2026-11-17: a statement-level `Programs.Framework.Error`,
 "(a)"; "always keep, never raise", "(a)"), as far as tree-sitter-python's recovery allows; what the pre-pass rewrites
@@ -55,7 +54,7 @@ is no longer invalid, and what remains after it is:
   (`ERROR`), or it holds invalid syntax that no term holds (an `ERROR` beside its parts, as in `x = = 1`, or a
   `MISSING` token, as in `def f(:`), or it is a construct the dialects cannot hold: Python 2's `print x` and `exec x`,
   a tuple parameter, a type parameter that is no name. Its `text` is the statement's as written, before the pre-pass;
-  its children, by `body` and index *(agent)*, the statements tree-sitter read within it, each block's and each
+  its `body` *(agent)*, the statements tree-sitter read within it, each block's and each
   statement's, themselves kept as here. A compound statement is an `Error` as a whole where its header or a clause
   is invalid *(agent)*: its clauses (`except`, `case`) are no statements to recover.
 - **Within an expression**, the dialect's `error` term: an expression is one as a whole, its `text` as written and its
@@ -97,7 +96,6 @@ _CLAUSES = {"elif_clause", "else_clause", "except_clause", "finally_clause", "ca
 # so the converter regroups chains of binary operators by these.
 _LEVELS = [("|",), ("^",), ("&",), ("<<", ">>"), ("+", "-"), ("*", "@", "/", "//", "%"), ("**",)]
 _LANGUAGE = "Programs.Python3"
-_ERROR = "Programs.Framework.Error"
 
 
 class _Invalid(Exception):
@@ -291,13 +289,13 @@ def _literal(value: Any, text: str) -> P.Writer:
 
 
 class _Statement:
-    """A statement, as the transaction writes it: its symbol, its kind, its properties, its line, and its children, by
-    the property that holds them."""
+    """A statement, as the transaction writes it: its kind, its properties, its line, and its children, by the property
+    that holds them."""
 
-    __slots__ = ("symbol", "kind", "properties", "line", "children")
+    __slots__ = ("kind", "properties", "line", "children")
 
-    def __init__(self, symbol: str, kind: str, line: int):
-        self.symbol, self.kind, self.line = symbol, kind, line
+    def __init__(self, kind: str, line: int):
+        self.kind, self.line = kind, line
         self.properties: dict[str, Any] = {}
         self.children: list[tuple[str, int, _Statement]] = []
 
@@ -314,13 +312,11 @@ class _Statement:
 class _Converter:
     """Rewrites a tree-sitter-python tree into statements and terms. `shift` and `origin` place a tree parsed from a
     part of the text: its offsets are `shift` past those of the part, and its text as written is `origin`'s.
-    `statements` collects every statement made, in source order; `retype`, where given, is the offset of a name `Type`
-    that the source spells `type`."""
+    `retype`, where given, is the offset of a name `Type` that the source spells `type`."""
 
     def __init__(self, source: _Source, prepared: _Prepared, shift: int = 0, origin: _Source | None = None,
-                 made: list[_Statement] | None = None, retype: int | None = None):
+                 retype: int | None = None):
         self.source, self.pre, self.shift, self.origin = source, prepared, shift, origin or source
-        self.made: list[_Statement] = [] if made is None else made
         self.retype = retype
         self.consumed: set[int] = set()
         self.unstarred: set[int] = set()  # splats at the head of a postfix chain, read as their operand
@@ -344,9 +340,7 @@ class _Converter:
 
     def new(self, ts: _TS, kind: str) -> _Statement:
         """A statement of `kind`, starting where `ts` does."""
-        statement = _Statement("s?", kind, self.origin.line(self.at(ts)))
-        self.made.append(statement)
-        return statement
+        return _Statement(kind, self.origin.line(self.at(ts)))
 
     @staticmethod
     def kids(ts: _TS) -> list[_TS]:
@@ -481,7 +475,6 @@ class _Converter:
         incomplete, or it holds what no `error` or `missing` term does, or it is a construct the converter cannot hold
         (Python 2's `exec` and `print`, a tuple parameter). The error's text is the statement's, as written, and its
         children the statements recovered within it."""
-        mark = len(self.made)
         self.consumed.add(ts.id)
         try:
             made = self.convert(ts)
@@ -489,7 +482,6 @@ class _Converter:
                 return made
         except (Exception if ts.has_error else _Invalid):  # what tree-sitter recovered, shaped as no grammar rule is
             pass
-        del self.made[mark:]
         error = self.new(ts, "Error").set(text=self.written(ts))
         return error.hold("body", self.recovered(ts))
 
@@ -601,7 +593,7 @@ class _Converter:
         tree-sitter-python reads as a type alias: it is parsed again with `Type` for `type`, which is then put back."""
         source = _Source("Type" + self.text(ts)[4:])
         tree = _PARSER.parse(source.data, encoding="utf16le")
-        converter = _Converter(source, _Prepared(), self.at(ts), self.origin, self.made, self.at(ts))
+        converter = _Converter(source, _Prepared(), self.at(ts), self.origin, self.at(ts))
         return converter.statement(converter.named(tree.root_node)[0])
 
     def print_statement(self, ts: _TS) -> _Statement:
@@ -817,7 +809,7 @@ class _Converter:
         tree = _PARSER.parse(source.data, encoding="utf16le")
         if tree.root_node.has_error:
             return _error(text, [])
-        converter = _Converter(source, _Prepared(), offset - 1, self.origin, [])
+        converter = _Converter(source, _Prepared(), offset - 1, self.origin)
         statement = converter.named(tree.root_node)[0]
         return converter.expression(converter.named(converter.named(statement)[0])[0])
 
@@ -1317,40 +1309,23 @@ class _Converter:
 # --- The transaction ---
 
 
-def _resolver(txn: Any, store: Any) -> Callable[[str], Any]:
-    """A schema by its name: the store's, where given, else as the transaction names it."""
-    if store is not None:
-        return store.registered
-    cache: dict[str, Any] = {}
+def _value(statement: _Statement) -> Callable[[Any], Any]:
+    """The writer of a statement as a branch of the union that holds it, tagged by its kind in lower case: its
+    properties, its line, and its children, each list by the property that holds it, in index order."""
+    properties, line, tag = statement.properties, statement.line, statement.kind.lower()
+    blocks: dict[str, list[Callable[[Any], Any]]] = {}
+    for property, _, child in statement.children:
+        blocks.setdefault(property, []).append(_value(child))
 
-    def resolve(name: str) -> Any:
-        if name not in cache:
-            found = txn
-            for part in name.split("."):
-                found = getattr(found, part)
-            cache[name] = found
-        return cache[name]
-
-    return resolve
-
-
-def _spec(statement: _Statement) -> Callable[[Any], Any]:
-    """The spec item that writes a statement: its properties, its location, and its children, each by the property
-    that holds it and its index there."""
-    properties, line = statement.properties, statement.line
-    children = [(property, index, child.symbol) for property, index, child in statement.children]
-
-    def write(_: Any) -> Any:
-        r = getattr(_, statement.symbol)
+    def write(r: Any) -> Any:
         for name, value in properties.items():
             getattr(r, name)(value)
-        r.location([lambda e: e.file(_.module).line(line)])
-        if children:
-            r.children([lambda e, p=p, i=i, s=s: e.child(getattr(_, s)).property(p).index(i)
-                        for p, i, s in children])
+        r.line(line)
+        for name, children in blocks.items():
+            getattr(r, name)(children)
         return r
 
-    return write
+    return lambda union: getattr(union, tag)(write)
 
 
 def parse(text: str, path: str, store: Any = None) -> Callable[[Any], Any]:
@@ -1370,26 +1345,18 @@ def parse(text: str, path: str, store: Any = None) -> Callable[[Any], Any]:
         cleaned, prepared = _prepare(text, tree.root_node, source)
         source = _Source(text, cleaned)
         tree = _PARSER.parse(source.data, encoding="utf16le")
-    converter = _Converter(source, prepared)
-    body = converter.module(tree.root_node)
-    statements = converter.made
-    for i, statement in enumerate(statements):
-        statement.symbol = f"s{i}"
-    items = [_spec(statement) for statement in statements]
-    top = [(i, statement.symbol) for i, statement in enumerate(body)]
+    body = [_value(statement) for statement in _Converter(source, prepared).module(tree.root_node)]
 
     def transaction(txn: Any) -> Any:
-        schema = _resolver(txn, store)
-        symbols = {"ws": schema("Programs.Framework.Workspace"), "module": schema(f"{_LANGUAGE}.Module"),
-                   **{statement.symbol: schema(_ERROR if statement.kind == "Error" else f"{_LANGUAGE}.{statement.kind}")
-                      for statement in statements}}
+        symbols = {"ws": store.registered("Programs.Framework.Workspace") if store is not None else
+                   txn.Programs.Framework.Workspace,
+                   "module": store.registered(f"{_LANGUAGE}.Module") if store is not None else
+                   getattr(txn.Programs, "Python3").Module}
         return txn.uid(path).mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
             .symbols(symbols)
             .spec([
                 lambda _: _.ws.files({path: lambda e: e.file(_.module)}),
-                lambda _: _.module.body([lambda e, i=i, s=s: e.child(getattr(_, s)).property("body").index(i)
-                                         for i, s in top]),
-                *items,
+                lambda _: _.module.body(body),
             ])]))])
 
     return transaction

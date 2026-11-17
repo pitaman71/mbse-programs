@@ -2,8 +2,9 @@
 
 For each Python source in `conformance/sources`, it writes the frame of the transaction its parse gives
 (`<source>.json`), as the user decided ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md),
-"The corpora as frames"): a `References.OfFrame`, each statement's reference and the values the transaction assigned
-it, as `Plain.ToPlain(store).Value` writes it; and the text the stored module prints to (`<source>.py`). Every
+"The corpora as frames"): a `References.OfFrame`, binding the workspace and the module and assigning the module its
+tree, one nested value, as the whole tree is values ("Stage 3: the whole tree as values"), as
+`Plain.ToPlain(store).Value` writes it; and the text the stored module prints to (`<source>.py`). Every
 implementation must write the same bytes. The default directory is `conformance/python3` at the repository root.
 
 The port brings the languages over one stage at a time: the other languages' sources, grammars and transpiled programs

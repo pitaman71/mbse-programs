@@ -10,8 +10,8 @@ nothing; each raises LookupError where the workspace holds no file at `path`.
 - `validate(store, path)`: the module's problems as a tree, in source order: each kind's own rules, ported from the 0.3
   language's `check()` methods, and its terms' problems, as their dialects validate them.
 
-Each problem is located by its path from the module: a statement's is the property of its parent that holds it and its
-index there, from the module's `body` (`body[2]`, `body[0].orelse[0]`, `body[1].handlers[0]`); a statement's
+Each problem is located by its path from the module: a statement's is the property of what holds it and its index
+there, from the module's `body` (`body[2]`, `body[0].orelse[0]`, `body[1].handlers[0]`); a statement's
 property's, the statement's then the property, with its index where it holds a list (`body[0].value`,
 `body[3].decorator_list[0]`). So: `body[2]: TypeAlias needs Python 3.12`, `body[0].value: namedexpr needs Python 3.8`.
 
@@ -47,9 +47,6 @@ Not checked: an `except` clause's types unparenthesized (3.14), which the tree d
 - names: a name a statement declares (a definition's `name`, an `except` clause's, `global` and `nonlocal`'s, an
   alias' `asname`) an identifier that is not a keyword; an alias' `name` and an `ImportFrom`'s `module` dotted names of
   them, `*` an `ImportFrom`'s alias' name;
-- where a statement is (new with the model, whose `HasParent` takes any property name) *(agent)*: each parent holds
-  statements in the properties its kind has (`body`, `orelse`, `finalbody`), an `ExceptHandler` only in a `Try`'s or a
-  `TryStar`'s `handlers` and a `MatchCase` only in a `Match`'s `cases`, and nothing else there;
 - invalid syntax, as the user decided that a parse keeps it and validation reports it (2026-11-17): each
   `Programs.Framework.Error`, `invalid syntax '<its text>'`, as mbse-expressions words an `error` term's
   (`Terms.invalid_problems`) *(agent)*, located at the error (`body[2]: invalid syntax 'x = = 1'`); an `Error` an
@@ -62,8 +59,9 @@ Not checked: an `except` clause's types unparenthesized (3.14), which the tree d
   annotations, ... The names a term refers to are taken as bound *(agent)*: binding them is the program's, which
   `Definitions` resolves, not a term's.
 
-Dropped, as the model now holds them: a property's type (`Identifier.spelling must be a str`) and a child's category,
-which the schemas check on write; `DottedName` and `Identifier` as nodes (a name is a string); and every
+Dropped, as the model now holds them: a property's type (`Identifier.spelling must be a str`), a child's category and
+where a statement or a clause may stand (a `try`'s `handlers` hold only `except` clauses, a block no clause), which the
+schemas check on write; `DottedName` and `Identifier` as nodes (a name is a string); and every
 rule on terms, which mbse-expressions' dialects own (`ConcatenatedString`, `Set`, comprehensions, `Compare`, `BoolOp`,
 `Lambda`, `JoinedStr` and `TemplateStr` prefixes, `MatchMapping`, `MatchClass`, `MatchOr`).
 """
@@ -79,7 +77,7 @@ from mbse.Expressions.Python.Python3 import Domains, Expressions as PythonExpres
 
 from ..Framework.Model import WORKSPACE
 from .Standards import DIALECTS, designation
-from .Statements import CLAUSES, LANGUAGE
+from .Statements import LANGUAGE
 
 __all__ = ["check", "validate", "FEATURES", "STATEMENT_FEATURES"]
 
@@ -93,10 +91,17 @@ def _kind(node: Any) -> str:
     return node.as_schema().name.rsplit(".", 1)[-1]
 
 
-def _children(node: Any, adjacency: str = "children") -> list[tuple[str, int, Any]]:
-    """A statement's children (a module's, by its `body`), each its property, its index and itself, in that order."""
-    return sorted(((str(e.property.get()), int(e.index.get()), e.child) for e in getattr(node, adjacency)),
-                  key=lambda entry: entry[:2])
+_BLOCK = ("body", "handlers", "orelse", "finalbody", "cases")
+"""The properties that hold statements, clauses or errors, in source order: a module's, a statement's, a clause's and an
+error's."""
+
+
+def _children(node: Any) -> list[tuple[str, int, Any]]:
+    """The statements, clauses and errors a module, a statement, a clause or an error holds, each its property, its
+    index and its record, in source order."""
+    held = Objects.properties(node)
+    return [(name, index, Terms.kind_of(element)[1]) for name in _BLOCK if name in held
+            for index, element in enumerate(held[name].values)]
 
 
 def _module(store: Any, path: str, read: Callable[[Any], list[str]]) -> list[str]:
@@ -108,7 +113,7 @@ def _module(store: Any, path: str, read: Callable[[Any], list[str]]) -> list[str
 
 def _statements(module: Any) -> Iterator[tuple[str, Any, Any]]:
     """Every statement and clause of a module, each its path, itself and its parent, parents first, in source order."""
-    stack = [(f"{prop}[{index}]", child, module) for prop, index, child in reversed(_children(module, "body"))]
+    stack = [(f"{prop}[{index}]", child, module) for prop, index, child in reversed(_children(module))]
     while stack:
         where, node, parent = stack.pop()
         yield where, node, parent
@@ -116,9 +121,11 @@ def _statements(module: Any) -> Iterator[tuple[str, Any, Any]]:
 
 
 def _properties(node: Any) -> Iterator[tuple[str, Any]]:
-    """A statement's properties that are set, each by its path from the statement (`.value`, `.targets[1]`) and what
-    it holds: a list's elements each by its index."""
+    """A statement's properties that are set, but its line and the statements it holds, each by its path from the
+    statement (`.value`, `.targets[1]`) and what it holds: a list's elements each by its index."""
     for name, held in Objects.properties(node).items():
+        if name == "line" or name in _BLOCK:
+            continue
         if isinstance(held, Objects.Listed):
             yield from ((f".{name}[{i}]", element) for i, element in enumerate(held.values))
         else:
@@ -307,13 +314,6 @@ _BLOCKS = {"If": ("body", "orelse"), "While": ("body", "orelse"), "For": ("body"
 """The blocks of statements each kind holds, the first of which needs a statement other than a comment, and the others,
 where they hold any, too (a module's may be empty)."""
 
-_HOLDS = {**_BLOCKS, "Error": ("body",)}
-"""The properties of each kind that hold statements: its blocks, and an error's recovered statements."""
-
-_PLACES = {"Try": {"handlers": "ExceptHandler"}, "TryStar": {"handlers": "ExceptHandler"},
-           "Match": {"cases": "MatchCase"}}
-"""The clauses each kind holds, by the property that holds them."""
-
 _NEEDS = {"Expr": ("value",), "Assign": ("value",), "AugAssign": ("target", "op", "value"),
           "AnnAssign": ("target", "annotation"), "Assert": ("test",), "TypeAlias": ("name", "value"), "If": ("test",),
           "While": ("test",), "For": ("target", "iter"), "AsyncFor": ("target", "iter"), "Match": ("subject",),
@@ -383,17 +383,6 @@ def _rules(kind: str, held: dict[str, Any], children: dict[str, list[Any]]) -> l
     return problems
 
 
-def _placed(parent: str, prop: str, kind: str) -> list[str]:
-    """The problem of a statement, a clause or an error of `kind` held by a `parent`'s `prop`: an error stands where a
-    statement or a clause may, and holds statements in its `body`."""
-    clause = _PLACES.get(parent, {}).get(prop)
-    if clause is not None:
-        allowed = kind in (clause, "Error")
-    else:
-        allowed = prop in _HOLDS.get(parent, ()) and kind not in CLAUSES
-    return [] if allowed else [f"{_a(parent)}'s {prop} cannot hold {_a(kind)}"]
-
-
 def _terms(held: Any) -> Iterator[Any]:
     """The terms a property holds: itself, or a list's, or a value object's, in order."""
     if isinstance(held, Objects.Listed):
@@ -412,8 +401,7 @@ def _bound(term: Any) -> set[str]:
 
 
 def _validate(module: Any) -> list[str]:
-    problems = [f"body[{index}]: {p}" for prop, index, child in _children(module, "body")
-                for p in _placed("Module", prop, _kind(child))]
+    problems: list[str] = []
     for where, node, _ in _statements(module):
         kind, held = _kind(node), Objects.properties(node)
         children: dict[str, list[Any]] = {}
@@ -426,8 +414,6 @@ def _validate(module: Any) -> list[str]:
         for at, value in _properties(node):
             for term in _terms(value):
                 problems += [f"{where}{at}: {p}" for p in PythonExpressions.DIALECT.validate(term, _bound(term))]
-        problems += [f"{where}.{prop}[{index}]: {p}" for prop, index, child in _children(node)
-                     for p in _placed(kind, prop, _kind(child))]
     return problems
 
 
