@@ -341,7 +341,9 @@ first. Each stage passes both gates at 100% with the corpora regenerated, in the
    `HasProvenance`, `HasScope`, `HasLocation`, `HasParent`); `Python3`'s statement kinds refining `Statement`, owned
    through the parent-child relations; the parser from the native parser's tree to owned statements and the dialect's
    expressions; printer; definitions; pins mbse-schemas 0.26.5 and mbse-expressions 0.8.0.
-3. **`TypeScript5`** and the transpiler.
+3. **The whole tree as values, then `TypeScript5`** and the transpiler ([Stage 3: the whole tree as
+   values](#stage-3-the-whole-tree-as-values)): `Python3` reworked to values; mbse-expressions' open unions for the
+   terms that hold statements; then `TypeScript5` and the transpiler.
 4. **`C` and `Cpp`**, each covering its standards.
 5. **`SystemVerilog`** (Verilog its subset), and the exchange from Python to TypeScript.
 6. **Tutorials, skill, README, EQUIVALENCE; release.** Then mbse-codegen-python. The version is 0.4.0 from stage 2,
@@ -366,7 +368,7 @@ meanwhile. Python only; TypeScript and the equivalence gate follow in stage 3 (p
 - no counted objects: every object found again is a singleton or owned by key, as the stacked stores direct ("A model
   should give every object it must find again a singleton or an owner+key"); counted identity is being deprecated.
 
-**The model.** As decided above: `Programs.Framework`'s models, `Programs.Python3` a singleton by name, its statement
+**The model** (superseded: [Stage 3: the whole tree as values](#stage-3-the-whole-tree-as-values)). As decided above: `Programs.Framework`'s models, `Programs.Python3` a singleton by name, its statement
 kinds (`Expr`, `Assign`, `AugAssign`, `AnnAssign`, `Assert`, `Pass`, `Delete`, `Return`, `Raise`, `Break`, `Continue`,
 `Import`, `ImportFrom`, `Global`, `Nonlocal`, `TypeAlias`, `If`, `While`, `For`, `AsyncFor`, `Try`, `TryStar`, `With`,
 `AsyncWith`, `Match`, `FunctionDef`, `AsyncFunctionDef`, `ClassDef`, `Comment`) refining `Statement`, each owned by its
@@ -445,6 +447,55 @@ and mbse-schemas, its cost to the port, and an additive fix.
      checks what was recovered within it;
    - definitions descend into an `Error`'s recovered statements, in the scope it stands in; its text binds nothing,
      and an `error` term's recovered terms are uses.
+
+## Stage 3: the whole tree as values
+
+Stage 3 met what Python3 never did: statements within an expression. mbse-expressions' TypeScript5 leaves a function
+expression's, a block-bodied arrow's and a class expression's body out of the term (mbse-basis [CAP-226: complete
+expression dialects](../../../../mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not
+part of the term"), and stage 2's statements, owned reference objects, cannot be held by a term, a value: mbse-schemas
+0.28 refuses a reference object in a value's property ("property 'body' takes a value object or a Spec"). Python3's
+lambda has an expression for its body, and its class members are statements, so neither question arose there.
+
+**Decided** by the user, in this order:
+
+1. **A crossover is a property of the term**: "For any dialect A if term T_A has a clause(s) that crosses over to another
+   dialect's expression language, the crossover should be modeled as a property of T_A."
+2. **Which dialect defines what**: "mbse-expressions defines a dialect for expression grammar and mbse-programs defines
+   a dialect for statement, definition, and file grammar".
+3. **The whole tree is values.** Asked first "dialects define expressions and statements as value objects, no?", then
+   "Perhaps blocks and statements should be value objects", and "Or statement may have both a reference and value
+   representation. Especially if the dialect's grammar maps well onto such a dichotomy". Shown that a separation of
+   files and definitions as references from statements and expressions as values ("can we cleanly separate: File
+   (reference), Definitions (references), nested decls such as namespace, Statement Kinds (values), Expression Kinds
+   (values)") leaves seams (a definition within a statement, a body mixing definitions and statements, `export`
+   wrapping a declaration): "Because modern languages do not have a clean lexical separation between definitions and
+   statements we may have to resort to "the whole AST is value objects". It's lexically proportionate, so maybe that's
+   just tolerable." Asked whether to record that as decided: "yes".
+
+This supersedes, for every language, that statements and scopes are owned reference objects (the consolidated
+statement's "Files, scopes, and statements should be owned reference objects", its revised framework's relations, and
+stage 2's model). What it means:
+
+- **References**: the singleton `Programs.Framework.Workspace`, each `Programs.Framework.File` it owns by path, and the
+  file's `Provenance`. A file holds its tree as one value, as a holder holds its root term.
+- **Values**: everything a file holds: its statements, definitions, clauses, class members and invalid syntax
+  (`Programs.Framework.Error`), and the expressions within them, which were values already. A node is found again by
+  its place in its file, as stage 2's `Definitions` anchors a use within a term.
+- **The crossover**: where a term holds statements, mbse-expressions' dialect gives the term a property typed by an
+  open union of its own, which mbse-programs' dialect extends by schema extension with its block (shown in a scratch
+  store on mbse-schemas 0.28: a term's `body` holding mbse-programs' block, holding a statement holding a term). The
+  dependency stays one way: mbse-expressions names nothing of mbse-programs'. For TypeScript5: its function, arrow and
+  class expressions; later C's and C++'s statement expressions and lambdas.
+- **What goes**: `Programs.Framework.HasParent`, `HasLocation`, `Opens`, `HasScope` and `Scope` as a stored model, which
+  a value cannot fill: nesting is ownership, a line is a property, and scopes are derived on demand, as `Definitions`
+  already are (Decided, 6). `Statement`, `Clause` and `Error` stay, as value kinds the languages' kinds refine.
+
+Still to check, before building: that mbse-schemas reads such a tree back as written, and how a rewrite changes a value
+nested within a file (in place, or by replacing the file's tree).
+
+The stages change with it (below): stage 3 reworks `Python3` to values, asks mbse-expressions for the open unions, then
+builds `TypeScript5` and the transpiler.
 
 ## Risks
 
