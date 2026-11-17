@@ -345,7 +345,8 @@ def _while(node: Any, level: int) -> list[str]:
 
 def _for(node: Any, level: int) -> list[str]:
     keyword = "async for" if _kind(node) == "AsyncFor" else "for"
-    header = f"{keyword} {_bare(_held(node.target), tuples=True)} in {_bare(_held(node.iter), tuples=True)}"
+    target, iterable = _bare(_held(node.target), tuples=True), _bare(_held(node.iter), tuples=True)
+    header = " ".join(part for part in (keyword, target, "in", iterable) if part)  # a missing target prints nothing
     children = _children(node)
     return [*_suite(header, children.get("body", []), level), *_else(children, level)]
 
