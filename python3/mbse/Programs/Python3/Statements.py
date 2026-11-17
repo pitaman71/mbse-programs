@@ -29,16 +29,13 @@ STATEMENTS = ("Comment", "Expr", "Assign", "AugAssign", "AnnAssign", "Assert", "
               "ClassDef")
 CLAUSES = ("ExceptHandler", "MatchCase")
 KINDS = STATEMENTS + CLAUSES
+CONTAINERS = ("Terms", "TypeTerms", "Names", "Aliases", "WithItems", "Keywords")
 
 
 def install(txn: Any) -> Any:
     """Python 3's statement kinds, its module and its language's singleton, upserted."""
     S, F, E = txn.Schemas, txn.Programs.Framework, txn.Expressions.Python
     T, Ty, Pt = E.Python3.Term, E.Types.Term, E.Patterns.Term
-
-    def many(element: Any) -> Any:
-        """A list of `element`, by index: a container of one property's own."""
-        return S.OfContainer(lambda c: c.index([S.OfInt]).element([element]))
 
     def kind(name: str, properties: Any = lambda _: {}) -> Any:
         """A statement or clause kind: a reference object refining `Statement` or `Clause`, with its own properties,
@@ -48,46 +45,53 @@ def install(txn: Any) -> Any:
             properties(_))
 
     def function(_: Any) -> dict[str, Any]:
-        """A function's properties, async or not: its containers made anew for each kind."""
-        return {"decorator_list": many(T), "name": S.OfStr, "type_params": many(Ty), "args": E.Python3.Arguments,
+        """A function's properties, async or not."""
+        return {"decorator_list": _.Terms, "name": S.OfStr, "type_params": _.TypeTerms, "args": E.Python3.Arguments,
                 "returns": Ty}
+
+    def named(name: str, element: Any) -> Any:
+        """A named container: a list, by index, of `element`."""
+        return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").index([S.OfInt]).element([element(_)])
 
     return txn.uid("mbse.Programs.Python3/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Language": S.OfObject, "Module": S.OfObject, "Alias": S.OfObject, "WithItem": S.OfObject,
-                  **{name: S.OfObject for name in KINDS}})
+                  **{name: S.OfContainer for name in CONTAINERS}, **{name: S.OfObject for name in KINDS}})
         .spec([
             lambda _: _.Language.name(f"{LANGUAGE}.Language").ref(True).singleton(LANGUAGE),
             lambda _: _.Module.name(f"{LANGUAGE}.Module").ref(True).refines([F.File]),
             lambda _: _.Alias.name(f"{LANGUAGE}.Alias").properties({"name": S.OfStr, "asname": S.OfStr}),
             lambda _: _.WithItem.name(f"{LANGUAGE}.WithItem").properties({"context_expr": T, "optional_vars": T}),
+            named("Terms", lambda _: T), named("TypeTerms", lambda _: Ty), named("Names", lambda _: S.OfStr),
+            named("Aliases", lambda _: _.Alias), named("WithItems", lambda _: _.WithItem),
+            named("Keywords", lambda _: E.Python3.Keyword),
             kind("Comment", lambda _: {"text": S.OfStr, "trailing": S.OfBool}),
             kind("Expr", lambda _: {"value": T}),
-            kind("Assign", lambda _: {"targets": many(T), "value": T}),
+            kind("Assign", lambda _: {"targets": _.Terms, "value": T}),
             kind("AugAssign", lambda _: {"target": T, "op": S.OfStr, "value": T}),
             kind("AnnAssign", lambda _: {"target": T, "annotation": Ty, "value": T}),
             kind("Assert", lambda _: {"test": T, "msg": T}),
             kind("Pass"), kind("Break"), kind("Continue"),
-            kind("Delete", lambda _: {"targets": many(T)}),
+            kind("Delete", lambda _: {"targets": _.Terms}),
             kind("Return", lambda _: {"value": T}),
             kind("Raise", lambda _: {"exc": T, "cause": T}),
-            kind("Import", lambda _: {"is_lazy": S.OfBool, "names": many(_.Alias)}),
+            kind("Import", lambda _: {"is_lazy": S.OfBool, "names": _.Aliases}),
             kind("ImportFrom", lambda _: {"is_lazy": S.OfBool, "level": S.OfInt, "module": S.OfStr,
-                                          "names": many(_.Alias)}),
-            kind("Global", lambda _: {"names": many(S.OfStr)}),
-            kind("Nonlocal", lambda _: {"names": many(S.OfStr)}),
-            kind("TypeAlias", lambda _: {"name": T, "type_params": many(Ty), "value": Ty}),
+                                          "names": _.Aliases}),
+            kind("Global", lambda _: {"names": _.Names}),
+            kind("Nonlocal", lambda _: {"names": _.Names}),
+            kind("TypeAlias", lambda _: {"name": T, "type_params": _.TypeTerms, "value": Ty}),
             kind("If", lambda _: {"test": T}),
             kind("While", lambda _: {"test": T}),
             kind("For", lambda _: {"target": T, "iter": T}),
             kind("AsyncFor", lambda _: {"target": T, "iter": T}),
             kind("Try"), kind("TryStar"),
             kind("ExceptHandler", lambda _: {"type": T, "name": S.OfStr}),
-            kind("With", lambda _: {"items": many(_.WithItem)}),
-            kind("AsyncWith", lambda _: {"items": many(_.WithItem)}),
+            kind("With", lambda _: {"items": _.WithItems}),
+            kind("AsyncWith", lambda _: {"items": _.WithItems}),
             kind("Match", lambda _: {"subject": T}),
             kind("MatchCase", lambda _: {"pattern": Pt, "guard": T}),
             kind("FunctionDef", function),
             kind("AsyncFunctionDef", function),
-            kind("ClassDef", lambda _: {"decorator_list": many(T), "name": S.OfStr, "type_params": many(Ty),
-                                        "bases": many(T), "keywords": many(E.Python3.Keyword)}),
+            kind("ClassDef", lambda _: {"decorator_list": _.Terms, "name": S.OfStr, "type_params": _.TypeTerms,
+                                        "bases": _.Terms, "keywords": _.Keywords}),
         ])]))])
