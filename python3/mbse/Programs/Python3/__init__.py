@@ -1,6 +1,6 @@
 """Python 3 as a language of mbse-programs: its statement kinds (`Statements`), refining `Programs.Framework.Statement`,
-whose expressions are mbse-expressions' `Python3` terms; source read into a store (`Parse`) and printed from it
-(`Print`).
+whose expressions are mbse-expressions' `Python3` terms; source read into a store (`Parse`), printed from it
+(`Print`), and the names it defines resolved (`Definitions`).
 
 `INSTALLS` lists, in the order they run, the installs a store needs to hold Python 3 programs, each in a transaction
 of its own; `store()` gives a new store with each run."""
@@ -16,7 +16,7 @@ from mbse.Expressions.Python import Types as PythonTypes
 from mbse.Schemas.Framework import Builders
 
 from ..Framework import Model
-from . import Parse, Print, Statements
+from . import Definitions, Parse, Print, Statements
 from .Statements import install
 
 INSTALLS = (Expressions.install, ISOIEC11404.install, IEEE754.install, PythonExpressions.install, PythonTypes.install,
@@ -31,4 +31,4 @@ def store() -> Any:
     return made
 
 
-__all__ = ["INSTALLS", "Parse", "Print", "Statements", "install", "store"]
+__all__ = ["INSTALLS", "Definitions", "Parse", "Print", "Statements", "install", "store"]
