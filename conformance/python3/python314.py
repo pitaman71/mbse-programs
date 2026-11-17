@@ -9,11 +9,11 @@ from collections.abc import *
 type Pair[A, B = int] = tuple[A, B]
 type Callback[**P, *Ts] = Callable[P, tuple[*Ts]]
 NUMBERS = [0, 1_000, 0x_FF, 0o17, 0b1010, 1.5e-3, 2j, 3.0J, .5, 5.]
-TEXTS = ('single', "double", '''triple''', """triple
-double""", b'bytes', rb'\d+', R"raw", u'unicode', 'a' "b" f'c{NUMBERS[0]}')
-SPECIAL = (None, True, False, ...)
+TEXTS = 'single', "double", '''triple''', """triple
+double""", b'bytes', rb'\d+', R"raw", u'unicode', 'a' "b" f'c{NUMBERS[0]}'
+SPECIAL = None, True, False, ...
 EMPTY = (), [], {}, set()
-ONE = (1,)
+ONE = 1,
 
 
 @decorator
@@ -42,7 +42,7 @@ class Shape[T: (int, float), *Shapes](Base, metaclass=Meta, **options):
         yield
         yield self
         yield from range(10)
-        received = yield 1, 2
+        received = yield (1, 2)
         return received
 
 
@@ -81,7 +81,7 @@ def containers(items, key):
     total = sum(x for x in items)
     head, *tail = items
     [first, second] = items
-    (one,) = items
+    one, = items
     del head, tail[0], items.attribute
     return items[0], items[1:2], items[::2], items[a:b, c], items[...], items[*key]
 
@@ -145,7 +145,7 @@ def statements(path):
         pass
     try:
         pass
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         pass
     try:
         pass

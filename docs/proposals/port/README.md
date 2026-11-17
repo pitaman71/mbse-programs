@@ -344,7 +344,82 @@ first. Each stage passes both gates at 100% with the corpora regenerated, in the
 3. **`TypeScript5`** and the transpiler.
 4. **`C` and `Cpp`**, each covering its standards.
 5. **`SystemVerilog`** (Verilog its subset), and the exchange from Python to TypeScript.
-6. **Tutorials, skill, README, EQUIVALENCE; release** 0.4.0. Then mbse-codegen-python.
+6. **Tutorials, skill, README, EQUIVALENCE; release.** Then mbse-codegen-python. The version is 0.4.0 from stage 2,
+   which brings the new API, as the user decided ("bump the verion and no need to add 'dev' as a suffix").
+
+## Stage 2, Python3: the design (for review, 2026-11-16)
+
+Redrawn for the siblings as they stand: mbse-schemas 0.27.0 (`c64cb18`, CAP-315 stage 2) and mbse-expressions 0.10.0,
+which still pins mbse-schemas `<0.27`. As the user decided (2026-11-16): CAP-312 and CAP-314 land in mbse-schemas first,
+as necessary to stabilize it with CAP-316; once they do and mbse-expressions is re-pinned to them, that pair of commits is
+this port's freeze point, and the siblings take only additive changes until the port lands. Work that parallelizes runs
+meanwhile. Python only; TypeScript and the equivalence gate follow in stage 3 (proposed).
+
+**Written to 0.27's rules from the start** ([CAP-315](../../../../mbse-basis/docs/capabilities/CAP-315.md), mbse-schemas'
+`tests/37_Lifetimes.ipynb`), so that the freeze point's bump changes no code:
+
+- every read and write of the tree within a transaction; a visitor never kept past the transaction that made it, nor
+  keyed by `id()` across transactions;
+- `singleton` and `extent` only in a transaction; transactions never nested;
+- between transactions, an object held as its `References.OfObject`, found again by navigation or by a symbol given
+  the reference; a frame read as references and `assigns`;
+- no counted objects: every object found again is a singleton or owned by key, as the stacked stores direct ("A model
+  should give every object it must find again a singleton or an owner+key"); counted identity is being deprecated.
+
+**The model.** As decided above: `Programs.Framework`'s models, `Programs.Python3` a singleton by name, its statement
+kinds (`Expr`, `Assign`, `AugAssign`, `AnnAssign`, `Assert`, `Pass`, `Delete`, `Return`, `Raise`, `Break`, `Continue`,
+`Import`, `ImportFrom`, `Global`, `Nonlocal`, `TypeAlias`, `If`, `While`, `For`, `AsyncFor`, `Try`, `TryStar`, `With`,
+`AsyncWith`, `Match`, `FunctionDef`, `AsyncFunctionDef`, `ClassDef`, `Comment`) refining `Statement`, each owned by its
+parent through `HasParent` (or a relation named for the edge) keyed by the property and index; `Module` a `File`. An `except`
+clause and a `case` (`ExceptHandler`, `MatchCase`), which hold statements, refine a framework model of their own,
+`Programs.Framework.Clause`, owned as a statement is (decided below, 4); an import's aliases and a `with` statement's
+items (`Alias`, `WithItem`), which hold none, are value objects of the statement that holds them. Expressions are mbse-expressions' `Python3` terms; annotations, returns, type aliases' values and type
+parameters `Python Types` terms; a case's pattern a `Python Patterns` term; a function's parameters `Python3.Arguments`,
+a class's keywords `Python3.Keyword`, the dialect's own helpers. Gaps are fixed in mbse-expressions, never by extension
+here (CAP-226).
+
+**Reused from 0.3.28**, measured: about 40% of the Python language's 3,000 lines is independent of how a node is held
+and moves nearly verbatim (tree-sitter's source handling and pre-pass, error positions, the precedence ladder, the
+regrouping of binary operators, `SINCE` and `FEATURES`, the printer's layout, `Framework.Definitions` and Python's
+scoping rules); the converter and the printer keep their dispatch tables, one function per kind, rewriting only how a
+node is built and read. The expressions' printer is mbse-expressions' `Text.ToText`; its `Text.FromText` moves here
+(CAP-226).
+
+**Cost**, measured on 0.27: about 0.13 ms a node built in a transaction, about 0.1 ms written as a Reachable document;
+the Python corpus' 1,181 nodes, about 0.15 s.
+
+**The corpora as frames**, as the user decided (2026-11-16): "transaction is one representation but may be difficult
+to compare. Frame I think already has equality and comparison"; then, shown the frame measured, "yes". A tree of owned
+objects is not carried by a `Reachable` transaction, which writes its root and the counted objects it reaches and
+refers to every other object by its object reference; a snapshot carries it with every schema of the store (274 KB for a
+two-statement program). The transaction a parse gives carries it too (180 KB for the Python corpus, `Plain.ToPlain
+(store).Transaction`), but compares only as text. So each corpus file is the frame that transaction gives back, as a
+`References.OfFrame` (`References.of(store, frame)`) written by `Plain.ToPlain(store).Value`: each statement's
+object reference, which names its place in the tree, in `binds`, and its properties, its terms among them, in `assigns`.
+Measured on 0.27 for the Python corpus: 146 KB; byte-identical when parsed in two stores; equal under `Comparison`
+once both are read into one store (a store's own schema objects make two stores' values incomparable); equal and
+byte-identical where only the source's layout differs; incomparable, and differing, where a value does. A frame
+witnesses a program and does not rebuild it: a program is rebuilt by parsing its source. `assigns` holds each value as
+a value of any schema, which names its schema, so the statement kinds' lists are named containers
+(`Programs.Python3.Terms`, ...).
+
+**What the port needs of its siblings** is [a proposal of its own, parked](../sibling-gaps/README.md) until the
+siblings are stable enough for the port to proceed, as the user decided: each gap the port found in mbse-expressions
+and mbse-schemas, its cost to the port, and an additive fix.
+
+**Decided** by the user (2026-11-16), on the three questions as posed:
+
+1. **A statement's property holds the term**, a nested value (`If.test: Expressions.Python.Python3.Term`), owned with its
+   statement and reached through its statement's object reference: "yes that is the obvs way". The holders (`Expressions.Python.Python3.Expression`),
+   counted objects with no object reference under 0.27, stay for a constraint's root. Asked as (a) a nested value, or
+   (b) a holder per expression related to its statement.
+2. **A singleton `Programs.Framework.Workspace` owns the files**, keyed by path: "sure that works".
+3. **mbse-expressions moves to 0.27** by the session that built CAP-315 stage 2, after the CAP-316 re-pin of
+   mbse-expressions merges: "sure that works".
+4. **A clause is not a statement.** Shown a module whose `except` clause and `case` refined `Statement`, the user: "I
+   don't much like treating a clause as a statement when it can only appear in that place". Of the names offered for
+   the framework's model of a part of a statement that only it may hold, and that holds statements (`Clause`, `Arm`,
+   `Part`), the user chose `Programs.Framework.Clause`, with VOC-032 narrowed to it ("1.").
 
 ## Risks
 

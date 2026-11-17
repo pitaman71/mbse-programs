@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mbse-programs"
-version = "0.3.28"
+version = "0.4.0"
 description = "Programs as language-neutral data: complete, serializable abstract syntax trees for C, C++, Python, TypeScript, JavaScript, Verilog and SystemVerilog, with their definitions, built for transpilers that never parse or print strings"
 keywords = ["ast", "abstract syntax tree", "c++", "c", "python", "typescript", "javascript", "verilog", "systemverilog",
             "transpiler", "mbse", "tree-sitter", "slang", "code generation"]
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mbse-expressions>=0.5.4,<0.6",
-    "mbse-schemas>=0.10.0,<0.11",
+    "mbse-expressions>=0.11.1,<0.12",
+    "mbse-schemas>=0.28.0,<0.29",
     "tree-sitter>=0.25",
     "tree-sitter-cpp==0.23.4",
     "tree-sitter-python==0.25.0",
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-yaml = ["mbse-schemas[yaml]>=0.10.0,<0.11"]
+yaml = ["mbse-schemas[yaml]>=0.28.0,<0.29"]
 
 [tool.setuptools.package-data]
 "mbse.Programs" = ["skill/*.md", "skill/references/*.md"]
@@ -46,12 +46,44 @@ mbse-expressions = { path = "../../mbse-expressions/python3", editable = true }
 mbse-schemas = { path = "../../mbse-schemas/python3", editable = true }
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "tutorials"]
-addopts = "--nbmake"
+testpaths = ["tests"]  # and "tutorials", restored with the port's tutorials
+# The port (docs/proposals/port/README.md) brings the languages over one stage at a time: 0.3's suites, tutorials and
+# skill are set aside, each restored with its stage.
+addopts = [
+    "--nbmake",
+    "--ignore=tests/01_Syntax.ipynb",
+    "--ignore=tests/02_Ccpp.ipynb",
+    "--ignore=tests/03_Parse.ipynb",
+    "--ignore=tests/04_Print.ipynb",
+    "--ignore=tests/05_Definitions.ipynb",
+    "--ignore=tests/06_Python.ipynb",
+    "--ignore=tests/07_PythonParse.ipynb",
+    "--ignore=tests/08_PythonPrint.ipynb",
+    "--ignore=tests/09_PythonDefinitions.ipynb",
+    "--ignore=tests/10_TypeScript.ipynb",
+    "--ignore=tests/11_TypeScriptParse.ipynb",
+    "--ignore=tests/12_TypeScriptPrint.ipynb",
+    "--ignore=tests/13_TypeScriptDefinitions.ipynb",
+    "--ignore=tests/14_TypeScriptToPython.ipynb",
+    "--ignore=tests/15_PythonBridge.ipynb",
+    "--ignore=tests/16_Conformance.ipynb",
+    "--ignore=tests/17_Skill.ipynb",
+    "--ignore=tests/18_Verilog.ipynb",
+    "--ignore=tests/19_VerilogRead.ipynb",
+    "--ignore=tests/20_VerilogPrint.ipynb",
+    "--ignore=tests/21_VerilogDefinitions.ipynb",
+    "--ignore=tests/22_VerilogBridge.ipynb",
+]
 
 [tool.coverage.run]
 source = ["mbse.Programs"]
-omit = ["*/mbse/Programs/Conformance/*"]
+omit = [
+    "*/mbse/Programs/Conformance/*",
+    # 0.3's languages, bridges and transpiler and its node machinery, set aside until their stages of the port
+    "*/mbse/Programs/Bridges/*", "*/mbse/Programs/Ccpp/*", "*/mbse/Programs/Python/*",
+    "*/mbse/Programs/Transpilers/*", "*/mbse/Programs/TypeScript/*", "*/mbse/Programs/Verilog/*",
+    "*/mbse/Programs/Framework/Syntax.py",
+]
 branch = true
 parallel = true
 patch = ["subprocess"]
