@@ -50,7 +50,7 @@ Invalid syntax is kept, never raised, as the user decided (2026-11-17: a stateme
 "(a)"; "always keep, never raise", "(a)"), as far as tree-sitter-python's recovery allows; what the pre-pass rewrites
 is no longer invalid, and what remains after it is:
 
-- **Where a statement stands**, an `Error` (`Programs.Framework.Error`), with its line: tree-sitter skipped it
+- **Where a statement stands**, an `Error` (`Programs.Python3.Error`, refining `Programs.Framework.Error`), with its line: tree-sitter skipped it
   (`ERROR`), or it holds invalid syntax that no term holds (an `ERROR` beside its parts, as in `x = = 1`, or a
   `MISSING` token, as in `def f(:`), or it is a construct the dialects cannot hold: Python 2's `print x` and `exec x`,
   a tuple parameter, a type parameter that is no name. Its `text` is the statement's as written, before the pre-pass;
@@ -1332,7 +1332,7 @@ def parse(text: str, path: str, store: Any = None) -> Callable[[Any], Any]:
     """The callback of the transaction that writes `text`, Python 3 source, as the module at `path` in the
     workspace: given to `store.transaction`, or, with `store`, to `store.Mutations.OfTransaction`. Raises
     `ParseError` only for text that is no text, a lone surrogate (which no encoding writes), now, before any
-    transaction: invalid syntax is kept (`Programs.Framework.Error`, the dialects' `error` and `missing`)."""
+    transaction: invalid syntax is kept (`Programs.Python3.Error`, the dialects' `error` and `missing`)."""
     try:
         source = _Source(text)
     except UnicodeEncodeError as error:  # a lone surrogate
