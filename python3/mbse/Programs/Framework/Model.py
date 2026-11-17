@@ -12,7 +12,7 @@ defines, in a store:
   through `Programs.Framework.HasProvenance(file, provenance)`, one at most;
 - `Programs.Framework.Statement`, a statement, which each language's statement kinds refine, owned by its parent, a
   file or a statement, through `Programs.Framework.HasParent(child, parent)`, keyed by the parent's `property` that
-  holds it and its `index` there: a node's path is its file's, then each parent's property and index;
+  holds it and its `index` there: a node's object reference is its parent's, extended by that property and index;
 - `Programs.Framework.Clause`, a clause: a part of a statement that its language's grammar allows only within that
   statement and that holds statements (Python's `except` and `case`), owned by its statement through `HasParent` as a
   statement is, keyed by the statement's property that holds it (`handlers`, `cases`) and its index there; never a
@@ -26,7 +26,7 @@ defines, in a store:
 
 Run it in a transaction of its own (`store.transaction(install)`); run again, it writes nothing. A language's install
 runs after it. Every object of a program is a singleton or owned, never counted, so that each is found again by its
-path (mbse-basis [CAP-315: every read within a transaction or through a follow](mbse:mbse-basis/docs/capabilities/CAP-315.md#decided)).
+object reference (mbse-basis [CAP-315: every read within a transaction or through a follow](mbse:mbse-basis/docs/capabilities/CAP-315.md#decided)).
 """
 
 from typing import Any

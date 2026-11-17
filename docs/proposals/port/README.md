@@ -390,11 +390,11 @@ the Python corpus' 1,181 nodes, about 0.15 s.
 **The corpora as frames**, as the user decided (2026-11-16): "transaction is one representation but may be difficult
 to compare. Frame I think already has equality and comparison"; then, shown the frame measured, "yes". A tree of owned
 objects is not carried by a `Reachable` transaction, which writes its root and the counted objects it reaches and
-refers to every other object by its path; a snapshot carries it with every schema of the store (274 KB for a
+refers to every other object by its object reference; a snapshot carries it with every schema of the store (274 KB for a
 two-statement program). The transaction a parse gives carries it too (180 KB for the Python corpus, `Plain.ToPlain
 (store).Transaction`), but compares only as text. So each corpus file is the frame that transaction gives back, as a
 `References.OfFrame` (`References.of(store, frame)`) written by `Plain.ToPlain(store).Value`: each statement's
-reference, whose path is its place in the tree, in `binds`, and its properties, its terms among them, in `assigns`.
+object reference, which names its place in the tree, in `binds`, and its properties, its terms among them, in `assigns`.
 Measured on 0.27 for the Python corpus: 146 KB; byte-identical when parsed in two stores; equal under `Comparison`
 once both are read into one store (a store's own schema objects make two stores' values incomparable); equal and
 byte-identical where only the source's layout differs; incomparable, and differing, where a value does. A frame
@@ -409,8 +409,8 @@ and mbse-schemas, its cost to the port, and an additive fix.
 **Decided** by the user (2026-11-16), on the three questions as posed:
 
 1. **A statement's property holds the term**, a nested value (`If.test: Expressions.Python.Python3.Term`), owned with its
-   statement and reached by its path: "yes that is the obvs way". The holders (`Expressions.Python.Python3.Expression`),
-   counted objects with no path or reference under 0.27, stay for a constraint's root. Asked as (a) a nested value, or
+   statement and reached through its statement's object reference: "yes that is the obvs way". The holders (`Expressions.Python.Python3.Expression`),
+   counted objects with no object reference under 0.27, stay for a constraint's root. Asked as (a) a nested value, or
    (b) a holder per expression related to its statement.
 2. **A singleton `Programs.Framework.Workspace` owns the files**, keyed by path: "sure that works".
 3. **mbse-expressions moves to 0.27** by the session that built CAP-315 stage 2, after the CAP-316 re-pin of
