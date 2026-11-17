@@ -402,6 +402,10 @@ witnesses a program and does not rebuild it: a program is rebuilt by parsing its
 a value of any schema, which names its schema, so the statement kinds' lists are named containers
 (`Programs.Python3.Terms`, ...).
 
+**What the port needs of its siblings** is [a proposal of its own, parked](../sibling-gaps/README.md) until the
+siblings are stable enough for the port to proceed, as the user decided: each gap the port found in mbse-expressions
+and mbse-schemas, its cost to the port, and an additive fix.
+
 **Decided** by the user (2026-11-16), on the three questions as posed:
 
 1. **A statement's property holds the term**, a nested value (`If.test: Expressions.Python.Python3.Term`), owned with its
