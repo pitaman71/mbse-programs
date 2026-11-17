@@ -10,9 +10,9 @@ workspace's `files` by `path` and writes its tree, the module's `body`, as one v
 `Programs.Python3.Statement`, holding its properties, its line and the statements of its blocks, nested (stage 3's
 design, "the whole tree as values"). Its frame binds the module, and assigns it its tree.
 
-As the port decided ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md#stage-2-python3-the-design-for-review-2026-11-16)),
-statements are `Programs.Python3`'s kinds, owned reference objects; expressions are mbse-expressions' `Python3` terms,
-nested values, written here from tree-sitter's tree with their concrete syntax as far as the dialect keeps it:
+As the port decided ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)),
+the whole tree is values: statements are `Programs.Python3`'s kinds, value objects nested in the module's `body`;
+expressions are mbse-expressions' `Python3` terms, nested values too, written here from tree-sitter's tree with their concrete syntax as far as the dialect keeps it:
 parentheses written in the source (`parenthesized`), a literal's spelling (`text`, `prefix`, `quote`, `base`,
 `separators`), adjacent strings (`concatenatedstring`), and an f-string's or a t-string's text and fields as written.
 Annotations, return types, type aliases' values and type parameters are `Python Types` terms; a case's pattern a

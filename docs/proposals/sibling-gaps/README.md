@@ -61,17 +61,21 @@ CPython `ast` without them.
    `Definitions` and `Check` take a module's visitor within the caller's transaction (`print_file`, `define_file`,
    `check_file`, `validate_file`), or the store and a path and open their own, called with none open. Nothing is asked of
    mbse-schemas.
-10. **No public way to extend an object reference by an owned entry.** `Definitions` builds a statement's reference
+10. **No public way to extend an object reference by an owned entry.** No longer met here: as the whole tree is values
+   ([Stage 3: the whole tree as values](../port/README.md#stage-3-the-whole-tree-as-values)), a statement has no object
+   reference, and an anchor is its place in its module's value alone, which `Definitions` makes without mbse-schemas.
+   As it stood: `Definitions` built a statement's reference
    from its module's and each parent entry's keys by writing the plain form by hand, guarded by P3DEF-07, which
-   compares it with `References.of` for every statement of the conformance source.
+   compared it with `References.of` for every statement of the conformance source.
    - Proposed: a reference of an entry's owned object given its owner's reference and its keys.
    - Since then, the user decided that a path is internal to an object reference and that no API takes or returns a
      bare path (mbse-basis [CAP-132](../../../../mbse-basis/docs/capabilities/CAP-132.md)), so the plain form
      `Definitions` writes is mbse-schemas' internal, and breaks if it changes: this is a dependency on internals until
      the proposed API exists.
-11. **Executing a parse's transaction costs about 6.5 ms a statement** (the Python conformance source, 151 statements,
-    about 1.0 s), nearly all of it in the transaction's execution: fine for a file, slow for a suite that parses
-    hundreds. Reported to the session that owns the store (2026-11-16); no fix proposed here.
+11. **Executing a parse's transaction costs about 4.6 ms a statement** (the Python conformance source, 151 statements,
+    about 0.7 s, written as one nested value; 6.5 ms as owned statements), nearly all of it in the transaction's
+    execution, against 15 ms to read the source: fine for a file, slow for a suite that parses hundreds. Reported to the
+    session that owns the store; no fix proposed here.
 
 ## When unparked
 
