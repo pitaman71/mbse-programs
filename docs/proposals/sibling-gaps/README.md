@@ -73,6 +73,15 @@ CPython `ast` without them.
     about 1.0 s), nearly all of it in the transaction's execution: fine for a file, slow for a suite that parses
     hundreds. Reported to the session that owns the store (2026-11-16); no fix proposed here.
 
+12. **A query's frame stream cannot be consumed within the transaction that makes it**, found by mbse-transforms
+    ([its first-release proposal](https://github.com/pitaman71/mbse-transforms/blob/main/docs/proposals/first-release/README.md#gaps-found),
+    Gaps found, 1). A query's result is a frame stream, and `Visitors.OfPattern` is a frame's own protocol, its symbols
+    members, each the visitor of the object it binds; but `store.transaction` gives the stream back after its
+    transaction ends, each frame holding object references, so a caller that needs the frames' objects resolves the
+    references itself, through what CAP-132 makes internal (10, above, has the same root).
+    - Proposed: a frame stream consumed within its transaction, each frame given as a `Visitors.OfPattern`; nothing then
+      resolves a reference.
+
 ## When unparked
 
 The user decides which to take, and in which order. Each lands in its own repository, additively, and the port picks it
