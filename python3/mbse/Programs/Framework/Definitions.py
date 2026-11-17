@@ -154,7 +154,9 @@ class Scope:
 
 class Program:
     """What a set of trees declares: the global scope, every entity, and for each syntax node the entity it declares and
-    the scope it is in."""
+    the scope it is in. A node is found by its `key`: its identity, for a syntax node held in memory; a language whose
+    nodes are places in a store, which a program holds as values (Python3's `Definitions.Anchor`), keys them by value,
+    overriding it *(agent)*."""
 
     def __init__(self, root: Scope):
         self.root = root
@@ -163,6 +165,10 @@ class Program:
         self._declares: dict[int, Entity] = {}
         self._scopes: dict[int, Scope] = {}
 
+    def key(self, node: Any) -> Any:
+        """What finds `node` in the program's maps: its identity."""
+        return id(node)
+
     def add(self, entity: Entity) -> Entity:
         """Records a new entity."""
         self._entities.append(entity)
@@ -170,11 +176,11 @@ class Program:
 
     def declares(self, node: Any, entity: Entity) -> None:
         """Records that `node` declares `entity`."""
-        self._declares[id(node)] = entity
+        self._declares[self.key(node)] = entity
 
     def located(self, node: Any, scope: Scope) -> None:
         """Records that `node` is in `scope`."""
-        self._scopes.setdefault(id(node), scope)
+        self._scopes.setdefault(self.key(node), scope)
 
     def entities(self) -> Iterator[Entity]:
         """Every entity, in the order the program first declares them."""
@@ -182,11 +188,11 @@ class Program:
 
     def entity_of(self, node: Any) -> Entity | None:
         """The entity `node` declares or defines; None if it declares none."""
-        return self._declares.get(id(node))
+        return self._declares.get(self.key(node))
 
     def scope_of(self, node: Any) -> Scope | None:
         """The innermost scope `node` is in; None for a syntax node outside the program's trees."""
-        return self._scopes.get(id(node))
+        return self._scopes.get(self.key(node))
 
     def lookup(self, name: str, at: Any = None) -> list[Entity]:
         """The entities a name written as text names, such as 'std::vector' or '::main', where `at` is (by default,
