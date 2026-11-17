@@ -1,15 +1,15 @@
 """Print: a Python 3 module, as the store holds it, printed as Python source text in one fixed layout.
 
-A module is a `Programs.Python3.Module` that `Programs.Framework.TheWorkspace` owns by its path; its statements are
-owned through `Programs.Framework.HasParent`, keyed by the parent's property that holds each (`body`, `orelse`,
-`finalbody`, `handlers`, `cases`) and its index there, and are printed in that order (`Statements`). The printer reads
-the tree and writes nothing:
+A module is a `Programs.Python3.Module` that `Programs.Framework.TheWorkspace` owns by its path; it holds its tree as
+one value, its `body`, each statement holding the statements of its blocks and its clauses as its properties (`body`,
+`orelse`, `finalbody`, `handlers`, `cases`), printed in their order (`Statements`). The printer reads the tree and
+writes nothing:
 
 - `print_module(store, path)`: the text of the module at `path`, read within the transaction open on `store`, or,
   where none is, within one of its own; LookupError where the workspace holds no file at `path`.
 - `print_file(module)`: the text of a module, given its visitor, within the transaction that made it.
-- `print_statement(statement)`: the lines of one statement, its children's among them, joined by newlines without a
-  final one, given its visitor, within the transaction that made it.
+- `print_statement(statement)`: the lines of one statement, its blocks' among them, joined by newlines without a
+  final one, given its record (`Terms.kind_of`'s, of the union that holds it), within the transaction that read it.
 
 The layout is the 0.3 printer's (`Python/_Printer.py`): four spaces a level, one statement a line; `elif` for an
 `orelse` that is one `If`; as PEP 8 has it, two blank lines around top-level function and class definitions and one
@@ -37,7 +37,8 @@ Decided by the agent where the port left it open, each *(agent)*:
   own, so it is called with none open, as transactions do not nest.
 - **An `except` clause's tuple is parenthesized** (`except (A, B):`), which every Python 3 parses; Python 3.14's bare
   form is not written, since the tree, as `ast` has it, does not record which was written.
-- **A clause's kind is its parent's**: an `except` clause is `except*` where its `try` is a `TryStar`.
+- **A clause's kind is its parent's**: an `except` clause is `except*` where its `try` is a `TryStar`; printed alone,
+  a value that knows no parent, it is `except`.
 - **A parameter's default** is written `x=1`, or `x: int = 1` where it has an annotation, as PEP 8 has it; a class
   without bases or keywords is written without parentheses (`class C:`); an alias is written as its name is stored,
   `*` among them.
@@ -92,19 +93,10 @@ def _kind(node: Any) -> str:
     return node.as_schema().name.rsplit(".", 1)[-1]
 
 
-def _children(node: Any, adjacency: str = "children") -> dict[str, list[Any]]:
-    """A statement's children (a module's, by its `body`), by the property that holds them, each in index order."""
-    entries = sorted(((str(e.property.get()), int(e.index.get()), e.child) for e in getattr(node, adjacency)),
-                     key=lambda entry: entry[:2])
-    found: dict[str, list[Any]] = {}
-    for prop, _, child in entries:
-        found.setdefault(prop, []).append(child)
-    return found
-
-
-def _parent(node: Any) -> Any:
-    """A statement's parent: the statement or module that owns it."""
-    return next(iter(node.parent)).parent
+def _statements(node: Any, name: str) -> list[Any]:
+    """The statements, clauses or errors a node's property holds (a module's or a statement's `body`, an `if`'s
+    `orelse`, a `try`'s `handlers`), in order, each the record of its kind, as its union tags it."""
+    return [Terms.kind_of(element)[1] for element in _many(getattr(node, name))]
 
 
 # --- Expressions ---
@@ -251,7 +243,7 @@ def _suite(header: str, body: list[Any], level: int) -> list[str]:
 
 def _error(node: Any, level: int) -> list[str]:
     """Invalid syntax where a statement stands, `Programs.Framework.Error`: its text as written, its first line at
-    `level` and the others as the source indented them; nothing where it has none. Its children, recovered within it,
+    `level` and the others as the source indented them; nothing where it has none. Its `body`, recovered within it,
     are within its text, and are not printed again."""
     text = node.text.get() or ""
     return [_INDENT * level + line if i == 0 else line for i, line in enumerate(text.split("\n"))] if text else []
@@ -314,8 +306,8 @@ _SIMPLE: dict[str, Callable[[Any], str]] = {
 }
 
 
-def _else(children: dict[str, list[Any]], level: int) -> list[str]:
-    orelse = children.get("orelse", [])
+def _else(node: Any, level: int) -> list[str]:
+    orelse = _statements(node, "orelse")
     return _suite("else", orelse, level) if orelse else []
 
 
@@ -325,70 +317,66 @@ def _orelse(orelse: list[Any], level: int) -> list[str]:
         return []
     if len(orelse) == 1 and _kind(orelse[0]) == "If":
         elif_ = orelse[0]
-        children = _children(elif_)
-        return [*_suite(f"elif {_bare(_held(elif_.test), named=True)}", children.get("body", []), level),
-                *_orelse(children.get("orelse", []), level)]
+        return [*_suite(f"elif {_bare(_held(elif_.test), named=True)}", _statements(elif_, "body"), level),
+                *_orelse(_statements(elif_, "orelse"), level)]
     return _suite("else", orelse, level)
 
 
 def _if(node: Any, level: int) -> list[str]:
-    children = _children(node)
-    return [*_suite(f"if {_bare(_held(node.test), named=True)}", children.get("body", []), level),
-            *_orelse(children.get("orelse", []), level)]
+    return [*_suite(f"if {_bare(_held(node.test), named=True)}", _statements(node, "body"), level),
+            *_orelse(_statements(node, "orelse"), level)]
 
 
 def _while(node: Any, level: int) -> list[str]:
-    children = _children(node)
-    return [*_suite(f"while {_bare(_held(node.test), named=True)}", children.get("body", []), level),
-            *_else(children, level)]
+    return [*_suite(f"while {_bare(_held(node.test), named=True)}", _statements(node, "body"), level),
+            *_else(node, level)]
 
 
 def _for(node: Any, level: int) -> list[str]:
     keyword = "async for" if _kind(node) == "AsyncFor" else "for"
     target, iterable = _bare(_held(node.target), tuples=True), _bare(_held(node.iter), tuples=True)
     header = " ".join(part for part in (keyword, target, "in", iterable) if part)  # a missing target prints nothing
-    children = _children(node)
-    return [*_suite(header, children.get("body", []), level), *_else(children, level)]
+    return [*_suite(header, _statements(node, "body"), level), *_else(node, level)]
 
 
 def _try(node: Any, level: int) -> list[str]:
-    children = _children(node)
-    lines = _suite("try", children.get("body", []), level)
-    for handler in children.get("handlers", []):
-        lines += _handler(handler, level, star=_kind(node) == "TryStar")
-    lines += _else(children, level)
-    if children.get("finalbody"):
-        lines += _suite("finally", children["finalbody"], level)
+    lines = _suite("try", _statements(node, "body"), level)
+    for handler in _statements(node, "handlers"):
+        lines += _handler(handler, level, star=_kind(node) == "TryStar") if _kind(handler) != "Error" else \
+            _error(handler, level)
+    lines += _else(node, level)
+    finalbody = _statements(node, "finalbody")
+    if finalbody:
+        lines += _suite("finally", finalbody, level)
     return lines
 
 
-def _handler(node: Any, level: int, star: bool | None = None) -> list[str]:
-    if star is None:
-        star = _kind(_parent(node)) == "TryStar"
+def _handler(node: Any, level: int, star: bool) -> list[str]:
+    """An `except` clause, `except*` where its `try` is a `TryStar`."""
     header = ("except*" if star else "except") + _optional(node, "type", " ")
     name = node.name.get()
     if name is not None:
         header += f" as {name}"
-    return _suite(header, _children(node).get("body", []), level)
+    return _suite(header, _statements(node, "body"), level)
 
 
 def _with(node: Any, level: int) -> list[str]:
     keyword = "async with" if _kind(node) == "AsyncWith" else "with"
     items = ", ".join(_with_item(item) for item in _many(node.items))
-    return _suite(f"{keyword} {items}", _children(node).get("body", []), level)
+    return _suite(f"{keyword} {items}", _statements(node, "body"), level)
 
 
 def _match(node: Any, level: int) -> list[str]:
     lines = [f"{_INDENT * level}match {_bare(_held(node.subject), tuples=True, named=True)}:"]
-    for case in _children(node).get("cases", []):
-        lines += _case(case, level + 1)
+    for case in _statements(node, "cases"):
+        lines += _statement(case, level + 1)
     return lines
 
 
 def _case(node: Any, level: int) -> list[str]:
     guard = _held(node.guard)
     header = f"case {_text(_held(node.pattern))}" + ("" if guard is None else f" if {_bare(guard, named=True)}")
-    return _suite(header, _children(node).get("body", []), level)
+    return _suite(header, _statements(node, "body"), level)
 
 
 def _decorators(node: Any, level: int) -> list[str]:
@@ -398,18 +386,18 @@ def _decorators(node: Any, level: int) -> list[str]:
 def _function(node: Any, level: int) -> list[str]:
     keyword = "async def" if _kind(node) == "AsyncFunctionDef" else "def"
     header = f"{keyword} {node.name.get()}{_type_params(node)}({_arguments(node)}){_optional(node, 'returns', ' -> ')}"
-    return [*_decorators(node, level), *_suite(header, _children(node).get("body", []), level)]
+    return [*_decorators(node, level), *_suite(header, _statements(node, "body"), level)]
 
 
 def _class(node: Any, level: int) -> list[str]:
     arguments = [*(_text(base) for base in _many(node.bases)), *(_keyword(k) for k in _many(node.keywords))]
     header = f"class {node.name.get()}{_type_params(node)}" + (f"({', '.join(arguments)})" if arguments else "")
-    return [*_decorators(node, level), *_suite(header, _children(node).get("body", []), level)]
+    return [*_decorators(node, level), *_suite(header, _statements(node, "body"), level)]
 
 
 _COMPOUND: dict[str, Callable[[Any, int], list[str]]] = {
     "If": _if, "While": _while, "For": _for, "AsyncFor": _for, "Try": _try, "TryStar": _try,
-    "ExceptHandler": _handler, "With": _with, "AsyncWith": _with, "Match": _match, "MatchCase": _case,
+    "ExceptHandler": lambda node, level: _handler(node, level, False), "With": _with, "AsyncWith": _with, "Match": _match, "MatchCase": _case,
     "FunctionDef": _function, "AsyncFunctionDef": _function, "ClassDef": _class, "Error": _error,
 }
 
@@ -421,8 +409,8 @@ KINDS: tuple[str, ...] = (*_SIMPLE, *_COMPOUND)
 # --- Entry points ---
 
 def print_statement(statement: Any) -> str:
-    """A statement's lines, its children's among them, joined by newlines, without a final one: its visitor, read
-    within the transaction that made it."""
+    """A statement's lines, its blocks' among them, joined by newlines, without a final one: its record, read within
+    the transaction that read it."""
     return "\n".join(_statement(statement, 0))
 
 
@@ -431,7 +419,7 @@ def print_file(module: Any) -> str:
     `Programs.Python3.Module`, read within the transaction that made it."""
     if module.as_schema().name != f"{LANGUAGE}.Module":
         raise TypeError(f"not a {LANGUAGE}.Module: {module.as_schema().name!r}")
-    return "".join(line + "\n" for line in _block(_children(module, "body").get("body", []), 0, top=True))
+    return "".join(line + "\n" for line in _block(_statements(module, "body"), 0, top=True))
 
 
 def print_module(store: Any, path: str) -> str:

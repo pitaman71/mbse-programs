@@ -10,14 +10,13 @@ a use of a name is anchored on its statement and the term's path, since a term i
   [CAP-315: every read within a transaction or through a follow](mbse:mbse-basis/docs/capabilities/CAP-315.md#decided)).
 - `referents(program, at)`: the entities the name at `at` (an `Anchor`, or its text) refers to, looked up from where
   it is.
-- `Anchor`: a place in the module. Its `node` is the `References.OfObject` of its statement or clause (of the module,
-  for the module itself), its `statement` that node's path below the module, rendered, its `property` the
-  statement's property that holds the place (none, for the statement itself), and its `term` the place's path within
-  that property's value: the names of the properties and the indices of the containers stepped through, terms,
-  helpers (a call's `keywords`, a function's `args`) and value objects (an import's aliases) alike. `str(anchor)` is
-  its text, which identifies it within its module: `body[1].body[0]:value.args[0]` is the first argument of the call
-  that is the value of the first statement of the body of the module's second statement; `body[0]` the statement
-  itself; `<module>` the module.
+- `Anchor`: a place in the module, as the whole tree is values (stage 3's design): its `statement` the path of its
+  statement or clause below the module, rendered, its `property` the statement's property that holds the place (none,
+  for the statement itself), and its `term` the place's path within that property's value: the names of the properties
+  and the indices of the containers stepped through, terms, helpers (a call's `keywords`, a function's `args`) and
+  value objects (an import's aliases) alike. `str(anchor)` is its text, which identifies it within its module:
+  `body[1].body[0]:value.args[0]` is the first argument of the call that is the value of the first statement of the
+  body of the module's second statement; `body[0]` the statement itself; `<module>` the module.
 - `Program`, a `Framework.Definitions.Program` whose qualified names join with `.` (`Shape.area`), keyed by anchors'
   text: `entity_of(at)`, `scope_of(at)` and `lookup(name, at)` each take an `Anchor` or its text; `anchor(text)` gives
   the anchor of a place it located; `named(spelling)` gives, in source order, every place a name spelled so is
@@ -73,10 +72,6 @@ Decided by the agent where the port left it open, each *(agent)*:
   within a transaction of its own, so called with none open; `define_file(store, module)` reads a module's visitor
   within the caller's transaction, as the user decided that whether one is open is no flag on the store (mbse-basis
   CAP-315). A program is one module's, as Python's scopes are.
-- **An anchor's reference is made on demand**: `References.of` costs about a millisecond a statement, a third of
-  `define`'s time on the conformance source, so an anchor holds its statement's path, made from the module's reference
-  and the property and index of each `HasParent` entry down to it, and makes the `References.OfObject` from it, through
-  `Plain.FromPlain`, when `node` is first read (P3DEF-07 checks it against `References.of` for every statement).
 - **Invalid syntax binds what tree-sitter recovered within it**: a `Programs.Framework.Error` is located in the scope
   it stands in, and its children, the statements recovered within it, are defined in that scope as any statement is,
   so that a name an invalid statement's recovered body binds is found; its own text binds nothing. An `error` term
@@ -118,78 +113,35 @@ _RANKS: dict[str, dict[str, int]] = {}
 store."""
 
 
-class _Place:
-    """Where a statement, a clause or the module is, as its reference is made of: the module's path, written by
-    `References.of`, or its parent's place and the property and index there that hold it. Its reference is made on
-    demand, a value that outlives the transaction."""
-
-    __slots__ = ("store", "parent", "edge", "plain", "made")
-
-    def __init__(self, store: Any, parent: _Place | None = None, edge: tuple[str, int] | None = None,
-                 plain: Any = None):
-        self.store, self.parent, self.edge, self.plain, self.made = store, parent, edge, plain, None
-
-    def path(self) -> Any:
-        """Its path as `Plain.ToPlain` writes a `Paths.OfRoot`: its parent's, then the entry that holds it."""
-        if self.plain is None:
-            parent = self.parent
-            assert parent is not None and self.edge is not None
-            entry = {"i": "body" if parent.parent is None else "children", "o": "parent",
-                     "properties": {"property": self.edge[0], "index": self.edge[1]}, "next": {"target": {}}}
-            self.plain = _extend(parent.path(), {"entry": entry})
-        return self.plain
-
-    def reference(self) -> Any:
-        """Its `References.OfObject`."""
-        if self.made is None:
-            self.made = Plain.FromPlain(self.store)(self.store.registered("References.OfObject"), {"path": self.path()})
-        return self.made
-
-
-def _extend(path: Any, step: Any) -> Any:
-    """A path, written as `Plain.ToPlain` writes it, with `step` in place of its target."""
-    if "target" in path:
-        return step
-    if "entry" in path:
-        return {"entry": {**path["entry"], "next": _extend(path["entry"]["next"], step)}}
-    return {**path, "next": _extend(path["next"], step)}
-
-
 class Anchor:
-    """A place in a module: its statement's or clause's reference (`node`, a `References.OfObject`, made on demand),
-    that statement's path, rendered (`statement`), the statement's property holding the place (`property`, None for
-    the statement itself) and the place's path within that property's value (`term`, property names and container
-    indices). `order` sorts anchors in source order. Equal, and hashed, as its text, and equal to its text."""
+    """A place in a module: its statement's or clause's path from the module, rendered (`statement`), the statement's
+    property holding the place (`property`, None for the statement itself) and the place's path within that
+    property's value (`term`, property names and container indices). `order` sorts anchors in source order. Equal,
+    and hashed, as its text, and equal to its text."""
 
-    __slots__ = ("_place", "statement", "property", "term", "order", "_text")
+    __slots__ = ("statement", "property", "term", "order", "_text")
 
-    def __init__(self, place: _Place, statement: str, property: str | None = None, term: tuple[str | int, ...] = (),
+    def __init__(self, statement: str, property: str | None = None, term: tuple[str | int, ...] = (),
                  order: tuple[tuple[int, ...], ...] = ()):
-        self._place, self.statement, self.property, self.term, self.order = place, statement, property, term, order
+        self.statement, self.property, self.term, self.order = statement, property, term, order
         if property is None:
             self._text = statement or _MODULE
         else:
             self._text = f"{statement}:{property}" + "".join(
                 f"[{step}]" if isinstance(step, int) else f".{step}" for step in term)
 
-    @property
-    def node(self) -> Any:
-        """The `References.OfObject` of the statement or clause the place is in, or of the module."""
-        return self._place.reference()
-
     def child(self, property: str, index: int) -> Anchor:
         """The anchor of the statement or clause at `index` of this one's `property`."""
         statement = f"{self.statement}.{property}[{index}]" if self.statement else f"{property}[{index}]"
-        return Anchor(_Place(self._place.store, self._place, (property, index)), statement,
-                      order=(*self.order, (_CHILDREN[property], index)))
+        return Anchor(statement, order=(*self.order, (_CHILDREN[property], index)))
 
     def at(self, property: str, rank: int) -> Anchor:
         """The anchor of this statement's `property`, the `rank`th of its properties in source order."""
-        return Anchor(self._place, self.statement, property, (), (*self.order, (-1, rank)))
+        return Anchor(self.statement, property, (), (*self.order, (-1, rank)))
 
     def step(self, step: str | int, rank: int) -> Anchor:
         """The anchor of a place within this one: a property, the `rank`th in source order, or a container's index."""
-        return Anchor(self._place, self.statement, self.property, (*self.term, step),
+        return Anchor(self.statement, self.property, (*self.term, step),
                       (*self.order[:-1], (*self.order[-1], rank)))
 
     def __str__(self) -> str:
@@ -282,7 +234,7 @@ class _Definer:
 
     def __init__(self, program: Program):
         self.program = program
-        self.bodies: deque[tuple[Any, str, Scope, Anchor]] = deque()
+        self.bodies: deque[tuple[Any, Scope, Anchor]] = deque()
 
     # Scopes and bindings
 
@@ -434,24 +386,26 @@ class _Definer:
 
     # Statements
 
-    def children(self, node: Any, adjacency: str, scope: Scope, at: Anchor) -> None:
-        """A statement's statements and clauses (a module's, by its `body`), in source order."""
-        entries = sorted(((str(e.property.get()), int(e.index.get()), e.child) for e in getattr(node, adjacency)),
-                         key=lambda entry: (_CHILDREN[entry[0]], entry[1]))
-        for prop, index, child in entries:
-            self.statement(child, scope, at.child(prop, index))
+    def children(self, node: Any, scope: Scope, at: Anchor) -> None:
+        """The statements, clauses and errors a module, a statement, a clause or an error holds, in source order."""
+        held = Objects.properties(node)
+        for prop in sorted(_CHILDREN, key=_CHILDREN.__getitem__):
+            if prop in held:
+                for index, element in enumerate(held[prop].values):
+                    self.statement(Terms.kind_of(element)[1], scope, at.child(prop, index))
 
     def statement(self, node: Any, scope: Scope, at: Anchor) -> None:
         self.program.located(at, scope)
         kind = node.as_schema().name.rsplit(".", 1)[-1]
-        props = Objects.properties(node)
+        props = {name: value for name, value in Objects.properties(node).items()
+                 if name != "line" and name not in _CHILDREN}
         handler = self.STATEMENTS.get(kind)
         if handler is not None:
             handler(self, node, props, scope, at)
             return
         for name, value in props.items():
             self.visit(value, scope, at.at(name, _rank(node, name)))
-        self.children(node, "children", scope, at)
+        self.children(node, scope, at)
 
     def prop(self, node: Any, props: dict[str, Any], name: str, scope: Scope, at: Anchor) -> None:
         """A statement's property, evaluated in `scope`, where it is set."""
@@ -478,7 +432,7 @@ class _Definer:
     def for_(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         self.prop(node, props, "iter", scope, at)
         self.targets(node, props, "target", scope, at)
-        self.children(node, "children", scope, at)
+        self.children(node, scope, at)
 
     def with_(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         items = at.at("items", _rank(node, "items"))
@@ -489,13 +443,13 @@ class _Definer:
             self.visit(fields["context_expr"], scope, each.step("context_expr", _rank(item, "context_expr")))
             if "optional_vars" in fields:
                 self.target(fields["optional_vars"], scope, each.step("optional_vars", _rank(item, "optional_vars")))
-        self.children(node, "children", scope, at)
+        self.children(node, scope, at)
 
     def handler(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         self.prop(node, props, "type", scope, at)
         if "name" in props:
             self.bind(scope, props["name"], at.at("name", _rank(node, "name")), "variable")
-        self.children(node, "children", scope, at)
+        self.children(node, scope, at)
 
     def import_(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         names = at.at("names", _rank(node, "names"))
@@ -548,7 +502,7 @@ class _Definer:
         entity.scope = inner
         self.arguments(props["args"], at.at("args", _rank(node, "args")), scope, annotations, inner)
         self.prop(node, props, "returns", annotations, at)
-        self.bodies.append((node, "children", inner, at))
+        self.bodies.append((node, inner, at))
 
     def class_(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         self.prop(node, props, "decorator_list", scope, at)
@@ -558,7 +512,7 @@ class _Definer:
         self.prop(node, props, "bases", annotations, at)
         self.prop(node, props, "keywords", annotations, at)
         entity.scope = Scope("class", entity, self.enclosing(annotations), at)
-        self.bodies.append((node, "children", entity.scope, at))
+        self.bodies.append((node, entity.scope, at))
 
     def type_alias(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         name = at.at("name", _rank(node, "name"))
@@ -570,7 +524,7 @@ class _Definer:
     def match_case(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         self.prop(node, props, "pattern", scope, at)
         self.prop(node, props, "guard", scope, at)
-        self.children(node, "children", scope, at)
+        self.children(node, scope, at)
 
     STATEMENTS: dict[str, Any] = {
         "Assign": assign, "AugAssign": assign, "AnnAssign": assign, "Delete": assign, "For": for_, "AsyncFor": for_,
@@ -582,10 +536,10 @@ class _Definer:
     def define(self, module: Any) -> Program:
         program = self.program
         program.located(program.root.node, program.root)
-        self.bodies.append((module, "body", program.root, program.root.node))
+        self.bodies.append((module, program.root, program.root.node))
         while self.bodies:
-            node, adjacency, scope, at = self.bodies.popleft()
-            self.children(node, adjacency, scope, at)
+            node, scope, at = self.bodies.popleft()
+            self.children(node, scope, at)
         for entity in program.entities():
             entity.declarations.sort(key=lambda anchor: anchor.order)
             entity.definition = entity.declarations[0] if entity.declarations else None
@@ -605,9 +559,7 @@ def define_file(store: Any, module: Any) -> Program:
     reference = References.of(store, module)
     plain = Plain.ToPlain(store)(reference.as_schema(), reference)["path"]
     path = plain["next"]["entry"]["properties"]["path"]  # its key in the workspace's files
-    place = _Place(store, plain=plain)
-    place.made = reference
-    program = Program(path, Anchor(place, ""))
+    program = Program(path, Anchor(""))
     return _Definer(program).define(module)
 
 
