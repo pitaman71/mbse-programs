@@ -1,9 +1,12 @@
 """Python 3 as a language of mbse-programs: its statement kinds (`Statements`), refining `Programs.Framework.Statement`,
 whose expressions are mbse-expressions' `Python3` terms; source read into a store (`Parse`), printed from it
-(`Print`), and the names it defines resolved (`Definitions`).
+(`Print`), the names it defines resolved (`Definitions`), and
+checked against a version of Python (`Check`, over the standards `Standards` records).
 
 `INSTALLS` lists, in the order they run, the installs a store needs to hold Python 3 programs, each in a transaction
-of its own; `store()` gives a new store with each run."""
+of its own; `store()` gives a new store with each run. Checking a version needs the standards as data too, which
+`Standards.prepare(store)` writes: about 4.5 s, mostly mbse-expressions' own standards, so `store()` leaves it to the
+caller that checks *(agent)*."""
 
 from typing import Any
 
@@ -16,7 +19,7 @@ from mbse.Expressions.Python import Types as PythonTypes
 from mbse.Schemas.Framework import Builders
 
 from ..Framework import Model
-from . import Definitions, Parse, Print, Statements
+from . import Check, Definitions, Parse, Print, Standards, Statements
 from .Statements import install
 
 INSTALLS = (Expressions.install, ISOIEC11404.install, IEEE754.install, PythonExpressions.install, PythonTypes.install,
@@ -31,4 +34,4 @@ def store() -> Any:
     return made
 
 
-__all__ = ["INSTALLS", "Definitions", "Parse", "Print", "Statements", "install", "store"]
+__all__ = ["INSTALLS", "Check", "Definitions", "Parse", "Print", "Standards", "Statements", "install", "store"]
