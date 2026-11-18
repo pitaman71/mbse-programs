@@ -73,6 +73,7 @@ allows; what the pre-pass rewrites is no longer invalid, and what remains after 
 
 from __future__ import annotations
 
+import bisect
 import math
 import re
 from collections.abc import Callable
@@ -105,6 +106,12 @@ _LOOSER_THAN_AS = {"==", "!=", "===", "!==", "&", "^", "|", "&&", "||", "??"}
 _BINDS = {"??": 1, "||": 1, "&&": 2, "|": 3, "^": 4, "&": 5, "==": 6, "!=": 6, "===": 6, "!==": 6, "<": 7, "<=": 7,
           ">": 7, ">=": 7, "in": 7, "instanceof": 7, "<<": 8, ">>": 8, ">>>": 8, "+": 9, "-": 9, "*": 10, "/": 10,
           "%": 10, "**": 11}
+# The declarations `export default` takes.
+_DEFAULTS = ("function_declaration", "generator_function_declaration", "function_signature", "class_declaration",
+             "abstract_class_declaration", "interface_declaration")
+# The members a class's `static` may modify.
+_MEMBERS = ("public_field_definition", "method_definition", "method_signature", "abstract_method_signature",
+            "index_signature")
 # The terms `TypeScript Patterns` lists, which an assignment's target may be.
 _PATTERNS = {"arraypattern", "objectpattern", "assignmentpattern", "restelement", "identifier", "memberexpression",
              "parenthesizedexpression", "tsasexpression", "tssatisfiesexpression", "tstypeassertion",
@@ -145,22 +152,31 @@ class _Source:
         return self.text.count("\n", 0, offset) + 1
 
 
-# --- The pre-pass: what tree-sitter-typescript cannot parse ---
+# --- The pre-pass: what tree-sitter-typescript cannot parse, or misreads ---
 
 
 class _Prepared:
     """What the pre-pass rewrote, by character offset: `accessor`s (by the offset of what follows), `in` and `out`
-    annotations (by the type parameter's name), `import defer` and `export type *` (by the statement), names
-    tree-sitter-typescript reads as keywords, `using` in `for (... of ...)`, and `import(...)` in types."""
+    annotations (by the type parameter's name), `import defer` and `export type *` (by the statement), `import.defer`
+    (by the call), names tree-sitter-typescript reads as keywords, `using` declarations it cannot parse, `import(...)`
+    in types, the attributes of an `export ... from`, a class's static index signatures, the type arguments of a
+    tagged template and of an optional call, decorators' parenthesized expressions, and comments that end lines."""
 
     def __init__(self) -> None:
         self.accessors: set[int] = set()
         self.variance: dict[int, set[str]] = {}
-        self.deferred: set[int] = set()
+        self.deferred: set[int] = set()  # `import defer ...` by the statement, `import.defer(...)` by the call
         self.type_exports: set[int] = set()
         self.imports: dict[int, int] = {}  # a placeholder's offset -> the offset of its `(`
         self.names: dict[int, str] = {}  # names tree-sitter-typescript reads as keywords, by offset
-        self.usings: dict[int, str] = {}  # `using` or `await using` in a `for (... of ...)`, by the offset of `const`
+        self.usings: dict[int, str] = {}  # `using` or `await using` rewritten `const`, by the offset of `const`
+        self.attributes: dict[int, tuple[int, int]] = {}  # by the `export`: where its source starts, its `}` ends
+        self.statics: set[int] = set()  # a static index signature, by where it starts once `static` is gone
+        self.arguments: dict[int, tuple[int, str]] = {}  # type arguments by the template or `?.` after them: their
+        # offset and text
+        self.decorators: set[int] = set()  # a decorator's parenthesized expression, by the offset of its `(`
+        self.comments: dict[int, int] = {}  # a comment, the only line end between two tokens, by where it starts: where
+        # it ends
 
 
 def _tokens(source: _Source, root: _TS) -> list[tuple[int, int, str]]:
@@ -179,30 +195,132 @@ def _tokens(source: _Source, root: _TS) -> list[tuple[int, int, str]]:
     return out
 
 
+def _ends_line(text: str) -> bool:
+    """Whether `text`, between two tokens, ends a line: it holds a line terminator, in a comment or not."""
+    return any(c in text for c in "\n\r\u2028\u2029")
+
+
 def _starts_name(word: str) -> bool:
     """Whether a token starts as a name does: with a letter, `_` or `$`."""
     return word != "" and (word[0].isalpha() or word[0] in ("_", "$"))
 
 
+def _closing(tokens: list[tuple[int, int, str]], i: int) -> int:
+    """The index of the bracket that closes the one at `tokens[i]`, or of the last token if none does."""
+    depth = 0
+    for j in range(i, len(tokens)):
+        if tokens[j][2] in ("(", "[", "{"):
+            depth += 1
+        elif tokens[j][2] in (")", "]", "}"):
+            depth -= 1
+            if depth == 0:
+                return j
+    return len(tokens) - 1
+
+
+# The line terminators tree-sitter-typescript reads as none, but in a `//` comment, which they end.
+_TERMINATORS = re.compile("\r(?!\n)|[\u2028\u2029]")
+# A block comment.
+_BLOCK = re.compile(r"/\*[\s\S]*?\*/")
+# Where a statement may start, by the token before it.
+_STARTS = ("", ";", "{", "}", ":")
+# Tokens no type arguments hold, which end the search for those of a tagged template or an optional call.
+_UNTYPED = (";", "{", "}", "=", "==", "===", "!=", "!==", "&&", "||", "??")
+# The tokens of an import's or an export's braces, before them the keyword.
+_SPECIFYING = (",", "{", "}", "*", "as", "type")
+
+
+def _specifier(tokens: list[tuple[int, int, str]], i: int) -> bool:
+    """Whether `tokens[i]` starts a specifier within the braces of an import or an export."""
+    if i == 0 or tokens[i - 1][2] not in ("{", ","):
+        return False
+    j = i - 1
+    while j > 0 and tokens[j][2] != "{":
+        j -= 1
+    head = tokens[j - 1][2] if j > 0 else ""
+    if head == "type" and j > 1:
+        head = tokens[j - 2][2]
+    elif head == "," and j > 2:  # `import d, { ... }`
+        head = "import" if tokens[j - 3][2] == "import" else ""
+    return head in ("import", "export")
+
+
 def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
-    """The text with the constructs tree-sitter-typescript cannot parse removed, and what was removed."""
+    """The text with the constructs tree-sitter-typescript cannot parse, or misreads, rewritten, and what was
+    rewritten. What it misreads is rewritten wherever it stands; what it cannot parse only where tree-sitter found an
+    error."""
     found = _Prepared()
     chars = list(text)
+    broken = root.has_error
 
     def blank(start: int, end: int) -> None:
         for p in range(start, end):
             chars[p] = " "
 
+    def rename(start: int, word: str) -> None:
+        chars[start] = "_"  # a name, as long, whose spelling the converter puts back
+        found.names[start] = word
+
     tokens = _tokens(source, root)
+    starts = [t[0] for t in tokens]
+    for match in _TERMINATORS.finditer(text):
+        k = bisect.bisect_right(starts, match.start()) - 1
+        if k < 0 or match.start() >= tokens[k][1] or tokens[k][2].startswith("#!"):
+            chars[match.start()] = "\n"  # between tokens, or ending a hashbang, a line terminator tree-sitter-typescript
+            # reads as none: a `\r` alone, U+2028 or U+2029
+
+    for match in _BLOCK.finditer(text):
+        k = bisect.bisect_right(starts, match.start()) - 1
+        if k < 0 or k + 1 == len(tokens) or match.start() < tokens[k][1] or not _ends_line(match.group()):
+            continue
+        rest = _BLOCK.sub("", text[tokens[k][1]:tokens[k + 1][0]])
+        if not _ends_line(rest) and "//" not in rest:
+            # a comment that is the only line end between two tokens, which tree-sitter-typescript reads as none:
+            # blanked but for its line ends, and listed again by the converter
+            for p in range(match.start(), match.end()):
+                chars[p] = "\n" if _ends_line(text[p]) else " "
+            found.comments[match.start()] = match.end()
+
+    def newline(i: int) -> bool:
+        """Whether a line ends between `tokens[i]` and the token after it."""
+        return i + 1 < len(tokens) and _ends_line(text[tokens[i][1]:tokens[i + 1][0]])
+
     for i, (start, end, word) in enumerate(tokens):
         before = tokens[i - 1][2] if i > 0 else ""
         after = tokens[i + 1][2] if i + 1 < len(tokens) else ""
-        if word == "accessor" and after not in ("", "(", ":", "=", ";", "?", "!", "<", ",", ")", "}"):
+        if before in (".", "?."):
+            continue  # a property's name, never a keyword
+        # What tree-sitter-typescript misreads
+        if word == "using" and (after == "[" or newline(i)):
+            rename(start, word)  # `using [a] = b` assigns `using[a]`; a line ends a name `using`
+            continue
+        if word in ("abstract", "accessor") and newline(i) and after != "new":
+            rename(start, word)  # a line ends a name: `abstract` and `accessor` are modifiers on one line only
+            continue
+        if before in (">", ">>", ">>>") and (word.startswith("`") or word == "?." and after == "("):
+            depth, j = 0, i - 1
+            while j > 0:
+                inner = tokens[j][2]
+                depth += len(inner) if inner in (">", ">>", ">>>") else -1 if inner == "<" else 0
+                if depth <= 0 or inner in _UNTYPED:
+                    break
+                j -= 1
+            if depth == 0 and tokens[j][2] == "<" and (_starts_name(tokens[j - 1][2]) or tokens[j - 1][2] in (
+                    ")", "]")):
+                # `f<T>`x``, a tag's type arguments, which tree-sitter-typescript reads as comparisons, and
+                # `f<T>?.()`'s, which it cannot read, blanked
+                found.arguments[start] = (tokens[j][0], text[tokens[j][0]:tokens[i - 1][1]])
+                blank(tokens[j][0], tokens[i - 1][1])
+            continue
+        if not broken:
+            continue
+        # What tree-sitter-typescript cannot parse
+        if word == "accessor" and after not in ("", "(", ":", "=", ";", "?", "!", "<", ",", ")", "}") and (
+                not newline(i)):
             blank(start, end)
             found.accessors.add(tokens[i + 1][0])  # where the member starts once `accessor` is gone, or its name
         elif word == "accessor" and before in ("{", ";", "}"):
-            chars[start] = "_"  # a member named `accessor`
-            found.names[start] = word
+            rename(start, word)  # a member named `accessor`
         elif word in ("in", "out") and before in ("<", ",", "in", "const") and _starts_name(after) and (
                 after not in ("in", "of")):
             name = next(t for t in tokens[i + 1:] if t[2] not in ("in", "out"))
@@ -211,12 +329,50 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
         elif word == "defer" and before == "import" and after in ("*", "{"):
             blank(start, end)
             found.deferred.add(tokens[i - 1][0])
+        elif word == "import" and after == "." and i + 3 < len(tokens) and tokens[i + 2][2] == "defer" and (
+                tokens[i + 3][2] == "("):
+            blank(tokens[i + 1][0], tokens[i + 2][1])  # `import.defer("m")` becomes `import      ("m")`
+            found.deferred.add(start)
+        elif word == "@" and after == "(":
+            close = _closing(tokens, i + 1)  # `@(a[0])`, a decorator's expression tree-sitter-typescript reads only
+            for p in range(tokens[i + 1][1], tokens[close][0]):  # as a name's, a member's or a call's, becomes a
+                chars[p] = "_"  # name in its parentheses, `@(____)`
+            found.decorators.add(tokens[i + 1][0])
         elif word == "type" and before == "export" and after == "*":
             blank(start, end)
             found.type_exports.add(tokens[i - 1][0])
-        elif word == "abstract" and after in (":", "?", "(") and before in (";", "{", "}", ",", "readonly"):
-            chars[start] = "_"  # a member named `abstract`
-            found.names[start] = word
+        elif word in ("with", "assert") and after == "{" and i >= 2 and tokens[i - 2][2] == "from" and (
+                before[:1] in ("'", '"')):
+            j = i - 3
+            while j > 0 and tokens[j][2] not in ("export", "import") and (
+                    tokens[j][2] in _SPECIFYING or _starts_name(tokens[j][2]) or tokens[j][2][:1] in ("'", '"')):
+                j -= 1
+            if tokens[j][2] == "export":  # an `export ... from`'s attributes, which tree-sitter-typescript reads on
+                close = _closing(tokens, i + 1)  # an import's alone, blanked
+                blank(start, tokens[close][1])
+                found.attributes[tokens[j][0]] = (tokens[i - 1][0], tokens[close][1])
+        elif word == "static" and (after == "[" or after == "readonly" and i + 2 < len(tokens) and (
+                tokens[i + 2][2] == "[")):
+            bracket = i + 1 if after == "[" else i + 2
+            if bracket + 2 < len(tokens) and _starts_name(tokens[bracket + 1][2]) and tokens[bracket + 2][2] == ":":
+                blank(start, end)  # `static [k: string]: T`, a class's index signature
+                found.statics.add(tokens[i + 1][0])
+        elif word == "abstract" and after in ("", ";", ":", "?", "!", "(", "<", "=", ".", "?.", "++", "--", ",",
+                                              ")", "]", "}"):
+            rename(start, word)  # a name `abstract`, which tree-sitter-typescript reads as the modifier
+        elif word in ("satisfies", "as") and before in ("let", "var", "const", ","):
+            rename(start, word)  # a name `satisfies` or `as` declared
+        elif word == "undefined" and i + 1 < len(tokens) and text.startswith("=>", tokens[i + 1][0]):
+            rename(start, word)  # a parameter `undefined`, before an `=>` tree-sitter-typescript may split
+        elif word in _KEYWORD_TYPES and word not in ("null", "void") and after == ".":
+            rename(start, word)  # `any.T`: a namespace's name a keyword type's spells
+        elif word == "type" and _specifier(tokens, i):
+            words = [t[2] for t in tokens[i + 1:i + 5]]
+            words = words[:next((k for k, w in enumerate(words) if w in (",", "}")), len(words))]
+            if words == [] or len(words) == 2 and words[0] == "as":
+                rename(start, word)  # `{ type }`, `{ type as x }`, `{ type as as }`: the name `type`
+            elif words == ["as"] or len(words) == 3 and words[:2] == ["as", "as"]:
+                rename(tokens[i + 1][0], "as")  # `{ type as }`, `{ type as as x }`: a type's name `as`
         elif word == "using" and before in ("(", "await") and i + 2 < len(tokens) and tokens[i + 2][2] == "of" and (
                 before == "(" or tokens[i - 2][2] == "("):
             # `for (using x of y)` becomes `for (const x of y)`, as long
@@ -226,10 +382,18 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                 blank(tokens[i - 1][0], tokens[i - 1][1])
                 keyword = "await using"
             found.usings[start] = keyword
+        elif word == "using" and _starts_name(after) and after not in ("in", "of", "instanceof", "as", "satisfies"):
+            head = i - 1 if before == "await" else i
+            lead = tokens[head - 1][2] if head > 0 else ""
+            if lead in _STARTS or lead == "(" and head >= 2 and tokens[head - 2][2] == "for":
+                # a `using` declaration, `using x: T = f()`, becomes `const x: T = f()`, as long
+                chars[start:end] = list("const")
+                if before == "await":
+                    blank(tokens[i - 1][0], tokens[i - 1][1])
+                found.usings[start] = "await using" if before == "await" else "using"
         elif word == "using" and (not _starts_name(after) or after in ("in", "of", "instanceof", "as", "satisfies")):
-            chars[start] = "_"  # a name `using`: the keyword is followed by the name it binds
-            found.names[start] = word
-        elif word == "import" and after == "(" and before not in (".", ""):
+            rename(start, word)  # a name `using`: the keyword is followed by the name it binds
+        elif word == "import" and after == "(" and before != "":
             # `import("m")`, which tree-sitter-typescript cannot qualify with type arguments as a type, becomes a
             # name as long, `_______m_`... the converter reads the call back from the text
             close = next((j for j in range(i + 1, len(tokens)) if tokens[j][2] == ")"), None)
@@ -533,6 +697,7 @@ class _Converter:
             if skip is not None and ts.id == skip:
                 previous = ts
                 continue
+            out += self.blanked_comments(previous, ts)
             if ts.type == "comment":
                 out.append(self.comment(ts, previous))
             elif ts.type == "empty_statement" and out and out[-1].branch == "tsmoduledeclaration" and (
@@ -556,6 +721,17 @@ class _Converter:
             previous = ts
         return out
 
+    def blanked_comments(self, previous: _TS | None, ts: _TS) -> list[_Node]:
+        """The comments the pre-pass blanked after `previous` and before `ts`, as `comment` reads those tree-sitter
+        read."""
+        start = 0 if previous is None else self.shift + self.source.offset(previous.end_byte)
+        out = []
+        for at, end in sorted(self.pre.comments.items()):
+            if start <= at < self.at(ts):
+                out.append(_Node("comment", line=self.origin.line(at), text=self.origin.text[at + 2:end - 2], block=True,
+                                 trailing=previous is not None and "\n" not in self.origin.text[start:at]))
+        return out
+
     @staticmethod
     def strays(ts: _TS) -> list[_TS]:
         """The comments after `ts` that tree-sitter-typescript puts after the closing brace of the block that ends it:
@@ -575,7 +751,7 @@ class _Converter:
     def comment(self, ts: _TS, previous: _TS | None) -> _Node:
         """A comment, its text without its delimiters: trailing where nothing but blanks is between it and the end of
         `previous`, in the text as written."""
-        text = self.text(ts)
+        text = self.written(ts)
         block = text.startswith("/*")
         trailing = previous is not None and "\n" not in self.origin.text[
             self.shift + self.source.offset(previous.end_byte):self.at(ts)]
@@ -594,7 +770,7 @@ class _Converter:
         nodes = list(ts.children)
         hashbang = None
         if nodes and nodes[0].type == "hash_bang_line":
-            hashbang = self.text(nodes[0])[2:]
+            hashbang = self.text(nodes[0])[2:].removesuffix("\r")  # which a `\r\n` ends
             nodes = nodes[1:]
         return hashbang, self.listed(nodes, self.statement)
 
@@ -637,8 +813,8 @@ class _Converter:
             return None
         declarators = []
         for part in (first, *parts[1:]):
-            if part.type != "assignment_expression":
-                raise _Invalid(part.type)
+            if part.type != "assignment_expression" or self.require(part, "left").type == "object_pattern":
+                raise _Invalid(part.type)  # each declarator needs its value, and binds a name
             declarators.append(_Node("variabledeclarator", id=self.binding(self.require(part, "left")),
                                      init=self.expression(self.require(part, "right"))))
         return _Node("variabledeclaration", declarationKind=keyword, declarations=declarators)
@@ -656,7 +832,8 @@ class _Converter:
         return made
 
     def lexical_declaration(self, ts: _TS) -> _Node:
-        return _Node("variabledeclaration", declarationKind=self.text(self.require(ts, "kind")),
+        kind = self.require(ts, "kind")  # `const` where the pre-pass rewrote `using` or `await using`
+        return _Node("variabledeclaration", declarationKind=self.pre.usings.get(self.at(kind), self.text(kind)),
                      declarations=self.declarators(ts))
 
     def variable_declaration(self, ts: _TS) -> _Node:
@@ -852,14 +1029,38 @@ class _Converter:
 
     def members(self, body: _TS) -> list[_Node]:
         """A class body's members and comments; decorators before a method, which tree-sitter-typescript lists
-        beside it (and beside no other member), are its own."""
+        beside it (and beside no other member), are its own. `static`, `get` and `set` on a line before the member
+        they modify, which tree-sitter-typescript reads as members of those names (a line ends no modifier of
+        theirs), modify it."""
         pending: list[_Node] = []
+        modifiers: dict[int, list[_TS]] = {}  # by the member they modify
+        held: list[_TS] = []
+        nodes = [c for c in body.children if c.type not in _EXTRAS]
+        for ts, following in zip(nodes, nodes[1:]):
+            word = self.text(self.kids(ts)[-1]) if ts.type == "public_field_definition" and [
+                c.type for c in self.kids(ts) if c.type != "decorator"] == ["property_identifier"] else None
+            if word == "static" and following.type in _MEMBERS or word in ("get", "set") and (
+                    following.type == "method_definition"):
+                held.append(ts)
+            elif held:
+                modifiers[ts.id] = held
+                held = []
 
         def member(ts: _TS) -> Any:
             if ts.type == "decorator":
                 pending.append(self.decorator(ts))
                 return None
+            if any(ts in m for m in modifiers.values()):  # a modifier, its decorators the member's
+                pending.extend(self.decorator(d) for d in self.fields(ts, "decorator"))
+                return None
             made = self.member(ts)
+            for modifier in modifiers.get(ts.id, []):
+                if made.line is not None:  # where its first modifier is
+                    made.line = self.origin.line(self.at(modifiers[ts.id][0]))
+                if self.text(self.kids(modifier)[-1]) == "static":
+                    made.static = True
+                else:
+                    made.methodKind = self.text(self.kids(modifier)[-1])
             if pending:
                 made.decorators = pending + (made.decorators or [])
             pending.clear()
@@ -886,7 +1087,12 @@ class _Converter:
         return self.identifier(ts)
 
     def decorator(self, ts: _TS) -> _Node:
-        return _Node("decorator", expression=self.expression(self.named(ts)[0]))
+        expression = self.named(ts)[0]
+        if self.at(expression) in self.pre.decorators:  # `@(a[0])`, which the pre-pass made a name: read it back
+            converter, root = self.reparsed("", self.at(expression), self.shift + self.source.offset(
+                expression.end_byte))
+            return _Node("decorator", expression=converter.expression(converter.named(converter.named(root)[0])[0]))
+        return _Node("decorator", expression=self.expression(expression))
 
     def key(self, ts: _TS) -> tuple[_Node, bool]:
         """A member's key, and whether it is computed."""
@@ -962,7 +1168,8 @@ class _Converter:
         parameter = self.identifier(self.require(ts, "name"))
         parameter.typeAnnotation = _Node("tstypeannotation", typeAnnotation=self.type(index))
         made = _Node("tsindexsignature", parameters=[parameter], readonly="readonly" in modifiers,
-                     static="static" in modifiers, typeAnnotation=self.annotation(self.require(ts, "type")))
+                     static="static" in modifiers or self.at(ts) in self.pre.statics,
+                     typeAnnotation=self.annotation(self.require(ts, "type")))
         made.accessibility = next((m for m in modifiers if m in ("public", "private", "protected")), None)
         return made
 
@@ -1041,6 +1248,8 @@ class _Converter:
             if target.type in ("function_expression", "generator_function", "class") and value is not None:
                 converted: Any = _Branch("statement", self.default_declaration(target))
             elif declaration is not None:
+                if declaration.type not in _DEFAULTS:
+                    raise _Invalid(declaration.type)  # `export default enum E {}`: no default
                 converted = _Branch("statement", self.statement(declaration))
             else:
                 converted = _Branch("expression", self.expression(target))
@@ -1055,7 +1264,8 @@ class _Converter:
             if namespace is not None:
                 exported = self.named(namespace)[0]
                 made.exported = self.literal(exported) if exported.type == "string" else self.identifier(exported)
-            return made  # tree-sitter-typescript reads no attributes here
+            made.attributes = self.export_attributes(ts)
+            return made
         made = _Node("exportnameddeclaration")
         if declaration is not None:
             converted = self.statement(declaration)
@@ -1070,7 +1280,18 @@ class _Converter:
         made.specifiers = [self.export_specifier(s) for s in self.named(clause)]
         if source is not None:
             made.source = self.literal(source)
-        return made  # tree-sitter-typescript reads no attributes here
+            made.attributes = self.export_attributes(ts)
+        return made
+
+    def export_attributes(self, ts: _TS) -> list[_Node] | None:
+        """The attributes of `export ... from "m" with { ... }`, which the pre-pass blanked: tree-sitter-typescript
+        reads an import's alone. They are read back as an import's, `import "m" with { ... }`."""
+        written = self.pre.attributes.get(self.at(ts))
+        if written is None:
+            return None
+        converter, root = self.reparsed("import ", *written)
+        clause = next(c for c in converter.named(converter.named(root)[0]) if c.type == "import_attribute")
+        return converter.attributes(clause)
 
     def default_declaration(self, ts: _TS) -> _Node:
         """`export default function ...` or `export default class ...`, which are declarations, unnamed: a named one
@@ -1286,6 +1507,11 @@ class _Converter:
         return made
 
     def arrow_function(self, ts: _TS) -> _Node:
+        kids = self.kids(ts)
+        arrow = next(i for i, c in enumerate(kids) if c.type == "=>")
+        if _ends_line(self.between(kids[arrow - 1].end_byte, kids[arrow].start_byte)) or kids[0].type == "async" and (
+                _ends_line(self.between(kids[0].end_byte, kids[1].start_byte))):
+            raise _Invalid(ts.type)  # a line ends before `=>`, or after `async`: no arrow
         made = _Node("arrowfunctionexpression", isAsync=self.has(ts, "async"))
         parameter = self.field(ts, "parameter")
         if parameter is not None:
@@ -1372,6 +1598,9 @@ class _Converter:
                 self.require(ts, "function").type != "import"):
             target, optional = self.chain(self.require(ts, "function"))
             link = self.has(ts, "?.") or any(c.type == "optional_chain" for c in ts.children)
+            blanked = next((self.blanked(c) for c in ts.children if c.type in ("?.", "optional_chain")), None)
+            if blanked is not None:  # `f<T>?.()`, which instantiates `f` and calls it
+                target = _Node("tsinstantiationexpression", expression=target, typeArguments=blanked)
             made = _Node("callexpression", callee=target, optional=link,
                          arguments=self.arguments(self.require(ts, "arguments")))
             arguments = self.field(ts, "type_arguments")
@@ -1409,14 +1638,41 @@ class _Converter:
         function = self.require(ts, "function")
         arguments = self.require(ts, "arguments")
         if arguments.type == "template_string":
-            # tree-sitter-typescript reads `f<T>`x`` as comparisons: a tagged template has no type arguments
-            return _Node("taggedtemplateexpression", tag=self.expression(function), quasi=self.template(arguments))
+            if self.optional(function):
+                raise _Invalid(ts.type)  # `a?.b`x``: an optional chain tags no template
+            made = _Node("taggedtemplateexpression", tag=self.expression(function), quasi=self.template(arguments))
+            made.typeArguments = self.blanked(arguments)  # `f<T>`x``'s
+            return made
         if function.type == "import":
             values = [self.expression(a) for a in self.named(arguments)]
-            return _Node("importexpression", source=values[0], options=values[1] if len(values) > 1 else None)
+            return _Node("importexpression", phase="defer" if self.at(ts) in self.pre.deferred else None,
+                         source=values[0], options=values[1] if len(values) > 1 else None)
         return self.link(ts)
 
+    def blanked(self, ts: _TS) -> _Node | None:
+        """The type arguments before `ts`, a template or a `?.`, which the pre-pass blanked, read back as a type's,
+        `_<T>`; None where it blanked none."""
+        blanked = self.pre.arguments.get(self.at(ts))
+        if blanked is None:
+            return None
+        offset, written = blanked
+        converter, root = self.reparsed("type _=_", offset, offset + len(written))
+        value = converter.require(converter.named(root)[0], "value")
+        if value.type != "generic_type":
+            raise _Invalid(ts.type)
+        return converter.type_arguments(converter.require(value, "type_arguments"))
+
+    def optional(self, ts: _TS) -> bool:
+        """Whether an optional link (`?.`) is in the chain that `ts` ends, outside parentheses."""
+        while ts.type in ("member_expression", "subscript_expression", "call_expression", "non_null_expression"):
+            if self.has(ts, "?.") or any(c.type == "optional_chain" for c in ts.children):
+                return True
+            ts = self.named(ts)[0]
+        return False
+
     def new_expression(self, ts: _TS) -> _Node:
+        if self.optional(self.require(ts, "constructor")):
+            raise _Invalid(ts.type)  # `new a?.b()`: an optional chain constructs nothing
         made = _Node("newexpression", callee=self.expression(self.require(ts, "constructor")))
         arguments = self.field(ts, "arguments")
         if arguments is not None:
@@ -1504,8 +1760,9 @@ class _Converter:
 
     def type_assertion(self, ts: _TS) -> _Node:
         arguments, expression = self.named(ts)
-        return _Node("tstypeassertion", typeAnnotation=self.type(self.named(arguments)[0]),
-                     expression=self.expression(expression))
+        written = self.named(arguments)  # none in `<const>x`, whose `const` tree-sitter-typescript reads as a token
+        return _Node("tstypeassertion", typeAnnotation=self.type(written[0]) if written else _Node(
+            "tstypereference", typeName=_Node("identifier", name="const")), expression=self.expression(expression))
 
     def instantiation(self, ts: _TS) -> _Node:
         return _Node("tsinstantiationexpression", expression=self.expression(self.named(ts)[0]),
@@ -1758,12 +2015,16 @@ class _Converter:
             arguments = self.named(self.require(ts, "arguments"))
             return {"source": self.expression(arguments[0]),
                     "options": self.expression(arguments[1]) if len(arguments) > 1 else None}
-        start = self.at(ts)
-        source = _Source(self.origin.text[start:self.shift + self.source.offset(ts.end_byte)])
-        tree = _PARSERS[False].parse(source.data, encoding="utf16le")
-        converter = _Converter(source, _Prepared(), start, self.origin)
-        call = converter.named(converter.named(tree.root_node)[0])[0]
+        converter, root = self.reparsed("", self.at(ts), self.shift + self.source.offset(ts.end_byte))
+        call = converter.named(converter.named(root)[0])[0]
         return converter.import_call(call)
+
+    def reparsed(self, prefix: str, start: int, end: int) -> tuple[_Converter, _TS]:
+        """The text written from `start` to `end`, after `prefix`, parsed as a program of its own: the converter that
+        places it where it was written, and the program's tree."""
+        source = _Source(prefix + self.origin.text[start:end])
+        tree = _PARSERS[False].parse(source.data, encoding="utf16le")
+        return _Converter(source, _Prepared(), start - len(prefix), self.origin), tree.root_node
 
     def import_or_reference(self, ts: _TS) -> _Node:
         """A type that is `import('m').a.b`, or a type reference."""
@@ -1925,9 +2186,8 @@ def parse(text: str, path: str, store: Any = None) -> Callable[[Any], Any]:
         raise ParseError("not text: a lone surrogate", line, column) from None
     parser = _PARSERS[path.endswith(".tsx")]
     tree = parser.parse(source.data, encoding="utf16le")
-    prepared = _Prepared()
-    if tree.root_node.has_error:
-        cleaned, prepared = _prepare(text, tree.root_node, source)
+    cleaned, prepared = _prepare(text, tree.root_node, source)
+    if cleaned != text:
         source = _Source(text, cleaned)
         tree = parser.parse(source.data, encoding="utf16le")
     hashbang, statements = _Converter(source, prepared).program(tree.root_node)
