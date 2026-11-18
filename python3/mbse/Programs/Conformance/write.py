@@ -1,32 +1,38 @@
 """Writes this implementation's conformance files: `python -m mbse.Programs.Conformance.write [directory]`.
 
-For each Python source in `conformance/sources`, it writes the frame of the transaction its parse gives
-(`<source>.json`), as the user decided ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md),
-"The corpora as frames"): a `References.OfFrame`, binding the workspace and the module and assigning the module its
+For each source in `conformance/sources` of a language ported so far (`LANGUAGES`: Python 3's `.py`, TypeScript 5's
+`.ts` and `.tsx`), it writes the frame of the transaction its parse gives (`<source>.json`), as the user decided ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md),
+"The corpora as frames"): a `References.OfFrame`, binding the workspace and the file and assigning the file its
 tree, one nested value, as the whole tree is values ("Stage 3: the whole tree as values"), as
-`Plain.ToPlain(store).Value` writes it; and the text the stored module prints to (`<source>.py`). Every
+`Plain.ToPlain(store).Value` writes it; and the text the stored file prints to (`<source>`, its suffix kept). Every
 implementation must write the same bytes. The default directory is `conformance/python3` at the repository root.
 
-The port brings the languages over one stage at a time: the other languages' sources, grammars and transpiled programs
-are set aside until their stages, their files left as 0.3 wrote them.
+The port brings the languages over one stage at a time: the other languages' sources (C++ and SystemVerilog), grammars and
+transpiled programs are set aside until their stages, their files left as 0.3 wrote them.
 """
 
 from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
-from mbse.Programs import Python3
+from mbse.Programs import Python3, TypeScript5
 from mbse.Schemas.Framework import Plain, References
 
 ROOT = Path(__file__).resolve().parents[4] / "conformance"
 DEFAULT = ROOT / "python3"
 
 
-def frame(store: object, text: str, path: str) -> str:
-    """The frame of the transaction that parses `text` into `store` at `path`, as JSON, two-space indented."""
-    (given,) = store.transaction(Python3.Parse.parse(text, path))  # type: ignore[attr-defined]
+LANGUAGES = {".py": Python3, ".ts": TypeScript5, ".tsx": TypeScript5}
+"""The language each source is, by its suffix."""
+
+
+def frame(store: object, parse: Callable[[Any], Any]) -> str:
+    """The frame of a parse's transaction, executed in `store`, as JSON, two-space indented."""
+    (given,) = store.transaction(parse)  # type: ignore[attr-defined]
     schema = store.registered("References.OfFrame")  # type: ignore[attr-defined]
     written = Plain.ToPlain(store).Value(schema, References.of(store, given))
     return json.dumps(written, indent=2, ensure_ascii=False) + "\n"
@@ -35,10 +41,11 @@ def frame(store: object, text: str, path: str) -> str:
 def render(sources: Path = ROOT / "sources") -> dict[str, str]:
     """File name -> text, for every file this implementation writes."""
     files = {}
-    for source in sorted(sources.glob("*.py")):
-        store = Python3.store()
-        files[f"{source.stem}.json"] = frame(store, source.read_text(encoding="utf-8"), source.name)
-        files[source.name] = Python3.Print.print_module(store, source.name)
+    for source in sorted(path for path in sources.iterdir() if path.suffix in LANGUAGES):
+        language = LANGUAGES[source.suffix]
+        store = language.store()
+        files[f"{source.stem}.json"] = frame(store, language.Parse.parse(source.read_text(encoding="utf-8"), source.name))
+        files[source.name] = language.Print.print_module(store, source.name)
     return files
 
 

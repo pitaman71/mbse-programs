@@ -70,7 +70,7 @@ function guard(x: unknown): x is string {
     return typeof x === "string";
 }
 function check(x: unknown): asserts x {}
-const arrow = async <T>(t: T): Promise<T> => t;
+const arrow = async <T,>(t: T): Promise<T> => t;
 const objectArrow = () => ({ key: 1 });
 const expression = function named() {
     return named;
