@@ -143,6 +143,11 @@ What stays as tree-sitter-typescript reads it:
     reads tokens, not functions, nor the option: kept as tree-sitter reads them, invalid syntax or those expressions.
 42. **`get` or `set` on a line of its own before a field**, `get\\nx = 1`, which TypeScript rejects (an accessor takes
     parameters): kept as tree-sitter reads it, two fields.
+43. **A regular expression TypeScript rejects** (TypeScript 5.5 checks a regular expression's syntax), which it reads
+    as any other: a flag ECMAScript has not or one twice, or `u` and `v` together (`/a/zz`, `/a/gg`, `/a/uv`), a
+    pattern its flags' grammar rejects (`/(/`, `/a{/u`), a line terminator within it, which ends a literal (a `\\r`
+    alone, U+2028, which 19 leaves there), and `/*a/`, which JavaScript reads as a comment no `*/` ends: a `constant`
+    with its `pattern`, `flags` and `text`, without its `regexp`, which the dialect holds only where they parse.
 
 Decided here *(agent, for review)*:
 
@@ -158,8 +163,9 @@ Decided here *(agent, for review)*:
   a bigint's (an int), a boolean's. `base` is written for a number spelled as an integer and for a bigint, 10 where it
   has no prefix; `separators` where its digits are grouped by `_`. A JSX attribute's string is its text between its
   quotes, which JSX does not unescape. `null` and a regular expression are `constant`s: its `singleton`, or its
-  `pattern` and `flags` as written, with its `text`; a regular expression's `regexp`, the `TypeScript RegExp` term its
-  pattern encodes, is not written: mbse-expressions has no reader of it in Python, and the dialect allows it absent.
+  `pattern` and `flags` as written, with its `text`, and a regular expression's `regexp`, the `TypeScript RegExp`
+  term its pattern and flags encode, as `RegExp` reads them (ECMA-262's pattern grammar, in the `u` and `v` modes and
+  Annex B's without them, as regexpp reads it), absent where they do not parse, as the dialect has it (43).
 - **Positions**: each statement's, clause's, class member's (but an index signature's, which `TypeScript Types` gives
   none), enum member's and error's line is written as its `line`; an expression has none. A statement's line is where
   its node starts: a decorated class's, its first decorator's.
@@ -199,6 +205,7 @@ from tree_sitter import Parser as _TSParser
 
 from ..Framework.Errors import ParseError
 from ..Framework.Model import WORKSPACE
+from . import RegExp
 
 __all__ = ["parse", "ParseError", "WORKSPACE"]
 
@@ -773,8 +780,9 @@ class _Converter:
             return _Node("constant", singleton="null", text=text)
         if ts.type == "regex":
             flags = self.field(ts, "flags")
-            return _Node("constant", pattern=self.text(self.require(ts, "pattern")),
-                         flags=None if flags is None else self.text(flags), text=text)
+            pattern, spelled = self.text(self.require(ts, "pattern")), "" if flags is None else self.text(flags)
+            return _Node("constant", pattern=pattern, flags=spelled or None, text=text,
+                         regexp=RegExp.read(pattern, spelled))
         return _Node("literal", value=_scalar(text == "true"), text=text)
 
     # Invalid syntax
