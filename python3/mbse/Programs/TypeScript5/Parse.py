@@ -73,6 +73,7 @@ allows; what the pre-pass rewrites is no longer invalid, and what remains after 
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Callable
 from typing import Any
@@ -271,7 +272,10 @@ def _number(text: str) -> _Node:
     integral = bigint or base != 10 or digits.isdigit()
     value: Any = int(digits[2:] if base != 10 else digits, base) if integral else float(digits)
     if not bigint:
-        value = float(value)
+        try:
+            value = float(value)
+        except OverflowError:  # beyond the largest number: JavaScript reads it as `Infinity`
+            value = math.inf
     return _Node("literal", value=_scalar(value), text=text, base=base if integral else None,
                  separators="_" in text)
 
@@ -423,7 +427,7 @@ class _Converter:
         if ts.type == "string":
             try:
                 value = _unescape(text[1:-1])
-            except ValueError:  # an escape of no character, `\u{110000}`
+            except (ValueError, OverflowError):  # an escape of no character, `\u{110000}`
                 raise _Invalid(text) from None
             return _Node("literal", value=_scalar(value), text=text, quote=text[0])
         if ts.type == "number":
@@ -431,8 +435,9 @@ class _Converter:
         if ts.type == "null":
             return _Node("constant", singleton="null", text=text)
         if ts.type == "regex":
+            flags = self.field(ts, "flags")
             return _Node("constant", pattern=self.text(self.require(ts, "pattern")),
-                         flags=self.text(self.field(ts, "flags")) if self.field(ts, "flags") else None, text=text)
+                         flags=None if flags is None else self.text(flags), text=text)
         return _Node("literal", value=_scalar(text == "true"), text=text)
 
     # Invalid syntax
