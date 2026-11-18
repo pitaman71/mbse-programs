@@ -344,7 +344,7 @@ first. Each stage passes both gates at 100% with the corpora regenerated, in the
 3. **The whole tree as values, then `TypeScript5`** and the transpiler ([Stage 3: the whole tree as
    values](#stage-3-the-whole-tree-as-values)): `Python3` reworked to values; mbse-expressions' open unions for the
    terms that hold statements; then `TypeScript5` and the transpiler.
-4. **`C` and `Cpp`**, each covering its standards.
+4. **`C` and `Cpp`**, each covering its standards ([Stage 4: C and Cpp](#stage-4-c-and-cpp)).
 5. **`SystemVerilog`** (Verilog its subset), and the exchange from Python to TypeScript.
 6. **Tutorials, skill, README, EQUIVALENCE; release.** Then mbse-codegen-python. The version is 0.4.0 from stage 2,
    which brings the new API, as the user decided ("bump the verion and no need to add 'dev' as a suffix").
@@ -514,6 +514,34 @@ What it changes beyond this repository's model, for the user's attention:
 
 The stages change with it (below): stage 3 reworks `Python3` to values, asks mbse-expressions for the open unions, then
 builds `TypeScript5` and the transpiler.
+
+## Stage 4: C and Cpp
+
+Two languages, `Programs.C` and `Programs.Cpp`, each a singleton by name, the whole tree values, as stage 3 decided.
+Their standards are mbse-expressions' C and C++ dialects': C11, C17 (C11's corrigenda, with no new syntax) and C23; and
+C++17, C++20 and C++23. Where a C or C++ term holds statements or declarations, a property of the term holds them, typed
+by an open union in mbse-expressions, which it declares a boundary (`Terms.boundaries`) and mbse-programs extends, as
+for TypeScript5: a GNU statement expression's body and a C++ lambda's body (`block`), and a struct's, a union's or a
+class's member declarations (`members`, which their `body: bool` only marked).
+
+**Decided** by the user, on three questions as posed:
+
+1. **Each language its own native parser**: tree-sitter-c for C, tree-sitter-cpp for C++, each language's departures
+   from its standards enumerated and pre-passed against its own standard
+   ([CAP-026](../../../../mbse-basis/docs/capabilities/CAP-026.md#decided)). Asked as (a) that, or (b) tree-sitter-cpp
+   for both, as 0.3 parsed them: "1(a)".
+2. **C's statement kinds, and C++ reusing them**: `Programs.C` defines its kinds; `Programs.Cpp` defines only what C++
+   adds, its union listing C's kinds and its own, as mbse-expressions' C++ writers derive from C's. Asked as (a) that,
+   or (b) two independent sets of kinds: "2(a)".
+3. **A preprocessor directive between statements is a statement holding the directive term**, mbse-expressions'
+   `C Preprocessor` term, and a conditional's statements a property of that term, typed by an open union mbse-programs
+   extends: the crossover rule applied again. Asked as (a) that, or (b) directives as mbse-programs' own statement
+   kinds: "3(a)". tree-sitter reads only conditionals that enclose whole statements; one that splits a construct
+   (`#if` within a function's body, closed after it) is an entry in each parser's enumerated departures.
+
+The stage builds, in order: mbse-expressions' open unions for the C family (both implementations, a release); then
+`Programs.C` (statements, parse, print, definitions, standards, check, a C corpus source); then `Programs.Cpp` over it;
+each with its suites at 100%.
 
 ## Risks
 
