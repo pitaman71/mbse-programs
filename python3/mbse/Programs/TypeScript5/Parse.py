@@ -59,12 +59,13 @@ allows; what the pre-pass rewrites is no longer invalid, and what remains after 
 - **Where a statement, a switch's case, a class member or an enum member stands**, an `Error`
   (`Programs.TypeScript5.Error`), with its line: tree-sitter skipped it (`ERROR`), or it holds invalid syntax no term
   holds (a `MISSING` token, as in `if (a {}`), or it is a construct the converter cannot hold (a mapped type as a class
-  member, a decorator on a static block). Its `text` is as written, before the pre-pass; its `body`, the statements
-  tree-sitter read within it, each block's statements among them, flattened *(agent, as Python3's)*. A statement whose
-  `catch` clause or interface member is invalid is an `Error` as a whole *(agent)*.
+  member). Its `text` is as written, before the pre-pass; its `body`, the statements tree-sitter read within it, each
+  block's statements among them, flattened *(agent, as Python3's)*. A statement whose `catch` clause or interface
+  member is invalid is an `Error` as a whole *(agent)*.
 - **Within an expression, a type or a pattern**, its dialect's `error` term, the innermost that holds an `ERROR` or a
-  construct its dialect cannot hold (a type annotation in parentheses, Flow's `?T`, a call as an assignment's target):
-  its `text` as written, its `terms` each `TypeScript5` expression tree-sitter read within it.
+  construct its dialect cannot hold (a type annotation in parentheses, Flow's `?T`, an optional chain as an assignment's
+  target, a hole among a call's arguments, an escape of no character): its `text` as written, its `terms` each
+  `TypeScript5` expression tree-sitter read within it.
 - **`MISSING`**: where an expression or a type stands, its dialect's `missing` term, its `kind` the node type
   tree-sitter expected; a token makes what holds it invalid as above.
 - **`ParseError`** is raised only for text that is no text, a lone surrogate, which no encoding writes.
@@ -835,8 +836,8 @@ class _Converter:
         made.body = _Node("classbody", body=self.members(self.require(ts, "body")))
 
     def members(self, body: _TS) -> list[_Node]:
-        """A class body's members and comments; decorators before a member, which tree-sitter-typescript lists
-        beside it, are its own."""
+        """A class body's members and comments; decorators before a method, which tree-sitter-typescript lists
+        beside it (and beside no other member), are its own."""
         pending: list[_Node] = []
 
         def member(ts: _TS) -> Any:
@@ -845,8 +846,6 @@ class _Converter:
                 return None
             made = self.member(ts)
             if pending:
-                if made.branch in ("staticblock", "tsindexsignature"):  # which take no decorators
-                    raise _Invalid(ts.type)
                 made.decorators = pending + (made.decorators or [])
             pending.clear()
             return made
@@ -1357,7 +1356,7 @@ class _Converter:
             target, optional = self.chain(self.require(ts, "function"))
             link = self.has(ts, "?.") or any(c.type == "optional_chain" for c in ts.children)
             made = _Node("callexpression", callee=target, optional=link,
-                         arguments=[self.element(a) for a in self.named(self.require(ts, "arguments"))])
+                         arguments=self.arguments(self.require(ts, "arguments")))
             arguments = self.field(ts, "type_arguments")
             if arguments is not None:
                 made.typeArguments = self.type_arguments(arguments)
@@ -1369,6 +1368,13 @@ class _Converter:
             target, optional = self.chain(inner)
             return _Node("tsnonnullexpression", expression=target), optional
         return self.expression(ts), False
+
+    def arguments(self, ts: _TS) -> list[_Node]:
+        """A call's arguments; a hole among them, which tree-sitter-typescript reads (`f(a,,b)`), is invalid."""
+        made = self.elements(ts, self.element)
+        if any(a.branch == "elision" for a in made):
+            raise _Invalid(ts.type)
+        return made
 
     def non_null_last(self, node: _Node) -> _Node:
         """`node` with its last operand asserted non-null: `a ?? b!` is `a ?? (b!)`, which tree-sitter-typescript
@@ -1397,7 +1403,7 @@ class _Converter:
         made = _Node("newexpression", callee=self.expression(self.require(ts, "constructor")))
         arguments = self.field(ts, "arguments")
         if arguments is not None:
-            made.arguments = [self.element(a) for a in self.named(arguments)]
+            made.arguments = self.arguments(arguments)
         type_arguments = self.field(ts, "type_arguments")
         if type_arguments is not None:
             made.typeArguments = self.type_arguments(type_arguments)
