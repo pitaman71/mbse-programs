@@ -79,9 +79,9 @@ addopts = [
 source = ["mbse.Programs"]
 omit = [
     "*/mbse/Programs/Conformance/*",
-    # 0.3's languages, bridges and transpiler and its node machinery, set aside until their stages of the port
+    # 0.3's languages and bridges and its node machinery, set aside until their stages of the port
     "*/mbse/Programs/Bridges/*", "*/mbse/Programs/Ccpp/*", "*/mbse/Programs/Python/*",
-    "*/mbse/Programs/Transpilers/*", "*/mbse/Programs/TypeScript/*", "*/mbse/Programs/Verilog/*",
+    "*/mbse/Programs/TypeScript/*", "*/mbse/Programs/Verilog/*",
     "*/mbse/Programs/Framework/Syntax.py",
 ]
 branch = true

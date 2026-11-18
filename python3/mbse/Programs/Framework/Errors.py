@@ -2,7 +2,7 @@
 implementation.
 
 All are `ValueError`s. `ParseError` locates its problem in the source text, with a 1-based line and column, and
-`TranspileError` in the tree, with the path to its syntax node.
+`TranspileError` in the tree, with its syntax node's place.
 """
 
 from __future__ import annotations
@@ -24,7 +24,9 @@ class PrintError(ValueError):
 
 class TranspileError(ValueError):
     """A tree a transpiler cannot translate: a construct the target has no counterpart for, or one outside the
-    transpiler's subset. `path` locates its syntax node in the source tree, as `Parents.path` does."""
+    transpiler's subset. `path` locates its syntax node in the source tree: its anchor's text, where the tree is values
+    (`body[0]:expression.right`, `TypeScript5.Definitions.Anchor`), or its path in 0.3's trees, as `Parents.path` gives
+    it."""
 
     def __init__(self, message: str, path: str):
         super().__init__(f"{path}: {message}" if path else message)

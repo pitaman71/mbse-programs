@@ -7,8 +7,12 @@ tree, one nested value, as the whole tree is values ("Stage 3: the whole tree as
 `Plain.ToPlain(store).Value` writes it; and the text the stored file prints to (`<source>`, its suffix kept). Every
 implementation must write the same bytes. The default directory is `conformance/python3` at the repository root.
 
-The port brings the languages over one stage at a time: the other languages' sources (C++ and SystemVerilog), grammars and
-transpiled programs are set aside until their stages, their files left as 0.3 wrote them.
+It also writes, beside each program of `conformance/transpilers/typescript-to-python`, the Python it translates to
+(`<program>.py`): the program parsed into a store holding both languages (`Transpilers.store()`), transpiled into the
+module at `<program>.py`, and that module printed.
+
+The port brings the languages over one stage at a time: the other languages' sources (C++ and SystemVerilog) and
+grammars are set aside until their stages, their files left as 0.3 wrote them.
 """
 
 from __future__ import annotations
@@ -19,7 +23,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from mbse.Programs import Python3, TypeScript5
+from mbse.Programs import Python3, Transpilers, TypeScript5
 from mbse.Schemas.Framework import Plain, References
 
 ROOT = Path(__file__).resolve().parents[4] / "conformance"
@@ -49,11 +53,27 @@ def render(sources: Path = ROOT / "sources") -> dict[str, str]:
     return files
 
 
+def transpiled(programs: Path = ROOT / "transpilers" / "typescript-to-python") -> dict[str, str]:
+    """File name -> text, for the Python each TypeScript program translates to."""
+    store = Transpilers.store()
+    files = {}
+    for program in sorted(programs.glob("*.ts")):
+        target = f"{program.stem}.py"
+        store.transaction(TypeScript5.Parse.parse(program.read_text(encoding="utf-8"), program.name))
+        store.transaction(Transpilers.TypeScriptToPython.transpile(store, program.name, target))
+        files[target] = Python3.Print.print_module(store, target)
+    return files
+
+
 def main(directory: Path = DEFAULT) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     for name, text in render().items():
         (directory / name).write_text(text, encoding="utf-8")
         print("wrote", directory / name)
+    programs = ROOT / "transpilers" / "typescript-to-python"
+    for name, text in transpiled(programs).items():
+        (programs / name).write_text(text, encoding="utf-8")
+        print("wrote", programs / name)
 
 
 if __name__ == "__main__":

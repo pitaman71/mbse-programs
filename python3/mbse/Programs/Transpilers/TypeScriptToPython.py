@@ -12,8 +12,8 @@ module, without parsing or printing text.
 The transaction is one upsert, `uid(target)`, as `Python3.Parse.parse` writes one: it puts the module in the workspace's
 `files` by `target` and writes its tree, the module's `body`, as one value, through the builders: each statement a
 branch of `Programs.Python3.Statement`, its expressions `Python3` terms written by the dialect's own writers, its
-annotations `Python Types` terms. The store holds both languages' schemas: `Transpilers.store()` makes one. Statements it
-builds have no `line`, as built rather than parsed.
+annotations `Python Types` terms. The store holds both languages' schemas: `Transpilers.store()` makes one. The
+statements it builds have no `line`, as built rather than parsed.
 
 It covers a subset of TypeScript, and raises `TranspileError` at the first syntax node outside it, located by its
 anchor's text (`TypeScript5.Definitions.Anchor`: `body[0]:expression.right`):
@@ -89,7 +89,7 @@ COMPARISONS = {"==": "==", "===": "==", "!=": "!=", "!==": "!=", "<": "<", "<=":
                "in": "in"}
 BINARY = {"+", "-", "*", "/", "%", "**", "<<", ">>", "&", "|", "^"}
 
-_PLACES = frozenset({*(f"{TS.LANGUAGE}.{kind}" for kind in (*TS.KINDS, "Error", "Program", "ClassBody", "TSModuleBlock"))})
+_PLACES = frozenset(f"{TS.LANGUAGE}.{kind}" for kind in (*TS.KINDS, "Error", "Program", "ClassBody", "TSModuleBlock"))
 """The schemas that have a statement's place, as `TypeScript5.Definitions` anchors them: statements, clauses, class
 members, invalid syntax, and the program, class bodies and namespace blocks that hold them."""
 _FUNCTIONS = ("functiondeclaration", "functionexpression", "arrowfunctionexpression")
@@ -232,7 +232,7 @@ def _alias(name: str, asname: str | None = None) -> P.Helper:
     return P.Helper("alias", _record({"name": name, "asname": asname}))
 
 
-def _comment(statements: list[_Statement]) -> bool:
+def _empty(statements: list[_Statement]) -> bool:
     """Whether a body holds nothing but comments."""
     return all(s.kind == "Comment" for s in statements)
 
@@ -334,7 +334,7 @@ class _Translator:
     def body(self, statements: list[_Node]) -> list[_Statement]:
         """Statements as a block's body, which is never empty."""
         body = self.statements(statements)
-        return body + [_Statement("Pass")] if _comment(body) else body
+        return body + [_Statement("Pass")] if _empty(body) else body
 
     def block(self, statement: _Node) -> list[_Statement]:
         """A statement as a block's body: a block's statements, or the statement alone."""
@@ -674,7 +674,7 @@ class _Translator:
         else:  # an abstract method's signature
             body = []
         body = self.outer_names(block) + (prefix or []) + body
-        if _comment(body):
+        if _empty(body):
             body.append(_Statement("Pass"))
         self.methods.pop()
         returns = node["returnType"]
@@ -777,7 +777,7 @@ class _Translator:
         if constructor is not None or fields:  # after the class's own attributes, before its methods
             index = next((i for i, s in enumerate(body) if s.kind in ("FunctionDef", "AsyncFunctionDef")), len(body))
             body.insert(index, self.constructor(constructor, fields, base is not None))
-        if _comment(body):
+        if _empty(body):
             body.append(_Statement("Pass"))
         return [_Statement("ClassDef", name=self.python(node["id"]["name"]), bases=bases, body=body)]
 
