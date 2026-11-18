@@ -25,11 +25,11 @@ A statement's expressions are mbse-expressions' TypeScript family's terms, writt
 (`TypeScript5.Text.Printer`), which this module's `Printer` extends with the statements: parenthesized only where
 precedence requires, as 0.3 did, and also where an expression statement would start with `{`, `function`, `class` or
 `let [`, a default export with `function` or `class`, and where a `for`'s initializer holds `in` outside parentheses,
-which would read as a `for ... in`. Where `Text.Printer` writes a function's, an arrow's, a class expression's or an
-object method's statements `{}`, this one writes the block or the class body the term's `block` or `classBody` holds:
-its statements one level in from the statement that holds the term, its closing brace at that statement's level. An
-object type with comments is written on its members' lines at the same levels; without, on one line, as `Text.Printer`
-writes it.
+which would read as a `for ... in`. `Text.Printer` writes a function's, an arrow's, a class expression's or an object
+method's statements through `statements`, which this printer overrides to write the block or the class body the term's
+`block` or `classBody` holds: its statements one level in from the statement that holds the term, its closing brace at
+that statement's level (`level`, which `Text.Printer` also writes an object type with comments at, its members on
+their lines; without comments, on one line).
 
 Decided by the agent where the port left it open, each *(agent)*:
 
@@ -158,7 +158,6 @@ class Printer(Text.Printer):
         super().__init__()
         self.level = 0  # the level of the statement being printed, where a block within a term indents from
         self.records: dict[int, tuple[Any, Any]] = {}  # each function, arrow and class term read, and its record
-        self.texts = {**self.texts, "tstypeliteral": Printer.type_literal}
 
     def node(self, value: Any) -> Any:
         """A term's `Node` (`Text.Printer.node`); the record of a function, an arrow or a class kept, whose block or
@@ -249,53 +248,17 @@ class Printer(Text.Printer):
         text = _error_text(node)
         return [_INDENT * level + line if i == 0 else line for i, line in enumerate(text.split("\n"))] if text else []
 
-    # Terms within statements: a block or a class body where `Text.Printer` writes `{}`
+    # Terms within statements: a block or a class body, which `Text.Printer` writes through `statements`
 
     def held_block(self, node: Any, name: str) -> list[Any]:
         """The statements or members a function's, an arrow's or a class's `block` or `classBody` holds."""
         branch = _branch(getattr(self.records[id(node)][1], name))
         return [] if branch is None else _body(branch[1])
 
-    def _functionexpression(self, node: Any) -> str:
-        return super()._functionexpression(node)[:-2] + self.inline(self.held_block(node, "block"))
-
-    def _arrowfunctionexpression(self, node: Any) -> str:
-        text = super()._arrowfunctionexpression(node)
-        if node.subterms["body"] is not None:
-            return text
-        return text[:-2] + self.inline(self.held_block(node, "block"))
-
-    def _classexpression(self, node: Any) -> str:
-        return super()._classexpression(node)[:-2] + self.inline(self.held_block(node, "classBody"))
-
-    def _property(self, node: Any) -> str:
-        """An object's property; a method's or an accessor's statements, its value's block."""
-        text = super()._property(node)
-        value = self.node(node.subterms["value"])
-        attributes = node.attributes
-        if value.kind != "functionexpression" or attributes.get("shorthand") or not (
-                attributes.get("method") or attributes.get("propertyKind") in ("get", "set")):
-            return text
-        return text[:-2] + self.inline(self.held_block(value, "block"))
-
-    def type_literal(self, node: Any) -> str:
-        """An object type: on one line, as `Text.Printer` writes it, or with comments on its members' lines, one level
-        in from the statement's, a trailing comment on the line before it."""
-        members = node.helpers.get("members", ())
-        if all(member.kind != "comment" for member in members):
-            return self.types.TEXTS["tstypeliteral"](self, node)
-        lines = ["{"]
-        for member in members:
-            attributes = member.attributes
-            if member.kind == "comment":
-                text = f"/*{attributes['text']}*/" if attributes.get("block") else f"//{attributes['text']}"
-                if attributes.get("trailing"):
-                    lines[-1] += " " + text
-                    continue
-            else:
-                text = self.text(member) + ";"
-            lines.append(_INDENT * (self.level + 1) + text)
-        return "\n".join([*lines, _INDENT * self.level + "}"])
+    def statements(self, node: Any) -> str:
+        """A function's, an arrow's or a class's statements or members, its `block` or `classBody`, which `Text.Printer`
+        leaves to this grammar: its lines, one level in from the statement's."""
+        return self.inline(self.held_block(node, "classBody" if node.kind == "classexpression" else "block"))
 
     def has_in(self, value: Any) -> bool:
         """Whether an expression holds an `in` operator outside parentheses."""

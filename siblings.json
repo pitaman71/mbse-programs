@@ -5,8 +5,8 @@
   },
   "mbse-expressions": {
     "repository": "git@github.com:pitaman71/mbse-expressions.git",
-    "version": "0.12.1",
-    "commit": "53373f9ab0eeb6fcdee68b32ac3cedb333b42f6d"
+    "version": "0.12.2",
+    "commit": "5c64fbaf9be9d9e5f966936534837be35243f455"
   },
   "mbse-schemas": {
     "repository": "git@github.com:pitaman71/mbse-schemas.git",
