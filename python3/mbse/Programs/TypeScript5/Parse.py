@@ -1139,6 +1139,8 @@ class _Converter:
         return made
 
     def enum_member(self, ts: _TS) -> _Node:
+        if ts.type == "ERROR":  # what tree-sitter skipped where a member stands, which `key` would read as a name
+            raise _Invalid(ts.type)
         if ts.type == "enum_assignment":
             key, computed = self.key(self.require(ts, "name"))
             return self.new(ts, "tsenummember", computed=computed, id=key,
