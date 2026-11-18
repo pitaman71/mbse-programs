@@ -12,8 +12,8 @@ identity escape of any character but `c` (and `k`, where the pattern names a gro
 groups a legacy octal escape or characters, and a class range with a character set as an end its characters. Its trees
 are regexpp's, the reference parser the dialect's kinds are named for (`@eslint-community/regexpp`, with its
 `ecmaVersion` 2025 and `strict` off), and so is what it rejects: duplicate flags or a flag ECMAScript has not, `u` and
-`v` together, a group named twice in one alternative (ES2025's duplicate names allowed in separate ones), a reference to
-a group the pattern does not name, a quantifier's bounds out of order, a class range's ends out of order, a property
+`v` together, a name two groups share where both may match (ES2025 allows it in separate alternatives), a reference to
+a name no group has, a quantifier's bounds out of order, a class range's ends out of order, a property
 escape of a name or a value Unicode's tables (ECMA-262's tables 67 to 69, and Unicode 16's scripts) do not have, a
 negated class that may hold strings, and in the `u` and `v` modes, what Annex B alone allows *(agent)*. A pattern
 holding a line terminator does not parse: the literal ends there (12.9.5) *(agent)*.
@@ -444,10 +444,8 @@ class _Reader:
         """An atom of Annex B's grammar, without the `u` and `v` modes."""
         if self.dot(elements) or self.escaped(elements):
             return True
-        if self.eat("\\"):  # `\\` where no escape follows: `\\c` without a control letter; `\\` a character
-            if self.at(0) != 0x63:  # `\\` that ends the pattern
-                self.i -= 1
-                return False
+        if self.at(0) == 0x5C and self.at(1) == 0x63:  # `\\c` without a control letter: `\\` a character
+            self.i += 1
             elements.append(_Read(R.CHARACTER, _character("\\", 0x5C), self.i - 1, 0x5C))
             return True
         if self.character_class(elements) or self.group(elements):
@@ -574,7 +572,10 @@ class _Reader:
             self.i -= 1  # Annex B: an identity escape
         if not self.unicode and 0x30 <= cp <= 0x37:
             return self.octal()
-        identity = cp in _SYNTAX or cp == 0x2F if self.unicode else cp not in (-1, 0x63) and not (self.named and cp == 0x6B)
+        if self.unicode:
+            identity = cp in _SYNTAX or cp == 0x2F
+        else:  # Annex B: any but `c`, and `k` where the pattern names a group
+            identity = cp not in (-1, 0x63) and not (self.named and cp == 0x6B)
         if identity:
             self.i += 1
             return cp
@@ -582,9 +583,8 @@ class _Reader:
 
     def octal(self) -> int:
         """A legacy octal escape's value (Annex B): `\\0` to `\\377`."""
-        start = self.i
         value = self.number(8, 3 if self.at(0) <= 0x33 else 2)
-        assert value is not None and self.i > start
+        assert value is not None  # an octal digit stands here
         return value
 
     def unicode_escape(self, unicode: bool) -> int | None:
@@ -610,8 +610,8 @@ class _Reader:
     # Groups
 
     def group_name(self) -> str | None:
-        """A group's name, `<name>`, decoded, or None where no `<` follows; where no name and `>` do, a pattern that does
-        not parse."""
+        """A group's name, `<name>`, decoded, or None where no `<` follows; where no name and `>` do, a pattern that
+        does not parse."""
         if not self.eat("<"):
             return None
         name: list[str] = []

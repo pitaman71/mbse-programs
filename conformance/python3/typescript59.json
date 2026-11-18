@@ -752,6 +752,53 @@
                       "constant": {
                         "pattern": "ab+c",
                         "flags": "giv",
+                        "regexp": {
+                          "regexpliteral": {
+                            "pattern": {
+                              "pattern": {
+                                "alternatives": [
+                                  {
+                                    "alternative": {
+                                      "elements": [
+                                        {
+                                          "character": {
+                                            "raw": "a",
+                                            "value": 97
+                                          }
+                                        },
+                                        {
+                                          "quantifier": {
+                                            "raw": "b+",
+                                            "min": 1,
+                                            "greedy": true,
+                                            "element": {
+                                              "character": {
+                                                "raw": "b",
+                                                "value": 98
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "character": {
+                                            "raw": "c",
+                                            "value": 99
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "flags": {
+                              "raw": "giv",
+                              "isGlobal": true,
+                              "ignoreCase": true,
+                              "unicodeSets": true
+                            }
+                          }
+                        },
                         "text": "/ab+c/giv"
                       }
                     }
