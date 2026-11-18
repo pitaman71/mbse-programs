@@ -626,15 +626,22 @@ class _Converter:
 
     def using(self, ts: _TS) -> _Node | None:
         """`using x = f()` or `await using x = f()`, which tree-sitter-typescript reads as an assignment with a
-        `using` token, perhaps awaited; None for any other expression."""
-        keyword = "using"
-        if ts.type == "await_expression":
-            keyword, ts = "await using", self.named(ts)[0]
-        if ts.type != "assignment_expression" or not self.has(ts, "using"):
+        `using` token, perhaps awaited, and with several declarators, `using x = f(), y = g()`, as a sequence whose
+        first expression is that and each other an assignment; None for any other expression. A declarator that is no
+        assignment is invalid syntax: each needs its value."""
+        parts = self.named(ts) if ts.type == "sequence_expression" else [ts]
+        keyword, first = "using", parts[0]
+        if first.type == "await_expression":
+            keyword, first = "await using", self.named(first)[0]
+        if first.type != "assignment_expression" or not self.has(first, "using"):
             return None
-        declarator = _Node("variabledeclarator", id=self.binding(self.require(ts, "left")),
-                           init=self.expression(self.require(ts, "right")))
-        return _Node("variabledeclaration", declarationKind=keyword, declarations=[declarator])
+        declarators = []
+        for part in (first, *parts[1:]):
+            if part.type != "assignment_expression":
+                raise _Invalid(part.type)
+            declarators.append(_Node("variabledeclarator", id=self.binding(self.require(part, "left")),
+                                     init=self.expression(self.require(part, "right"))))
+        return _Node("variabledeclaration", declarationKind=keyword, declarations=declarators)
 
     def declarators(self, ts: _TS) -> list[_Node]:
         return [self.declarator(d) for d in self.named(ts) if d.type == "variable_declarator"]
@@ -691,6 +698,9 @@ class _Converter:
         init = self.require(ts, "initializer")
         if init.type in ("lexical_declaration", "variable_declaration"):
             made.init = self.convert(init)
+        elif (using := self.using(init)) is not None:  # `for (using x = f(); ...)`
+            using.line = self.origin.line(self.at(init))
+            made.init = using
         elif init.type != "empty_statement":
             made.init = _Branch("expression", self.expression(init))
         conditions = [c for c in self.fields(ts, "condition") if c.type not in (";", "empty_statement")]
@@ -1452,6 +1462,8 @@ class _Converter:
                      operator=operator, right=right)
 
     def assignment(self, ts: _TS) -> _Node:
+        if self.has(ts, "using"):  # a `using` declaration where only an expression stands: invalid syntax
+            raise _Invalid(ts.type)
         operator = self.field(ts, "operator")
         return _Node("assignmentexpression", left=self.target(self.require(ts, "left")),
                      operator="=" if operator is None else self.text(operator),
