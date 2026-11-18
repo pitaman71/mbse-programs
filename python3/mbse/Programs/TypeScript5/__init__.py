@@ -1,6 +1,6 @@
 """TypeScript 5 as a language of mbse-programs: its statements, declarations and their parts (`Statements`), as value
 objects refining `Programs.Framework.Statement`, whose expressions are mbse-expressions' `TypeScript5` terms; source
-read into a store (`Parse`).
+read into a store (`Parse`), and printed from it (`Print`).
 
 `INSTALLS` lists, in the order they run, the installs a store needs to hold TypeScript 5 programs, each in a
 transaction of its own; `store()` gives a new store with each run."""
@@ -17,7 +17,7 @@ from mbse.Expressions.TypeScript import Types as TypeScriptTypes
 from mbse.Schemas.Framework import Builders
 
 from ..Framework import Model
-from . import Parse, Statements
+from . import Parse, Print, Statements
 from .Statements import install
 
 INSTALLS = (Expressions.install, ISOIEC11404.install, IEEE754.install, TypeScriptExpressions.install,
@@ -33,4 +33,4 @@ def store() -> Any:
     return made
 
 
-__all__ = ["INSTALLS", "Parse", "Statements", "install", "store"]
+__all__ = ["INSTALLS", "Parse", "Print", "Statements", "install", "store"]
