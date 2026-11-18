@@ -1,7 +1,7 @@
 """Writes this implementation's conformance files: `python -m mbse.Programs.Conformance.write [directory]`.
 
 For each source in `conformance/sources` of a language ported so far (`LANGUAGES`: Python 3's `.py`, TypeScript 5's
-`.ts` and `.tsx`), it writes the frame of the transaction its parse gives (`<source>.json`), as the user decided ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md),
+`.ts` and `.tsx`, C's `.c`), it writes the frame of the transaction its parse gives (`<source>.json`), as the user decided ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md),
 "The corpora as frames"): a `References.OfFrame`, binding the workspace and the file and assigning the file its
 tree, one nested value, as the whole tree is values ("Stage 3: the whole tree as values"), as
 `Plain.ToPlain(store).Value` writes it; and the text the stored file prints to (`<source>`, its suffix kept). Every
@@ -23,14 +23,14 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from mbse.Programs import Python3, Transpilers, TypeScript5
+from mbse.Programs import C, Python3, Transpilers, TypeScript5
 from mbse.Schemas.Framework import Plain, References
 
 ROOT = Path(__file__).resolve().parents[4] / "conformance"
 DEFAULT = ROOT / "python3"
 
 
-LANGUAGES = {".py": Python3, ".ts": TypeScript5, ".tsx": TypeScript5}
+LANGUAGES = {".py": Python3, ".ts": TypeScript5, ".tsx": TypeScript5, ".c": C}
 """The language each source is, by its suffix."""
 
 

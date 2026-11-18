@@ -229,7 +229,8 @@ class Printer(Text.Printer):
         """`head` and a statement it governs: a block on the same line, another statement on the next."""
         if _kind(body) == "CompoundStatement":
             return self.braced(head, _statements(body, "body"), level)
-        return [_INDENT * level + head, *self.statement_lines(body, level + 1)]
+        inner = level + 2 if _kind(body) in ("CaseStatement", "DefaultStatement") else level + 1  # a label, out
+        return [_INDENT * level + head, *self.statement_lines(body, inner)]
 
     def error(self, node: Any, level: int) -> list[str]:
         """Invalid syntax where a statement or a member stands, `Programs.C.Error`: its text as written, its first line

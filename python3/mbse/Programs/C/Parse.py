@@ -435,9 +435,11 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                 j += 1
             if j < len(tokens) and tokens[j][2] == ":":
                 stop = next((k for k in range(j + 1, len(tokens)) if tokens[k][2] in ("{", ";", "<%")), len(tokens))
-                if stop > j + 2:
-                    named(tokens[j + 1][0], tokens[stop - 1][1])
-                    found.names[tokens[j + 1][0]] = ("base", tokens[j + 1][0], tokens[stop - 1][1])
+                if stop > j + 2 or stop == j + 2 and tokens[j + 1][2] not in _PRIMITIVES:
+                    first, last = tokens[j + 1][0], tokens[stop - 1][1]  # made `int`, as long: tree-sitter-c takes
+                    blank(first, last)  # a keyword alone there
+                    chars[first:first + 3] = list("int")
+                    found.names[first] = ("base", first, last)
         elif word == "case":
             depth, j, last = 0, i + 1, None
             while j < len(tokens):
@@ -606,6 +608,7 @@ class _Converter:
     def __init__(self, source: _Source, prepared: _Prepared, shift: int = 0, origin: _Source | None = None):
         self.source, self.pre, self.shift, self.origin = source, prepared, shift, origin or source
         self.consumed: set[int] = set()
+        self.hoisted: list[_Node] = []  # what a label that is a statement's body took beyond its statement
 
     # Helpers
 
@@ -776,9 +779,12 @@ class _Converter:
                 ts = kids[i]
                 i += 1
             elif ts.is_named:
+                outer, self.hoisted = self.hoisted, []
                 out.append(convert(ts))
+                out += self.hoisted
+                self.hoisted = outer
             elif ts.type == "}":
-                break
+                return out
             else:
                 continue
             previous = ts
@@ -811,22 +817,26 @@ class _Converter:
 
     def case(self, nodes: list[_TS], i: int, convert: Callable[[_TS], Any]) -> tuple[list[Any], int]:
         """The case or default label `nodes[i]`, and the index of the node after what it took: tree-sitter lists the
-        statements after a label as its children; here it labels the first, and the others follow it. A label
-        without statements labels the next label, or ends its block (C23)."""
+        statements after a label as its children; here it labels the first, and the others follow it, the comments
+        before the first among them. A label without statements labels the next label, or ends its block (C23)."""
         ts = nodes[i]
         i += 1
         self.consumed.add(ts.id)
         value = self.field(ts, "value")
-        body = [c for c in ts.children if c.is_named and c.type != "comment" and (value is None or c.id != value.id)]
-        comments = [c for c in ts.children if c.type == "comment"]
-        statement, rest = None, []
-        if body:
-            statement = convert(body[0])
-            rest = self.listed(ts.children[ts.children.index(body[0]) + 1:], convert, body[0])
+        colon = next(c for c in ts.children if c.type == ":")
+        held = self.listed(ts.children[ts.children.index(colon) + 1:], convert, colon)
+        first = next((k for k, item in enumerate(held) if item.branch != "comment"), None)
+        statement = None
+        if first is not None:
+            statement = held.pop(first)
         elif i < len(nodes) and nodes[i].type == "case_statement":
             nested, i = self.case(nodes, i, convert)
-            statement, rest = nested[0], nested[1:]
+            statement, held = nested[0], held + nested[1:]
+        for comment in held[:first]:
+            comment.trailing = False
         try:
+            if any(c.type == "ERROR" or c.is_missing for c in ts.children[:ts.children.index(colon)]):
+                raise _Invalid(ts.type)
             if value is None:
                 label = self.new(ts, "defaultstatement", statement=statement)
             else:
@@ -834,13 +844,16 @@ class _Converter:
                 span = self.pre.ranges.get(self.local(ts))
                 if span is not None:
                     label.last = self.part_expression(*span)
-            if any(c.type == "ERROR" for c in ts.children if c not in body):
-                raise _Invalid(ts.type)
         except _Invalid:
-            label = self.new(ts, "error", text=self.written(ts), body=[statement, *rest] if statement else rest)
-            return [label], i
-        leading = [self.comment(c, None) for c in comments if not body or c.start_byte < body[0].start_byte]
-        return [label, *leading, *rest], i
+            return [self.new(ts, "error", text=self.written(ts), body=[s for s in [statement, *held] if s])], i
+        return [label, *held], i
+
+    def case_body(self, ts: _TS) -> _Node:
+        """A label that is a statement's body, `switch (x) case 1: f();`: tree-sitter lists every statement after it
+        in its block as its own, which follow the statement that holds it instead (`hoisted`)."""
+        label, *rest = self.case([ts], 0, self.statement)[0]
+        self.hoisted += rest
+        return label
 
     # Translation units, blocks and statements
 
@@ -850,14 +863,18 @@ class _Converter:
         return self.listed(ts.children, self.external)
 
     def external(self, ts: _TS) -> _Node:
-        if ts.type in self.STATEMENTS and ts.type not in ("expression_statement",) or (
+        if ts.type == "attributed_statement" and self.named(ts)[-1].type != "expression_statement" or (
+                ts.type == "attributed_statement" and self.named(self.named(ts)[-1])):
+            return self.error(ts)
+        if ts.type in self.STATEMENTS and ts.type not in ("expression_statement", "attributed_statement") or (
                 ts.type == "expression_statement" and not self.asm_statement(ts)):
             return self.error(ts)
         return self.statement(ts)
 
     def asm_statement(self, ts: _TS) -> bool:
+        """Whether an expression statement is a declaration: `asm(...)`, or `_Static_assert(x)` read as a call."""
         kids = self.named(ts)
-        return len(kids) == 1 and kids[0].type == "gnu_asm_expression"
+        return len(kids) == 1 and (kids[0].type == "gnu_asm_expression" or self.asserting(kids[0]))
 
     def block(self, ts: _TS) -> _Node:
         return self.new(ts, "compoundstatement", body=self.listed(ts.children, self.statement, ts.children[0]))
@@ -880,10 +897,22 @@ class _Converter:
             return _Node("expressionstatement")
         if inner[0].type == "gnu_asm_expression":
             return self.asm(inner[0])
+        if self.asserting(inner[0]):  # `_Static_assert(x);`, which tree-sitter-c reads as a call
+            function, arguments = self.require(inner[0], "function"), self.named(self.require(inner[0], "arguments"))
+            return _Node("staticassertdeclaration", keyword=self.text(function),
+                         condition=self.expression(arguments[0]),
+                         message=self.expression(arguments[1]) if len(arguments) == 2 else None)
         goto = self.pre.gotos.get(self.local(inner[0]))
         if goto is not None:  # `goto *p;`, which the pre-pass made `+p;`
             return _Node("gotostatement", target=self.expression(self.require(inner[0], "argument")))
         return _Node("expressionstatement", expression=self.expression(inner[0]))
+
+    def asserting(self, ts: _TS) -> bool:
+        """Whether `ts` is a call of `static_assert` or `_Static_assert` with one argument or two: a declaration."""
+        if ts.type != "call_expression" or self.require(ts, "function").type != "identifier":
+            return False
+        return self.text(self.require(ts, "function")) in ("static_assert", "_Static_assert") and (
+            len(self.named(self.require(ts, "arguments"))) in (1, 2))
 
     def asm(self, ts: _TS) -> _Node:
         made = _Node("asmdeclaration", keyword=self.text(ts.children[0]),
@@ -950,6 +979,9 @@ class _Converter:
 
     def attributed(self, ts: _TS) -> _Node:
         parts = self.named(ts)
+        if parts[-1].type == "expression_statement" and not self.named(parts[-1]):
+            # `[[fallthrough]];`, which tree-sitter-c reads as an empty statement with attributes: a declaration (C23)
+            return _Node("attributedeclaration", attributes=[self.attribute(a) for a in parts[:-1]])
         return _Node("attributedstatement", attributes=[self.attribute(a) for a in parts[:-1]],
                      statement=self.statement(parts[-1]))
 
@@ -1147,7 +1179,11 @@ class _Converter:
     # Declarators
 
     def declarator(self, ts: _TS) -> _Node:
-        """A declarator, named or abstract, with the GNU attributes the pre-pass blanked after it."""
+        """A declarator, named or abstract."""
+        return self.inner_declarator(ts)
+
+    def declared(self, ts: _TS) -> _Node:
+        """A declaration's declarator, with the GNU attributes the pre-pass blanked after it."""
         made = self.inner_declarator(ts)
         blanked = self.pre.after.get(self.source.offset(ts.end_byte))
         if blanked:
@@ -1241,12 +1277,12 @@ class _Converter:
                      declarators=[])
         for c in self.fields(ts, "declarator"):
             if c.type == "init_declarator":
-                made.declarators.append(_Node("initdeclarator", declarator=self.declarator(
+                made.declarators.append(_Node("initdeclarator", declarator=self.declared(
                     self.require(c, "declarator")), initializer=self.expression(self.require(c, "value"))))
             elif c.type == "gnu_asm_expression":
                 raise _Invalid(c.type)  # an `asm` label, which the model has no place for
             else:
-                made.declarators.append(_Node("initdeclarator", declarator=self.declarator(c)))
+                made.declarators.append(_Node("initdeclarator", declarator=self.declared(c)))
         return made
 
     def function_definition(self, ts: _TS) -> _Node:
@@ -1285,7 +1321,7 @@ class _Converter:
                         self.consumed.add(c.id)  # an unnamed bit-field, which tree-sitter reads with a missing name
                         made.declarators.append(_Node("memberdeclarator"))
                     else:
-                        made.declarators.append(_Node("memberdeclarator", declarator=self.declarator(c)))
+                        made.declarators.append(_Node("memberdeclarator", declarator=self.declared(c)))
                 elif c.type == "bitfield_clause":
                     if not made.declarators:
                         made.declarators.append(_Node("memberdeclarator"))
@@ -1424,7 +1460,7 @@ class _Converter:
     def unary(self, ts: _TS) -> _Node:
         operator, argument = self.text(self.require(ts, "operator")), self.require(ts, "argument")
         if operator == "&" and argument.type == "pointer_expression" and self.text(
-                self.require(argument, "operator")) == "&" and argument.start_byte == ts.start_byte + 2:
+                self.require(argument, "operator")) == "&" and self.local(argument) == self.local(ts) + 1:
             raise _Invalid("&&")  # GNU's label as a value, `&&l`, which the model has no kind for
         return _Node("unaryexpression", operator=operator, operand=self.expression(argument))
 
@@ -1535,7 +1571,8 @@ _Converter.STATEMENTS.update({
     "break_statement": lambda self, ts: _Node("breakstatement"),
     "continue_statement": lambda self, ts: _Node("continuestatement"),
     "goto_statement": lambda self, ts: _Node("gotostatement", label=self.identifier(self.require(ts, "label"))),
-    "labeled_statement": _Converter.labeled, "attributed_statement": _Converter.attributed,
+    "labeled_statement": _Converter.labeled,
+    "case_statement": _Converter.case_body, "attributed_statement": _Converter.attributed,
 })
 
 _Converter.DECLARATIONS.update({
