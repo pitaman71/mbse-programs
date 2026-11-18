@@ -5,7 +5,7 @@ against a version of TypeScript (`Check`, over the standards `Standards` records
 
 `INSTALLS` lists, in the order they run, the installs a store needs to hold TypeScript 5 programs, each in a
 transaction of its own; `store()` gives a new store with each run. Checking a version needs the standards as data too,
-which `Standards.prepare(store)` writes: about 5 s, mostly mbse-expressions' own standards, so `store()` leaves it to
+which `Standards.prepare(store)` writes: about 8 s, mostly mbse-expressions' own standards, so `store()` leaves it to
 the caller that checks *(agent)*, as Python3's does."""
 
 from typing import Any
