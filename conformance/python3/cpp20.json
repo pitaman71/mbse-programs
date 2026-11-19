@@ -2119,9 +2119,7 @@
                                     "line": 97,
                                     "specifiers": [
                                       {
-                                        "declspecifier": {
-                                          "keyword": "explicit"
-                                        }
+                                        "explicitspecifier": {}
                                       }
                                     ],
                                     "declarators": [
@@ -2173,9 +2171,104 @@
                                   }
                                 },
                                 {
-                                  "error": {
+                                  "memberdeclaration": {
                                     "line": 98,
-                                    "text": "explicit(N > 1) Vector(T a, T b);"
+                                    "specifiers": [
+                                      {
+                                        "explicitspecifier": {
+                                          "condition": {
+                                            "binaryexpression": {
+                                              "left": {
+                                                "idexpression": {
+                                                  "name": {
+                                                    "identifier": {
+                                                      "spelling": "N"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "operator": ">",
+                                              "right": {
+                                                "literal": {
+                                                  "value": {
+                                                    "int": 1
+                                                  },
+                                                  "text": "1",
+                                                  "base": 10
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ],
+                                    "declarators": [
+                                      {
+                                        "declarator": {
+                                          "functiondeclarator": {
+                                            "declarator": {
+                                              "iddeclarator": {
+                                                "name": {
+                                                  "identifier": {
+                                                    "spelling": "Vector"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "parameters": [
+                                              {
+                                                "parameterdeclaration": {
+                                                  "specifiers": [
+                                                    {
+                                                      "namedtypespecifier": {
+                                                        "name": {
+                                                          "identifier": {
+                                                            "spelling": "T"
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  ],
+                                                  "declarator": {
+                                                    "iddeclarator": {
+                                                      "name": {
+                                                        "identifier": {
+                                                          "spelling": "a"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              {
+                                                "parameterdeclaration": {
+                                                  "specifiers": [
+                                                    {
+                                                      "namedtypespecifier": {
+                                                        "name": {
+                                                          "identifier": {
+                                                            "spelling": "T"
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  ],
+                                                  "declarator": {
+                                                    "iddeclarator": {
+                                                      "name": {
+                                                        "identifier": {
+                                                          "spelling": "b"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    ]
                                   }
                                 },
                                 {
@@ -2639,9 +2732,7 @@
                                     "line": 106,
                                     "specifiers": [
                                       {
-                                        "declspecifier": {
-                                          "keyword": "explicit"
-                                        }
+                                        "explicitspecifier": {}
                                       }
                                     ],
                                     "declarators": [
@@ -4294,9 +4385,81 @@
               }
             },
             {
-              "error": {
+              "simpledeclaration": {
                 "line": 154,
-                "text": "auto [first, second] = std::pair{1, 2};"
+                "specifiers": [
+                  {
+                    "placeholdertypespecifier": {}
+                  }
+                ],
+                "declarators": [
+                  {
+                    "declarator": {
+                      "structuredbindingdeclarator": {
+                        "bindings": [
+                          {
+                            "spelling": "first"
+                          },
+                          {
+                            "spelling": "second"
+                          }
+                        ]
+                      }
+                    },
+                    "initializer": {
+                      "equalinitializer": {
+                        "value": {
+                          "functionalcastexpression": {
+                            "type": {
+                              "namedtypespecifier": {
+                                "name": {
+                                  "qualifiedname": {
+                                    "qualifiers": [
+                                      {
+                                        "identifier": {
+                                          "spelling": "std"
+                                        }
+                                      }
+                                    ],
+                                    "name": {
+                                      "identifier": {
+                                        "spelling": "pair"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "initializer": {
+                              "initializerlist": {
+                                "items": [
+                                  {
+                                    "literal": {
+                                      "value": {
+                                        "int": 1
+                                      },
+                                      "text": "1",
+                                      "base": 10
+                                    }
+                                  },
+                                  {
+                                    "literal": {
+                                      "value": {
+                                        "int": 2
+                                      },
+                                      "text": "2",
+                                      "base": 10
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             },
             {
@@ -8790,9 +8953,49 @@
                         }
                       },
                       {
-                        "error": {
+                        "rangeforstatement": {
                           "line": 239,
-                          "text": "for (auto &[key, value] : map) {}"
+                          "declaration": {
+                            "specifiers": [
+                              {
+                                "placeholdertypespecifier": {}
+                              }
+                            ],
+                            "declarators": [
+                              {
+                                "declarator": {
+                                  "referencedeclarator": {
+                                    "declarator": {
+                                      "structuredbindingdeclarator": {
+                                        "bindings": [
+                                          {
+                                            "spelling": "key"
+                                          },
+                                          {
+                                            "spelling": "value"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "range": {
+                            "idexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "map"
+                                }
+                              }
+                            }
+                          },
+                          "body": {
+                            "compoundstatement": {
+                              "line": 239
+                            }
+                          }
                         }
                       },
                       {

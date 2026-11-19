@@ -44,6 +44,9 @@ Where C++ adds to C's rules, each *(agent)*, as 0.3 decided where it did:
   attributes and its name's template arguments are evaluated where it stands; a member's default initializer, a
   bit-field's width and a member function's body see the class's members. An anonymous union's members are its
   enclosing scope's, as an anonymous struct's or union's member's are, as C's.
+- **A structured binding** (C++17), `auto [a, b] = p;`, `for (auto &[k, v] : m)`, binds each of its names as its
+  declaration binds a declarator's name, a 'variable', each name's place declaring its entity, and its declarator's
+  place the last's *(agent)*.
 - **Friends declare nothing**, as 0.3: a friend's class and functions are uses of their names.
 - **An explicit instantiation declares nothing**: its class is a use of the template's name.
 - **Statements that declare** (`if`, `switch`, `while`, `for`, a range-based `for`) each open a block, which their
@@ -61,8 +64,7 @@ Where C++ adds to C's rules, each *(agent)*, as 0.3 decided where it did:
   C's.
 
 What it does not do, as 0.3: choose among overloads, resolve names that depend on types (members, dependent names),
-tell a typedef name from other names where the parser did not (`Parse`, item 48), or bind a structured binding's
-names, which mbse-expressions' C++ cannot hold yet (`Parse`, item 44).
+or tell a typedef name from other names where the parser did not (`Parse`, item 46).
 """
 
 from __future__ import annotations
@@ -451,6 +453,9 @@ class _Definer(C._Definer):
                     bind(text, place)
                 _, inner = _branch(held)
                 self.within(inner, Objects.properties(inner), scope, place)
+            elif name == "bindings":  # a structured binding's (C++17), each its own name
+                for i, identifier in enumerate(held.values):
+                    bind(Objects.properties(identifier)["spelling"], place.at(i, i))
             elif name == "declarator":
                 self.declarator(held, scope, place, bind, function)
             elif name == "parameters":

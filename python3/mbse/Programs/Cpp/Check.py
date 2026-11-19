@@ -43,14 +43,14 @@ since C++17; what C++17 has, every edition has):
 - terms and helpers, `FEATURES`: `consteval` and `constinit` (C++20), `char8_t` (C++20), `<=>` and `operator<=>`, and
   `operator co_await` (C++20), a lambda's template parameters (C++20) and attributes (C++23), its `requires` (C++20), a
   pack init-capture (C++20), a constrained placeholder, `Number auto` (C++20), a type parameter's constraint (C++20), a
-  template template parameter's `requires` (C++20), an explicit object parameter (C++23); and, beyond 0.3's data, a
+  template template parameter's `requires` (C++20), an explicit object parameter (C++23), structured bindings (C++17)
+  and `explicit(condition)` (C++20); and, beyond 0.3's data, `__has_include` (C++17), a
   static lambda (C++23), a subscript of several indices (C++23), `auto(x)` and `auto{x}` (C++23), the literal suffixes
   `z` and `uz` (C++23), and C Preprocessor's `#elifdef`, `#elifndef` and `#warning` (C++23), whose dialect records C's
   editions only *(agent)*.
 
 Not checked: what an edition removed (`register`, dynamic exception specifications), as `check` lists what an edition
-lacks, not what it dropped; a conditional `explicit` and structured bindings, which mbse-expressions' C++ cannot hold
-yet (`Parse`, items 44 and 45); and an abbreviated function template's `auto` parameter (C++20), which `check` cannot
+lacks, not what it dropped; and an abbreviated function template's `auto` parameter (C++20), which `check` cannot
 tell from a generic lambda's (C++14) without its context *(agent)*.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member or part: what a kind needs, a
@@ -173,6 +173,9 @@ FEATURES: dict[str, Callable[[str, dict[str, Any]], Found]] = {
     "functionalcastexpression": lambda tag, held: [(f"{tag} of auto", "C++23")] if _record(held["type"])[0] == (
         "placeholdertypespecifier") else [],
     "literal": _literal,
+    "explicitspecifier": _set("condition", "C++20"),
+    "structuredbindingdeclarator": lambda tag, held: [(tag, "C++17")],
+    "hasincludeexpression": lambda tag, held: [(tag, "C++17")],
     "elifdefdirective": lambda tag, held: [(tag, "C++23")],
     "otherdirective": lambda tag, held: [("#warning", "C++23")] if held.get("directive") == "warning" else [],
 }
