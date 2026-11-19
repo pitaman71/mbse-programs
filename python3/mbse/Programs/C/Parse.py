@@ -1408,10 +1408,8 @@ class _Converter:
                 if c.type in ("attribute_specifier", "attribute_declaration"):
                     made.attributes.append(self.attribute(c))
                 elif c.type == "gnu_asm_expression":  # GNU's asm label, which tree-sitter-c reads as the function's
-                    self.label(held, self.asm_label(c))  # declarator's: its identifier's
-                elif c.type != "parameter_list" and (inner is None or c.id != inner.id):
-                    raise _Invalid(c.type)
-            return made
+                    self.label(held, self.asm_label(c))  # declarator's: its identifier's (its other children are its
+            return made  # declarator and its parameters)
         if kind in ("parenthesized_declarator", "abstract_parenthesized_declarator"):
             parts = self.named(ts)
             if len(parts) != 1:
