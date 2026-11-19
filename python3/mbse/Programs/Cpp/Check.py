@@ -89,7 +89,7 @@ from mbse.Expressions.Cpp.Types import Expressions as CppTypes
 from mbse.Expressions.Framework import Objects, Terms
 
 from ..C import Check as C
-from ..C.Check import _Availability, _bound, _branch, _deferred, _kind, _read, _terms, _unique, _walk
+from ..C.Check import _Availability, _bound, _branch, _kind, _read, _terms, _unique, _walk
 from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
@@ -345,7 +345,7 @@ def _rules(kind: str, held: dict[str, Any]) -> list[str]:
 
 def _validated(term: Any) -> list[str]:
     """A term's problems, as the dialect whose union holds it validates it."""
-    return _deferred(_DIALECTS[term.as_schema().name].validate(term, _bound(term)))
+    return _DIALECTS[term.as_schema().name].validate(term, _bound(term))
 
 
 def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
@@ -353,8 +353,8 @@ def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
     its dialect validates it; a helper's, its own checks, in C++, and its terms' as their dialect validates them."""
     if Terms.is_term(value):
         return _validated(value)
-    own = _deferred(Kinds.problems(Terms.node(tag, record), Domains.Types(record, "Cpp.Expressions"),
-                                   CppExpressions.SUFFIXES, CppExpressions.PREFIXES, "C++"))
+    own = Kinds.problems(Terms.node(tag, record), Domains.Types(record, "Cpp.Expressions"),
+                         CppExpressions.SUFFIXES, CppExpressions.PREFIXES, "C++")
     return own + [problem for term in _terms(record, _HOLDERS) for problem in _validated(term)]
 
 
@@ -380,4 +380,4 @@ def validate(store: Any, path: str) -> list[str]:
 
 def validate_file(unit: Any) -> list[str]:
     """`validate` of a unit's visitor, read within the caller's transaction."""
-    return _validate(unit)
+    return Domains.Reading(None).run(lambda: _validate(unit))
