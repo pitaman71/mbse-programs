@@ -24,10 +24,11 @@ a conditional directive's `group`, are located through the term's place (`body[0
 
 What an edition has is read from data, as C's: a statement, declaration, clause or member kind is available where a
 standard of that edition's designation, among those `Programs.Cpp` covers, lists its schema (`Standards`); a term's
-kind, where one of `Cpp`'s or `Cpp Types`' does (`Standards.DIALECTS`): C++20's `requires`, `co_await`, `co_yield`
-and designated initializers. A kind no standard lists is not checked: GNU's extensions, a part or a helper, C
-Preprocessor's directives (whose standards are C's alone, a gap of mbse-expressions', reported), and invalid syntax, a
-`Programs.Cpp.Error` and an `error` or `missing` term, which `validate` reports, as C's *(agent)*. A kind's problem is
+kind, where one of `Cpp`'s, `Cpp Types`' or `C Preprocessor`'s of C++'s designations does (`Standards.DIALECTS`):
+C++20's `requires`, `co_await`, `co_yield` and designated initializers, C++23's `#elifdef` and `#elifndef`
+(`elifdefdirective`), and C++17's `__has_include` (`hasincludeexpression`), in every edition. A kind no standard lists
+is not checked: GNU's extensions, a part or a helper, and invalid syntax, a `Programs.Cpp.Error` and an `error` or
+`missing` term, which `validate` reports, as C's *(agent)*. A kind's problem is
 `<kind> needs <the first edition that has it>`.
 
 What a property's value makes available stays code, by the kind that holds it, as C's: a standard tags a kind, not a
@@ -44,10 +45,9 @@ since C++17; what C++17 has, every edition has):
   `operator co_await` (C++20), a lambda's template parameters (C++20) and attributes (C++23), its `requires` (C++20), a
   pack init-capture (C++20), a constrained placeholder, `Number auto` (C++20), a type parameter's constraint (C++20), a
   template template parameter's `requires` (C++20), an explicit object parameter (C++23), structured bindings (C++17)
-  and `explicit(condition)` (C++20); and, beyond 0.3's data, `__has_include` (C++17), a
-  static lambda (C++23), a subscript of several indices (C++23), `auto(x)` and `auto{x}` (C++23), the literal suffixes
-  `z` and `uz` (C++23), and C Preprocessor's `#elifdef`, `#elifndef` and `#warning` (C++23), whose dialect records C's
-  editions only *(agent)*.
+  and `explicit(condition)` (C++20); and, beyond 0.3's data, a static lambda (C++23), a subscript of several indices
+  (C++23), `auto(x)` and `auto{x}` (C++23), the literal suffixes `z` and `uz` (C++23), and C Preprocessor's `#warning`
+  (C++23), a directive's name within `otherdirective`, which its data does not record *(agent)*.
 
 Not checked: what an edition removed (`register`, dynamic exception specifications), as `check` lists what an edition
 lacks, not what it dropped; and an abbreviated function template's `auto` parameter (C++20), which `check` cannot
@@ -179,13 +179,11 @@ FEATURES: dict[str, Callable[[str, dict[str, Any]], Found]] = {
     "literal": _literal,
     "explicitspecifier": _set("condition", "C++20"),
     "structuredbindingdeclarator": lambda tag, held: [(tag, "C++17")],
-    "hasincludeexpression": lambda tag, held: [(tag, "C++17")],
-    "elifdefdirective": lambda tag, held: [(tag, "C++23")],
     "otherdirective": lambda tag, held: [("#warning", "C++23")] if held.get("directive") == "warning" else [],
 }
 """The features of a term or a helper that its properties' values make, by its kind (its tag, or its helper's), given
-its tag and its properties that are set: each feature's name, and the edition it arrived in, by its common name *(agent: code until
-mbse-expressions records them)*."""
+its tag and its properties that are set: each feature's name, and the edition it arrived in, by its common name *(agent:
+code, as a standard tags a kind, not a property's value)*."""
 
 
 def _alias(kind: str, held: dict[str, Any]) -> Found:
