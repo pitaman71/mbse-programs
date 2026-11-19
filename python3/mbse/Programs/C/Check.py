@@ -31,13 +31,14 @@ holds as statements.
 What an edition has is read from data, as mbse-expressions records it (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided)):
 a statement, declaration or member kind is available where a standard of that edition's designation, among those
 `Programs.C` covers, lists its schema (`Standards`); a term's kind, where one of those of `C`, `C Types` or `C
-Preprocessor` does (`Standards.DIALECTS`): C23's attribute declarations, `nullptr` (a `constant`) and `#elifdef`; and
-`_Pragma("...")`, C Preprocessor's `pragmaexpression`, which every edition has. A kind no standard lists is not
-checked: GNU's extensions (`asm`, a statement expression, `__extension__`, a label as a value, `&&l`, C's
-`labeladdressexpression`), outside every edition, as mbse-expressions' `C` marks them, a part or a helper (GNU's asm
-label, C Types' `AsmLabel`, among them), and invalid syntax, a `Programs.C.Error` and an `error` or `missing` term,
-which `validate` reports *(agent)*. A kind's problem is `<kind> needs <the first edition that
-has it>`: a statement's kind by its name (`AttributeDeclaration`), a term's by its tag (`constant`).
+Preprocessor` does (`Standards.DIALECTS`), of that designation, a dialect's editions of another language (C
+Preprocessor's C++ editions) not read: C23's attribute declarations, `nullptr` (a `constant`), `#elifdef` and
+`__has_include` (`hasincludeexpression`); and `_Pragma("...")`, C Preprocessor's `pragmaexpression`, which every edition
+has. A kind no standard lists is not checked: GNU's extensions (`asm`, a statement expression, `__extension__`, a label
+as a value, `&&l`, C's `labeladdressexpression`), outside every edition, as mbse-expressions' `C` marks them, a part or
+a helper (GNU's asm label, C Types' `AsmLabel`, among them), and invalid syntax, a `Programs.C.Error` and an `error` or
+`missing` term, which `validate` reports *(agent)*. A kind's problem is `<kind> needs <the first edition that has it>`:
+a statement's kind by its name (`AttributeDeclaration`), a term's by its tag (`constant`).
 
 What a property's value makes available stays code, by the kind that holds it: a standard tags a kind, not a property
 or a value of one *(agent)*. As the 0.3 language had them, C's (`Ccpp/Syntax.py`, `SINCE` and `FEATURES`; what arrived
@@ -66,7 +67,7 @@ Not checked: what C23 removed (a K&R definition, an old-style declaration of a f
   MemberDeclarator needs a declarator or a bitfield`); and, beyond 0.3's, `a SimpleDeclaration needs a specifier`, as
   for a member declaration and a function's definition: C99 removed the implicit `int`, and a function's definition's
   declarator declaring a function (`int m { ... }`), which the schemas hold where a unit is built, and which `Parse`
-  keeps as invalid syntax where tree-sitter reads one (its departure 36) *(agent)*; a kind's word one
+  keeps as invalid syntax where tree-sitter reads one (its departure 37) *(agent)*; a kind's word one
   of its choices (`StaticAssertDeclaration.keyword cannot be 'assert'`); and the dangling `else`, an `if` without one
   ending the consequence of an `if` with one;
 - invalid syntax, as the user decided that a parse keeps it and validation reports it: each `Programs.C.Error`,
@@ -321,7 +322,8 @@ def _year(standard: Any) -> int:
 
 class _Availability:
     """What the store's standards say: the target edition's year, each kind's schema's editions' years, by its schema's
-    name, and each edition's year and common name. `language` is the singleton covering the editions, `edition` the
+    name, among the editions the language covers by designation (a dialect's other editions, C Preprocessor's C++
+    editions in C's, not read), and each edition's year and common name. `language` is the singleton covering the editions, `edition` the
     target's common name or designation, and `dialects` the singletons whose standards list kinds *(agent: parameters,
     so that `Programs.Cpp.Check` reuses it)*."""
 
@@ -330,15 +332,18 @@ class _Availability:
         if target is None:
             raise LookupError(f"{language} covers no edition {edition!r}: run Standards.prepare on the store")
         self.target = _year(target)
+        covered = ExpressionStandards.standards(store.singleton(language))
         self.years = {ExpressionStandards.properties(s)["names"][0]: _year(s)  # type: ignore[index]
-                      for s in ExpressionStandards.standards(store.singleton(language)).values()}
+                      for s in covered.values()}
         self.names = {year: name for name, year in self.years.items()}
         self.versions: dict[str, set[int]] = {}
         for dialect in dialects:
             standards = ExpressionStandards.standards(store.singleton(dialect))
             if not standards:
                 raise LookupError(f"{dialect} covers no edition: run Standards.prepare on the store")
-            for standard in standards.values():
+            for designation, standard in standards.items():
+                if designation not in covered:  # another language's, as C Preprocessor's C++ editions are C's
+                    continue
                 for kind in ExpressionStandards.kinds(standard):
                     self.versions.setdefault(kind.name, set()).add(_year(standard))
 

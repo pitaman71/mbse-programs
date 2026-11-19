@@ -91,7 +91,8 @@ What tree-sitter-cpp cannot parse, which the pre-pass rewrites where it found an
     before GNU attributes, `register int r asm("r1") = 3;`, read back into its identifier's `asm`.
 18. **`__has_include`** (C++17), `#if __has_include(<h>)`, `__has_include("h")`, in an `#if` or an `#elif`: the
     header's name blanked, the converter reading it back, C Preprocessor's `hasincludeexpression` (its `path`, and
-    `system` where it is `<h>`); of a macro, `__has_include(M)`, which it reads as a call, the `macro` of one.
+    `system` where it is `<h>`); of a macro, `__has_include(M)`, which it reads as a call, the `macro` of one: C's
+    pre-pass and converter, as C's `Parse` reads it (its 16).
 19. **A user-defined string literal before an adjacent string**, `"a"_s "b"`: the suffix blanked, the converter
     reading the adjacent strings back as the user-defined literal's `concatenation`, its suffix the one they share
     (`"a" "b"_s`, as C++ joins them before it applies it); suffixes that differ, `"a"_s "b"_t`, kept invalid syntax.
@@ -124,7 +125,7 @@ What tree-sitter-cpp misreads, which the converter corrects:
     declarator's `pure`.
 31. **An attribute declaration**, `[[fallthrough]];`, which it reads as an attributed empty statement: an
     `AttributeDeclaration`; and GNU's attributes on a null statement, `__attribute__((fallthrough));`, which it reads as
-    an error and `;`, an `AttributedStatement`, as C's does (its 22).
+    an error and `;`, an `AttributedStatement`, as C's does (its 23).
 32. **A condition's declaration**, `if (int x = f())`, whose initializer it reads as the declaration's: its
     declarator's.
 33. **GNU's asm label**, `int f(void) asm("g");`, which it reads as a declarator of its own: the `asm` of the
@@ -135,9 +136,9 @@ What tree-sitter-cpp misreads, which the converter corrects:
 35. **A constraint**, the parenthesized conjunctions and disjunctions it reads as tokens within a requires-clause: a
     term, `&&` and `||` binary expressions of primary expressions.
 36. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model, and GNU's labels as values,
-    `&&l`, as C's `Parse` reads them (its 25 and 28).
+    `&&l`, as C's `Parse` reads them (its 26 and 29).
 37. **A type's keyword as a macro's argument**, `va_arg(ap, int)`, which it reads as an error: a `typeid`, as C's
-    `Parse` reads it (its 24).
+    `Parse` reads it (its 25).
 38. **`auto(x)` and `auto{x}`** (C++23), which it reads as a call of a function named `auto` and a cast to a type named
     `auto`: a `functionalcastexpression` whose type is a `placeholdertypespecifier`.
 
@@ -220,12 +221,12 @@ _ACCESS = ("public", "protected", "private")
 
 class _Prepared(C._Prepared):
     """What the pre-pass rewrote, by character offset: C's (`Programs.C.Parse._Prepared`: the keywords it respelled, the
-    attributes it blanked, the items it blanked where they are listed and the `_Pragma`s among them), and C++'s: the
-    module declarations it blanked, each made already, the declarations and blocks `export` introduced, the `extern` of
-    an `extern template`, the explicit object parameters (`this`), a using-declaration's further declarators, a
-    bit-field's initializer, an attribute specifier's `using` namespace, the `;` it wrote after a label ending a block,
-    an alias declaration where an init-statement stands, a lambda's `static` and attributes, and a conversion
-    function's name made a name."""
+    attributes it blanked, the items it blanked where they are listed and the `_Pragma`s among them, and the headers of
+    `__has_include`), and C++'s: the module declarations it blanked, each made already, the declarations and blocks
+    `export` introduced, the `extern` of an `extern template`, the explicit object parameters (`this`), a
+    using-declaration's further declarators, a bit-field's initializer, an attribute specifier's `using` namespace, the
+    `;` it wrote after a label ending a block, an alias declaration where an init-statement stands, a lambda's `static`
+    and attributes, and a conversion function's name made a name."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -245,15 +246,11 @@ class _Prepared(C._Prepared):
         self.lambdas: dict[int, list[tuple[int, int]]] = {}  # by its lambda's `[`: the span of each of its attributes
         self.conversions: dict[int, tuple[int, int]] = {}  # by its offset: a conversion function's name made a name,
         # and the span of its type
-        self.headers: dict[int, tuple[str, bool]] = {}  # by its offset: a `__has_include`'s header, blanked, and
-        # whether it is a system header's, `<h>`
         self.suffixes: dict[int, str] = {}  # by its string's offset: a string's suffix blanked before an adjacent string
 
 
 _STRING = re.compile(r'(?:u8|[uUL])?R?"')
 """The start of a string literal's token."""
-_HAS_INCLUDE = re.compile(r'\b__has_include[ \t]*\([ \t]*(<[^>\n]*>|"[^"\n]*")[ \t]*\)')
-"""`__has_include` of a header's name, `<h>` or `"h"`, which tree-sitter-cpp cannot parse."""
 
 
 def _masked(text: str) -> str:
@@ -337,10 +334,8 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
         elif broken and line.startswith("%:"):
             chars[start:start + 2] = list("# ")
         if broken and C._directive_name(line) in ("if", "elif"):
-            for match in _HAS_INCLUDE.finditer(line):  # `__has_include(<h>)`, `__has_include("h")` (C++17)
-                header = match.group(1)
-                found.headers[start + match.start()] = (header[1:-1], header[0] == "<")
-                blank(start + match.start(1), start + match.end(1))
+            for span in C._has_includes(line, start, found):  # `__has_include(<h>)`, `__has_include("h")` (C++17)
+                blank(*span)
     braces = C._braces(tokens)
     labels: dict[int, int] = {}  # the index of an asm label's `)`, blanked: where the declarator before it ends
     pragmas: set[int] = set()  # the index of a `_Pragma`'s `)`, blanked
@@ -1534,17 +1529,6 @@ class _Converter(C._Converter):
             raise _Invalid(keyword)
         return _Node("typeidexpression" if keyword == "typeid" else "noexceptexpression",
                      operand=self.argument(operands[0]))
-
-    def has_include(self, function: _TS, arguments: _TS) -> _Node:
-        """`__has_include` (C++17), C Preprocessor's `hasincludeexpression`: of the header the pre-pass blanked, or of a
-        macro, `__has_include(M)`, which tree-sitter-cpp reads as a call."""
-        header = self.pre.headers.get(self.local(function))
-        if header is not None:
-            return _Node("hasincludeexpression", path=header[0], system=header[1] or None)
-        operands = self.named(arguments)
-        if len(operands) != 1:
-            raise _Invalid("__has_include")
-        return _Node("hasincludeexpression", macro=self.expression(operands[0]))
 
     def field_expression(self, ts: _TS) -> _Node:
         operator, member = self.text(self.require(ts, "operator")), self.require(ts, "field")

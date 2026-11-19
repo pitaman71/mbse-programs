@@ -82,75 +82,79 @@ What tree-sitter-c cannot parse, which the pre-pass rewrites:
     enumerators: blanked, the converter listing a `Directive` holding C Preprocessor's `pragmaexpression` where it
     stood, and among enumerators the term itself, as the dialect holds them *(agent: a directive, as `#pragma` is,
     since it stands for one)*. Within an initializer's braces, or after a label, it is kept as tree-sitter reads it.
+16. **`__has_include` of a header's name** (C23), `#if __has_include(<h>)`, `__has_include("h")`, in an `#if` or an
+    `#elif`, which it reads as comparisons and errors, or an error: the header's name blanked, the converter reading it
+    back, C Preprocessor's `hasincludeexpression` (its `path`, and `system` where it is `<h>`); of a macro,
+    `__has_include(M)`, which it reads as a call, the `macro` of one, as C++'s `Parse` reads it (its 18).
 
 What tree-sitter-c misreads, which the pre-pass rewrites:
 
-16. **`_Thread_local`** (C11), which it reads as a type's name: rewritten `thread_local`, as long, the converter
+17. **`_Thread_local`** (C11), which it reads as a type's name: rewritten `thread_local`, as long, the converter
     spelling it as written.
-17. **`_Complex` and `_Imaginary`** (C99, kept by C11 to C23), which it reads as types' names or declarators:
+18. **`_Complex` and `_Imaginary`** (C99, kept by C11 to C23), which it reads as types' names or declarators:
     rewritten `const`, as long, the converter making each a `primitivetypespecifier` as written.
 
 What tree-sitter-c misreads, which the converter corrects:
 
-20. **`typeof` of a type name** (C23), `typeof(int *) x`, which it reads as a macro's type specifier: a
+19. **`typeof` of a type name** (C23), `typeof(int *) x`, which it reads as a macro's type specifier: a
     `typeofspecifier` holding a `typeid`.
-19. **Keywords and type names**: `_Bool`, `_Float16` to `_Float128x`, `_Decimal32` to `_Decimal128`, `__int128`,
+20. **Keywords and type names**: `_Bool`, `_Float16` to `_Float128x`, `_Decimal32` to `_Decimal128`, `__int128`,
     `__float128` and `__auto_type`, which it reads as types' names, and the library's typedefs `size_t`, `int32_t`,
     `char16_t` and their like, which it reads as keywords: a `primitivetypespecifier` for a keyword, a
     `namedtypespecifier` for a name, as 0.3 had them.
-20. **An unnamed bit-field**, `int : 3;`, which it reads with a missing name: a `MemberDeclarator` without a
+21. **An unnamed bit-field**, `int : 3;`, which it reads with a missing name: a `MemberDeclarator` without a
     declarator.
-21. **A label ending a block** (C23), `l: }`, which it reads with a missing `;`: a label without a statement, as
+22. **A label ending a block** (C23), `l: }`, which it reads with a missing `;`: a label without a statement, as
     it reads `case 1: }`.
-22. **GNU attributes on a null statement**, `__attribute__((fallthrough));`, which it reads as an error and `;`: an
+23. **GNU attributes on a null statement**, `__attribute__((fallthrough));`, which it reads as an error and `;`: an
     `AttributedStatement`.
-23. **`NULL`**, which it reads as a null constant like `nullptr`: the macro's name, a `variable`; `nullptr` (C23) a
+24. **`NULL`**, which it reads as a null constant like `nullptr`: the macro's name, a `variable`; `nullptr` (C23) a
     `constant`.
-24. **A type name as a macro's argument**, `va_arg(ap, int)`, which it reads as a variable named `int`: a `typeid`,
+25. **A type name as a macro's argument**, `va_arg(ap, int)`, which it reads as a variable named `int`: a `typeid`,
     where the argument is a type's keyword.
-25. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model (0.3's normalization); and
+26. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model (0.3's normalization); and
     GNU's obsolete designator `x: 1`, read as `.x = 1`.
-26. **An attribute declaration** (C23), `[[fallthrough]];`, which it reads as an empty statement with attributes: an
+27. **An attribute declaration** (C23), `[[fallthrough]];`, which it reads as an empty statement with attributes: an
     `AttributeDeclaration`, at file scope as within a block.
-27. **`static_assert(x, "m");` and `_Static_assert`** (C11; without a message, C23), which it reads as a call, an
+28. **`static_assert(x, "m");` and `_Static_assert`** (C11; without a message, C23), which it reads as a call, an
     expression statement: a `StaticAssertDeclaration`.
-28. **GNU's labels as values**, `&&l`, which it reads as `&(&l)`, the address of an address: C's
+29. **GNU's labels as values**, `&&l`, which it reads as `&(&l)`, the address of an address: C's
     `labeladdressexpression`, its `label` the label's name.
-29. **`_Pragma("...")` within an expression**, which it reads as a call of a function named `_Pragma`: C Preprocessor's
+30. **`_Pragma("...")` within an expression**, which it reads as a call of a function named `_Pragma`: C Preprocessor's
     `pragmaexpression`, its `operand` the string literal, as written; with a `;` after it, where a statement stands, an
     `ExpressionStatement` holding it, as written.
-30. **GNU's asm label**, `int x asm("r1");`, `int f(void) __asm__("f2");`, which it reads as a declarator of its own
+31. **GNU's asm label**, `int x asm("r1");`, `int f(void) __asm__("f2");`, which it reads as a declarator of its own
     after the one it labels, or within a function's declarator: the `asm` of the identifier's declarator it labels (C
     Types' `AsmLabel`, its `keyword` as written and its `label` the string literal).
 
 What tree-sitter-c reads but C rejects, which the converter keeps invalid syntax (an `Error`, or an `error` term):
 
-31. **Statements at file scope**, `x = 1;`, `;`, `{}`: C's translation unit holds declarations alone.
-32. **C++'s linkage specification**, `extern "C" { ... }`, and **Microsoft's extensions** 0.3 did not keep: calling
+32. **Statements at file scope**, `x = 1;`, `;`, `{}`: C's translation unit holds declarations alone.
+33. **C++'s linkage specification**, `extern "C" { ... }`, and **Microsoft's extensions** 0.3 did not keep: calling
     conventions (`__cdecl`), pointer modifiers (`__ptr32`, `__based`) and structured exceptions (`__try`).
-33. **Literals C rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C has not (`1uu`, `1.0ff`), and an
+34. **Literals C rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C has not (`1uu`, `1.0ff`), and an
     escape of no character (`'\\x'`). GNU's imaginary constants (`1.0i`) tree-sitter cannot read either: an `Error`.
-34. **A conditional directive's closing or continuing line where none is open**, `#endif` alone, which it reads as an
+35. **A conditional directive's closing or continuing line where none is open**, `#endif` alone, which it reads as an
     other directive.
-35. **A macro's use that is no C syntax**, `FOO(T) x;` (a macro's type specifier other than `typeof`), and a type
+36. **A macro's use that is no C syntax**, `FOO(T) x;` (a macro's type specifier other than `typeof`), and a type
     specifier tree-sitter reads but C has not.
-36. **A function's definition whose declarator declares no function**, `int m { return 0; }` and `int (*m)[3] {}`,
+37. **A function's definition whose declarator declares no function**, `int m { return 0; }` and `int (*m)[3] {}`,
     which it reads as a function's definition: an `Error`.
-37. **GNU's asm label on a function's definition**, `int f(void) asm("g") { ... }`, which GCC takes on a declaration
+38. **GNU's asm label on a function's definition**, `int f(void) asm("g") { ... }`, which GCC takes on a declaration
     alone: an `Error`; a second asm label, `int x asm("a") asm("b");`, which it cannot read, as its recovery
     leaves it.
-38. **`_Pragma` of what is no one string literal**, `_Pragma(x)`, `_Pragma("a" "b")`, and **`&&` of what is no
+39. **`_Pragma` of what is no one string literal**, `_Pragma(x)`, `_Pragma("a" "b")`, and **`&&` of what is no
     label's name**, `&&(l)`: an `error` term within an expression, an `Error` where an item stands.
 
 What stays as tree-sitter-c reads it:
 
-39. **Typedef names and other names**, `T * x;` (a declaration or a product), `(T)*x` (a cast or a product),
+40. **Typedef names and other names**, `T * x;` (a declaration or a product), `(T)*x` (a cast or a product),
     `typeof(x)` and `_Alignof(x)` (of a type or of an expression): which a text is depends on whether `T` names a
     type, which the declarations before it decide, outside the grammar. Read as tree-sitter decides.
-40. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it:
+41. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it:
     no tree of either the directives or the statements, the preprocessor not run. Kept as tree-sitter's recovery
     leaves it: invalid syntax, as written.
-41. **Trigraphs** (`??=`), which C11 and C17 replace before all else, within strings too, and C23 removed: which a
+42. **Trigraphs** (`??=`), which C11 and C17 replace before all else, within strings too, and C23 removed: which a
     text means depends on its edition. Kept as tree-sitter reads them, invalid syntax where they spell punctuation.
 
 Decided here *(agent, for review)*:
@@ -273,7 +277,8 @@ class _Prepared:
     """What the pre-pass rewrote, by character offset: keywords it respelled (`_Thread_local`, `_Complex`, an inferred
     declaration's `auto`, a `switch`), constructs it made names (`_BitInt(N)`, `typeof`'s operand, `_Atomic(T)`, an
     enumeration's underlying type), attributes it blanked, by what they follow, the ends of case ranges, computed
-    `goto`s, and the items it blanked where they are listed (null directives, a struct's `static_assert`s)."""
+    `goto`s, the items it blanked where they are listed (null directives, a struct's `static_assert`s), and the headers
+    of `__has_include` it blanked."""
 
     def __init__(self) -> None:
         self.keywords: dict[int, str] = {}  # by its offset: the keyword as written
@@ -289,6 +294,24 @@ class _Prepared:
         # span of its operand
         self.labels: dict[int, tuple[int, int]] = {}  # GNU's asm labels, by where the declarator before them ends: the
         # span of each
+        self.headers: dict[int, tuple[str, bool]] = {}  # by its offset: a `__has_include`'s header, blanked, and
+        # whether it is a system header's, `<h>`
+
+
+_HAS_INCLUDE = re.compile(r'\b__has_include[ \t]*\([ \t]*(<[^>\n]*>|"[^"\n]*")[ \t]*\)')
+"""`__has_include` of a header's name, `<h>` or `"h"`, which tree-sitter-c and tree-sitter-cpp cannot parse."""
+
+
+def _has_includes(line: str, start: int, found: _Prepared) -> list[tuple[int, int]]:
+    """The spans to blank of the headers of each `__has_include(<h>)` and `__has_include("h")` (C23, C++17) in an `#if`
+    or an `#elif` line at `start`, each header recorded by its `__has_include`'s offset *(agent: C's, so that C++'s
+    pre-pass, which lists its directives as C's does, shares it)*."""
+    spans = []
+    for match in _HAS_INCLUDE.finditer(line):
+        header = match.group(1)
+        found.headers[start + match.start()] = (header[1:-1], header[0] == "<")
+        spans.append((start + match.start(1), start + match.end(1)))
+    return spans
 
 
 _PUNCTUATORS = sorted(["%:%:", "...", "<<=", ">>=", "->", "++", "--", "<<", ">>", "<=", ">=", "==", "!=", "&&", "||",
@@ -459,6 +482,9 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
             found.items.append((start, start, start))
         elif line.startswith("%:"):
             chars[start:start + 2] = list("# ")
+        if broken and _directive_name(line) in ("if", "elif"):
+            for span in _has_includes(line, start, found):  # `__has_include(<h>)`, `__has_include("h")` (C23)
+                blank(*span)
     braces = _braces(tokens)
     labels: dict[int, int] = {}  # the index of an asm label's `)`, blanked: where the declarator before it ends
     pragmas: set[int] = set()  # the index of a `_Pragma`'s `)`, blanked
@@ -1701,15 +1727,30 @@ class _Converter:
         return _Node("postfixexpression", operand=operand, operator=operator)
 
     def call(self, ts: _TS) -> _Node:
-        """A call; `_Pragma("...")`, which tree-sitter-c reads as one, the pragma operator, of one string literal."""
+        """A call; `_Pragma("...")`, which tree-sitter-c reads as one, the pragma operator, of one string literal; and
+        `__has_include`, C Preprocessor's `hasincludeexpression`."""
         function = self.require(ts, "function")
         if function.type == "identifier" and self.text(function) == "_Pragma":
             operands = self.named(self.require(ts, "arguments"))
             if len(operands) != 1 or operands[0].type != "string_literal":
                 raise _Invalid(self.text(function))
             return self.pragma(self.expression(operands[0]))
+        if function.type == "identifier" and self.text(function) == "__has_include":
+            return self.has_include(function, self.require(ts, "arguments"))
         return _Node("callexpression", function=self.expression(self.require(ts, "function")),
                      arguments=self.arguments(self.require(ts, "arguments")))
+
+    def has_include(self, function: _TS, arguments: _TS) -> _Node:
+        """`__has_include` (C23, C++17), C Preprocessor's `hasincludeexpression`: of the header the pre-pass blanked,
+        or of a macro, `__has_include(M)`, which tree-sitter reads as a call *(agent: C's, C++'s converter inheriting
+        it)*."""
+        header = self.pre.headers.get(self.local(function))
+        if header is not None:
+            return _Node("hasincludeexpression", path=header[0], system=header[1] or None)
+        operands = self.named(arguments)
+        if len(operands) != 1:
+            raise _Invalid("__has_include")
+        return _Node("hasincludeexpression", macro=self.expression(operands[0]))
 
     def field_expression(self, ts: _TS) -> _Node:
         return _Node("memberexpression", object=self.expression(self.require(ts, "argument")),

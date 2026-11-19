@@ -12,7 +12,7 @@ _Pragma("GCC diagnostic push")
 #
 #if defined(DEBUG) && VERSION >= 202311L
 #define TRACE 1
-#elif !defined(NDEBUG)
+#elif !defined(NDEBUG) && __has_include(<assert.h>)
 #define TRACE 2
 #else
 #define TRACE 0
