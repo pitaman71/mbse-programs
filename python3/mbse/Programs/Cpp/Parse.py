@@ -72,7 +72,8 @@ What tree-sitter-cpp cannot parse, which the pre-pass rewrites where it found an
 15. **A static lambda** (C++23), `[]() static {}`: `static` blanked, the converter giving the lambda's declarator the
     specifier `static` where it stood; without parameters, `[] static {}`, `static` rewritten `()`, as long, so that it
     prints `[]() static {}`, which C++23 reads the same *(agent: the model holds no lambda's specifiers without its
-    declarator)*.
+    declarator)*; **and a lambda's attributes** (C++23), `[] [[nodiscard]] () {}`: blanked, the converter reading them
+    back into the lambda's `attributes`.
 16. **A conversion function's name within an expression**, `x.operator int()`, `p->operator T *()`, and, within a
     function's body or an initializer, `operator bool()`: made a name as long, the converter reading its type back, a
     `conversionname`. Qualified, `&S::operator int`, it parses as it is.
@@ -220,8 +221,8 @@ class _Prepared(C._Prepared):
     module declarations it blanked, each made already, the declarations and blocks `export` introduced, the `extern` of
     an `extern template`, the explicit object parameters (`this`), a using-declaration's further declarators, a
     bit-field's initializer, an attribute specifier's `using` namespace, the `;` it wrote after a label ending a block,
-    an alias declaration where an init-statement stands, a lambda's `static` and a conversion function's name made a
-    name."""
+    an alias declaration where an init-statement stands, a lambda's `static` and attributes, and a conversion
+    function's name made a name."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -238,6 +239,7 @@ class _Prepared(C._Prepared):
         self.aliases: dict[int, tuple[int, int]] = {}  # by the `(` before it: an alias declaration's span, before its
         # `;`, blanked where an init-statement stands
         self.statics: dict[int, int] = {}  # by its lambda's `(`: the offset of a lambda's `static`
+        self.lambdas: dict[int, list[tuple[int, int]]] = {}  # by its lambda's `[`: the span of each of its attributes
         self.conversions: dict[int, tuple[int, int]] = {}  # by its offset: a conversion function's name made a name,
         # and the span of its type
 
@@ -389,6 +391,13 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                 found.aliases[tokens[i - 2][0]] = (start, tokens[stop - 1][1])
                 blank(start, tokens[stop - 1][1])
                 i = stop
+        elif w == "[" and after == "[" and before == "]" and _introducer(tokens, i - 2):
+            opening, j = C._opening(tokens, i - 2), i - 1  # a lambda's attributes (C++23), `[] [[nodiscard]] ()`
+            while word(j) == "[" and word(j + 1) == "[" and (close := C._closing(tokens, j)) is not None:
+                found.lambdas.setdefault(tokens[opening][0], []).append((tokens[j][0], tokens[close][1]))
+                blank(tokens[j][0], tokens[close][1])
+                j = close + 1
+            i = max(i, j)  # unclosed: nothing to read back
         elif w == "static" and _lambda_static(tokens, i - 1):
             opening = C._opening(tokens, i - 2)  # a static lambda (C++23), `[]() static {}`; `[] static {}` given
             if before == "]":  # its `()`
@@ -463,12 +472,17 @@ def _lambda_static(tokens: list[tuple[int, int, str]], at: int) -> bool:
     `]` or its template parameters' `>`, or after its captures, `[] static`, which no attribute's `]]` and no
     subscript's `]` is."""
     before = tokens[at - 1][2] if at > 0 else ""
-    if before not in (")", "]"):
-        return False
-    opening = C._opening(tokens, at - 1)
-    previous = tokens[opening - 1][2] if opening > 0 else ""
     if before == ")":
-        return previous in ("]", ">")
+        opening = C._opening(tokens, at - 1)
+        return opening > 0 and tokens[opening - 1][2] in ("]", ">")
+    return before == "]" and _introducer(tokens, at - 1)
+
+
+def _introducer(tokens: list[tuple[int, int, str]], close: int) -> bool:
+    """Whether the `]` at `tokens[close]` closes a lambda's captures: its `[` follows no name, `)` or `]` (a
+    subscript's), but `return` and its like, and opens no attribute's `[[`."""
+    opening = C._opening(tokens, close)
+    previous = tokens[opening - 1][2] if opening > 0 else ""
     following = tokens[opening + 1][2] if opening + 1 < len(tokens) else ""
     return following != "[" and previous not in (")", "]", "[") and not (
         C._WORD.fullmatch(previous) and previous not in ("return", "co_return", "co_yield", "throw"))
@@ -1559,6 +1573,10 @@ class _Converter(C._Converter):
 
     def lambda_(self, ts: _TS) -> _Node:
         made = _Node("lambdaexpression", captures=[], block=self.block(self.require(ts, "body")))
+        made.attributes = []
+        for start, end in self.pre.lambdas.get(self.local(ts), []):  # which the pre-pass blanked (C++23)
+            converter, root = self.reparsed("", start, end, " int _;")
+            made.attributes.append(converter.attribute(converter.named(converter.named(root)[0])[0]))
         captures = [c for c in self.require(ts, "captures").children if c.type != "comment"]
         i = 1
         while i < len(captures) - 1:
