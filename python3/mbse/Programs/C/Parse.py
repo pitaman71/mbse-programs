@@ -752,6 +752,9 @@ class _Converter:
     """Rewrites a tree-sitter-c tree into statements and terms. `shift` and `origin` place a tree parsed from a part of
     the text: its offsets are `shift` past those of the part, and its text as written is `origin`'s."""
 
+    SPECIFIER_NODES = _SPECIFIER_NODES  # what declares alone before a `;` *(a hook `Programs.Cpp` overrides)*
+    GROUPS = ("group", "membergroup")  # the tags of a group of statements and of members *(a hook, as above)*
+
     def __init__(self, source: _Source, prepared: _Prepared, shift: int = 0, origin: _Source | None = None):
         self.source, self.pre, self.shift, self.origin = source, prepared, shift, origin or source
         self.consumed: set[int] = set()
@@ -912,7 +915,7 @@ class _Converter:
             listed = self.local(ts)
             if ts.type == "comment":
                 out.append(self.comment(ts, previous))
-            elif ts.type in _SPECIFIER_NODES and i < len(kids) and kids[i].type == ";":
+            elif ts.type in self.SPECIFIER_NODES and i < len(kids) and kids[i].type == ";":
                 out.append(self.guarded(ts, lambda t: self.new(t, "simpledeclaration", specifiers=self.specifier(t))))
                 ts = kids[i]
                 i += 1
@@ -1556,9 +1559,9 @@ class _Converter:
         if place == "enumerator":
             made.items = self.enumerators(nodes, head)
         elif place == "member":
-            made.group = _Node("membergroup", members=self.listed(nodes, self.member, head))
+            made.group = _Node(self.GROUPS[1], members=self.listed(nodes, self.member, head))
         else:
-            made.group = _Node("group", body=self.listed(nodes, self.statement, head))
+            made.group = _Node(self.GROUPS[0], body=self.listed(nodes, self.statement, head))
         if alternative is not None:
             made.alternative = self.directive_term(alternative, place)
         return made
