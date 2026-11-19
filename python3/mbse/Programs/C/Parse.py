@@ -85,13 +85,13 @@ What tree-sitter-c misreads, which the converter corrects:
 16. **`typeof` of a type name** (C23), `typeof(int *) x`, which it reads as a macro's type specifier: a
     `typeofspecifier` holding a `typeid`.
 17. **Keywords and type names**: `_Bool`, `_Float16` to `_Float128x`, `_Decimal32` to `_Decimal128`, `__int128`,
-    `__float128`, `__auto_type` and `_Noreturn`'s companions it reads as types' names, and the library's typedefs
-    `size_t`, `int32_t`, `char16_t` and their like, which it reads as keywords: a `primitivetypespecifier` for a
-    keyword, a `namedtypespecifier` for a name, as 0.3 had them.
+    `__float128` and `__auto_type`, which it reads as types' names, and the library's typedefs `size_t`, `int32_t`,
+    `char16_t` and their like, which it reads as keywords: a `primitivetypespecifier` for a keyword, a
+    `namedtypespecifier` for a name, as 0.3 had them.
 18. **An unnamed bit-field**, `int : 3;`, which it reads with a missing name: a `MemberDeclarator` without a
     declarator.
-19. **A label ending a block** (C23), `l: }`, `case 1: }`, which it reads with a missing `;`: a label without a
-    statement.
+19. **A label ending a block** (C23), `l: }`, which it reads with a missing `;`: a label without a statement, as
+    it reads `case 1: }`.
 20. **GNU attributes on a null statement**, `__attribute__((fallthrough));`, which it reads as an error and `;`: an
     `AttributedStatement`.
 21. **`NULL`**, which it reads as a null constant like `nullptr`: the macro's name, a `variable`; `nullptr` (C23) a
