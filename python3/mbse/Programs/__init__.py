@@ -5,9 +5,9 @@ mbse-schemas, with the entities they declare, and standards that parse source te
 source text. A transpiler written against these trees never parses or prints strings. See mbse-basis
 [FEA-008: expressive program models](../../../../mbse-basis/docs/features/FEA-008.md).
 
-The framework is `mbse.Programs.Framework`, and the languages are packages beside it: `mbse.Programs.C` for C (the
-port's), `mbse.Programs.Ccpp` for C and C++ (0.3's), `mbse.Programs.Python` for Python, and `mbse.Programs.TypeScript`
-for TypeScript and JavaScript.
+The framework is `mbse.Programs.Framework`, and the languages are packages beside it: `mbse.Programs.C` for C and
+`mbse.Programs.Cpp` for C++ (the port's), `mbse.Programs.Ccpp` for C and C++ (0.3's), `mbse.Programs.Python` for
+Python, and `mbse.Programs.TypeScript` for TypeScript and JavaScript.
 `mbse.Programs.Transpilers` translates between them, and `mbse.Programs.Bridges` between them and mbse-expressions'
 dialects.
 
