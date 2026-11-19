@@ -256,13 +256,24 @@
                       "elifdirective": {
                         "condition": {
                           "c": {
-                            "unaryexpression": {
-                              "operator": "!",
-                              "operand": {
-                                "definedexpression": {
-                                  "name": {
-                                    "spelling": "NDEBUG"
+                            "binaryexpression": {
+                              "left": {
+                                "unaryexpression": {
+                                  "operator": "!",
+                                  "operand": {
+                                    "definedexpression": {
+                                      "name": {
+                                        "spelling": "NDEBUG"
+                                      }
+                                    }
                                   }
+                                }
+                              },
+                              "operator": "&&",
+                              "right": {
+                                "hasincludeexpression": {
+                                  "path": "assert.h",
+                                  "system": true
                                 }
                               }
                             }

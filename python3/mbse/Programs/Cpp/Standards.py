@@ -17,8 +17,9 @@ takes them as mbse-expressions' C++ dialects have them, ISO/IEC 14882:2017, 2020
   writes nothing. Its frame binds the language (`language`) and each edition by its common name spelled as an
   identifier (`Cpp23`), as mbse-expressions' frames do.
 - `prepare(store)` runs, each in a transaction of its own, the installs mbse-expressions' `Cpp` defines its domains
-  with (`ISO/IEC 11404` and `IEEE 754`), mbse-expressions' `define`s for `Cpp` and `Cpp Types`, then `install` and
-  `define`; it gives the store back. `Check` reads them.
+  with (`ISO/IEC 11404` and `IEEE 754`), mbse-expressions' `define`s for `Cpp`, `Cpp Types` and `C Preprocessor`
+  (whose C++ editions record the directive kinds each has), then `install` and `define`; it gives the store back.
+  `Check` reads them.
 
 Decided by the agent, each *(agent)*, as `Programs.C.Standards` decides for C:
 
@@ -32,9 +33,12 @@ Decided by the agent, each *(agent)*, as `Programs.C.Standards` decides for C:
   adds a property's value makes (`Check.STATEMENT_FEATURES`). A translation unit is in every edition, and the parts that
   hold no statement are parts of the statements that hold them.
 - **GNU's `asm` is in no edition** (`EXTENSIONS`), as for C.
-- **The directives' editions are not read from data**: mbse-expressions' `C Preprocessor`, which C++'s directives are
-  terms of, records C's editions alone (ISO/IEC 9899), none of C++'s, a gap reported to it; so `Check` does not read its
-  standards for C++, and what C++23 adds to the directives (`#elifdef`, `#warning`) is code (`Check.FEATURES`).
+- **The directives' editions are read from data**, as the expressions' and the types' are: mbse-expressions' `C
+  Preprocessor`, which C++'s directives and `__has_include` are terms of, records C++17, C++20 and C++23 by C++'s
+  designations beside C's, each with the kinds it has (`elifdefdirective`, `#elifdef` and `#elifndef`, C++23's;
+  `hasincludeexpression` C++17's), and `Check` reads its standards of C++'s designations alone (`DIALECTS`). A
+  directive's name within `otherdirective` (`#warning`, C++23's) is a feature of a property's value, which its data
+  does not record, and stays code (`Check.FEATURES`).
 """
 
 from __future__ import annotations
@@ -42,6 +46,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from mbse.Expressions.C.Preprocessor import Expressions as CPreprocessor
 from mbse.Expressions.Cpp.Expressions import Expressions as CppExpressions
 from mbse.Expressions.Cpp.Types import Expressions as CppTypes
 from mbse.Expressions.IEEE754 import Expressions as IEEE754
@@ -65,9 +70,10 @@ C++17, from which `define` writes the kinds each edition has."""
 EXTENSIONS = ("AsmDeclaration",)
 """The kinds in no edition: GNU's."""
 
-DIALECTS = (LANGUAGE, "Expressions.Cpp.Expressions", "Expressions.Cpp.Types")
+DIALECTS = (LANGUAGE, "Expressions.Cpp.Expressions", "Expressions.Cpp.Types", "Expressions.C.Preprocessor")
 """The singletons whose standards say which kinds a C++ translation unit may hold: the language's own, for its
-statements, then mbse-expressions' dialects, for the terms its statements hold."""
+statements, then mbse-expressions' dialects, for the terms its statements hold, C Preprocessor's of C++'s designations
+alone."""
 
 
 def _symbol(name: str) -> str:
@@ -114,8 +120,9 @@ def define(txn: Any) -> Any:
 
 def prepare(store: Any) -> Any:
     """`store`, holding `Cpp.INSTALLS`, given the data `Check` reads: the installs of `ISO/IEC 11404` and `IEEE 754`,
-    mbse-expressions' `define`s for `Cpp` and `Cpp Types`, then `install` and `define`, each in a transaction of its own.
-    Run again, it writes nothing."""
-    for each in (ISOIEC11404.install, IEEE754.install, CppExpressions.define, CppTypes.define, install, define):
+    mbse-expressions' `define`s for `Cpp`, `Cpp Types` and `C Preprocessor`, then `install` and `define`, each in a
+    transaction of its own. Run again, it writes nothing."""
+    for each in (ISOIEC11404.install, IEEE754.install, CppExpressions.define, CppTypes.define, CPreprocessor.define,
+                 install, define):
         store.transaction(each)
     return store
