@@ -10,7 +10,8 @@ nothing; each raises LookupError where the workspace holds no file at `path`.
   give their versions)*; LookupError where the language covers none such. The store must hold the standards
   (`Standards.prepare`).
 - `validate(store, path)`: the unit's problems as a tree, in source order: each kind's own rules, ported from the 0.3
-  language's validation, and its terms' problems, as their dialects validate them.
+  language's validation, and its terms' problems, as their dialects validate them, but what depends on the target,
+  which waits for an ABI to be applied (below).
 
 Each problem is located by its place in the unit's value, as `Definitions` anchors it, its steps joined by `.` as
 TypeScript5's `Check` joins them *(agent)*: a statement's, declaration's or member declaration's is the property of what
@@ -76,10 +77,20 @@ Not checked: what C23 removed (a K&R definition, an old-style declaration of a f
   `DIALECT.validate`, each reading the others); a helper a statement holds alone (a specifier, a declarator, an
   attribute specifier), by its own checks (`C.Expressions.Kinds.problems`: an identifier's spelling, a literal's
   value) and its terms as their dialect validates them. The names a term refers to are taken as bound *(agent)*:
-  binding them is the unit's, which `Definitions` resolves, not a term's. A literal of a type C leaves to the
-  implementation (`1`'s `int`, `L'w'`'s `wchar_t`) is not checked against its range: mbse-expressions reads such a
-  type from an ABI that a term's holder names, and a unit names none (a gap, reported), so the problem it gives, "'int'
-  is not a type C defines, and its expression names no ABI", is dropped, as CPRS-01 drops it *(agent)*.
+  binding them is the unit's, which `Definitions` resolves, not a term's. What depends on the target is deferred,
+  below.
+
+**The ABI is applied last.** As the user decided, "Of course C and C++ need a ABI, but if we can model programs in an
+abi-agnostic form and apply the ABI at the last minute, that would be advantageous". A program names no ABI: a unit
+holds C as written, and nothing in its tree depends on a target. `validate` checks what does not depend on one; the
+checks that do are not made: a literal's type and its range (`1`'s `int`, `L'w'`'s `wchar_t`, which C leaves to the
+implementation), `sizeof` and `_Alignof`, and constant evaluation (an array's size, a `static_assert`'s condition, a
+bit-field's width, a `case` label's value). A later step applies an ABI at the call that needs one: `validate_for(store,
+path, abi)` is planned, mbse-expressions reading a term's types under an ABI the caller gives, rather than one the
+term's holder names, and reporting a check that needs an ABI as deferred rather than as a problem (gaps of
+mbse-expressions', reported). Until then, the problems mbse-expressions gives where a type needs an ABI, "'int' is not a
+type C defines, and its expression names no ABI", stand for those deferred checks, and `validate` leaves them out
+(`_deferred`), as CPRS-01 does *(agent)*.
 
 Dropped, as the model now holds them: a property's type and a child's category, and where a statement or a member
 declaration may stand (a struct's members hold only member declarations, a block no member declaration), which the
@@ -114,7 +125,8 @@ _DIALECTS = {"Expressions.C.Expressions.Term": CExpressions.DIALECT, "Expression
              "Expressions.C.Preprocessor.Term": CPreprocessor.DIALECT}
 """The dialect that validates a term, by the union that holds it."""
 _NO_ABI = "and its expression names no ABI"
-"""How mbse-expressions words a type it cannot read without an ABI (`int`), which a unit names none of."""
+"""How mbse-expressions words a type it cannot read without an ABI (`int`): a check deferred until one is applied, as a
+unit names none."""
 
 
 # --- Reading ---
@@ -449,14 +461,15 @@ def _bound(term: Any) -> set[str]:
     return {name for t in Terms.walk(term) if isinstance(name := Terms.name_of(t), str)}
 
 
-def _known(problems: list[str]) -> list[str]:
-    """Problems but those of a type C leaves to the implementation, which only an ABI defines and a unit names none."""
+def _deferred(problems: list[str]) -> list[str]:
+    """Problems but the checks deferred until an ABI is applied: those of a type C leaves to the implementation, which
+    only an ABI defines, and a unit names none."""
     return [problem for problem in problems if not problem.endswith(_NO_ABI)]
 
 
 def _validated(term: Any) -> list[str]:
     """A term's problems, as the dialect whose union holds it validates it."""
-    return _known(_DIALECTS[term.as_schema().name].validate(term, _bound(term)))
+    return _deferred(_DIALECTS[term.as_schema().name].validate(term, _bound(term)))
 
 
 def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
@@ -464,7 +477,7 @@ def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
     its dialect validates it; a helper's, its own checks, and its terms' as their dialect validates them."""
     if Terms.is_term(value):
         return _validated(value)
-    own = _known(Kinds.problems(Terms.node(tag, record), Domains.Types(record, "C.Expressions")))
+    own = _deferred(Kinds.problems(Terms.node(tag, record), Domains.Types(record, "C.Expressions")))
     return own + [problem for term in _terms(record) for problem in _validated(term)]
 
 

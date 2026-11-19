@@ -524,7 +524,7 @@ by an open union in mbse-expressions, which it declares a boundary (`Terms.bound
 for TypeScript5: a GNU statement expression's body and a C++ lambda's body (`block`), and a struct's, a union's or a
 class's member declarations (`members`, which their `body: bool` only marked).
 
-**Decided** by the user, on three questions as posed:
+**Decided** by the user, on three questions as posed, and on the ABI:
 
 1. **Each language its own native parser**: tree-sitter-c for C, tree-sitter-cpp for C++, each language's departures
    from its standards enumerated and pre-passed against its own standard
@@ -538,6 +538,16 @@ class's member declarations (`members`, which their `body: bool` only marked).
    extends: the crossover rule applied again. Asked as (a) that, or (b) directives as mbse-programs' own statement
    kinds: "3(a)". tree-sitter reads only conditionals that enclose whole statements; one that splits a construct
    (`#if` within a function's body, closed after it) is an entry in each parser's enumerated departures.
+4. **The ABI is applied last**: "Of course C and C++ need a ABI, but if we can model programs in an abi-agnostic form
+   and apply the ABI at the last minute, that would be advantageous". A program names no ABI: a translation unit holds
+   C as written, and nothing in its tree depends on a target. `Check.validate` checks what does not depend on one; the
+   checks that do are not made: a literal's type and its range, `sizeof` and `_Alignof`, and constant evaluation (an
+   array's size, a `static_assert`'s condition, a bit-field's width, a `case` label's value). A later step applies an
+   ABI at the call that needs one: `validate_for(store, path, abi)` is planned, with mbse-expressions reading a term's
+   types under an ABI the caller gives, rather than one the term's holder names, and reporting a check that needs an
+   ABI as deferred rather than as a problem. Until then, the problems mbse-expressions gives where a type needs an ABI
+   ("'int' is not a type C defines, and its expression names no ABI") stand for those deferred checks, and `validate`
+   leaves them out.
 
 The stage builds, in order: mbse-expressions' open unions for the C family (both implementations, a release); then
 `Programs.C` (statements, parse, print, definitions, standards, check, a C corpus source); then `Programs.Cpp` over it;
