@@ -11,13 +11,14 @@ keywords = ["ast", "abstract syntax tree", "c++", "c", "python", "typescript", "
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mbse-expressions>=0.12.2,<0.13",
+    "mbse-expressions>=0.12.4,<0.13",
     "mbse-schemas>=0.28.0,<0.29",
     "tree-sitter>=0.25",
     "tree-sitter-cpp==0.23.4",
     "tree-sitter-python==0.25.0",
     "tree-sitter-typescript==0.23.2",
     "pyslang==12.0.0",
+    "tree-sitter-c==0.24.2",
 ]
 
 [project.optional-dependencies]
