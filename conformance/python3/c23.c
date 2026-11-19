@@ -7,6 +7,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define LOG(format, ...) printf(format, __VA_ARGS__)
 #pragma once
+_Pragma("GCC diagnostic push")
 #embed "data.bin"
 #
 #if defined(DEBUG) && VERSION >= 202311L
@@ -72,6 +73,8 @@ int old(a, b)
 }
 int x __attribute__((aligned(16))) = 0;
 int noinline(void) __attribute__((noinline, format(printf, 1, 2)));
+int renamed asm("renamed_symbol") = 1;
+int lookup(void) __asm__("lookup2");
 __extension__ typedef long long ll;
 __declspec(dllexport) int exported;
 asm("nop");
@@ -112,6 +115,7 @@ enum {
     ANONYMOUS
 } anonymous;
 struct __attribute__((packed)) packed {
+    _Pragma("pack(1)")
     char c;
 };
 // Statements
@@ -127,6 +131,7 @@ int statements(int n) {
         }
     }
     for (total = 0; total < n; ++total) {}
+    _Pragma("GCC unroll 2")
     for (;;)
         break;
     while (n-- > 0)
@@ -158,6 +163,7 @@ again:
     total = MAX(total, 1);
     [[gnu::cold]] if (total) {}
     void *target = p;
+    static void *labels[] = {&&again, &&done};
     goto *target;
 done:
     ;
@@ -211,4 +217,5 @@ void expressions(int a, int b, int *p, struct point *s) {
     a = (a);
     a = 'ab';
     printf("%d %s\n", a, "done");
+    _Pragma("GCC diagnostic pop");
 }

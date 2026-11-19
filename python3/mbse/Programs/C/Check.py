@@ -30,10 +30,12 @@ holds as statements.
 What an edition has is read from data, as mbse-expressions records it (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided)):
 a statement, declaration or member kind is available where a standard of that edition's designation, among those
 `Programs.C` covers, lists its schema (`Standards`); a term's kind, where one of those of `C`, `C Types` or `C
-Preprocessor` does (`Standards.DIALECTS`): C23's attribute declarations, `nullptr` (a `constant`) and `#elifdef`. A
-kind no standard lists is not checked: GNU's extensions (`asm`, a statement expression, `__extension__`), outside every
-edition, as mbse-expressions' `C` marks them, a part or a helper, and invalid syntax, a `Programs.C.Error` and an
-`error` or `missing` term, which `validate` reports *(agent)*. A kind's problem is `<kind> needs <the first edition that
+Preprocessor` does (`Standards.DIALECTS`): C23's attribute declarations, `nullptr` (a `constant`) and `#elifdef`; and
+`_Pragma("...")`, C Preprocessor's `pragmaexpression`, which every edition has. A kind no standard lists is not
+checked: GNU's extensions (`asm`, a statement expression, `__extension__`, a label as a value, `&&l`, C's
+`labeladdressexpression`), outside every edition, as mbse-expressions' `C` marks them, a part or a helper (GNU's asm
+label, C Types' `AsmLabel`, among them), and invalid syntax, a `Programs.C.Error` and an `error` or `missing` term,
+which `validate` reports *(agent)*. A kind's problem is `<kind> needs <the first edition that
 has it>`: a statement's kind by its name (`AttributeDeclaration`), a term's by its tag (`constant`).
 
 What a property's value makes available stays code, by the kind that holds it: a standard tags a kind, not a property
@@ -62,7 +64,8 @@ Not checked: what C23 removed (a K&R definition, an old-style declaration of a f
   AttributeDeclaration needs an attribute`), and what goes together (`a GotoStatement needs a label or a target`, `a
   MemberDeclarator needs a declarator or a bitfield`); and, beyond 0.3's, `a SimpleDeclaration needs a specifier`, as
   for a member declaration and a function's definition: C99 removed the implicit `int`, and a function's definition's
-  declarator declaring a function, which tree-sitter reads otherwise (`int m { ... }`) *(agent)*; a kind's word one
+  declarator declaring a function (`int m { ... }`), which the schemas hold where a unit is built, and which `Parse`
+  keeps as invalid syntax where tree-sitter reads one (its departure 36) *(agent)*; a kind's word one
   of its choices (`StaticAssertDeclaration.keyword cannot be 'assert'`); and the dangling `else`, an `if` without one
   ending the consequence of an `if` with one;
 - invalid syntax, as the user decided that a parse keeps it and validation reports it: each `Programs.C.Error`,

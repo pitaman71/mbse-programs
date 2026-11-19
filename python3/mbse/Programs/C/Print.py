@@ -19,7 +19,8 @@ them, and `else if` for an `else` that is one `if`; a statement that is no block
 `switch`, on the next line one level in; `case` and `default` labels one level in from the `switch`, the statements
 after them one further, and other labels one level out from their statement; a struct's or a union's members one
 level in, a member a line, an enumeration's enumerators so too, each but the last with its comma; directives at the
-start of their lines, a conditional's group at its level between them; a comment `//` or `/* */` as written
+start of their lines, a conditional's group at its level between them, and a `_Pragma` where a statement stands at
+its level *(agent: an operator, written where the source may write it)*; a comment `//` or `/* */` as written
 (`Comment.block`), a trailing one (`trailing`) at the end of the line of what it follows.
 
 A statement's expressions are mbse-expressions' C family's terms, written by its printer (`C.Expressions.Text.Printer`,
@@ -363,8 +364,10 @@ class Printer(Text.Printer):
         return inner
 
     def directive_lines(self, node: Any, level: int) -> list[str]:
-        """A directive, at the start of its line; a conditional's group between its lines, at `level`."""
-        return self.text(self.node(_held(node.directive))).split("\n")
+        """A directive, at the start of its line; a conditional's group between its lines, at `level`; a `_Pragma`,
+        an operator rather than a line of its own, at `level`, as a statement."""
+        written = self.text(self.node(_held(node.directive))).split("\n")
+        return [_INDENT * level + written[0]] if _branch(node.directive)[0] == "pragmaexpression" else written
 
     def asm(self, node: Any) -> str:
         text = node.keyword.get() + "".join(f" {q}" for q in ("volatile", "inline", "goto") if getattr(node, q).get())

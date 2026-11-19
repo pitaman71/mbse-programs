@@ -159,6 +159,26 @@
               "directive": {
                 "line": 10,
                 "directive": {
+                  "pragmaexpression": {
+                    "operand": {
+                      "c": {
+                        "literal": {
+                          "value": {
+                            "str": "GCC diagnostic push"
+                          },
+                          "text": "\"GCC diagnostic push\"",
+                          "quote": "\""
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "directive": {
+                "line": 11,
+                "directive": {
                   "otherdirective": {
                     "directive": "embed",
                     "text": "\"data.bin\""
@@ -168,7 +188,7 @@
             },
             {
               "directive": {
-                "line": 11,
+                "line": 12,
                 "directive": {
                   "otherdirective": {}
                 }
@@ -176,7 +196,7 @@
             },
             {
               "directive": {
-                "line": 12,
+                "line": 13,
                 "directive": {
                   "ifdirective": {
                     "condition": {
@@ -218,7 +238,7 @@
                         "body": [
                           {
                             "directive": {
-                              "line": 13,
+                              "line": 14,
                               "directive": {
                                 "definedirective": {
                                   "name": {
@@ -253,7 +273,7 @@
                             "body": [
                               {
                                 "directive": {
-                                  "line": 15,
+                                  "line": 16,
                                   "directive": {
                                     "definedirective": {
                                       "name": {
@@ -274,7 +294,7 @@
                                 "body": [
                                   {
                                     "directive": {
-                                      "line": 17,
+                                      "line": 18,
                                       "directive": {
                                         "definedirective": {
                                           "name": {
@@ -298,7 +318,7 @@
             },
             {
               "directive": {
-                "line": 19,
+                "line": 20,
                 "directive": {
                   "ifdefdirective": {
                     "name": {
@@ -309,7 +329,7 @@
                         "body": [
                           {
                             "simpledeclaration": {
-                              "line": 20,
+                              "line": 21,
                               "specifiers": [
                                 {
                                   "primitivetypespecifier": {
@@ -345,7 +365,7 @@
                             "body": [
                               {
                                 "simpledeclaration": {
-                                  "line": 22,
+                                  "line": 23,
                                   "specifiers": [
                                     {
                                       "primitivetypespecifier": {
@@ -382,7 +402,7 @@
                                 "body": [
                                   {
                                     "simpledeclaration": {
-                                      "line": 24,
+                                      "line": 25,
                                       "specifiers": [
                                         {
                                           "primitivetypespecifier": {
@@ -418,13 +438,13 @@
             },
             {
               "comment": {
-                "line": 27,
+                "line": 28,
                 "text": " Declarations and their specifiers"
               }
             },
             {
               "simpledeclaration": {
-                "line": 28,
+                "line": 29,
                 "specifiers": [
                   {
                     "declspecifier": {
@@ -479,7 +499,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 29,
+                "line": 30,
                 "specifiers": [
                   {
                     "declspecifier": {
@@ -528,7 +548,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 30,
+                "line": 31,
                 "specifiers": [
                   {
                     "declspecifier": {
@@ -563,7 +583,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 31,
+                "line": 32,
                 "specifiers": [
                   {
                     "declspecifier": {
@@ -593,7 +613,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 32,
+                "line": 33,
                 "specifiers": [
                   {
                     "alignasspecifier": {
@@ -645,7 +665,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 33,
+                "line": 34,
                 "specifiers": [
                   {
                     "alignasspecifier": {
@@ -686,7 +706,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 34,
+                "line": 35,
                 "specifiers": [
                   {
                     "atomictypespecifier": {
@@ -721,7 +741,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 35,
+                "line": 36,
                 "specifiers": [
                   {
                     "cvqualifier": {
@@ -751,7 +771,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 36,
+                "line": 37,
                 "specifiers": [
                   {
                     "declspecifier": {
@@ -798,7 +818,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 37,
+                "line": 38,
                 "attributes": [
                   {
                     "standardattributespecifier": {
@@ -851,7 +871,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 38,
+                "line": 39,
                 "attributes": [
                   {
                     "standardattributespecifier": {
@@ -902,7 +922,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 39,
+                "line": 40,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -953,7 +973,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 40,
+                "line": 41,
                 "specifiers": [
                   {
                     "declspecifier": {
@@ -992,7 +1012,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 41,
+                "line": 42,
                 "specifiers": [
                   {
                     "declspecifier": {
@@ -1030,7 +1050,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 42,
+                "line": 43,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1065,7 +1085,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 43,
+                "line": 44,
                 "specifiers": [
                   {
                     "bitintspecifier": {
@@ -1108,7 +1128,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 44,
+                "line": 45,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1156,7 +1176,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 45,
+                "line": 46,
                 "specifiers": [
                   {
                     "typeofspecifier": {
@@ -1196,7 +1216,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 46,
+                "line": 47,
                 "specifiers": [
                   {
                     "typeofspecifier": {
@@ -1237,7 +1257,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 47,
+                "line": 48,
                 "specifiers": [
                   {
                     "typeofspecifier": {
@@ -1281,7 +1301,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 48,
+                "line": 49,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1311,7 +1331,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 49,
+                "line": 50,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1341,7 +1361,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 50,
+                "line": 51,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1375,7 +1395,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 51,
+                "line": 52,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1400,7 +1420,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 52,
+                "line": 53,
                 "specifiers": [
                   {
                     "namedtypespecifier": {
@@ -1429,7 +1449,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 53,
+                "line": 54,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1468,7 +1488,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 54,
+                "line": 55,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1503,7 +1523,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 55,
+                "line": 56,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1577,7 +1597,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 56,
+                "line": 57,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1636,7 +1656,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 57,
+                "line": 58,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1711,7 +1731,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 58,
+                "line": 59,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1764,7 +1784,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 59,
+                "line": 60,
                 "specifiers": [
                   {
                     "namedtypespecifier": {
@@ -1807,7 +1827,7 @@
             },
             {
               "staticassertdeclaration": {
-                "line": 60,
+                "line": 61,
                 "keyword": "static_assert",
                 "condition": {
                   "binaryexpression": {
@@ -1851,7 +1871,7 @@
             },
             {
               "staticassertdeclaration": {
-                "line": 61,
+                "line": 62,
                 "keyword": "static_assert",
                 "condition": {
                   "literal": {
@@ -1866,7 +1886,7 @@
             },
             {
               "staticassertdeclaration": {
-                "line": 62,
+                "line": 63,
                 "keyword": "_Static_assert",
                 "condition": {
                   "literal": {
@@ -1890,7 +1910,7 @@
             },
             {
               "attributedeclaration": {
-                "line": 63,
+                "line": 64,
                 "attributes": [
                   {
                     "standardattributespecifier": {
@@ -1906,7 +1926,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 64,
+                "line": 65,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -1969,7 +1989,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 65,
+                "line": 66,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -2071,7 +2091,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 66,
+                "line": 67,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -2215,7 +2235,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 67,
+                "line": 68,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -2269,7 +2289,7 @@
             },
             {
               "functiondefinition": {
-                "line": 68,
+                "line": 69,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -2369,11 +2389,11 @@
                   }
                 ],
                 "body": {
-                  "line": 71,
+                  "line": 72,
                   "body": [
                     {
                       "returnstatement": {
-                        "line": 72,
+                        "line": 73,
                         "value": {
                           "variable": {
                             "name": "a"
@@ -2387,7 +2407,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 74,
+                "line": 75,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -2444,7 +2464,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 75,
+                "line": 76,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -2526,7 +2546,107 @@
             },
             {
               "simpledeclaration": {
-                "line": 76,
+                "line": 77,
+                "specifiers": [
+                  {
+                    "primitivetypespecifier": {
+                      "keyword": "int"
+                    }
+                  }
+                ],
+                "declarators": [
+                  {
+                    "declarator": {
+                      "iddeclarator": {
+                        "name": {
+                          "identifier": {
+                            "spelling": "renamed"
+                          }
+                        },
+                        "asm": {
+                          "keyword": "asm",
+                          "label": {
+                            "literal": {
+                              "value": {
+                                "str": "renamed_symbol"
+                              },
+                              "text": "\"renamed_symbol\"",
+                              "quote": "\""
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "initializer": {
+                      "literal": {
+                        "value": {
+                          "int": 1
+                        },
+                        "text": "1",
+                        "base": 10
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "simpledeclaration": {
+                "line": 78,
+                "specifiers": [
+                  {
+                    "primitivetypespecifier": {
+                      "keyword": "int"
+                    }
+                  }
+                ],
+                "declarators": [
+                  {
+                    "declarator": {
+                      "functiondeclarator": {
+                        "declarator": {
+                          "iddeclarator": {
+                            "name": {
+                              "identifier": {
+                                "spelling": "lookup"
+                              }
+                            },
+                            "asm": {
+                              "keyword": "__asm__",
+                              "label": {
+                                "literal": {
+                                  "value": {
+                                    "str": "lookup2"
+                                  },
+                                  "text": "\"lookup2\"",
+                                  "quote": "\""
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "parameters": [
+                          {
+                            "parameterdeclaration": {
+                              "specifiers": [
+                                {
+                                  "primitivetypespecifier": {
+                                    "keyword": "void"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "simpledeclaration": {
+                "line": 79,
                 "specifiers": [
                   {
                     "declspecifier": {
@@ -2566,7 +2686,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 77,
+                "line": 80,
                 "attributes": [
                   {
                     "declspecspecifier": {
@@ -2602,7 +2722,7 @@
             },
             {
               "asmdeclaration": {
-                "line": 78,
+                "line": 81,
                 "keyword": "asm",
                 "template": {
                   "literal": {
@@ -2617,13 +2737,13 @@
             },
             {
               "comment": {
-                "line": 80,
+                "line": 83,
                 "text": " Structs, unions and enumerations"
               }
             },
             {
               "simpledeclaration": {
-                "line": 81,
+                "line": 84,
                 "specifiers": [
                   {
                     "classspecifier": {
@@ -2639,7 +2759,7 @@
                           "members": [
                             {
                               "memberdeclaration": {
-                                "line": 82,
+                                "line": 85,
                                 "specifiers": [
                                   {
                                     "primitivetypespecifier": {
@@ -2675,7 +2795,7 @@
                             },
                             {
                               "memberdeclaration": {
-                                "line": 83,
+                                "line": 86,
                                 "specifiers": [
                                   {
                                     "primitivetypespecifier": {
@@ -2709,7 +2829,7 @@
                             },
                             {
                               "memberdeclaration": {
-                                "line": 84,
+                                "line": 87,
                                 "specifiers": [
                                   {
                                     "primitivetypespecifier": {
@@ -2734,7 +2854,7 @@
                             },
                             {
                               "memberdeclaration": {
-                                "line": 85,
+                                "line": 88,
                                 "specifiers": [
                                   {
                                     "classspecifier": {
@@ -2745,7 +2865,7 @@
                                           "members": [
                                             {
                                               "memberdeclaration": {
-                                                "line": 86,
+                                                "line": 89,
                                                 "specifiers": [
                                                   {
                                                     "primitivetypespecifier": {
@@ -2770,7 +2890,7 @@
                                             },
                                             {
                                               "memberdeclaration": {
-                                                "line": 87,
+                                                "line": 90,
                                                 "specifiers": [
                                                   {
                                                     "primitivetypespecifier": {
@@ -2803,7 +2923,7 @@
                             },
                             {
                               "memberdeclaration": {
-                                "line": 89,
+                                "line": 92,
                                 "specifiers": [
                                   {
                                     "classspecifier": {
@@ -2814,7 +2934,7 @@
                                           "members": [
                                             {
                                               "memberdeclaration": {
-                                                "line": 90,
+                                                "line": 93,
                                                 "specifiers": [
                                                   {
                                                     "primitivetypespecifier": {
@@ -2860,7 +2980,7 @@
                             },
                             {
                               "staticassertdeclaration": {
-                                "line": 92,
+                                "line": 95,
                                 "keyword": "static_assert",
                                 "condition": {
                                   "binaryexpression": {
@@ -2895,7 +3015,7 @@
                             },
                             {
                               "directive": {
-                                "line": 93,
+                                "line": 96,
                                 "directive": {
                                   "ifdefdirective": {
                                     "name": {
@@ -2906,7 +3026,7 @@
                                         "members": [
                                           {
                                             "memberdeclaration": {
-                                              "line": 94,
+                                              "line": 97,
                                               "specifiers": [
                                                 {
                                                   "primitivetypespecifier": {
@@ -2938,13 +3058,13 @@
                             },
                             {
                               "comment": {
-                                "line": 96,
+                                "line": 99,
                                 "text": " a member's comment"
                               }
                             },
                             {
                               "memberdeclaration": {
-                                "line": 97,
+                                "line": 100,
                                 "specifiers": [
                                   {
                                     "primitivetypespecifier": {
@@ -2969,7 +3089,7 @@
                             },
                             {
                               "comment": {
-                                "line": 97,
+                                "line": 100,
                                 "text": " trailing ",
                                 "block": true,
                                 "trailing": true
@@ -2985,7 +3105,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 99,
+                "line": 102,
                 "specifiers": [
                   {
                     "classspecifier": {
@@ -3001,7 +3121,7 @@
                           "members": [
                             {
                               "memberdeclaration": {
-                                "line": 100,
+                                "line": 103,
                                 "specifiers": [
                                   {
                                     "primitivetypespecifier": {
@@ -3026,7 +3146,7 @@
                             },
                             {
                               "memberdeclaration": {
-                                "line": 101,
+                                "line": 104,
                                 "specifiers": [
                                   {
                                     "primitivetypespecifier": {
@@ -3103,7 +3223,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 103,
+                "line": 106,
                 "specifiers": [
                   {
                     "classspecifier": {
@@ -3131,7 +3251,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 104,
+                "line": 107,
                 "specifiers": [
                   {
                     "enumspecifier": {
@@ -3232,7 +3352,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 113,
+                "line": 116,
                 "specifiers": [
                   {
                     "enumspecifier": {
@@ -3267,7 +3387,7 @@
             },
             {
               "simpledeclaration": {
-                "line": 116,
+                "line": 119,
                 "specifiers": [
                   {
                     "classspecifier": {
@@ -3294,8 +3414,28 @@
                         "memberlist": {
                           "members": [
                             {
+                              "directive": {
+                                "line": 120,
+                                "directive": {
+                                  "pragmaexpression": {
+                                    "operand": {
+                                      "c": {
+                                        "literal": {
+                                          "value": {
+                                            "str": "pack(1)"
+                                          },
+                                          "text": "\"pack(1)\"",
+                                          "quote": "\""
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            {
                               "memberdeclaration": {
-                                "line": 117,
+                                "line": 121,
                                 "specifiers": [
                                   {
                                     "primitivetypespecifier": {
@@ -3328,13 +3468,13 @@
             },
             {
               "comment": {
-                "line": 120,
+                "line": 124,
                 "text": " Statements"
               }
             },
             {
               "functiondefinition": {
-                "line": 121,
+                "line": 125,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -3378,11 +3518,11 @@
                   }
                 },
                 "body": {
-                  "line": 121,
+                  "line": 125,
                   "body": [
                     {
                       "simpledeclaration": {
-                        "line": 122,
+                        "line": 126,
                         "specifiers": [
                           {
                             "primitivetypespecifier": {
@@ -3441,7 +3581,7 @@
                     },
                     {
                       "forstatement": {
-                        "line": 123,
+                        "line": 127,
                         "initializer": {
                           "simpledeclaration": {
                             "specifiers": [
@@ -3502,11 +3642,11 @@
                         },
                         "body": {
                           "compoundstatement": {
-                            "line": 123,
+                            "line": 127,
                             "body": [
                               {
                                 "ifstatement": {
-                                  "line": 124,
+                                  "line": 128,
                                   "condition": {
                                     "binaryexpression": {
                                       "left": {
@@ -3542,12 +3682,12 @@
                                   },
                                   "consequence": {
                                     "continuestatement": {
-                                      "line": 125
+                                      "line": 129
                                     }
                                   },
                                   "alternative": {
                                     "ifstatement": {
-                                      "line": 126,
+                                      "line": 130,
                                       "condition": {
                                         "binaryexpression": {
                                           "left": {
@@ -3569,16 +3709,16 @@
                                       },
                                       "consequence": {
                                         "breakstatement": {
-                                          "line": 127
+                                          "line": 131
                                         }
                                       },
                                       "alternative": {
                                         "compoundstatement": {
-                                          "line": 128,
+                                          "line": 132,
                                           "body": [
                                             {
                                               "expressionstatement": {
-                                                "line": 129,
+                                                "line": 133,
                                                 "expression": {
                                                   "assignmentexpression": {
                                                     "left": {
@@ -3610,7 +3750,7 @@
                     },
                     {
                       "forstatement": {
-                        "line": 132,
+                        "line": 136,
                         "initializer": {
                           "expression": {
                             "assignmentexpression": {
@@ -3659,24 +3799,44 @@
                         },
                         "body": {
                           "compoundstatement": {
-                            "line": 132
+                            "line": 136
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "directive": {
+                        "line": 137,
+                        "directive": {
+                          "pragmaexpression": {
+                            "operand": {
+                              "c": {
+                                "literal": {
+                                  "value": {
+                                    "str": "GCC unroll 2"
+                                  },
+                                  "text": "\"GCC unroll 2\"",
+                                  "quote": "\""
+                                }
+                              }
+                            }
                           }
                         }
                       }
                     },
                     {
                       "forstatement": {
-                        "line": 133,
+                        "line": 138,
                         "body": {
                           "breakstatement": {
-                            "line": 134
+                            "line": 139
                           }
                         }
                       }
                     },
                     {
                       "whilestatement": {
-                        "line": 135,
+                        "line": 140,
                         "condition": {
                           "binaryexpression": {
                             "left": {
@@ -3703,7 +3863,7 @@
                         },
                         "body": {
                           "expressionstatement": {
-                            "line": 136,
+                            "line": 141,
                             "expression": {
                               "postfixexpression": {
                                 "operand": {
@@ -3720,14 +3880,14 @@
                     },
                     {
                       "dostatement": {
-                        "line": 137,
+                        "line": 142,
                         "body": {
                           "compoundstatement": {
-                            "line": 137,
+                            "line": 142,
                             "body": [
                               {
                                 "expressionstatement": {
-                                  "line": 138,
+                                  "line": 143,
                                   "expression": {
                                     "postfixexpression": {
                                       "operand": {
@@ -3766,7 +3926,7 @@
                     },
                     {
                       "switchstatement": {
-                        "line": 140,
+                        "line": 145,
                         "condition": {
                           "variable": {
                             "name": "n"
@@ -3774,11 +3934,11 @@
                         },
                         "body": {
                           "compoundstatement": {
-                            "line": 140,
+                            "line": 145,
                             "body": [
                               {
                                 "casestatement": {
-                                  "line": 141,
+                                  "line": 146,
                                   "value": {
                                     "literal": {
                                       "value": {
@@ -3790,7 +3950,7 @@
                                   },
                                   "statement": {
                                     "casestatement": {
-                                      "line": 142,
+                                      "line": 147,
                                       "value": {
                                         "literal": {
                                           "value": {
@@ -3802,7 +3962,7 @@
                                       },
                                       "statement": {
                                         "expressionstatement": {
-                                          "line": 143,
+                                          "line": 148,
                                           "expression": {
                                             "assignmentexpression": {
                                               "left": {
@@ -3830,12 +3990,12 @@
                               },
                               {
                                 "breakstatement": {
-                                  "line": 144
+                                  "line": 149
                                 }
                               },
                               {
                                 "casestatement": {
-                                  "line": 145,
+                                  "line": 150,
                                   "value": {
                                     "literal": {
                                       "value": {
@@ -3856,11 +4016,11 @@
                                   },
                                   "statement": {
                                     "compoundstatement": {
-                                      "line": 145,
+                                      "line": 150,
                                       "body": [
                                         {
                                           "expressionstatement": {
-                                            "line": 146,
+                                            "line": 151,
                                             "expression": {
                                               "assignmentexpression": {
                                                 "left": {
@@ -3884,7 +4044,7 @@
                                         },
                                         {
                                           "breakstatement": {
-                                            "line": 147
+                                            "line": 152
                                           }
                                         }
                                       ]
@@ -3894,7 +4054,7 @@
                               },
                               {
                                 "casestatement": {
-                                  "line": 149,
+                                  "line": 154,
                                   "value": {
                                     "literal": {
                                       "value": {
@@ -3906,7 +4066,7 @@
                                   },
                                   "statement": {
                                     "attributedeclaration": {
-                                      "line": 150,
+                                      "line": 155,
                                       "attributes": [
                                         {
                                           "standardattributespecifier": {
@@ -3924,7 +4084,7 @@
                               },
                               {
                                 "casestatement": {
-                                  "line": 151,
+                                  "line": 156,
                                   "value": {
                                     "literal": {
                                       "value": {
@@ -3936,7 +4096,7 @@
                                   },
                                   "statement": {
                                     "attributedstatement": {
-                                      "line": 152,
+                                      "line": 157,
                                       "attributes": [
                                         {
                                           "gnuattributespecifier": {
@@ -3951,7 +4111,7 @@
                                       ],
                                       "statement": {
                                         "expressionstatement": {
-                                          "line": 152
+                                          "line": 157
                                         }
                                       }
                                     }
@@ -3960,10 +4120,10 @@
                               },
                               {
                                 "defaultstatement": {
-                                  "line": 153,
+                                  "line": 158,
                                   "statement": {
                                     "expressionstatement": {
-                                      "line": 154,
+                                      "line": 159,
                                       "expression": {
                                         "assignmentexpression": {
                                           "left": {
@@ -3994,7 +4154,7 @@
                     },
                     {
                       "switchstatement": {
-                        "line": 156,
+                        "line": 161,
                         "condition": {
                           "variable": {
                             "name": "n"
@@ -4002,7 +4162,7 @@
                         },
                         "body": {
                           "casestatement": {
-                            "line": 157,
+                            "line": 162,
                             "value": {
                               "literal": {
                                 "value": {
@@ -4014,7 +4174,7 @@
                             },
                             "statement": {
                               "expressionstatement": {
-                                "line": 158,
+                                "line": 163,
                                 "expression": {
                                   "assignmentexpression": {
                                     "left": {
@@ -4042,7 +4202,7 @@
                     },
                     {
                       "gotostatement": {
-                        "line": 159,
+                        "line": 164,
                         "label": {
                           "spelling": "done"
                         }
@@ -4050,13 +4210,13 @@
                     },
                     {
                       "labeledstatement": {
-                        "line": 160,
+                        "line": 165,
                         "label": {
                           "spelling": "again"
                         },
                         "statement": {
                           "expressionstatement": {
-                            "line": 161,
+                            "line": 166,
                             "expression": {
                               "assignmentexpression": {
                                 "left": {
@@ -4098,7 +4258,7 @@
                     },
                     {
                       "attributedstatement": {
-                        "line": 162,
+                        "line": 167,
                         "attributes": [
                           {
                             "standardattributespecifier": {
@@ -4113,7 +4273,7 @@
                         ],
                         "statement": {
                           "ifstatement": {
-                            "line": 162,
+                            "line": 167,
                             "condition": {
                               "variable": {
                                 "name": "total"
@@ -4121,7 +4281,7 @@
                             },
                             "consequence": {
                               "compoundstatement": {
-                                "line": 162
+                                "line": 167
                               }
                             }
                           }
@@ -4130,7 +4290,7 @@
                     },
                     {
                       "simpledeclaration": {
-                        "line": 163,
+                        "line": 168,
                         "specifiers": [
                           {
                             "primitivetypespecifier": {
@@ -4163,8 +4323,66 @@
                       }
                     },
                     {
+                      "simpledeclaration": {
+                        "line": 169,
+                        "specifiers": [
+                          {
+                            "declspecifier": {
+                              "keyword": "static"
+                            }
+                          },
+                          {
+                            "primitivetypespecifier": {
+                              "keyword": "void"
+                            }
+                          }
+                        ],
+                        "declarators": [
+                          {
+                            "declarator": {
+                              "pointerdeclarator": {
+                                "declarator": {
+                                  "arraydeclarator": {
+                                    "declarator": {
+                                      "iddeclarator": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "labels"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "initializer": {
+                              "initializerlist": {
+                                "items": [
+                                  {
+                                    "labeladdressexpression": {
+                                      "label": {
+                                        "spelling": "again"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "labeladdressexpression": {
+                                      "label": {
+                                        "spelling": "done"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
                       "gotostatement": {
-                        "line": 164,
+                        "line": 170,
                         "target": {
                           "variable": {
                             "name": "target"
@@ -4174,20 +4392,20 @@
                     },
                     {
                       "labeledstatement": {
-                        "line": 165,
+                        "line": 171,
                         "label": {
                           "spelling": "done"
                         },
                         "statement": {
                           "expressionstatement": {
-                            "line": 166
+                            "line": 172
                           }
                         }
                       }
                     },
                     {
                       "simpledeclaration": {
-                        "line": 167,
+                        "line": 173,
                         "specifiers": [
                           {
                             "primitivetypespecifier": {
@@ -4217,11 +4435,11 @@
                     },
                     {
                       "compoundstatement": {
-                        "line": 168,
+                        "line": 174,
                         "body": [
                           {
                             "simpledeclaration": {
-                              "line": 169,
+                              "line": 175,
                               "specifiers": [
                                 {
                                   "primitivetypespecifier": {
@@ -4251,7 +4469,7 @@
                           },
                           {
                             "expressionstatement": {
-                              "line": 170,
+                              "line": 176,
                               "expression": {
                                 "castexpression": {
                                   "type": {
@@ -4279,7 +4497,7 @@
                     },
                     {
                       "asmdeclaration": {
-                        "line": 172,
+                        "line": 178,
                         "keyword": "asm",
                         "volatile": true,
                         "template": {
@@ -4354,7 +4572,7 @@
                     },
                     {
                       "asmdeclaration": {
-                        "line": 173,
+                        "line": 179,
                         "keyword": "asm",
                         "goto": true,
                         "template": {
@@ -4375,7 +4593,7 @@
                     },
                     {
                       "staticassertdeclaration": {
-                        "line": 174,
+                        "line": 180,
                         "keyword": "static_assert",
                         "condition": {
                           "binaryexpression": {
@@ -4410,7 +4628,7 @@
                     },
                     {
                       "directive": {
-                        "line": 175,
+                        "line": 181,
                         "directive": {
                           "ifdirective": {
                             "condition": {
@@ -4425,7 +4643,7 @@
                                 "body": [
                                   {
                                     "expressionstatement": {
-                                      "line": 176,
+                                      "line": 182,
                                       "expression": {
                                         "callexpression": {
                                           "function": {
@@ -4462,7 +4680,7 @@
                     },
                     {
                       "returnstatement": {
-                        "line": 178,
+                        "line": 184,
                         "value": {
                           "variable": {
                             "name": "total"
@@ -4472,7 +4690,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 179
+                        "line": 185
                       }
                     }
                   ]
@@ -4481,13 +4699,13 @@
             },
             {
               "comment": {
-                "line": 182,
+                "line": 188,
                 "text": " Expressions"
               }
             },
             {
               "functiondefinition": {
-                "line": 183,
+                "line": 189,
                 "specifiers": [
                   {
                     "primitivetypespecifier": {
@@ -4604,11 +4822,11 @@
                   }
                 },
                 "body": {
-                  "line": 183,
+                  "line": 189,
                   "body": [
                     {
                       "simpledeclaration": {
-                        "line": 184,
+                        "line": 190,
                         "specifiers": [
                           {
                             "primitivetypespecifier": {
@@ -4734,7 +4952,7 @@
                     },
                     {
                       "simpledeclaration": {
-                        "line": 185,
+                        "line": 191,
                         "specifiers": [
                           {
                             "classspecifier": {
@@ -4855,7 +5073,7 @@
                     },
                     {
                       "simpledeclaration": {
-                        "line": 186,
+                        "line": 192,
                         "specifiers": [
                           {
                             "classspecifier": {
@@ -4927,7 +5145,7 @@
                     },
                     {
                       "simpledeclaration": {
-                        "line": 187,
+                        "line": 193,
                         "specifiers": [
                           {
                             "primitivetypespecifier": {
@@ -4968,7 +5186,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 188,
+                        "line": 194,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5042,7 +5260,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 189,
+                        "line": 195,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5129,7 +5347,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 190,
+                        "line": 196,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5204,7 +5422,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 191,
+                        "line": 197,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5272,7 +5490,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 192,
+                        "line": 198,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5301,7 +5519,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 193,
+                        "line": 199,
                         "expression": {
                           "binaryexpression": {
                             "left": {
@@ -5349,7 +5567,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 194,
+                        "line": 200,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5373,7 +5591,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 195,
+                        "line": 201,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5397,7 +5615,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 196,
+                        "line": 202,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5421,7 +5639,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 197,
+                        "line": 203,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5445,7 +5663,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 198,
+                        "line": 204,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5469,7 +5687,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 199,
+                        "line": 205,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5493,7 +5711,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 200,
+                        "line": 206,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5517,7 +5735,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 201,
+                        "line": 207,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5541,7 +5759,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 202,
+                        "line": 208,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5581,7 +5799,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 203,
+                        "line": 209,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5680,7 +5898,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 204,
+                        "line": 210,
                         "expression": {
                           "postfixexpression": {
                             "operand": {
@@ -5695,7 +5913,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 205,
+                        "line": 211,
                         "expression": {
                           "unaryexpression": {
                             "operator": "--",
@@ -5710,7 +5928,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 206,
+                        "line": 212,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5796,7 +6014,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 207,
+                        "line": 213,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5864,7 +6082,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 208,
+                        "line": 214,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5948,7 +6166,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 209,
+                        "line": 215,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -5995,7 +6213,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 210,
+                        "line": 216,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -6008,11 +6226,11 @@
                               "statementexpression": {
                                 "block": {
                                   "compoundstatement": {
-                                    "line": 210,
+                                    "line": 216,
                                     "body": [
                                       {
                                         "simpledeclaration": {
-                                          "line": 211,
+                                          "line": 217,
                                           "specifiers": [
                                             {
                                               "primitivetypespecifier": {
@@ -6042,7 +6260,7 @@
                                       },
                                       {
                                         "expressionstatement": {
-                                          "line": 212,
+                                          "line": 218,
                                           "expression": {
                                             "binaryexpression": {
                                               "left": {
@@ -6075,7 +6293,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 214,
+                        "line": 220,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -6103,7 +6321,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 215,
+                        "line": 221,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -6127,7 +6345,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 216,
+                        "line": 222,
                         "expression": {
                           "assignmentexpression": {
                             "left": {
@@ -6151,7 +6369,7 @@
                     },
                     {
                       "expressionstatement": {
-                        "line": 217,
+                        "line": 223,
                         "expression": {
                           "callexpression": {
                             "function": {
@@ -6184,6 +6402,26 @@
                                 }
                               }
                             ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "expressionstatement": {
+                        "line": 224,
+                        "expression": {
+                          "pragmaexpression": {
+                            "operand": {
+                              "c": {
+                                "literal": {
+                                  "value": {
+                                    "str": "GCC diagnostic pop"
+                                  },
+                                  "text": "\"GCC diagnostic pop\"",
+                                  "quote": "\""
+                                }
+                              }
+                            }
                           }
                         }
                       }

@@ -72,64 +72,85 @@ What tree-sitter-c cannot parse, which the pre-pass rewrites:
     again where it stood.
 13. **Digraphs** (C95), `<: :> <% %> %: %:%:`: rewritten as the tokens they spell, `[ ] { } # ##`, as the model holds
     them, as 0.3 normalized them.
+14. **GNU's asm label before what initializes a declarator, or before GNU attributes**, `register int r asm("r1") =
+    3;`, `int x asm("x2") __attribute__((unused));`: blanked, the converter reading it back into the `asm` of the
+    identifier's declarator it follows (C Types' `AsmLabel`); the attributes after it are the declarator's, as in 6.
+    Among a struct's members, where GCC takes none, it is kept as tree-sitter reads it.
+15. **`_Pragma("...")` where a statement, a declaration, a member or an enumerator stands** (C99, kept by C11 to C23),
+    without a `;` after it, `_Pragma("once") int x;`, the pragma operator, a `#pragma` directive written within a
+    line: which it reads as a call missing its `;`, or cannot read at all among a struct's members or an enumeration's
+    enumerators: blanked, the converter listing a `Directive` holding C Preprocessor's `pragmaexpression` where it
+    stood, and among enumerators the term itself, as the dialect holds them *(agent: a directive, as `#pragma` is,
+    since it stands for one)*. Within an initializer's braces, or after a label, it is kept as tree-sitter reads it.
 
 What tree-sitter-c misreads, which the pre-pass rewrites:
 
-14. **`_Thread_local`** (C11), which it reads as a type's name: rewritten `thread_local`, as long, the converter
+16. **`_Thread_local`** (C11), which it reads as a type's name: rewritten `thread_local`, as long, the converter
     spelling it as written.
-15. **`_Complex` and `_Imaginary`** (C99, kept by C11 to C23), which it reads as types' names or declarators:
+17. **`_Complex` and `_Imaginary`** (C99, kept by C11 to C23), which it reads as types' names or declarators:
     rewritten `const`, as long, the converter making each a `primitivetypespecifier` as written.
 
 What tree-sitter-c misreads, which the converter corrects:
 
-16. **`typeof` of a type name** (C23), `typeof(int *) x`, which it reads as a macro's type specifier: a
+20. **`typeof` of a type name** (C23), `typeof(int *) x`, which it reads as a macro's type specifier: a
     `typeofspecifier` holding a `typeid`.
-17. **Keywords and type names**: `_Bool`, `_Float16` to `_Float128x`, `_Decimal32` to `_Decimal128`, `__int128`,
+19. **Keywords and type names**: `_Bool`, `_Float16` to `_Float128x`, `_Decimal32` to `_Decimal128`, `__int128`,
     `__float128` and `__auto_type`, which it reads as types' names, and the library's typedefs `size_t`, `int32_t`,
     `char16_t` and their like, which it reads as keywords: a `primitivetypespecifier` for a keyword, a
     `namedtypespecifier` for a name, as 0.3 had them.
-18. **An unnamed bit-field**, `int : 3;`, which it reads with a missing name: a `MemberDeclarator` without a
+20. **An unnamed bit-field**, `int : 3;`, which it reads with a missing name: a `MemberDeclarator` without a
     declarator.
-19. **A label ending a block** (C23), `l: }`, which it reads with a missing `;`: a label without a statement, as
+21. **A label ending a block** (C23), `l: }`, which it reads with a missing `;`: a label without a statement, as
     it reads `case 1: }`.
-20. **GNU attributes on a null statement**, `__attribute__((fallthrough));`, which it reads as an error and `;`: an
+22. **GNU attributes on a null statement**, `__attribute__((fallthrough));`, which it reads as an error and `;`: an
     `AttributedStatement`.
-21. **`NULL`**, which it reads as a null constant like `nullptr`: the macro's name, a `variable`; `nullptr` (C23) a
+23. **`NULL`**, which it reads as a null constant like `nullptr`: the macro's name, a `variable`; `nullptr` (C23) a
     `constant`.
-22. **A type name as a macro's argument**, `va_arg(ap, int)`, which it reads as a variable named `int`: a `typeid`,
+24. **A type name as a macro's argument**, `va_arg(ap, int)`, which it reads as a variable named `int`: a `typeid`,
     where the argument is a type's keyword.
-23. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model (0.3's normalization); and
+25. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model (0.3's normalization); and
     GNU's obsolete designator `x: 1`, read as `.x = 1`.
-24. **An attribute declaration** (C23), `[[fallthrough]];`, which it reads as an empty statement with attributes: an
+26. **An attribute declaration** (C23), `[[fallthrough]];`, which it reads as an empty statement with attributes: an
     `AttributeDeclaration`, at file scope as within a block.
-25. **`static_assert(x, "m");` and `_Static_assert`** (C11; without a message, C23), which it reads as a call, an
+27. **`static_assert(x, "m");` and `_Static_assert`** (C11; without a message, C23), which it reads as a call, an
     expression statement: a `StaticAssertDeclaration`.
+28. **GNU's labels as values**, `&&l`, which it reads as `&(&l)`, the address of an address: C's
+    `labeladdressexpression`, its `label` the label's name.
+29. **`_Pragma("...")` within an expression**, which it reads as a call of a function named `_Pragma`: C Preprocessor's
+    `pragmaexpression`, its `operand` the string literal, as written; with a `;` after it, where a statement stands, an
+    `ExpressionStatement` holding it, as written.
+30. **GNU's asm label**, `int x asm("r1");`, `int f(void) __asm__("f2");`, which it reads as a declarator of its own
+    after the one it labels, or within a function's declarator: the `asm` of the identifier's declarator it labels (C
+    Types' `AsmLabel`, its `keyword` as written and its `label` the string literal).
 
 What tree-sitter-c reads but C rejects, which the converter keeps invalid syntax (an `Error`, or an `error` term):
 
-26. **Statements at file scope**, `x = 1;`, `;`, `{}`: C's translation unit holds declarations alone.
-27. **C++'s linkage specification**, `extern "C" { ... }`, and **Microsoft's extensions** 0.3 did not keep: calling
+31. **Statements at file scope**, `x = 1;`, `;`, `{}`: C's translation unit holds declarations alone.
+32. **C++'s linkage specification**, `extern "C" { ... }`, and **Microsoft's extensions** 0.3 did not keep: calling
     conventions (`__cdecl`), pointer modifiers (`__ptr32`, `__based`) and structured exceptions (`__try`).
-28. **Literals C rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C has not (`1uu`, `1.0ff`), and an
+33. **Literals C rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C has not (`1uu`, `1.0ff`), and an
     escape of no character (`'\\x'`). GNU's imaginary constants (`1.0i`) tree-sitter cannot read either: an `Error`.
-29. **A conditional directive's closing or continuing line where none is open**, `#endif` alone, which it reads as an
+34. **A conditional directive's closing or continuing line where none is open**, `#endif` alone, which it reads as an
     other directive.
-30. **A macro's use that is no C syntax**, `FOO(T) x;` (a macro's type specifier other than `typeof`), and a type
+35. **A macro's use that is no C syntax**, `FOO(T) x;` (a macro's type specifier other than `typeof`), and a type
     specifier tree-sitter reads but C has not.
+36. **A function's definition whose declarator declares no function**, `int m { return 0; }` and `int (*m)[3] {}`,
+    which it reads as a function's definition: an `Error`.
+37. **GNU's asm label on a function's definition**, `int f(void) asm("g") { ... }`, which GCC takes on a declaration
+    alone: an `Error`; and an asm label of what declares no identifier, or a second one.
+38. **`_Pragma` of what is no one string literal**, `_Pragma(x)`, `_Pragma("a" "b")`, and **`&&` of what is no
+    label's name**, `&&(l)`: an `error` term within an expression, an `Error` where an item stands.
 
 What stays as tree-sitter-c reads it:
 
-31. **Typedef names and other names**, `T * x;` (a declaration or a product), `(T)*x` (a cast or a product),
+39. **Typedef names and other names**, `T * x;` (a declaration or a product), `(T)*x` (a cast or a product),
     `typeof(x)` and `_Alignof(x)` (of a type or of an expression): which a text is depends on whether `T` names a
     type, which the declarations before it decide, outside the grammar. Read as tree-sitter decides.
-32. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it:
+40. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it:
     no tree of either the directives or the statements, the preprocessor not run. Kept as tree-sitter's recovery
     leaves it: invalid syntax, as written.
-33. **Trigraphs** (`??=`), which C11 and C17 replace before all else, within strings too, and C23 removed: which a
+41. **Trigraphs** (`??=`), which C11 and C17 replace before all else, within strings too, and C23 removed: which a
     text means depends on its edition. Kept as tree-sitter reads them, invalid syntax where they spell punctuation.
-34. **What the model cannot hold** (mbse-expressions' gaps, reported to it): GNU's labels as values, `&&l`, which
-    tree-sitter reads as `&(&l)`, an `error` term as written; an `asm` label on a declarator, `int x asm("r1");`, and
-    `_Pragma("...")`, an `Error` as written.
 
 Decided here *(agent, for review)*:
 
@@ -194,6 +215,11 @@ _CV = {"const", "volatile", "restrict", "_Atomic", "__restrict", "__restrict__",
 _TYPEOFS = ("typeof", "typeof_unqual", "__typeof__", "__typeof")
 _ATTRIBUTES = ("__attribute__", "__attribute")
 _DIGRAPHS = {"<:": "[ ", ":>": "] ", "<%": "{ ", "%>": "} ", "%:": "# ", "%:%:": "## "}
+_ASM = ("asm", "__asm__", "__asm")
+_NOT_DECLARATORS = _PRIMITIVES | _CV | {
+    "if", "while", "for", "switch", "else", "do", "return", "goto", "case", "default", "sizeof", "_Alignof", "alignof",
+    "__extension__", "struct", "union", "enum", *_ATTRIBUTES, *_ASM}
+"""The words before an `asm`, or before the `(` of a `)` before it, that end no declarator."""
 _SPECIFIER_NODES = ("struct_specifier", "union_specifier", "enum_specifier")
 _ALTERNATIVE_DIRECTIVES = ("#else", "#elif", "#endif", "#elifdef", "#elifndef")
 
@@ -254,7 +280,11 @@ class _Prepared:
         self.ranges: dict[int, tuple[int, int]] = {}  # by the `case`: the span of its range's end
         self.gotos: dict[int, int] = {}  # by the `+` that was `*`: the `goto`'s offset
         self.items: list[tuple[int, int, int]] = []  # an item blanked: its offset, and the span to read back (a null
-        # directive's is empty)
+        # directive's and a pragma's are empty)
+        self.pragmas: dict[int, tuple[int, int]] = {}  # a `_Pragma` blanked where an item stands, by its offset: the
+        # span of its operand
+        self.labels: dict[int, tuple[int, int]] = {}  # GNU's asm labels, by where the declarator before them ends: the
+        # span of each
 
 
 _PUNCTUATORS = sorted(["%:%:", "...", "<<=", ">>=", "->", "++", "--", "<<", ">>", "<=", ">=", "==", "!=", "&&", "||",
@@ -323,10 +353,43 @@ def _closing(tokens: list[tuple[int, int, str]], i: int) -> int | None:
     return None
 
 
+def _opening(tokens: list[tuple[int, int, str]], j: int) -> int:
+    """The index of the bracket that opens the one at `tokens[j]`; -1 if none does."""
+    depth = 0
+    for i in range(j, -1, -1):
+        if tokens[i][2] in (")", "]", "}", ":>", "%>"):
+            depth += 1
+        elif tokens[i][2] in ("(", "[", "{", "<:", "<%"):
+            depth -= 1
+            if depth == 0:
+                return i
+    return -1
+
+
+def _labeling(tokens: list[tuple[int, int, str]], i: int) -> bool:
+    """Whether the `asm` at `tokens[i]` follows a declarator, which it labels: a name, `]`, or a parameter list's `)`,
+    no statement's or attribute's."""
+    before = tokens[i - 1][2] if i > 0 else ""
+    if before == ")":
+        opening = _opening(tokens, i - 1)
+        before = tokens[opening - 1][2] if opening > 0 else ""
+        return before == ")" or _WORD.fullmatch(before) is not None and before not in _NOT_DECLARATORS
+    return before == "]" or _WORD.fullmatch(before) is not None and before not in _NOT_DECLARATORS
+
+
+def _headed(tokens: list[tuple[int, int, str]], opening: int) -> bool:
+    """Whether the `(` at `tokens[opening]` follows what heads a block: a statement's keyword, a function's declarator
+    (a name, or a `)`), not a compound literal's type."""
+    before = tokens[opening - 1][2] if opening > 0 else ""
+    return before in ("if", "while", "for", "switch", ")") or _WORD.fullmatch(before) is not None and (
+        before not in _NOT_DECLARATORS)
+
+
 def _braces(tokens: list[tuple[int, int, str]]) -> list[str]:
     """Each token's innermost brace: `enum` within an enumeration's body, `struct` within a struct's or a union's,
-    `block` within any other braces, `` outside them."""
-    out, stack = [], []
+    `init` within an initializer's or a compound literal's, `block` within any other braces, `` outside them."""
+    out: list[str] = []
+    stack: list[str] = []
     for i, (_, _, word) in enumerate(tokens):
         out.append(stack[-1] if stack else "")
         if word in ("{", "<%"):
@@ -336,6 +399,10 @@ def _braces(tokens: list[tuple[int, int, str]]) -> list[str]:
                     kind = "enum" if tokens[j][2] == "enum" else "struct"
                     break
                 j -= 1
+            before = tokens[i - 1][2] if i > 0 else ""
+            if kind == "block" and (before == "=" or before in ("{", ",", "<%") and out[-1] == "init" or (
+                    before == ")" and not _headed(tokens, _opening(tokens, i - 1)))):
+                kind = "init"
             stack.append(kind)
         elif word in ("}", "%>") and stack:
             stack.pop()
@@ -389,6 +456,8 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
         elif line.startswith("%:"):
             chars[start:start + 2] = list("# ")
     braces = _braces(tokens)
+    labels: dict[int, int] = {}  # the index of an asm label's `)`, blanked: where the declarator before it ends
+    pragmas: set[int] = set()  # the index of a `_Pragma`'s `)`, blanked
     for i, (start, end, word) in enumerate(tokens):
         after = tokens[i + 1][2] if i + 1 < len(tokens) else ""
         before = tokens[i - 1][2] if i > 0 else ""
@@ -451,15 +520,33 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                 continue
             found.attributes.setdefault(start, []).append((tokens[i + 1][0], tokens[close][1]))
             blank(tokens[i + 1][0], tokens[close][1])
-        elif word in _ATTRIBUTES and after == "(" and (_WORD.fullmatch(before) or before == "]") and (
-                before not in _PRIMITIVES | _CV | {"struct", "union", "enum"}):
+        elif word in _ATTRIBUTES and after == "(" and ((_WORD.fullmatch(before) or before == "]") and (
+                before not in _PRIMITIVES | _CV | {"struct", "union", "enum"}) or i - 1 in labels):
             close = _closing(tokens, i + 1)
             if close is None:  # unclosed: nothing to read back
                 continue
             following = tokens[close + 1][2] if close + 1 < len(tokens) else ""
             if following in ("=", ",", ";", ":"):
-                found.after.setdefault(tokens[i - 1][1], []).append((start, tokens[close][1]))
+                found.after.setdefault(labels.get(i - 1, tokens[i - 1][1]), []).append((start, tokens[close][1]))
                 blank(start, tokens[close][1])
+        elif word in _ASM and after == "(" and braces[i] != "struct" and _labeling(tokens, i):
+            close = _closing(tokens, i + 1)
+            if close is None:  # unclosed: nothing to read back
+                continue
+            following = tokens[close + 1][2] if close + 1 < len(tokens) else ""
+            if following in ("=", ",", ";", *_ATTRIBUTES):
+                labels[close] = tokens[i - 1][1]
+                found.labels[tokens[i - 1][1]] = (start, tokens[close][1])
+                blank(start, tokens[close][1])
+        elif word == "_Pragma" and after == "(" and braces[i] != "init" and (
+                before in ("", ";", "{", "}", "<%", "%>") or before == "," and braces[i] == "enum" or i - 1 in pragmas):
+            close = _closing(tokens, i + 1)  # where an item stands, without `;`
+            if close is None or close + 1 < len(tokens) and tokens[close + 1][2] == ";":
+                continue
+            pragmas.add(close)
+            found.items.append((start, start, start))
+            found.pragmas[start] = (tokens[i + 1][1], tokens[close][0])
+            blank(start, tokens[close][1])
         elif word in ("static_assert", "_Static_assert") and braces[i] == "struct":
             stop = next((j for j in range(i, len(tokens)) if tokens[j][2] == ";"), len(tokens) - 1)
             found.items.append((start, start, tokens[stop][1]))
@@ -633,6 +720,28 @@ def _write(value: Any) -> Any:
         return getattr(visitor, tag)(record)
 
     return write
+
+
+def _identifier(declarator: _Node | None) -> _Node | None:
+    """The identifier's declarator within `declarator`; None within an abstract one."""
+    while declarator is not None and declarator.branch != "iddeclarator":
+        declarator = declarator.declarator
+    return declarator
+
+
+def _named(declarator: _Node) -> bool:
+    """Whether a declarator is, within its parentheses, the identifier it declares."""
+    while declarator.branch == "parenthesizeddeclarator":
+        declarator = declarator.declarator
+    return declarator.branch == "iddeclarator"
+
+
+def _binder(declarator: _Node) -> _Node:
+    """The declarator nearest the name a declarator declares, but parentheses: a function's declarator, where it
+    declares a function, not that of the type a function returns."""
+    while declarator.declarator is not None and not _named(declarator.declarator):
+        declarator = declarator.declarator
+    return declarator
 
 
 # --- The converter ---
@@ -834,18 +943,31 @@ class _Converter:
         return 0 if previous is None else self.source.offset(previous.end_byte)
 
     def blanked(self, start: int, end: int) -> list[_Node]:
-        """The items the pre-pass blanked from `start` and before `end`: null directives, and the `static_assert`s of a
-        struct's members, read back."""
+        """The items the pre-pass blanked from `start` and before `end`: null directives, `_Pragma`s, and the
+        `static_assert`s of a struct's members, read back."""
         out = []
         for at, first, last in self.pre.items:
-            if start <= at < end:
-                if first == last:
-                    made = _Node("otherdirective").of("c_preprocessor")
-                    out.append(_Node("directive", line=self.origin.line(self.shift + at), directive=made))
-                    continue
+            if not start <= at < end:
+                continue
+            line = self.origin.line(self.shift + at)
+            operand = self.pre.pragmas.get(at)
+            if operand is not None:
+                out.append(self.blanked_pragma(at, *operand))
+            elif first == last:
+                out.append(_Node("directive", line=line, directive=_Node("otherdirective").of("c_preprocessor")))
+            else:
                 converter, root = self.reparsed("", first, last, "")
                 out += [converter.statement(c) for c in converter.named(root)]
         return out
+
+    def blanked_pragma(self, at: int, start: int, end: int) -> _Node:
+        """A `_Pragma` the pre-pass blanked where an item stands, at `at`, its operand between `start` and `end`: a
+        `Directive` holding it, or, of no one string literal, an `Error`."""
+        line = self.origin.line(self.shift + at)
+        try:
+            return _Node("directive", line=line, directive=self.pragma(self.part_expression(start, end)))
+        except _Invalid:
+            return _Node("error", line=line, text=self.origin.text[self.shift + at:self.shift + end + 1])
 
     def comment(self, ts: _TS, previous: _TS | None) -> _Node:
         """A comment, its text without its delimiters: trailing where nothing but blanks is between it and the end of
@@ -1223,8 +1345,12 @@ class _Converter:
         return self.inner_declarator(ts)
 
     def declared(self, ts: _TS) -> _Node:
-        """A declaration's declarator, with the GNU attributes the pre-pass blanked after it."""
+        """A declaration's declarator, with the asm label and the GNU attributes the pre-pass blanked after it."""
         made = self.inner_declarator(ts)
+        label = self.pre.labels.get(self.source.offset(ts.end_byte))
+        if label is not None:
+            converter, root = self.reparsed("int _ ", *label, ";")
+            self.label(made, converter.asm_label(converter.named(converter.named(root)[0])[-1]))
         blanked = self.pre.after.get(self.source.offset(ts.end_byte))
         if blanked:
             target = made
@@ -1235,6 +1361,20 @@ class _Converter:
                 target.attributes = (target.attributes or []) + [
                     converter.attribute(converter.named(converter.named(root)[0])[0])]
         return made
+
+    def asm_label(self, ts: _TS) -> _Node:
+        """GNU's asm label, `asm("name")`: C Types' `AsmLabel`, its keyword as written and its string literal."""
+        return _Node("asmlabel", keyword=self.text(ts.children[0]),
+                     label=self.expression(self.require(ts, "assembly_code")))
+
+    @staticmethod
+    def label(declarator: _Node | None, label: _Node) -> None:
+        """`label` given to the identifier `declarator` declares, its `asm`; `_Invalid` where it declares none (an
+        abstract declarator), or has one already."""
+        named = _identifier(declarator)
+        if named is None or named.asm is not None:
+            raise _Invalid("asm")
+        named.asm = label
 
     def inner_declarator(self, ts: _TS) -> _Node:
         kind = ts.type
@@ -1269,8 +1409,10 @@ class _Converter:
             for c in self.named(ts):
                 if c.type in ("attribute_specifier", "attribute_declaration"):
                     made.attributes.append(self.attribute(c))
+                elif c.type == "gnu_asm_expression":  # GNU's asm label, which tree-sitter-c reads as the function's
+                    self.label(held, self.asm_label(c))  # declarator's: its identifier's
                 elif c.type != "parameter_list" and (inner is None or c.id != inner.id):
-                    raise _Invalid(c.type)  # an `asm` label, which the model has no place for
+                    raise _Invalid(c.type)
             return made
         if kind in ("parenthesized_declarator", "abstract_parenthesized_declarator"):
             parts = self.named(ts)
@@ -1316,16 +1458,23 @@ class _Converter:
             if c.type == "init_declarator":
                 made.declarators.append(_Node("initdeclarator", declarator=self.declared(
                     self.require(c, "declarator")), initializer=self.expression(self.require(c, "value"))))
-            elif c.type == "gnu_asm_expression":
-                raise _Invalid(c.type)  # an `asm` label, which the model has no place for
+            elif c.type == "gnu_asm_expression":  # GNU's asm label, which tree-sitter-c reads as a declarator of its
+                if not made.declarators or made.declarators[-1].initializer is not None:  # own, after the one it
+                    raise _Invalid(c.type)  # labels: before what initializes it, never after
+                self.label(made.declarators[-1].declarator, self.asm_label(c))
             else:
                 made.declarators.append(_Node("initdeclarator", declarator=self.declared(c)))
         return made
 
     def function_definition(self, ts: _TS) -> _Node:
+        """A function's definition; one whose declarator declares no function (`int m { ... }`), or labels it (GNU's
+        `asm` label, which GCC takes on no definition), is what C rejects."""
         attributes: list[_Node] = []
         made = _Node("functiondefinition", specifiers=self.specifiers(ts, attributes), attributes=attributes,
                      declarator=self.declarator(self.require(ts, "declarator")))
+        binder, named = _binder(made.declarator), _identifier(made.declarator)
+        if binder.branch != "functiondeclarator" or named is None or named.asm is not None:
+            raise _Invalid(ts.type)
         made.declarations = [self.declaration(c) for c in self.named(ts) if c.type == "declaration"]
         made.body = self.block(self.require(ts, "body"))
         return made
@@ -1488,8 +1637,18 @@ class _Converter:
         operator, argument = self.text(self.require(ts, "operator")), self.require(ts, "argument")
         if operator == "&" and argument.type == "pointer_expression" and self.text(
                 self.require(argument, "operator")) == "&" and self.local(argument) == self.local(ts) + 1:
-            raise _Invalid("&&")  # GNU's label as a value, `&&l`, which the model has no kind for
+            label = self.require(argument, "argument")  # GNU's label as a value, `&&l`, which tree-sitter-c reads
+            if label.type != "identifier":  # as `&(&l)`: of a label's name alone
+                raise _Invalid("&&")
+            return _Node("labeladdressexpression", label=self.identifier(label))
         return _Node("unaryexpression", operator=operator, operand=self.expression(argument))
+
+    @staticmethod
+    def pragma(operand: _Node) -> _Node:
+        """`_Pragma(operand)`, C Preprocessor's `pragmaexpression`."""
+        if operand.branch != "literal" or operand.quote != '"':  # where an item stands, as the pre-pass read it back
+            raise _Invalid("_Pragma")
+        return _Node("pragmaexpression", operand=operand).of("c_preprocessor")
 
     def update(self, ts: _TS) -> _Node:
         operator = self.text(self.require(ts, "operator"))
@@ -1499,6 +1658,13 @@ class _Converter:
         return _Node("postfixexpression", operand=operand, operator=operator)
 
     def call(self, ts: _TS) -> _Node:
+        """A call; `_Pragma("...")`, which tree-sitter-c reads as one, the pragma operator, of one string literal."""
+        function = self.require(ts, "function")
+        if function.type == "identifier" and self.text(function) == "_Pragma":
+            operands = self.named(self.require(ts, "arguments"))
+            if len(operands) != 1 or operands[0].type != "string_literal":
+                raise _Invalid(self.text(function))
+            return self.pragma(self.expression(operands[0]))
         return _Node("callexpression", function=self.expression(self.require(ts, "function")),
                      arguments=self.arguments(self.require(ts, "arguments")))
 

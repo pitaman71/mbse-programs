@@ -32,7 +32,7 @@ Its entities have these kinds, ported from mbse-programs 0.3's (`Ccpp/Definition
 - 'variable', 'function', 'parameter' (of a function definition, or of a prototype, in its own scope), 'type alias'
   (`typedef`) and 'enumerator': C's ordinary identifiers;
 - 'struct', 'union' and 'enumeration': its tags, each struct or union with its members, 'field', in a scope of its own;
-- 'label', in its function's scope;
+- 'label', in its function's scope, which a `goto`, an `asm goto`'s labels and GNU's `&&label` refer to;
 - 'macro', each `#define`'s name, in the program's `macros`, as 0.3 had them *(agent)*.
 
 Declarations of one name and kind in one scope are one entity: a function's prototypes and its definition, a variable
@@ -57,7 +57,7 @@ place that binds a name, but for the names that name no entity of the program, w
 (`a.b`'s `b`, a designator's `.b`), an `asm` operand's symbolic name, a macro's parameters, and an attribute's name.
 What it does not do: resolve members (`a.b`, whose `b` depends on `a`'s type), run the preprocessor (a macro's
 replacement is text, and `#undef` is not read), tell typedef names from other names where the parser did not (`Parse`,
-item 31), or follow names into included files.
+item 39), or follow names into included files.
 
 Decided by the agent where the port left it open, each *(agent)*:
 
@@ -405,6 +405,10 @@ class _Definer:
     def member(self, record: Any, props: dict[str, Any], scope: Scope, at: Anchor, space: str) -> None:
         self.prop(record, props, "object", scope, at, space)  # its member's name depends on the object's type
 
+    def label_address(self, record: Any, props: dict[str, Any], scope: Scope, at: Anchor, space: str) -> None:
+        """GNU's `&&label`: its name a label's, looked up in its function's scope, as a `goto`'s."""
+        self.use(at.at("label", _rank(record, "label")), scope, _spelling(props["label"]), LABEL)
+
     def unnamed(self, record: Any, props: dict[str, Any], scope: Scope, at: Anchor, space: str) -> None:
         """A term whose names name no entity of the program: a designator's member."""
 
@@ -508,6 +512,7 @@ class _Definer:
 
     TERMS: dict[str, Any] = {
         "variable": variable, "identifier": identifier, "memberexpression": member, "fielddesignator": unnamed,
+        "labeladdressexpression": label_address,
         "classspecifier": specifier, "enumspecifier": specifier, "enumerator": enumerator, "typeid": type_name,
         "definedirective": define_macro, "ifdirective": preprocessed, "ifdefdirective": preprocessed,
         "elifdirective": preprocessed, "elifdefdirective": preprocessed, "includedirective": preprocessed,
