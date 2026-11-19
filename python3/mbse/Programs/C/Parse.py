@@ -62,7 +62,8 @@ What tree-sitter-c cannot parse, which the pre-pass rewrites:
 9. **GNU's case ranges**, `case 1 ... 3:`: `... 3` blanked, the converter reading the range's end back into the
    label's `last`.
 10. **A `switch` whose body is no compound statement**, `switch (x) case 1: f();`, which C allows: `switch` rewritten
-    `while`, as long, the converter making it a `switch` again.
+    `while`, as long, the converter making it a `switch` again; the statements after the label's, which tree-sitter
+    reads as the label's too, follow the `switch`.
 11. **GNU's computed `goto`**, `goto *p;`: `goto` blanked and `*` rewritten `+`, the converter making the expression
     statement it parses a `GotoStatement` whose `target` is `p`.
 12. **The null directive**, `#` alone on its line: blanked, the converter listing an `otherdirective` with no name
@@ -97,30 +98,34 @@ What tree-sitter-c misreads, which the converter corrects:
     where the argument is a type's keyword.
 23. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model (0.3's normalization); and
     GNU's obsolete designator `x: 1`, read as `.x = 1`.
+24. **An attribute declaration** (C23), `[[fallthrough]];`, which it reads as an empty statement with attributes: an
+    `AttributeDeclaration`, at file scope as within a block.
+25. **`_Static_assert(x);` and `static_assert(x);` without a message** (C23) where it reads them as calls: a
+    `StaticAssertDeclaration`.
 
 What tree-sitter-c reads but C rejects, which the converter keeps invalid syntax (an `Error`, or an `error` term):
 
-24. **Statements at file scope**, `x = 1;`, `;`, `{}`: C's translation unit holds declarations alone.
-25. **C++'s linkage specification**, `extern "C" { ... }`, and **Microsoft's extensions** 0.3 did not keep: calling
+26. **Statements at file scope**, `x = 1;`, `;`, `{}`: C's translation unit holds declarations alone.
+27. **C++'s linkage specification**, `extern "C" { ... }`, and **Microsoft's extensions** 0.3 did not keep: calling
     conventions (`__cdecl`), pointer modifiers (`__ptr32`, `__based`) and structured exceptions (`__try`).
-26. **Literals C rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C has not (`1x`, GNU's imaginary `i` once
+28. **Literals C rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C has not (`1x`, GNU's imaginary `i` once
     tree-sitter reads one), and an escape of no character (`\\x` without digits).
-27. **A conditional directive's closing or continuing line where none is open**, `#endif` alone, which it reads as an
+29. **A conditional directive's closing or continuing line where none is open**, `#endif` alone, which it reads as an
     other directive.
-28. **A macro's use that is no C syntax**, `FOO(T) x;` (a macro's type specifier other than `typeof`), and a type
+30. **A macro's use that is no C syntax**, `FOO(T) x;` (a macro's type specifier other than `typeof`), and a type
     specifier tree-sitter reads but C has not.
 
 What stays as tree-sitter-c reads it:
 
-29. **Typedef names and other names**, `T * x;` (a declaration or a product), `(T)*x` (a cast or a product),
+31. **Typedef names and other names**, `T * x;` (a declaration or a product), `(T)*x` (a cast or a product),
     `typeof(x)` and `_Alignof(x)` (of a type or of an expression): which a text is depends on whether `T` names a
     type, which the declarations before it decide, outside the grammar. Read as tree-sitter decides.
-30. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it:
+32. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it:
     no tree of either the directives or the statements, the preprocessor not run. Kept as tree-sitter's recovery
     leaves it: invalid syntax, as written.
-31. **Trigraphs** (`??=`), which C11 and C17 replace before all else, within strings too, and C23 removed: which a
+33. **Trigraphs** (`??=`), which C11 and C17 replace before all else, within strings too, and C23 removed: which a
     text means depends on its edition. Kept as tree-sitter reads them, invalid syntax where they spell punctuation.
-32. **What the model cannot hold** (mbse-expressions' gaps, reported to it): GNU's labels as values, `&&l`, which
+34. **What the model cannot hold** (mbse-expressions' gaps, reported to it): GNU's labels as values, `&&l`, which
     tree-sitter reads as `&(&l)`, an `error` term as written; an `asm` label on a declarator, `int x asm("r1");`, and
     `_Pragma("...")`, an `Error` as written.
 
@@ -1011,6 +1016,8 @@ class _Converter:
         """The specifiers one tree-sitter node spells."""
         kind, spelling = ts.type, self.text(ts)
         if kind in ("primitive_type", "type_identifier"):
+            if self.pre.keywords.get(self.local(ts)) == "auto":  # an inferred declaration's, which the pre-pass made
+                return [_Node("declspecifier", keyword="auto")]  # `int`
             name = self.pre.names.get(self.local(ts))
             if name is not None:
                 return [self.named_specifier(ts, *name)]
