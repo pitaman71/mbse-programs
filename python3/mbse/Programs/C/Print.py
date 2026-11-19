@@ -137,6 +137,8 @@ class Printer(Text.Printer):
     conditional directive's group, which it writes as their lines, at the level of the statement being printed
     (`level`)."""
 
+    HOLDERS = _HOLDERS  # the kinds whose statements, members or group it writes *(a hook `Programs.Cpp` extends)*
+
     def __init__(self) -> None:
         super().__init__(CExpressions.DIALECT)
         self.level = 0  # the level of the statement being printed, where a block within a term indents from
@@ -152,7 +154,7 @@ class Printer(Text.Printer):
     def keep(self, node: Any, record: Any) -> Any:
         """`node`, a term's or a helper's, its record and its helpers' records kept where they hold what this printer
         writes."""
-        if node.kind in _HOLDERS:
+        if node.kind in self.HOLDERS:
             self.records[id(node)] = (node, record)
         held = Objects.properties(record)
         for name, helpers in node.helpers.items():

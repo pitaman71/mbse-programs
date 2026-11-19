@@ -905,7 +905,8 @@ class _Converter:
         previous = header
         kids = [n for n in nodes if not n.is_missing]
         whole = bool(nodes) and nodes[0].parent is not None and nodes[0].parent.type == "translation_unit"
-        limit = len(self.source.text) if whole or not nodes else self.source.offset(nodes[-1].end_byte)
+        limit = len(self.source.text) if whole or not nodes and header is None else self.source.offset(
+            nodes[-1].end_byte) if nodes else self.after(header)  # a label's empty list: nothing after its `:`
         i = 0
         listed = self.after(previous)  # where what the pre-pass blanked is listed up to: each item once
         while i < len(kids):

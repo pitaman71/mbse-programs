@@ -870,10 +870,13 @@ class _Converter(C._Converter):
         attributes: list[_Node] = []
         made = _Node("simpledeclaration", specifiers=self.specifiers(ts, attributes), attributes=attributes,
                      declarators=[])
-        for c in self.fields(ts, "declarator"):
-            made.declarators.append(self.init_declarator(c, "initdeclarator"))
-        for c in ts.children:
-            if c.type == "gnu_asm_expression":
+        for i, c in enumerate(ts.children):
+            field = ts.field_name_for_child(i)
+            if field == "declarator":
+                made.declarators.append(self.init_declarator(c, "initdeclarator"))
+            elif field == "value":  # a condition's declarator's, which tree-sitter reads as the declaration's
+                made.declarators[-1].initializer = self.initializer(c, ts.children[i - 1].type == "=")
+            elif c.type == "gnu_asm_expression":
                 raise _Invalid(c.type)  # where tree-sitter reads one, it reads its own declarator
         return made
 
