@@ -524,24 +524,6 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                 continue
             found.attributes.setdefault(start, []).append((tokens[i + 1][0], tokens[close][1]))
             blank(tokens[i + 1][0], tokens[close][1])
-        elif word in _ATTRIBUTES and after == "(" and ((_WORD.fullmatch(before) or before == "]") and (
-                before not in _PRIMITIVES | _CV | {"struct", "union", "enum"}) or i - 1 in labels):
-            close = _closing(tokens, i + 1)
-            if close is None:  # unclosed: nothing to read back
-                continue
-            following = tokens[close + 1][2] if close + 1 < len(tokens) else ""
-            if following in ("=", ",", ";", ":"):
-                found.after.setdefault(labels.get(i - 1, tokens[i - 1][1]), []).append((start, tokens[close][1]))
-                blank(start, tokens[close][1])
-        elif word in _ASM and after == "(" and braces[i] != "struct" and _labeling(tokens, i):
-            close = _closing(tokens, i + 1)
-            if close is None:  # unclosed: nothing to read back
-                continue
-            following = tokens[close + 1][2] if close + 1 < len(tokens) else ""
-            if following in ("=", ",", ";", *_ATTRIBUTES):
-                labels[close] = tokens[i - 1][1]
-                found.labels[tokens[i - 1][1]] = (start, tokens[close][1])
-                blank(start, tokens[close][1])
         elif word == "_Pragma" and after == "(" and braces[i] != "init" and (
                 before in ("", ";", "{", "}", "<%", "%>") or before == "," and braces[i] == "enum" or i - 1 in pragmas):
             close = _closing(tokens, i + 1)  # where an item stands, without `;`
@@ -566,32 +548,65 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                     blank(first, last)  # a keyword alone there
                     chars[first:first + 3] = list("int")
                     found.names[first] = ("base", first, last)
-        elif word == "case":
-            depth, j, last = 0, i + 1, None
-            while j < len(tokens):
-                inner = tokens[j][2]
-                depth += 1 if inner in ("(", "[", "?") else -1 if inner in (")", "]") else 0
-                if inner == ":" and depth == 0 or inner in (";", "{", "}"):
-                    break
-                if inner == ":":
-                    depth -= 1  # a conditional's `:`
-                if inner == "..." and depth == 0:
-                    last = j
-                j += 1
-            if last is not None and j < len(tokens) and tokens[j][2] == ":":
-                found.ranges[start] = (tokens[last + 1][0], tokens[j - 1][1])
-                blank(tokens[last][0], tokens[j - 1][1])
         elif word == "switch" and after == "(":
             close = _closing(tokens, i + 1)
             if close is None:  # unclosed: nothing to read back
                 continue
             if close + 1 < len(tokens) and tokens[close + 1][2] not in ("{", "<%"):
                 respell(start, word, "while")
-        elif word == "goto" and after == "*":
-            blank(start, end)
-            chars[tokens[i + 1][0]] = "+"
-            found.gotos[tokens[i + 1][0]] = start
+        else:
+            _gnu(tokens, braces, i, found, labels, chars)
     return "".join(chars), found
+
+
+def _gnu(tokens: list[tuple[int, int, str]], braces: list[str], i: int, found: _Prepared, labels: dict[int, int],
+         chars: list[str]) -> None:
+    """GNU's extensions at `tokens[i]` that tree-sitter cannot parse, rewritten in `chars` and recorded in `found`: GNU
+    attributes after a declarator (6), a case range (9), a computed `goto` (11) and an asm label before what
+    initializes a declarator (14); `labels` the index of each asm label's `)` blanked, by where the declarator before
+    it ends. Shared with `Programs.Cpp.Parse`'s pre-pass, as tree-sitter-cpp cannot parse them either *(agent: moved
+    out of `_prepare` for C++'s reuse)*."""
+    start, end, word = tokens[i]
+    after = tokens[i + 1][2] if i + 1 < len(tokens) else ""
+    before = tokens[i - 1][2] if i > 0 else ""
+
+    def blank(first: int, last: int) -> None:
+        for p in range(first, last):
+            chars[p] = "\n" if chars[p] == "\n" else " "
+
+    if word in _ATTRIBUTES and after == "(" and ((_WORD.fullmatch(before) or before == "]") and (
+            before not in _PRIMITIVES | _CV | {"struct", "union", "enum"}) or i - 1 in labels):
+        close = _closing(tokens, i + 1)
+        following = tokens[close + 1][2] if close is not None and close + 1 < len(tokens) else ""
+        if close is not None and following in ("=", ",", ";", ":"):  # unclosed: nothing to read back
+            found.after.setdefault(labels.get(i - 1, tokens[i - 1][1]), []).append((start, tokens[close][1]))
+            blank(start, tokens[close][1])
+    elif word in _ASM and after == "(" and braces[i] != "struct" and _labeling(tokens, i):
+        close = _closing(tokens, i + 1)
+        following = tokens[close + 1][2] if close is not None and close + 1 < len(tokens) else ""
+        if close is not None and following in ("=", ",", ";", *_ATTRIBUTES):  # unclosed: nothing to read back
+            labels[close] = tokens[i - 1][1]
+            found.labels[tokens[i - 1][1]] = (start, tokens[close][1])
+            blank(start, tokens[close][1])
+    elif word == "case":
+        depth, j, last = 0, i + 1, None
+        while j < len(tokens):
+            inner = tokens[j][2]
+            depth += 1 if inner in ("(", "[", "?") else -1 if inner in (")", "]") else 0
+            if inner == ":" and depth == 0 or inner in (";", "{", "}"):
+                break
+            if inner == ":":
+                depth -= 1  # a conditional's `:`
+            if inner == "..." and depth == 0:
+                last = j
+            j += 1
+        if last is not None and j < len(tokens) and tokens[j][2] == ":":
+            found.ranges[start] = (tokens[last + 1][0], tokens[j - 1][1])
+            blank(tokens[last][0], tokens[j - 1][1])
+    elif word == "goto" and after == "*":
+        blank(start, end)
+        chars[tokens[i + 1][0]] = "+"
+        found.gotos[tokens[i + 1][0]] = start
 
 
 def _directive_name(line: str) -> str:
@@ -778,6 +793,9 @@ class _Converter:
     """Rewrites a tree-sitter-c tree into statements and terms. `shift` and `origin` place a tree parsed from a part of
     the text: its offsets are `shift` past those of the part, and its text as written is `origin`'s."""
 
+    SPECIFIER_NODES = _SPECIFIER_NODES  # what declares alone before a `;` *(a hook `Programs.Cpp` overrides)*
+    GROUPS = ("group", "membergroup")  # the tags of a group of statements and of members *(a hook, as above)*
+
     def __init__(self, source: _Source, prepared: _Prepared, shift: int = 0, origin: _Source | None = None):
         self.source, self.pre, self.shift, self.origin = source, prepared, shift, origin or source
         self.consumed: set[int] = set()
@@ -928,7 +946,8 @@ class _Converter:
         previous = header
         kids = [n for n in nodes if not n.is_missing]
         whole = bool(nodes) and nodes[0].parent is not None and nodes[0].parent.type == "translation_unit"
-        limit = len(self.source.text) if whole or not nodes else self.source.offset(nodes[-1].end_byte)
+        limit = len(self.source.text) if whole or not nodes and header is None else self.source.offset(
+            nodes[-1].end_byte) if nodes else self.after(header)  # a label's empty list: nothing after its `:`
         i = 0
         listed = self.after(previous)  # where what the pre-pass blanked is listed up to: each item once
         while i < len(kids):
@@ -938,7 +957,7 @@ class _Converter:
             listed = self.local(ts)
             if ts.type == "comment":
                 out.append(self.comment(ts, previous))
-            elif ts.type in _SPECIFIER_NODES and i < len(kids) and kids[i].type == ";":
+            elif ts.type in self.SPECIFIER_NODES and i < len(kids) and kids[i].type == ";":
                 out.append(self.guarded(ts, lambda t: self.new(t, "simpledeclaration", specifiers=self.specifier(t))))
                 ts = kids[i]
                 i += 1
@@ -1582,9 +1601,9 @@ class _Converter:
         if place == "enumerator":
             made.items = self.enumerators(nodes, head)
         elif place == "member":
-            made.group = _Node("membergroup", members=self.listed(nodes, self.member, head))
+            made.group = _Node(self.GROUPS[1], members=self.listed(nodes, self.member, head))
         else:
-            made.group = _Node("group", body=self.listed(nodes, self.statement, head))
+            made.group = _Node(self.GROUPS[0], body=self.listed(nodes, self.statement, head))
         if alternative is not None:
             made.alternative = self.directive_term(alternative, place)
         return made

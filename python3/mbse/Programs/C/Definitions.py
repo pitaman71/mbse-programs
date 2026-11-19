@@ -268,13 +268,13 @@ def _branch(value: Any) -> tuple[str, Any]:
     return value.as_schema().name.rsplit(".", 1)[-1].lower(), value
 
 
-def _statements(value: Any) -> bool:
+def _statements(value: Any, holders: frozenset[str]) -> bool:
     """Whether a property's value is a statement, a member declaration, an error or a part holding them, or a list of
-    them."""
+    them: one of `holders`, the schemas that have a statement's place."""
     if isinstance(value, Objects.Listed):
         value = value.values[0] if value.values else None
     return hasattr(value, "as_schema") and not Terms.is_term(value) and (
-        _branch(value)[1].as_schema().name in _STATEMENTS)
+        _branch(value)[1].as_schema().name in holders)
 
 
 def _many(held: Any) -> tuple[Any, ...]:
@@ -320,7 +320,11 @@ def _keywords(specifiers: Any) -> set[str]:
 # --- Defining ---
 
 class _Definer:
-    """Declares what a unit binds, visiting each place with its scope and the name space a name is written in there."""
+    """Declares what a unit binds, visiting each place with its scope and the name space a name is written in there.
+    `HOLDERS` are the schemas that have a statement's place, its language's *(agent: a class attribute, so that
+    `Programs.Cpp.Definitions` reuses the definer over C++'s)*."""
+
+    HOLDERS = _STATEMENTS
 
     def __init__(self, program: Program):
         self.program = program
@@ -372,7 +376,7 @@ class _Definer:
         if not hasattr(value, "as_schema"):
             return  # a scalar: a name a term holds is its own
         tag, record = _branch(value)
-        if record.as_schema().name in _STATEMENTS:
+        if record.as_schema().name in self.HOLDERS:
             self.statement(record, scope, at.opened())
             return
         self.term(tag, record, scope, at, space)
@@ -539,13 +543,13 @@ class _Definer:
     def children(self, node: Any, scope: Scope, at: Anchor) -> None:
         """The statements a statement, a part or an error holds, in source order, in `scope`."""
         for name, value in Objects.properties(node).items():
-            if _statements(value):
+            if _statements(value, self.HOLDERS):
                 self.child(node, name, value, scope, at)
 
     def parts(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         """A statement's properties, each in `scope`: its statements at their places, its terms evaluated."""
         for name, value in props.items():
-            if _statements(value):
+            if _statements(value, self.HOLDERS):
                 self.child(node, name, value, scope, at)
             else:
                 self.visit(value, scope, at.at(name, _rank(node, name)), ORDINARY)
