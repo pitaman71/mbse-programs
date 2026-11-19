@@ -85,23 +85,83 @@ CONTAINERS = ("Body", "Members", "Declarators", "MemberDeclarators", "Declaratio
               "AsmOperands", "Terms", "Identifiers")
 
 
+def properties(_: Any, dialect: Any) -> dict[str, dict[str, Any]]:
+    """Each of C's statement, declaration, member and part kinds' own properties, in source order, given the spec's
+    symbols and the schemas its expressions are of (`dialect`'s `S`, `Term`, `Identifier`, `Specifier`, `Declarator`,
+    `AttributeSpecifier` and `Directive`): the table `install` defines C's kinds by, and `Programs.Cpp` the kinds it
+    reuses by, over C++'s terms, as the user decided (stage 4, "2(a)") *(a hook `Programs.Cpp` reads)*."""
+    S, T, Identifier = dialect.S, dialect.Term, dialect.Identifier
+    declaration = {"attributes": _.Attributes, "specifiers": _.Specifiers}  # what a declaration's are
+    labeled = {"statement": _.Statement}  # a label's statement, absent where the label ends a block (C23)
+    return {
+        # comments and directives
+        "Comment": {"text": S.OfStr, "block": S.OfBool, "trailing": S.OfBool},
+        "Directive": {"directive": dialect.Directive},
+        "Group": {"body": _.Body},
+        "MemberGroup": {"members": _.Members},
+        # statements
+        "ExpressionStatement": {"expression": T},
+        "CompoundStatement": {"body": _.Body},
+        "IfStatement": {"condition": T, "consequence": _.Statement, "alternative": _.Statement},
+        "SwitchStatement": {"condition": T, "body": _.Statement},
+        "WhileStatement": {"condition": T, "body": _.Statement},
+        "DoStatement": {"body": _.Statement, "condition": T},
+        "ForStatement": {"initializer": _.ForInit, "condition": T, "increment": T, "body": _.Statement},
+        "BreakStatement": {}, "ContinueStatement": {},
+        "ReturnStatement": {"value": T},
+        "GotoStatement": {"label": Identifier, "target": T},  # target: GNU's `goto *p;`
+        "LabeledStatement": {"label": Identifier, **labeled},
+        "CaseStatement": {"value": T, "last": T, **labeled},  # last: GNU's `case 1 ... 3:`
+        "DefaultStatement": labeled,
+        "AttributedStatement": {"attributes": _.Attributes, "statement": _.Statement},
+        "AsmDeclaration": {
+            "keyword": S.OfStr, "volatile": S.OfBool, "inline": S.OfBool, "goto": S.OfBool, "template": T,
+            "outputs": _.AsmOperands, "inputs": _.AsmOperands, "clobbers": _.Terms, "labels": _.Identifiers},
+        "AsmOperand": {"name": Identifier, "constraint": T, "value": T},
+        # declarations
+        "SimpleDeclaration": {**declaration, "declarators": _.Declarators},
+        "InitDeclarator": {"declarator": dialect.Declarator, "initializer": T},
+        "FunctionDefinition": {
+            **declaration, "declarator": dialect.Declarator,
+            "declarations": _.Declarations,  # a K&R definition's parameters' declarations
+            "body": _.CompoundStatement},
+        "StaticAssertDeclaration": {"keyword": S.OfStr, "condition": T, "message": T},
+        "AttributeDeclaration": {"attributes": _.Attributes},
+        # a struct's or a union's members
+        "MemberList": {"members": _.Members},
+        "MemberDeclaration": {**declaration, "declarators": _.MemberDeclarators},
+        "MemberDeclarator": {"declarator": dialect.Declarator, "bitfield": T},
+    }
+
+
+class _Dialect:
+    """The schemas C's statements hold expressions of, as `properties` reads them: C's, C Types' and C Preprocessor's."""
+
+    def __init__(self, txn: Any):
+        C, Types = txn.Expressions.C.Expressions, txn.Expressions.C.Types
+        self.S, self.Term, self.Identifier, self.Directive = txn.Schemas, C.Term, C.Identifier, (
+            txn.Expressions.C.Preprocessor.Term)
+        self.Specifier, self.Declarator, self.AttributeSpecifier = (
+            Types.Specifier, Types.Declarator, Types.AttributeSpecifier)
+
+
 def install(txn: Any) -> Any:
     """C's statement and declaration kinds, their parts, its translation unit and its language's singleton, upserted,
     and its compound statement, member list and groups added to mbse-expressions' open unions."""
     S, F = txn.Schemas, txn.Programs.Framework
-    C, Types = txn.Expressions.C.Expressions, txn.Expressions.C.Types
-    T, Identifier, Directive = C.Term, C.Identifier, txn.Expressions.C.Preprocessor.Term
+    dialect = _Dialect(txn)
+    T, Identifier = dialect.Term, dialect.Identifier
 
-    def kind(name: str, properties: Any = lambda _: {}) -> Any:
+    def kind(name: str) -> Any:
         """A statement or member kind: a value object refining `Statement` (a member, nothing), with its own
-        properties, made within its spec, given the spec's symbols, and its line."""
+        properties (`properties`), made within its spec, given the spec's symbols, and its line."""
         base = [F.Statement] if name in STATEMENTS else []
         line = {} if base else {"line": S.OfInt}
         return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").refines(base).properties(
-            {**line, **properties(_)})
+            {**line, **properties(_, dialect)[name]})
 
-    def part(name: str, properties: Any) -> Any:
-        return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").properties(properties(_))
+    def part(name: str) -> Any:
+        return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").properties(properties(_, dialect)[name])
 
     def union(name: str, branches: Any) -> Any:
         """A union of `branches`, each a tag and the schema it names, given the spec's symbols, and the language's
@@ -116,14 +176,6 @@ def install(txn: Any) -> Any:
     def named(name: str, element: Any) -> Any:
         """A named container: a list, by index, of `element`."""
         return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").index([S.OfInt]).element([element(_)])
-
-    def declaration(_: Any) -> dict[str, Any]:
-        """What a declaration's attributes and specifiers are."""
-        return {"attributes": _.Attributes, "specifiers": _.Specifiers}
-
-    def labeled(_: Any) -> dict[str, Any]:
-        """A label's statement, absent where the label ends a block (C23)."""
-        return {"statement": _.Statement}
 
     return txn.uid("mbse.Programs.C/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Language": S.OfObject, "TranslationUnit": S.OfObject, "Error": S.OfObject,
@@ -141,8 +193,8 @@ def install(txn: Any) -> Any:
             union("ForInit", lambda _: [("simpledeclaration", _.SimpleDeclaration), ("expression", T)]),
             named("Body", lambda _: _.Statement), named("Members", lambda _: _.Member),
             named("Declarators", lambda _: _.InitDeclarator), named("MemberDeclarators", lambda _: _.MemberDeclarator),
-            named("Declarations", lambda _: _.SimpleDeclaration), named("Specifiers", lambda _: Types.Specifier),
-            named("Attributes", lambda _: Types.AttributeSpecifier), named("AsmOperands", lambda _: _.AsmOperand),
+            named("Declarations", lambda _: _.SimpleDeclaration), named("Specifiers", lambda _: dialect.Specifier),
+            named("Attributes", lambda _: dialect.AttributeSpecifier), named("AsmOperands", lambda _: _.AsmOperand),
             named("Terms", lambda _: T), named("Identifiers", lambda _: Identifier),
             # mbse-expressions' open unions, given this grammar's compound statement, member list and groups
             lambda _: _.Block.name("Expressions.C.Expressions.Block").branches([
@@ -151,42 +203,6 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("memberlist").schema([_.MemberList])]),
             lambda _: _.Groups.name("Expressions.C.Preprocessor.Group").branches([
                 lambda t: t.name("group").schema([_.Group]), lambda t: t.name("membergroup").schema([_.MemberGroup])]),
-            # comments and directives
-            kind("Comment", lambda _: {"text": S.OfStr, "block": S.OfBool, "trailing": S.OfBool}),
-            kind("Directive", lambda _: {"directive": Directive}),
-            part("Group", lambda _: {"body": _.Body}),
-            part("MemberGroup", lambda _: {"members": _.Members}),
-            # statements
-            kind("ExpressionStatement", lambda _: {"expression": T}),
-            kind("CompoundStatement", lambda _: {"body": _.Body}),
-            kind("IfStatement", lambda _: {"condition": T, "consequence": _.Statement, "alternative": _.Statement}),
-            kind("SwitchStatement", lambda _: {"condition": T, "body": _.Statement}),
-            kind("WhileStatement", lambda _: {"condition": T, "body": _.Statement}),
-            kind("DoStatement", lambda _: {"body": _.Statement, "condition": T}),
-            kind("ForStatement", lambda _: {"initializer": _.ForInit, "condition": T, "increment": T,
-                                            "body": _.Statement}),
-            kind("BreakStatement"), kind("ContinueStatement"),
-            kind("ReturnStatement", lambda _: {"value": T}),
-            kind("GotoStatement", lambda _: {"label": Identifier, "target": T}),  # target: GNU's `goto *p;`
-            kind("LabeledStatement", lambda _: {"label": Identifier, **labeled(_)}),
-            kind("CaseStatement", lambda _: {"value": T, "last": T, **labeled(_)}),  # last: GNU's `case 1 ... 3:`
-            kind("DefaultStatement", labeled),
-            kind("AttributedStatement", lambda _: {"attributes": _.Attributes, "statement": _.Statement}),
-            kind("AsmDeclaration", lambda _: {
-                "keyword": S.OfStr, "volatile": S.OfBool, "inline": S.OfBool, "goto": S.OfBool, "template": T,
-                "outputs": _.AsmOperands, "inputs": _.AsmOperands, "clobbers": _.Terms, "labels": _.Identifiers}),
-            part("AsmOperand", lambda _: {"name": Identifier, "constraint": T, "value": T}),
-            # declarations
-            kind("SimpleDeclaration", lambda _: {**declaration(_), "declarators": _.Declarators}),
-            part("InitDeclarator", lambda _: {"declarator": Types.Declarator, "initializer": T}),
-            kind("FunctionDefinition", lambda _: {
-                **declaration(_), "declarator": Types.Declarator,
-                "declarations": _.Declarations,  # a K&R definition's parameters' declarations
-                "body": _.CompoundStatement}),
-            kind("StaticAssertDeclaration", lambda _: {"keyword": S.OfStr, "condition": T, "message": T}),
-            kind("AttributeDeclaration", lambda _: {"attributes": _.Attributes}),
-            # a struct's or a union's members
-            part("MemberList", lambda _: {"members": _.Members}),
-            kind("MemberDeclaration", lambda _: {**declaration(_), "declarators": _.MemberDeclarators}),
-            part("MemberDeclarator", lambda _: {"declarator": Types.Declarator, "bitfield": T}),
+            # the kinds and their parts, each with its properties (`properties`)
+            *(kind(name) for name in KINDS), *(part(name) for name in PARTS),
         ])]))])
