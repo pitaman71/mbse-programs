@@ -43,13 +43,14 @@ before C11, as `restrict`, `inline` and designators, and C11's own, as `_Alignas
 
 - statements, declarations and parts, `STATEMENT_FEATURES`: a label, a `case` or a `default` without a statement (C23);
   `static_assert` spelled so, and without a message (C23); and, beyond 0.3's data, a label before a declaration (C23,
-  which the brief names) and a function's definition with an unnamed parameter (C23, 6.9.1) *(agent)*;
+  6.8.2), a function's definition with an unnamed parameter of its own (C23, 6.9.1), and a declaration whose type is
+  inferred, `auto` with no type specifier (C23, 6.7.10), which `Parse` writes as the keyword `auto` *(agent)*;
 - terms and helpers, `FEATURES`, which mbse-expressions does not record (a gap, reported there): C23's keywords as
   specifiers (`thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128`), `typeof` and `typeof_unqual`,
-  `_BitInt`, `auto` (a `placeholdertypespecifier`), an enumeration's underlying type, attributes in `[[ ]]`, `alignas`
-  and `alignof` spelled so, a `u8` character, `#warning` and `#embed`; and, beyond 0.3's data, a literal's digit
-  separators, a binary integer, `true` and `false`, the suffix `wb` and the decimal floating suffixes, `_Float16` to
-  `_Float128x` (C23's Annex H), and an empty initializer, `{}` (C23) *(agent)*.
+  `_BitInt`, `auto` as C Types' `placeholdertypespecifier`, an enumeration's underlying type, attributes in `[[ ]]`,
+  `alignas` and `alignof` spelled so, a `u8` character, `#warning` and `#embed`; and, beyond 0.3's data, a literal's
+  digit separators, a binary integer, `true` and `false`, the suffix `wb` and the decimal floating suffixes, `_Float16`
+  to `_Float128x` (C23's Annex H), and an empty initializer, `{}` (C23) *(agent)*.
 
 Not checked: what C23 removed (a K&R definition, an old-style declaration of a function without a prototype), as
 `check` lists what an edition lacks, not what it dropped; and trigraphs, which `Parse` keeps as tree-sitter reads them.
@@ -60,7 +61,8 @@ Not checked: what C23 removed (a K&R definition, an old-style declaration of a f
   condition`, `a FunctionDefinition needs a body`, `an AsmOperand needs a constraint`), a list that is not empty (`an
   AttributeDeclaration needs an attribute`), and what goes together (`a GotoStatement needs a label or a target`, `a
   MemberDeclarator needs a declarator or a bitfield`); and, beyond 0.3's, `a SimpleDeclaration needs a specifier`, as
-  for a member declaration and a function's definition: C99 removed the implicit `int` *(agent)*; a kind's word one
+  for a member declaration and a function's definition: C99 removed the implicit `int`, and a function's definition's
+  declarator declaring a function, which tree-sitter reads otherwise (`int m { ... }`) *(agent)*; a kind's word one
   of its choices (`StaticAssertDeclaration.keyword cannot be 'assert'`); and the dangling `else`, an `if` without one
   ending the consequence of an `if` with one;
 - invalid syntax, as the user decided that a parse keeps it and validation reports it: each `Programs.C.Error`,
@@ -238,6 +240,19 @@ def _assertion(kind: str, held: dict[str, Any]) -> list[tuple[str, str]]:
     return found + ([(f"{kind} without a message", "C23")] if "message" not in held else [])
 
 
+_UNTYPED = ("declspecifier", "cvqualifier", "standardattributespecifier", "alignasspecifier", "gnuattributespecifier",
+            "declspecspecifier")
+"""The specifiers that name no type: storage classes, function specifiers and qualifiers, and attributes."""
+
+
+def _inferred(kind: str, held: dict[str, Any]) -> list[tuple[str, str]]:
+    """A declaration's type inferred (C23, 6.7.10): `auto` and no type specifier."""
+    specifiers = [_branch(specifier) for specifier in (held["specifiers"].values if "specifiers" in held else ())]
+    words = [Objects.properties(record).get("keyword") for _, _, record in specifiers]
+    inferred = "auto" in words and all(tag in _UNTYPED for _, tag, _ in specifiers)
+    return [(f"{kind} with an inferred type", "C23")] if inferred else []
+
+
 def _unnamed(parameter: Any) -> bool:
     """Whether a parameter of a function's definition is unnamed: an ellipsis and a lone `void` are none."""
     _, tag, record = _branch(parameter)
@@ -248,18 +263,34 @@ def _unnamed(parameter: Any) -> bool:
     return keywords != ["void"]
 
 
+def _named(declarator: Any) -> bool:
+    """Whether a declarator is, within its parentheses, the identifier it declares."""
+    _, tag, record = _branch(declarator)
+    while tag == "parenthesizeddeclarator":
+        _, tag, record = _branch(Objects.properties(record)["declarator"])
+    return tag == "iddeclarator"
+
+
+def _binder(declarator: Any) -> tuple[str, dict[str, Any]]:
+    """The declarator nearest the name a declarator declares, but parentheses, its tag and its properties: a function's
+    declarator, where it declares a function, not that of the type a function returns."""
+    _, tag, record = _branch(declarator)
+    while "declarator" in (fields := Objects.properties(record)) and not _named(fields["declarator"]):
+        _, tag, record = _branch(fields["declarator"])
+    return tag, fields
+
+
 def _definition(kind: str, held: dict[str, Any]) -> list[tuple[str, str]]:
-    _, tag, declarator = _branch(held["declarator"])
-    while tag != "functiondeclarator" and "declarator" in Objects.properties(declarator):
-        _, tag, declarator = _branch(Objects.properties(declarator)["declarator"])
-    parameters = Objects.properties(declarator).get("parameters")
-    unnamed = tag == "functiondeclarator" and parameters is not None and any(map(_unnamed, parameters.values))
+    """A function's definition's features: a parameter of its own unnamed (C23), not one of the type it returns."""
+    tag, fields = _binder(held["declarator"])
+    parameters = fields["parameters"].values if "parameters" in fields else ()
+    unnamed = tag == "functiondeclarator" and any(map(_unnamed, parameters))
     return [(f"{kind} with an unnamed parameter", "C23")] if unnamed else []
 
 
 STATEMENT_FEATURES: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, str]]]] = {
     "LabeledStatement": _labeled, "CaseStatement": _labeled, "DefaultStatement": _labeled,
-    "StaticAssertDeclaration": _assertion, "FunctionDefinition": _definition,
+    "StaticAssertDeclaration": _assertion, "FunctionDefinition": _definition, "SimpleDeclaration": _inferred,
 }
 """The features of a statement, a member declaration or a part that its properties' values make, by its kind, given its
 kind and its properties that are set: each feature's name, and the edition it arrived in, by its common name *(agent:
@@ -390,6 +421,8 @@ def _rules(kind: str, held: dict[str, Any]) -> list[str]:
         problems.append("a GotoStatement needs a label or a target")
     if kind == "MemberDeclarator" and "declarator" not in held and "bitfield" not in held:
         problems.append("a MemberDeclarator needs a declarator or a bitfield")
+    if kind == "FunctionDefinition" and "declarator" in held and _binder(held["declarator"])[0] != "functiondeclarator":
+        problems.append("a FunctionDefinition's declarator declares no function")
     if kind == "IfStatement" and "alternative" in held and _dangles(held.get("consequence")):
         problems.append("an if without else ends the consequence, and would take the else")
     return problems
