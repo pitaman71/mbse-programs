@@ -54,8 +54,8 @@ What tree-sitter-cpp cannot parse, which the pre-pass rewrites where it found an
    reading it back into the member's declarator's `initializer`.
 8. **An attribute-using-prefix** (C++17), `[[using gnu: hot, cold]]`: `using gnu:` blanked, the converter giving the
    attribute specifier its `using_namespace`.
-9. **Attributes after an enumerator's name** (C++17), `A [[deprecated]] = 1`: blanked, the converter reading them
-   back into the enumerator's `attributes`.
+9. **Attributes after an enumerator's name** (C++17), `A [[deprecated]] = 1`, **or after a pointer's `*`**, `int *
+   [[a]] p`: blanked, the converter reading them back into the enumerator's or the pointer declarator's `attributes`.
 10. **A label ending a block** (C++23), `l: }` and `case 1: }`: a `;` written in the blank after its `:`, which the
     converter drops: a label without a statement. Without a blank between, `l:}`, kept as tree-sitter's recovery
     leaves it, invalid syntax.
@@ -115,8 +115,9 @@ What tree-sitter-cpp reads but C++ rejects, which the converter keeps invalid sy
 32. **C's constructs**: `_Generic`, a compound literal of a type-id, `(struct p){1}`, C's index designators, `[0] = 1`,
     an array declarator's `static`, qualifiers and `[*]`, K&R definitions, and the keywords `restrict`, `_Atomic`,
     `_Noreturn`, `_Thread_local` and `_Alignas`.
-33. **Literals C++ rejects**: an octal one with a digit 8 or 9 (`08`), and an escape of no character (`'\\x'`); a
-    suffix C++'s literals have not, `1uu`, a user-defined literal's, as tree-sitter reads it.
+33. **Literals C++ rejects**: an escape of no character (`'\\x'`), and an octal one with a digit 8 or 9 (`08`), which
+    it reads as two; a suffix C++'s literals have not, `1uu`, `1e`, `0x`, it reads as a user-defined literal's,
+    kept as it reads them.
 34. **A conditional directive's closing or continuing line where none is open**, `#endif` alone.
 35. **Virt-specifiers where no member is declared**, `int f() override;` at namespace scope, and a function's
     definition whose declarator declares no function.
@@ -131,22 +132,29 @@ What mbse-expressions' C++ dialect cannot hold, which the converter keeps invali
     alone is a `declspecifier`).
 40. **`__has_include`** (C++17), `#if __has_include(<h>)`, which tree-sitter cannot parse either: no term of the
     dialects holds a header's name.
+41. **A user-defined literal of adjacent strings**, `"a" "b"_s`: the dialect's `userdefinedliteral` holds one
+    literal; an `error` term.
 
-What stays as tree-sitter-cpp reads it:
+What stays as tree-sitter-cpp reads it, each left with its reason:
 
-41. **An alias declaration as an init-statement** (C++23), `for (using T = int; ;)`, which it cannot parse: kept as
+42. **An alias declaration as an init-statement** (C++23), `for (using T = int; ;)`, which it cannot parse: kept as
     its recovery leaves it, invalid syntax *(agent: the pre-pass would have to make it a declaration tree-sitter reads
     there and the converter an `AliasDeclaration` again, for a construct seldom written)*.
-42. **GNU's extensions it cannot parse**, which C's `Parse` pre-passes for tree-sitter-c: a case range, `case 1 ...
+43. **GNU's extensions it cannot parse**, which C's `Parse` pre-passes for tree-sitter-c: a case range, `case 1 ...
     3:`, a computed `goto *p;`, an asm label before what initializes a declarator, and GNU attributes after a
     declarator: kept as its recovery leaves them, invalid syntax *(agent: not C++, which 0.3 did not parse either)*.
-43. **Typedef names and other names**, `T * x;`, `T(x);`, `(T)*x`, and **template names and other names**,
-    `a<b>(c)`: which a text is depends on what `T` and `a` name, which the declarations before it decide, outside the
-    grammar. Read as tree-sitter decides.
-44. **A type as a macro's argument**, `va_arg(ap, int)`: no C++ expression, which the preprocessor, not run, would
+44. **Typedef names and other names**, `T * x;`, `T(x);`, `(T)*x`, **template names and other names**, `a<b>(c)`, and
+    **concepts and types**, `template <Number T>`, read as a constant parameter of the type `Number`: which a text is
+    depends on what `T`, `a` and `Number` name, which the declarations before it decide, outside the grammar. Read as
+    tree-sitter decides.
+45. **A type as a macro's argument**, `va_arg(ap, int)`: no C++ expression, which the preprocessor, not run, would
     expand; kept as tree-sitter's recovery leaves it, invalid syntax.
-45. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it: no
+46. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it: no
     tree of either, the preprocessor not run. Kept as tree-sitter's recovery leaves it, invalid syntax.
+47. **What else it cannot parse**, found probing: a conversion function's name within an expression,
+    `x.operator int()`, and a static lambda (C++23),
+    `[]() static {}`: kept as its recovery leaves them, invalid syntax *(agent: each seldom written, and each a
+    pre-pass of its own)*.
 
 Decided here *(agent, for review)*, as C's `Parse` decides: schemas resolved through the transaction or the store;
 what is absent is absent; a literal's value what C++ reads its spelling as, a raw string's its characters between its
@@ -259,8 +267,6 @@ def _module(words: list[str], written: str, keyword: str, exported: bool) -> _No
     if keyword == "import" and words and (words[0] == "<" and words[-1] == ">" or len(words) == 1 and words[0][:1] == '"'):
         return _Node("importdeclaration", export=exported, header=written[1:-1], system=words[0] == "<")
     name, partition = named(words)
-    if name is None and partition is None:
-        raise _Invalid(keyword)
     return _Node("importdeclaration", export=exported, name=name, partition=partition)
 
 
@@ -387,6 +393,12 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
             found.namespaces[start] = word(i + 2)  # `[[using gnu: hot]]` (C++17)
             blank(tokens[i + 1][0], tokens[i + 3][1])
             i += 4
+        elif w == "*" and after == "[" and word(i + 1) == "[":
+            close = C._closing(tokens, i)  # a pointer's attributes, `* [[a]]`
+            if close is None:  # unclosed: nothing to read back
+                continue
+            found.attributes.setdefault(start, []).append((tokens[i][0], tokens[close][1]))
+            blank(tokens[i][0], tokens[close][1])
         elif braces[i - 1] == "enum" and before in ("{", ",", "<%") and after == "[" and word(i + 1) == "[":
             close = C._closing(tokens, i)
             if close is None:  # unclosed: nothing to read back
@@ -416,21 +428,16 @@ _INTEGER = re.compile(r"(0[xX](?:'?[0-9a-fA-F])+|0[bB](?:'?[01])+|0(?:'?[0-7])*|
 
 
 def _number(text: str) -> _Node:
-    """A number's literal: its value, an int or a float, its spelling, and what the spelling encodes. `_Invalid` for one
-    C++ rejects: an octal one with a digit 8 or 9, or a suffix C++ has not."""
+    """A number's literal: its value, an int or a float, its spelling, and what the spelling encodes."""
     integer = _INTEGER.fullmatch(text)
     floating = C._FLOATING.fullmatch(text)
-    if integer is not None and (floating is None or not integer.group(2) or SUFFIXES[int].fullmatch(integer.group(2))):
+    if integer is not None and SUFFIXES[int].fullmatch(integer.group(2) or ""):
         digits, suffix = integer.group(1).replace("'", ""), integer.group(2) or ""
-        if not SUFFIXES[int].fullmatch(suffix):
-            raise _Invalid(text)
         base = {"0x": 16, "0X": 16, "0b": 2, "0B": 2}.get(digits[:2], 8 if digits.startswith("0") else 10)
         value = int(digits[2:] if base in (2, 16) else digits, base)
         return _Node("literal", value=_scalar(value), text=text, base=base, separators="'" in text,
                      suffix=suffix or None)
-    if floating is None or floating.group(2) and not SUFFIXES[float].fullmatch(floating.group(2)):
-        raise _Invalid(text)
-    digits = floating.group(1).replace("'", "")
+    digits = floating.group(1).replace("'", "")  # tree-sitter reads no other number, nor a suffix but C++'s
     try:
         value = float.fromhex(digits) if digits[:2] in ("0x", "0X") else float(digits)
     except OverflowError:  # beyond the largest: read as infinity
@@ -554,8 +561,6 @@ class _Converter(C._Converter):
         """An init-statement: a declaration, or a term."""
         if ts.type == "declaration":
             return self.declaration(ts)
-        if ts.type == "alias_declaration":
-            return self.alias(ts)
         if ts.type == "expression_statement":
             return _Branch("expression", self.expression(self.named(ts)[0]))
         return _Branch("expression", self.expression(ts))
@@ -663,8 +668,6 @@ class _Converter(C._Converter):
             elif c.type in ("storage_class_specifier", "type_qualifier", "virtual", "explicit_function_specifier") or (
                     not c.is_named and c.type in ("typedef", "__extension__", "friend")):
                 out += self.specifier(c)
-            elif c.type == "ms_call_modifier":
-                raise _Invalid(c.type)
         return out
 
     def specifier(self, ts: _TS) -> list[_Node]:
@@ -745,9 +748,7 @@ class _Converter(C._Converter):
                 current.attributes.append(self.attribute(c))
             else:
                 current.type = self.name(c)
-        if current is not None:
-            out.append(current)
-        return out
+        return out + [current]
 
     def enum_specifier(self, ts: _TS) -> _Node:
         key = "enum"
@@ -815,14 +816,10 @@ class _Converter(C._Converter):
             return _Node("destructorname", type=self.name(self.named(ts)[0]))
         if kind == "decltype":
             return self.specifier(ts)[0]
-        if kind == "operator_cast":
-            return self.conversion_name(ts)
-        if kind == "operator_name":
-            parts = [self.text(c) for c in ts.children[1:] if c.type != "comment"]
-            if parts and parts[0].startswith('""'):
-                return _Node("literaloperatorname", suffix=parts[-1] if len(parts) > 1 else parts[0][2:])
-            return _Node("operatorname", operator=_ALTERNATIVES.get("".join(parts), "".join(parts)))
-        raise _Invalid(kind)
+        parts = [self.text(c) for c in ts.children[1:] if c.type != "comment"]  # operator_name, the last kind of name
+        if parts and parts[0].startswith('""'):
+            return _Node("literaloperatorname", suffix=parts[-1] if len(parts) > 1 else parts[0][2:])
+        return _Node("operatorname", operator=_ALTERNATIVES.get("".join(parts), "".join(parts)))
 
     def qualified_parts(self, ts: _TS) -> tuple[bool, list[_Node], _TS]:
         """A qualified_identifier, which tree-sitter nests: whether it starts with `::`, its qualifiers, and its last
@@ -841,13 +838,8 @@ class _Converter(C._Converter):
     def declarator(self, ts: _TS) -> _Node:
         return self.inner_declarator(ts)
 
-    def declared(self, ts: _TS) -> _Node:
-        return self.inner_declarator(ts)
-
     def inner_declarator(self, ts: _TS) -> _Node:
         kind = ts.type
-        if ts.is_missing:
-            raise _Invalid(kind)
         if kind == "qualified_identifier":
             global_scope, qualifiers, last = self.qualified_parts(ts)
             if last.type == "pointer_type_declarator":  # `C::* declarator`
@@ -864,13 +856,11 @@ class _Converter(C._Converter):
         inner = self.field(ts, "declarator")
         if kind in ("pointer_declarator", "abstract_pointer_declarator", "pointer_type_declarator"):
             made = _Node("pointerdeclarator", declarator=self.declarator(inner) if inner is not None else None,
-                         qualifiers=[], attributes=[])
+                         qualifiers=[], attributes=self.blanked_attributes(self.local(ts)))
             for c in self.named(ts):
                 if c.type == "type_qualifier" and self.text(c) not in _C_ONLY or (
                         c.type == "ms_pointer_modifier" and self.text(c) in _CV):  # GNU's `__restrict`, which
                     made.qualifiers.append(_Node("cvqualifier", keyword=self.text(c)))  # it reads as Microsoft's
-                elif c.type in _ATTRIBUTES:
-                    made.attributes.append(self.attribute(c))
                 elif inner is None or c.id != inner.id:
                     raise _Invalid(c.type)  # Microsoft's pointer modifiers
             return made
@@ -888,10 +878,8 @@ class _Converter(C._Converter):
         if kind in ("function_declarator", "abstract_function_declarator"):
             return self.function_declarator(ts)
         if kind in ("parenthesized_declarator", "abstract_parenthesized_declarator"):
-            parts = self.named(ts)
-            if len(parts) != 1:
-                raise _Invalid(kind)  # a calling convention, `(__cdecl *f)`
-            return _Node("parenthesizeddeclarator", declarator=self.declarator(parts[0]))
+            return _Node("parenthesizeddeclarator", declarator=self.declarator(self.named(ts)[-1]))  # after a
+            # calling convention, `(__cdecl *f)`, which tree-sitter reads as an error
         if kind == "attributed_declarator":
             parts = self.named(ts)
             made = self.declarator(parts[0])
@@ -925,12 +913,8 @@ class _Converter(C._Converter):
                 made.attributes.append(self.attribute(c))
             elif c.type == "requires_clause":
                 self.lifted.setdefault("requires", self.requires_clause(c))
-            elif c.type == "virtual_specifier":
+            else:  # a virt-specifier, the last kind of part
                 self.lifted.setdefault("virt_specifiers", []).append(self.text(c))
-            elif c.type == "gnu_asm_expression":
-                C._identifier(made.declarator).asm = self.asm_label(c)
-            else:
-                raise _Invalid(c.type)
         return made
 
     def conversion_name(self, ts: _TS) -> _Node:
@@ -1007,20 +991,13 @@ class _Converter(C._Converter):
                 if inner.default is not None:
                     made.default = inner.default.specifiers[0].name
                 out.append(made)
-            elif kind in ("parameter_declaration", "optional_parameter_declaration",
-                          "variadic_parameter_declaration"):
+            else:  # a constant's parameter, the last kind
                 out.append(self.parameter(c))
-            else:
-                raise _Invalid(kind)
         return out
 
     def type_parameter(self, ts: _TS) -> _Node:
         first = ts.children[0]
-        made = _Node("typeparameter", pack=self.has(ts, "..."))
-        if first.type in ("class", "typename"):
-            made.key = first.type
-        else:  # a constrained parameter, `Number T`
-            made.constraint = self.name(first)
+        made = _Node("typeparameter", key=first.type, pack=self.has(ts, "..."))
         name = self.field(ts, "name") or next((c for c in self.named(ts) if c.type == "type_identifier" and (
             c.id != first.id)), None)
         if name is not None:
@@ -1055,8 +1032,6 @@ class _Converter(C._Converter):
                 made.declarators.append(self.init_declarator(c, "initdeclarator"))
             elif field == "value":  # a condition's declarator's, which tree-sitter reads as the declaration's
                 made.declarators[-1].initializer = self.initializer(c, ts.children[i - 1].type == "=")
-            elif c.type == "gnu_asm_expression":
-                raise _Invalid(c.type)  # where tree-sitter reads one, it reads its own declarator
         return made
 
     def defined(self, ts: _TS) -> _Node | None:
@@ -1126,10 +1101,8 @@ class _Converter(C._Converter):
             made.body = self.block(body)
         elif "default_method_clause" in clauses:
             made.body = _Node("defaultedbody")
-        elif "delete_method_clause" in clauses:
+        else:  # `= delete`: tree-sitter requires a body or one of these clauses
             made.body = _Node("deletedbody")
-        else:  # `= 0` with a body, which tree-sitter reads
-            raise _Invalid(ts.type)
         return made
 
     def member_initializers(self, ts: _TS) -> list[_Node]:
@@ -1151,10 +1124,8 @@ class _Converter(C._Converter):
                 continue
             if c.type == "requires_clause":
                 made.requires = self.requires_clause(c)
-            elif made.declaration is None:
+            else:  # what it declares, its one other part
                 made.declaration = self.templated(c)
-            else:
-                raise _Invalid(c.type)
         return made
 
     def templated(self, ts: _TS) -> _Node:
@@ -1163,11 +1134,7 @@ class _Converter(C._Converter):
             return self.convert_member(ts)
         if ts.type in ("class_specifier", "struct_specifier", "union_specifier", "enum_specifier"):
             return _Node("simpledeclaration", specifiers=self.specifier(ts))
-        made = self.convert(ts)
-        if made.branch not in ("simpledeclaration", "functiondefinition", "aliasdeclaration", "conceptdefinition",
-                               "templatedeclaration", "memberdeclaration"):
-            raise _Invalid(ts.type)
-        return made
+        return self.convert(ts)  # tree-sitter-cpp's grammar templates declarations, aliases, concepts and templates
 
     member_context = False
 
@@ -1175,10 +1142,10 @@ class _Converter(C._Converter):
         attributes: list[_Node] = []
         declaration = _Node("simpledeclaration", specifiers=self.specifiers(ts, attributes), attributes=attributes,
                             declarators=[])
-        declarator = self.field(ts, "declarator")
-        if declarator is not None and declarator.is_missing:  # `template class V<int>;`, read with a missing name
+        declarator = self.require(ts, "declarator")
+        if declarator.is_missing:  # `template class V<int>;`, read with a missing name
             self.consumed.add(declarator.id)
-        elif declarator is not None:
+        else:
             declaration.declarators.append(self.init_declarator(declarator, "initdeclarator"))
         return _Node("explicitinstantiation", extern=self.local(ts) in self.pre.extern, declaration=declaration)
 
@@ -1300,8 +1267,6 @@ class _Converter(C._Converter):
                     if c.is_missing:  # an unnamed bit-field, which tree-sitter reads with a missing name
                         self.consumed.add(c.id)
                         made.declarators.append(_Node("memberdeclarator"))
-                    elif c.type == "init_declarator":
-                        made.declarators.append(self.init_declarator(c, "memberdeclarator"))
                     else:
                         made.declarators.append(self.init_declarator(c, "memberdeclarator"))
                 elif field == "default_value":
@@ -1323,11 +1288,7 @@ class _Converter(C._Converter):
                         value = converter.require(converter.require(declarator, "declarator"), "value")
                         made.declarators[-1].initializer = converter.initializer(
                             value, converter.has(converter.require(declarator, "declarator"), "="))
-                elif c.type == "pure_virtual_clause":
-                    made.declarators[-1].pure = True
             return made
-        if kind in self.SPECIFIER_NODES:
-            return _Node("memberdeclaration", specifiers=self.specifier(ts))
         made = self.convert(ts)
         if made.branch not in ("functiondefinition", "usingdeclaration", "usingenumdeclaration", "aliasdeclaration",
                                "staticassertdeclaration", "templatedeclaration", "emptydeclaration",
@@ -1363,7 +1324,7 @@ class _Converter(C._Converter):
         literal, suffix = self.named(ts)
         text = self.text(literal)
         made = _number(text) if literal.type == "number_literal" else self.expression(literal)
-        if made.branch != "literal":
+        if made.branch != "literal":  # of adjacent strings, `"a" "b"_s`, which the dialect's literal is not (41)
             raise _Invalid(ts.type)
         return _Node("userdefinedliteral", literal=made, suffix=self.text(suffix))
 
@@ -1525,10 +1486,8 @@ class _Converter(C._Converter):
             elif c.type == "parameter_pack_expansion":
                 made.captures.append(_Node("simplecapture", name=self.identifier(self.require(c, "pattern")),
                                            pack=True))
-            elif c.type == "identifier":
+            else:  # a name, the last kind of capture
                 made.captures.append(_Node("simplecapture", name=self.identifier(c)))
-            else:
-                raise _Invalid(c.type)
         parameters = self.field(ts, "template_parameters")
         if parameters is not None:
             made.template_parameters = self.template_parameters(parameters)
@@ -1554,10 +1513,8 @@ class _Converter(C._Converter):
                 made.trailing_return = self.type_id(self.named(c)[0])
             elif c.type == "requires_clause":
                 made.requires = self.requires_clause(c)
-            elif c.type in _ATTRIBUTES:
+            else:  # an attribute specifier, the last kind of part
                 made.attributes.append(self.attribute(c))
-            else:
-                raise _Invalid(c.type)
         return made
 
     def requires_expression(self, ts: _TS) -> _Node:
