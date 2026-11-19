@@ -86,8 +86,8 @@ CONTAINERS = ("Body", "Members", "Declarators", "MemberDeclarators", "Declaratio
 
 
 def properties(_: Any, dialect: Any) -> dict[str, dict[str, Any]]:
-    """Each of C's statement, declaration, member and part kinds' own properties, in source order, given the spec's
-    symbols and the schemas its expressions are of (`dialect`'s `S`, `Term`, `Identifier`, `Specifier`, `Declarator`,
+    """Each of C's statement, declaration, member and part kinds' own properties, in source order, but those C++
+    restates (`own`), given the spec's symbols and the schemas its expressions are of (`dialect`'s `S`, `Term`, `Identifier`, `Specifier`, `Declarator`,
     `AttributeSpecifier` and `Directive`): the table `install` defines C's kinds by, and `Programs.Cpp` the kinds it
     reuses by, over C++'s terms, as the user decided (stage 4, "2(a)") *(a hook `Programs.Cpp` reads)*."""
     S, T, Identifier = dialect.S, dialect.Term, dialect.Identifier
@@ -106,7 +106,6 @@ def properties(_: Any, dialect: Any) -> dict[str, dict[str, Any]]:
         "SwitchStatement": {"condition": T, "body": _.Statement},
         "WhileStatement": {"condition": T, "body": _.Statement},
         "DoStatement": {"body": _.Statement, "condition": T},
-        "ForStatement": {"initializer": _.ForInit, "condition": T, "increment": T, "body": _.Statement},
         "BreakStatement": {}, "ContinueStatement": {},
         "ReturnStatement": {"value": T},
         "GotoStatement": {"label": Identifier, "target": T},  # target: GNU's `goto *p;`
@@ -121,16 +120,25 @@ def properties(_: Any, dialect: Any) -> dict[str, dict[str, Any]]:
         # declarations
         "SimpleDeclaration": {**declaration, "declarators": _.Declarators},
         "InitDeclarator": {"declarator": dialect.Declarator, "initializer": T},
-        "FunctionDefinition": {
-            **declaration, "declarator": dialect.Declarator,
-            "declarations": _.Declarations,  # a K&R definition's parameters' declarations
-            "body": _.CompoundStatement},
         "StaticAssertDeclaration": {"keyword": S.OfStr, "condition": T, "message": T},
         "AttributeDeclaration": {"attributes": _.Attributes},
         # a struct's or a union's members
         "MemberList": {"members": _.Members},
         "MemberDeclaration": {**declaration, "declarators": _.MemberDeclarators},
         "MemberDeclarator": {"declarator": dialect.Declarator, "bitfield": T},
+    }
+
+
+def own(_: Any, dialect: Any) -> dict[str, dict[str, Any]]:
+    """The properties of C's kinds that C++'s grammar restates (`properties`, which leaves them out): a `for`'s
+    initializer, C's own union, and a function's K&R declarations."""
+    return {
+        "ForStatement": {"initializer": _.ForInit, "condition": dialect.Term, "increment": dialect.Term,
+                         "body": _.Statement},
+        "FunctionDefinition": {
+            "attributes": _.Attributes, "specifiers": _.Specifiers, "declarator": dialect.Declarator,
+            "declarations": _.Declarations,  # a K&R definition's parameters' declarations
+            "body": _.CompoundStatement},
     }
 
 
@@ -158,7 +166,7 @@ def install(txn: Any) -> Any:
         base = [F.Statement] if name in STATEMENTS else []
         line = {} if base else {"line": S.OfInt}
         return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").refines(base).properties(
-            {**line, **properties(_, dialect)[name]})
+            {**line, **{**properties(_, dialect), **own(_, dialect)}[name]})
 
     def part(name: str) -> Any:
         return lambda _: getattr(_, name).name(f"{LANGUAGE}.{name}").properties(properties(_, dialect)[name])
