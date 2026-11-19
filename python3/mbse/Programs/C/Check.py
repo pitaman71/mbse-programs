@@ -142,31 +142,34 @@ def _branch(value: Any) -> tuple[Any, str, Any]:
     return value, value.as_schema().name.rsplit(".", 1)[-1].lower(), value
 
 
-def _walk(value: Any, where: str, root: str | None) -> Iterator[tuple[str, str | None, Any, str, Any]]:
+def _walk(value: Any, where: str, root: str | None, holders: frozenset[str]) -> Iterator[
+        tuple[str, str | None, Any, str, Any]]:
     """Every record within what a property holds, parents first, in source order: each its place, the place of the
     outermost term, helper or kind's record of mbse-expressions' holding it (None for a statement, a member
     declaration, an error, a part holding statements or a part), the term or record itself, its tag and its record. A
-    statement within a term, where its block, its member list or its group holds one, is one of them, at its place."""
+    statement within a term, where its block, its member list or its group holds one, is one of them, at its place.
+    `holders` are the schemas that have a statement's place, the language's *(agent: a parameter, so that
+    `Programs.Cpp.Check` reuses it over C++'s)*."""
     if isinstance(value, Objects.Listed):
         for i, element in enumerate(value.values):
-            yield from _walk(element, f"{where}[{i}]", root)
+            yield from _walk(element, f"{where}[{i}]", root, holders)
         return
     if not hasattr(value, "as_schema"):
         return  # a scalar
     value, tag, record = _branch(value)
     name = record.as_schema().name
-    if name in _STATEMENTS:
+    if name in holders:
         root = None
     elif root is None and name.startswith(_EXPRESSIONS):
         root = where
     yield where, root, value, tag, record
     for prop, held in Objects.properties(record).items():
-        yield from _walk(held, f"{where}.{prop}", root)
+        yield from _walk(held, f"{where}.{prop}", root, holders)
 
 
 def _unit(unit: Any) -> Iterator[tuple[str, str | None, Any, str, Any]]:
     """Every record of a unit's tree, as `_walk` gives it, from its `body`."""
-    return _walk(Objects.properties(unit).get("body"), "body", None)
+    return _walk(Objects.properties(unit).get("body"), "body", None, _STATEMENTS)
 
 
 def _read(store: Any, path: str, read: Callable[[Any], list[str]]) -> list[str]:
@@ -321,20 +324,20 @@ def _year(standard: Any) -> int:
 
 class _Availability:
     """What the store's standards say: the target edition's year, each kind's schema's editions' years, by its schema's
-    name, and each edition's year and common name."""
+    name, and each edition's year and common name. `language` is the singleton covering the editions, `edition` the
+    target's common name or designation, and `dialects` the singletons whose standards list kinds *(agent: parameters,
+    so that `Programs.Cpp.Check` reuses it)*."""
 
-    def __init__(self, store: Any, version: Version | str):
-        language = store.singleton(LANGUAGE)
-        tag = f"C{version[0]}" if isinstance(version, tuple) and len(version) == 1 else str(version)
-        target = ExpressionStandards.find(language, tag)
+    def __init__(self, store: Any, language: str, edition: str, dialects: tuple[str, ...]):
+        target = ExpressionStandards.find(store.singleton(language), edition)
         if target is None:
-            raise LookupError(f"{LANGUAGE} covers no edition {version!r}: run Standards.prepare on the store")
+            raise LookupError(f"{language} covers no edition {edition!r}: run Standards.prepare on the store")
         self.target = _year(target)
         self.years = {ExpressionStandards.properties(s)["names"][0]: _year(s)  # type: ignore[index]
-                      for s in ExpressionStandards.standards(language).values()}
+                      for s in ExpressionStandards.standards(store.singleton(language)).values()}
         self.names = {year: name for name, year in self.years.items()}
         self.versions: dict[str, set[int]] = {}
-        for dialect in DIALECTS:
+        for dialect in dialects:
             standards = ExpressionStandards.standards(store.singleton(dialect))
             if not standards:
                 raise LookupError(f"{dialect} covers no edition: run Standards.prepare on the store")
@@ -380,7 +383,8 @@ def check(store: Any, path: str, version: Version | str) -> list[str]:
 
 def check_file(store: Any, unit: Any, version: Version | str) -> list[str]:
     """`check` of a unit's visitor, a `Programs.C.TranslationUnit` of `store`, read within the caller's transaction."""
-    return _check(_Availability(store, version), unit)
+    edition = f"C{version[0]}" if isinstance(version, tuple) and len(version) == 1 else str(version)
+    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), unit)
 
 
 # --- Validity ---
@@ -443,17 +447,17 @@ def _rules(kind: str, held: dict[str, Any]) -> list[str]:
     return problems
 
 
-def _terms(held: Any) -> Iterator[Any]:
+def _terms(held: Any, holders: frozenset[str]) -> Iterator[Any]:
     """The terms a value holds: itself, or a list's, or a value object's, in order, none within a term or a part holding
-    statements."""
+    statements, one of `holders`."""
     if isinstance(held, Objects.Listed):
         for element in held.values:
-            yield from _terms(element)
+            yield from _terms(element, holders)
     elif Terms.is_term(held):
         yield held
-    elif Objects.is_object(held) and _branch(held)[2].as_schema().name not in _STATEMENTS:
+    elif Objects.is_object(held) and _branch(held)[2].as_schema().name not in holders:
         for value in Objects.properties(held).values():
-            yield from _terms(value)
+            yield from _terms(value, holders)
 
 
 def _bound(term: Any) -> set[str]:
@@ -478,7 +482,7 @@ def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
     if Terms.is_term(value):
         return _validated(value)
     own = _deferred(Kinds.problems(Terms.node(tag, record), Domains.Types(record, "C.Expressions")))
-    return own + [problem for term in _terms(record) for problem in _validated(term)]
+    return own + [problem for term in _terms(record, _STATEMENTS) for problem in _validated(term)]
 
 
 def _validate(unit: Any) -> list[str]:

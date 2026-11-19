@@ -124,41 +124,43 @@ What tree-sitter-cpp misreads, which the converter corrects:
     `&&l`, as C's `Parse` reads them (its 25 and 28).
 35. **A type's keyword as a macro's argument**, `va_arg(ap, int)`, which it reads as an error: a `typeid`, as C's
     `Parse` reads it (its 24).
+36. **`auto(x)` and `auto{x}`** (C++23), which it reads as a call of a function named `auto` and a cast to a type named
+    `auto`: a `functionalcastexpression` whose type is a `placeholdertypespecifier`.
 
 What tree-sitter-cpp reads but C++ rejects, which the converter keeps invalid syntax (an `Error`, or an `error` term):
 
-36. **Statements at namespace scope**, `x = 1;`, `{}`: a translation unit, a namespace, a linkage specification and an
+37. **Statements at namespace scope**, `x = 1;`, `{}`: a translation unit, a namespace, a linkage specification and an
     `export` hold declarations alone (`;` alone is an `EmptyDeclaration`).
-37. **C's constructs**: `_Generic`, a compound literal of a type-id, `(struct p){1}`, C's index designators, `[0] = 1`,
+38. **C's constructs**: `_Generic`, a compound literal of a type-id, `(struct p){1}`, C's index designators, `[0] = 1`,
     an array declarator's `static`, qualifiers and `[*]`, K&R definitions, and the keywords `restrict`, `_Atomic`,
     `_Noreturn`, `_Thread_local` and `_Alignas`.
-38. **Literals C++ rejects**: an escape of no character (`'\\x'`), and an octal one with a digit 8 or 9 (`08`), which
+39. **Literals C++ rejects**: an escape of no character (`'\\x'`), and an octal one with a digit 8 or 9 (`08`), which
     it reads as two; a suffix C++'s literals have not, `1uu`, `1e`, `0x`, it reads as a user-defined literal's,
     kept as it reads them.
-39. **A conditional directive's closing or continuing line where none is open**, `#endif` alone.
-40. **Virt-specifiers where no member is declared**, `int f() override;` at namespace scope, and a function's
+40. **A conditional directive's closing or continuing line where none is open**, `#endif` alone.
+41. **Virt-specifiers where no member is declared**, `int f() override;` at namespace scope, and a function's
     definition whose declarator declares no function.
-41. **Microsoft's extensions** 0.3 did not keep: calling conventions (`__cdecl`), pointer modifiers (`__ptr32`).
-42. **`_Pragma` of what is no one string literal**, `_Pragma(x)`.
+42. **Microsoft's extensions** 0.3 did not keep: calling conventions (`__cdecl`), pointer modifiers (`__ptr32`).
+43. **`_Pragma` of what is no one string literal**, `_Pragma(x)`.
 
 What mbse-expressions' C++ dialect cannot hold, which the converter keeps invalid syntax, each a gap reported to it:
 
-43. **Structured bindings** (C++17), `auto [a, b] = p;`, `for (auto &[k, v] : m)`: no declarator of the dialect binds
+44. **Structured bindings** (C++17), `auto [a, b] = p;`, `for (auto &[k, v] : m)`: no declarator of the dialect binds
     several names.
-44. **A conditional `explicit`** (C++20), `explicit(N > 1)`: no specifier of the dialect holds its condition (`explicit`
+45. **A conditional `explicit`** (C++20), `explicit(N > 1)`: no specifier of the dialect holds its condition (`explicit`
     alone is a `declspecifier`).
-45. **`__has_include`** (C++17), `#if __has_include(<h>)`, which tree-sitter cannot parse either: no term of the
+46. **`__has_include`** (C++17), `#if __has_include(<h>)`, which tree-sitter cannot parse either: no term of the
     dialects holds a header's name.
-46. **A user-defined literal of adjacent strings**, `"a" "b"_s`: the dialect's `userdefinedliteral` holds one
+47. **A user-defined literal of adjacent strings**, `"a" "b"_s`: the dialect's `userdefinedliteral` holds one
     literal; an `error` term.
 
 What stays as tree-sitter-cpp reads it, each left with its reason:
 
-47. **Typedef names and other names**, `T * x;`, `T(x);`, `(T)*x`, **template names and other names**, `a<b>(c)`, and
+48. **Typedef names and other names**, `T * x;`, `T(x);`, `(T)*x`, **template names and other names**, `a<b>(c)`, and
     **concepts and types**, `template <Number T>`, read as a constant parameter of the type `Number`: which a text is
     depends on what `T`, `a` and `Number` name, which the declarations before it decide, outside the grammar. Read as
     tree-sitter decides.
-48. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it: no
+49. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it: no
     tree of either, the preprocessor not run. Kept as tree-sitter's recovery leaves it, invalid syntax.
 
 Decided here *(agent, for review)*, as C's `Parse` decides: schemas resolved through the transaction or the store;
@@ -757,6 +759,8 @@ class _Converter(C._Converter):
     def specifier(self, ts: _TS) -> list[_Node]:
         """The specifiers one tree-sitter node spells."""
         kind, spelling = ts.type, self.text(ts)
+        if kind in ("identifier", "type_identifier") and spelling == "auto":  # `auto(x)`, `auto{x}` (C++23)
+            return [_Node("placeholdertypespecifier", decltype=False)]
         if kind == "primitive_type" or kind == "type_identifier" and spelling in _PRIMITIVES:
             return [_Node("primitivetypespecifier", keyword=spelling)]
         if kind == "sized_type_specifier":
@@ -1443,8 +1447,8 @@ class _Converter(C._Converter):
 
     def call(self, ts: _TS) -> _Node:
         function, arguments = self.require(ts, "function"), self.require(ts, "arguments")
-        if function.type == "primitive_type":  # `int(x)`
-            return _Node("functionalcastexpression", type=self.specifier(function)[0],
+        if function.type == "primitive_type" or function.type == "identifier" and self.text(function) == "auto":
+            return _Node("functionalcastexpression", type=self.specifier(function)[0],  # `int(x)`, `auto(x)`
                          initializer=_Node("parenthesizedinitializer", arguments=self.arguments(arguments)))
         if function.type == "identifier" and self.text(function) in ("typeid", "noexcept", "_Pragma"):
             return self.operator_call(self.text(function), arguments)

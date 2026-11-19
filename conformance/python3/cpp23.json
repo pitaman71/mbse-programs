@@ -1131,40 +1131,32 @@
                                   "value": {
                                     "binaryexpression": {
                                       "left": {
-                                        "callexpression": {
-                                          "function": {
-                                            "idexpression": {
-                                              "name": {
-                                                "identifier": {
-                                                  "spelling": "auto"
-                                                }
-                                              }
-                                            }
+                                        "functionalcastexpression": {
+                                          "type": {
+                                            "placeholdertypespecifier": {}
                                           },
-                                          "arguments": [
-                                            {
-                                              "idexpression": {
-                                                "name": {
-                                                  "identifier": {
-                                                    "spelling": "x"
+                                          "initializer": {
+                                            "parenthesizedinitializer": {
+                                              "arguments": [
+                                                {
+                                                  "idexpression": {
+                                                    "name": {
+                                                      "identifier": {
+                                                        "spelling": "x"
+                                                      }
+                                                    }
                                                   }
                                                 }
-                                              }
+                                              ]
                                             }
-                                          ]
+                                          }
                                         }
                                       },
                                       "operator": "+",
                                       "right": {
                                         "functionalcastexpression": {
                                           "type": {
-                                            "namedtypespecifier": {
-                                              "name": {
-                                                "identifier": {
-                                                  "spelling": "auto"
-                                                }
-                                              }
-                                            }
+                                            "placeholdertypespecifier": {}
                                           },
                                           "initializer": {
                                             "initializerlist": {
