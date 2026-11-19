@@ -1,6 +1,157 @@
 """Parse: C++ source text as the transaction that writes its translation unit, delegating to tree-sitter-cpp.
 
-DOCSTRING
+`parse(text, path)` reads `text` at once, keeping what does not parse as invalid syntax, and gives the transaction's
+callback, which a caller executes, `store.transaction(parse(text, path))`, or builds to write it,
+`Plain.ToPlain(store).Transaction(store.Mutations.OfTransaction(parse(text, path, store)))`. Executed in a store holding
+the installs (`Cpp.INSTALLS`: C's, then mbse-expressions' `Cpp` and `Cpp Types` and `Programs.Cpp`), it is one upsert,
+`uid(path)`, whose symbols bind the workspace (`ws`) and the translation unit (`unit`); its spec puts the unit in the
+workspace's `files` by `path` and writes its tree, the unit's `body`, as one value, each declaration and statement a
+branch of `Programs.Cpp.Statement` (stage 3's design, "the whole tree as values").
+
+Expressions are mbse-expressions' `Cpp` terms, a declaration's specifiers, declarators and attributes its helpers, type
+subterms `Cpp Types`' `typeid`, and directives `C Preprocessor` terms, nested values written through the builders with
+their concrete syntax as far as the dialects keep it. Where a term holds statements or declarations, its property holds
+them, as the user decided ("the crossover should be modeled as a property of T_A"): a lambda's and a statement
+expression's `block`, a class's `members`, and a conditional directive's `group`.
+
+tree-sitter-cpp builds a concrete syntax tree, tree-sitter-c's extended, so `_Converter` is C's
+(`Programs.C.Parse._Converter`), where tree-sitter-cpp writes the node types tree-sitter-c writes, and C++'s own, ported
+from mbse-programs 0.3's Ccpp parser (`Ccpp/_Parser.py`), which read C++ with tree-sitter-cpp: names, declarators,
+lambdas, requires-expressions, templates, classes, namespaces, modules. C's source and its offsets (`_Source`), its
+literals, comments, labels, directives, invalid syntax and its rules for what is absent are C++'s too.
+
+**Where tree-sitter-cpp 0.23.4 departs from C++.** As the user decided, "Parser discrepancies from the language spec
+should be clearly enumerated and have preprocessing passes as has been done elsewhere": each place where
+tree-sitter-cpp 0.23.4, the version pinned, reads C++ (ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, with
+the GNU extensions 0.3 kept) otherwise than C++ does is listed here, with the edition that brought the construct where
+it is recent, and how `parse` handles it, as C's `Parse` lists tree-sitter-c's. Where tree-sitter cannot parse a
+construct, the pre-pass rewrites the text so that it can, keeping every other character where it was, records what it
+rewrote (`_Prepared`), and the converter puts the construct back as the model holds it; where tree-sitter parses it
+wrongly, the converter corrects it; where tree-sitter reads what C++ rejects, the converter keeps it invalid syntax.
+
+What tree-sitter-cpp cannot parse, or misreads wherever it stands, which the pre-pass rewrites:
+
+1. **Module declarations** (C++20), `module;`, `export module m.n:p;`, `module :private;`, `import std;`,
+   `export import :p;`, `import <h>;`, `import "h";`, which it reads as an expression statement, a declaration, a
+   label or a template's name, or cannot read: blanked, each made as it stood (`GlobalModuleFragment`,
+   `ModuleDeclaration`, `PrivateModuleFragment`, `ImportDeclaration`), listed again where it stood; one that names
+   no module, an `Error`.
+2. **`export`** (C++20) before a declaration or a block: blanked, the converter making an `ExportDeclaration` of what
+   follows it, `braced` for a block.
+3. **`extern template`** (C++11), the explicit instantiation declaration: `extern` blanked, the converter making the
+   `ExplicitInstantiation` `extern`.
+4. **`if consteval` and `if !consteval`** (C++23): rewritten `if (1)`, as long, the converter making the `if`
+   `consteval` (and `negated`), with no condition.
+
+What tree-sitter-cpp cannot parse, which the pre-pass rewrites where it found an error:
+
+5. **An explicit object parameter** (C++23), `void f(this S &self)`: `this` blanked, the converter making the
+   parameter's `this_keyword`.
+6. **A using-declaration of several declarators** (C++17), `using std::a, std::b;`: the declarators after the first
+   blanked, the converter reading each back.
+7. **A bit-field's default member initializer** (C++20), `int x : 4 = 1;`, `int y : 2 {3};`: blanked, the converter
+   reading it back into the member's declarator's `initializer`.
+8. **An attribute-using-prefix** (C++17), `[[using gnu: hot, cold]]`: `using gnu:` blanked, the converter giving the
+   attribute specifier its `using_namespace`.
+9. **Attributes after an enumerator's name** (C++17), `A [[deprecated]] = 1`: blanked, the converter reading them
+   back into the enumerator's `attributes`.
+10. **A label ending a block** (C++23), `l: }` and `case 1: }`: a `;` written in the blank after its `:`, which the
+    converter drops: a label without a statement. Without a blank between, `l:}`, kept as tree-sitter's recovery
+    leaves it, invalid syntax.
+11. **`_Pragma("...")` where a declaration, a statement, a member or an enumerator stands** (C++11), without a `;`
+    after it: blanked, the converter listing a `Directive` holding C Preprocessor's `pragmaexpression` where it stood,
+    as C's `Parse` does (its 15).
+12. **The null directive**, `#` alone on its line: blanked, the converter listing an `otherdirective` with no name
+    where it stood, as C's does (its 12).
+13. **Digraphs**, `<: :> <% %> %: %:%:`: rewritten as the tokens they spell, as the model holds them.
+
+What tree-sitter-cpp misreads, which the converter corrects:
+
+14. **An explicit instantiation definition**, `template class V<int>;`, which it reads with a missing declarator: an
+    `ExplicitInstantiation` of the class.
+15. **`typeid` of a type-id**, `typeid(int)`, which it reads as a call holding an error: a `typeidexpression` whose
+    operand is the type-id, read again; and `typeid(x)`, `noexcept(x)` and `_Pragma("...")`, which it reads as calls:
+    a `typeidexpression`, a `noexceptexpression` and C Preprocessor's `pragmaexpression`.
+16. **A function deleted or defaulted outside a class**, `int f() = delete;`, `S::S() = default;`, which it reads as
+    a declarator initialized by a `delete` expression missing its operand, or by a variable named `default`: a
+    `FunctionDefinition` whose body is a `DeletedBody` or a `DefaultedBody`.
+17. **An unnamed bit-field**, `int : 3;`, which it reads with a missing name: a `MemberDeclarator` without a
+    declarator.
+18. **Alternative tokens**, `and`, `or`, `not`, `bitand`, `not_eq` and their like, which it keeps as spelled: the
+    tokens they spell, `&&`, `||`, `!`, `&`, `!=`, as 0.3 normalized them.
+19. **Casts it reads as calls**: `int(x)`, a call of a type's keyword, a `functionalcastexpression`;
+    `static_cast<T>(x)` and its siblings, a call of a template, a `namedcastexpression`; and `T{x}`, which it reads as
+    a compound literal, a `functionalcastexpression`.
+20. **`.*` and `->*`**, which it reads as a member access: a `binaryexpression`.
+21. **`NULL`**, which it reads as a null constant like `nullptr`: the macro's name, an `idexpression`; `nullptr` a
+    `constant`.
+22. **A conversion function's declarator**, `operator T *()`, which it nests within the conversion type's pointers:
+    a function's declarator whose name is a `conversionname` of the type and its pointers.
+23. **A declarator's trailing requires-clause and virt-specifiers**, which it reads as its function declarator's:
+    the `requires` and `virt_specifiers` of the declarator or the function's definition that holds it.
+24. **The pure-specifier**, `= 0`, which it reads as initializing a member function with `0`: the member
+    declarator's `pure`.
+25. **An attribute declaration**, `[[fallthrough]];`, which it reads as an attributed empty statement: an
+    `AttributeDeclaration`; and GNU's attributes on a null statement, `__attribute__((fallthrough));`, which it reads as
+    an error and `;`, an `AttributedStatement`, as C's does (its 22).
+26. **A condition's declaration**, `if (int x = f())`, whose initializer it reads as the declaration's: its
+    declarator's.
+27. **GNU's asm label**, `int f(void) asm("g");`, which it reads as a declarator of its own: the `asm` of the
+    identifier's declarator it follows; and GNU's `__restrict`, which it reads as Microsoft's pointer modifier, a
+    cv-qualifier.
+28. **A pointer to member's declarator**, `int C::*p`, which it reads as a qualified name ending in a pointer's
+    declarator: a `pointerdeclarator` whose `scope` is the class.
+29. **A constraint**, the parenthesized conjunctions and disjunctions it reads as tokens within a requires-clause: a
+    term, `&&` and `||` binary expressions of primary expressions.
+30. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model, and GNU's labels as values,
+    `&&l`, as C's `Parse` reads them (its 25 and 28).
+
+What tree-sitter-cpp reads but C++ rejects, which the converter keeps invalid syntax (an `Error`, or an `error` term):
+
+31. **Statements at namespace scope**, `x = 1;`, `{}`: a translation unit, a namespace, a linkage specification and an
+    `export` hold declarations alone (`;` alone is an `EmptyDeclaration`).
+32. **C's constructs**: `_Generic`, a compound literal of a type-id, `(struct p){1}`, C's index designators, `[0] = 1`,
+    an array declarator's `static`, qualifiers and `[*]`, K&R definitions, and the keywords `restrict`, `_Atomic`,
+    `_Noreturn`, `_Thread_local` and `_Alignas`.
+33. **Literals C++ rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C++ has not (`1uu`, `1.0ff`), an escape
+    of no character.
+34. **A conditional directive's closing or continuing line where none is open**, `#endif` alone.
+35. **Virt-specifiers where no member is declared**, `int f() override;` at namespace scope, and a function's
+    definition whose declarator declares no function.
+36. **Microsoft's extensions** 0.3 did not keep: calling conventions (`__cdecl`), pointer modifiers (`__ptr32`).
+37. **`_Pragma` of what is no one string literal**, `_Pragma(x)`.
+
+What mbse-expressions' C++ dialect cannot hold, which the converter keeps invalid syntax, each a gap reported to it:
+
+38. **Structured bindings** (C++17), `auto [a, b] = p;`, `for (auto &[k, v] : m)`: no declarator of the dialect binds
+    several names.
+39. **A conditional `explicit`** (C++20), `explicit(N > 1)`: no specifier of the dialect holds its condition (`explicit`
+    alone is a `declspecifier`).
+40. **`__has_include`** (C++17), `#if __has_include(<h>)`, which tree-sitter cannot parse either: no term of the
+    dialects holds a header's name.
+
+What stays as tree-sitter-cpp reads it:
+
+41. **An alias declaration as an init-statement** (C++23), `for (using T = int; ;)`, which it cannot parse: kept as
+    its recovery leaves it, invalid syntax *(agent: the pre-pass would have to make it a declaration tree-sitter reads
+    there and the converter an `AliasDeclaration` again, for a construct seldom written)*.
+42. **GNU's extensions it cannot parse**, which C's `Parse` pre-passes for tree-sitter-c: a case range, `case 1 ...
+    3:`, a computed `goto *p;`, an asm label before what initializes a declarator, and GNU attributes after a
+    declarator: kept as its recovery leaves them, invalid syntax *(agent: not C++, which 0.3 did not parse either)*.
+43. **Typedef names and other names**, `T * x;`, `T(x);`, `(T)*x`, and **template names and other names**,
+    `a<b>(c)`: which a text is depends on what `T` and `a` name, which the declarations before it decide, outside the
+    grammar. Read as tree-sitter decides.
+44. **A type as a macro's argument**, `va_arg(ap, int)`: no C++ expression, which the preprocessor, not run, would
+    expand; kept as tree-sitter's recovery leaves it, invalid syntax.
+45. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it: no
+    tree of either, the preprocessor not run. Kept as tree-sitter's recovery leaves it, invalid syntax.
+
+Decided here *(agent, for review)*, as C's `Parse` decides: schemas resolved through the transaction or the store;
+what is absent is absent; a literal's value what C++ reads its spelling as, a raw string's its characters between its
+delimiter's parentheses, a user-defined literal's its literal's; each statement's, declaration's, member's, clause's,
+directive's, comment's and error's line its `line`. Invalid syntax is kept, never raised, as the user decided for every
+language: an `Error` where a statement, a declaration or a member stands, an `error` or a `missing` term within an
+expression; `ParseError` only for text that is no text, a lone surrogate.
 """
 
 from __future__ import annotations
@@ -33,7 +184,9 @@ _ALTERNATIVES = {"and": "&&", "or": "||", "not": "!", "compl": "~", "bitand": "&
 _PRIMITIVES = {"void", "char", "char8_t", "char16_t", "char32_t", "wchar_t", "bool", "short", "int", "long", "signed",
                "unsigned", "float", "double", "__int128", "__float128", "_Float16", "_Float32", "_Float64",
                "_Float128"}
-_CV = {"const", "volatile", "__restrict", "__restrict__", "restrict", "_Atomic"}
+_CV = {"const", "volatile", "__restrict", "__restrict__"}
+_C_ONLY = {"restrict", "_Atomic", "_Noreturn", "_Thread_local", "_Alignas"}
+"""C's keywords tree-sitter-cpp reads as qualifiers and specifiers, which C++ has not."""
 _CASTS = {"static_cast", "dynamic_cast", "const_cast", "reinterpret_cast"}
 _NAMES = {"identifier", "field_identifier", "type_identifier", "namespace_identifier", "statement_identifier"}
 _ATTRIBUTES = {"attribute_declaration", "attribute_specifier", "ms_declspec_modifier", "alignas_qualifier"}
@@ -537,6 +690,8 @@ class _Converter(C._Converter):
         inner = self.named(ts)  # a type qualifier, the last kind of specifier
         if inner:
             return [self.attribute(inner[0])]
+        if spelling in _C_ONLY:
+            raise _Invalid(spelling)
         if spelling in _CV:
             return [_Node("cvqualifier", keyword=spelling)]
         return [_Node("declspecifier", keyword=spelling)]  # `constexpr`, `consteval`, `constinit`, `mutable`
@@ -701,8 +856,9 @@ class _Converter(C._Converter):
             made = _Node("pointerdeclarator", declarator=self.declarator(inner) if inner is not None else None,
                          qualifiers=[], attributes=[])
             for c in self.named(ts):
-                if c.type == "type_qualifier":
-                    made.qualifiers.append(_Node("cvqualifier", keyword=self.text(c)))
+                if c.type == "type_qualifier" and self.text(c) not in _C_ONLY or (
+                        c.type == "ms_pointer_modifier" and self.text(c) in _CV):  # GNU's `__restrict`, which
+                    made.qualifiers.append(_Node("cvqualifier", keyword=self.text(c)))  # it reads as Microsoft's
                 elif c.type in _ATTRIBUTES:
                     made.attributes.append(self.attribute(c))
                 elif inner is None or c.id != inner.id:
@@ -878,14 +1034,42 @@ class _Converter(C._Converter):
         attributes: list[_Node] = []
         made = _Node("simpledeclaration", specifiers=self.specifiers(ts, attributes), attributes=attributes,
                      declarators=[])
+        defined = self.defined(ts)
+        if defined is not None:
+            return defined
         for i, c in enumerate(ts.children):
             field = ts.field_name_for_child(i)
-            if field == "declarator":
+            if field == "declarator" and c.type == "gnu_asm_expression":  # GNU's asm label, which tree-sitter-cpp
+                C._identifier(made.declarators[-1].declarator).asm = self.asm_label(c)  # reads as a declarator
+            elif field == "declarator":
                 made.declarators.append(self.init_declarator(c, "initdeclarator"))
             elif field == "value":  # a condition's declarator's, which tree-sitter reads as the declaration's
                 made.declarators[-1].initializer = self.initializer(c, ts.children[i - 1].type == "=")
             elif c.type == "gnu_asm_expression":
                 raise _Invalid(c.type)  # where tree-sitter reads one, it reads its own declarator
+        return made
+
+    def defined(self, ts: _TS) -> _Node | None:
+        """A function's declaration `= delete` or `= default` outside a class, which tree-sitter-cpp reads as a
+        declarator initialized by a `delete` expression missing its operand, or by a variable named `default`: a
+        function's definition; None for any other declaration."""
+        declarators = self.fields(ts, "declarator")
+        if len(declarators) != 1 or declarators[0].type != "init_declarator":
+            return None
+        value = self.require(declarators[0], "value")
+        named = self.named(value)
+        deleted = value.type == "delete_expression" and len(named) == 1 and named[0].is_missing
+        if not (deleted or value.type == "identifier" and self.text(value) == "default"):
+            return None
+        self.lifted = {}
+        attributes: list[_Node] = []
+        made = _Node("functiondefinition", specifiers=self.specifiers(ts, attributes), attributes=attributes,
+                     declarator=self.declarator(self.require(declarators[0], "declarator")),
+                     body=_Node("deletedbody" if deleted else "defaultedbody"))
+        made.virt_specifiers, made.requires = self.lifted.get("virt_specifiers"), self.lifted.get("requires")
+        if C._binder(made.declarator).branch != "functiondeclarator":
+            raise _Invalid(ts.type)
+        self.consumed.update(n.id for n in named)
         return made
 
     def init_declarator(self, ts: _TS, kind: str) -> _Node:
