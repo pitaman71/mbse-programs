@@ -85,12 +85,11 @@ abi-agnostic form and apply the ABI at the last minute, that would be advantageo
 holds C as written, and nothing in its tree depends on a target. `validate` checks what does not depend on one; the
 checks that do are not made: a literal's type and its range (`1`'s `int`, `L'w'`'s `wchar_t`, which C leaves to the
 implementation), `sizeof` and `_Alignof`, and constant evaluation (an array's size, a `static_assert`'s condition, a
-bit-field's width, a `case` label's value). A later step applies an ABI at the call that needs one: `validate_for(store,
-path, abi)` is planned, mbse-expressions reading a term's types under an ABI the caller gives, rather than one the
-term's holder names, and reporting a check that needs an ABI as deferred rather than as a problem (gaps of
-mbse-expressions', reported). Until then, the problems mbse-expressions gives where a type needs an ABI, "'int' is not a
-type C defines, and its expression names no ABI", stand for those deferred checks, and `validate` leaves them out
-(`_deferred`), as CPRS-01 does *(agent)*.
+bit-field's width, a `case` label's value): its terms are validated within mbse-expressions' `Domains.Reading(None)`,
+which defers each check needing an ABI rather than reporting it. The ABI is applied at the call that needs one:
+`validate_for(store, path, abi)` validates within `Domains.Reading` of the ABI dialect's singleton named `abi`
+(`Expressions.SystemV.AMD64`, `Expressions.Arm.AAPCS64`, `ABIS`), so that each literal's type and range is checked under
+that target, and `prepare_abi(store, abi)` gives a store the ABI's schemas and types, after `Standards.prepare`.
 
 Dropped, as the model now holds them: a property's type and a child's category, and where a statement or a member
 declaration may stand (a struct's members hold only member declarations, a block no member declaration), which the
@@ -105,6 +104,8 @@ from typing import Any
 from mbse.Expressions.C.Expressions import Domains, Expressions as CExpressions, Kinds
 from mbse.Expressions.C.Preprocessor import Expressions as CPreprocessor
 from mbse.Expressions.C.Types import Expressions as CTypes
+from mbse.Expressions.Arm import AAPCS64
+from mbse.Expressions.SystemV import AMD64
 from mbse.Expressions.Framework import Objects, Standards as ExpressionStandards, Terms
 from mbse.Schemas.Framework import Schemas as SchemaKinds
 
@@ -112,7 +113,8 @@ from ..Framework.Model import WORKSPACE
 from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
-__all__ = ["check", "check_file", "validate", "validate_file", "FEATURES", "STATEMENT_FEATURES"]
+__all__ = ["check", "check_file", "validate", "validate_file", "validate_for", "validate_file_for", "prepare_abi",
+           "ABIS", "FEATURES", "STATEMENT_FEATURES"]
 
 Version = tuple[int, ...]
 
@@ -124,11 +126,6 @@ _EXPRESSIONS = "Expressions."
 _DIALECTS = {"Expressions.C.Expressions.Term": CExpressions.DIALECT, "Expressions.C.Types.Term": CTypes.DIALECT,
              "Expressions.C.Preprocessor.Term": CPreprocessor.DIALECT}
 """The dialect that validates a term, by the union that holds it."""
-_NO_ABI = "and its expression names no ABI"
-"""How mbse-expressions words a type it cannot read without an ABI (`int`): a check deferred until one is applied, as a
-unit names none."""
-
-
 # --- Reading ---
 
 def _branch(value: Any) -> tuple[Any, str, Any]:
@@ -461,15 +458,9 @@ def _bound(term: Any) -> set[str]:
     return {name for t in Terms.walk(term) if isinstance(name := Terms.name_of(t), str)}
 
 
-def _deferred(problems: list[str]) -> list[str]:
-    """Problems but the checks deferred until an ABI is applied: those of a type C leaves to the implementation, which
-    only an ABI defines, and a unit names none."""
-    return [problem for problem in problems if not problem.endswith(_NO_ABI)]
-
-
 def _validated(term: Any) -> list[str]:
     """A term's problems, as the dialect whose union holds it validates it."""
-    return _deferred(_DIALECTS[term.as_schema().name].validate(term, _bound(term)))
+    return _DIALECTS[term.as_schema().name].validate(term, _bound(term))
 
 
 def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
@@ -477,7 +468,7 @@ def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
     its dialect validates it; a helper's, its own checks, and its terms' as their dialect validates them."""
     if Terms.is_term(value):
         return _validated(value)
-    own = _deferred(Kinds.problems(Terms.node(tag, record), Domains.Types(record, "C.Expressions")))
+    own = Kinds.problems(Terms.node(tag, record), Domains.Types(record, "C.Expressions"))
     return own + [problem for term in _terms(record) for problem in _validated(term)]
 
 
@@ -496,11 +487,37 @@ def _validate(unit: Any) -> list[str]:
 
 def validate(store: Any, path: str) -> list[str]:
     """The problems of the unit at `path` as a tree, in source order, each located by its place: its kinds' own rules,
-    and its terms' problems as their dialects validate them. Raises LookupError where the workspace holds no file at
-    `path`."""
+    and its terms' problems as their dialects validate them, those that need an ABI deferred. Raises LookupError where
+    the workspace holds no file at `path`."""
     return _read(store, path, validate_file)
 
 
 def validate_file(unit: Any) -> list[str]:
     """`validate` of a unit's visitor, read within the caller's transaction."""
-    return _validate(unit)
+    return Domains.Reading(None).run(lambda: _validate(unit))
+
+
+def validate_for(store: Any, path: str, abi: str) -> list[str]:
+    """`validate` of the unit at `path` with the ABI dialect named `abi` applied (`ABIS`): what `validate` defers, each
+    literal's type and range, checked under that target. The store must hold the ABI (`prepare_abi`). Raises
+    LookupError where the workspace holds no file at `path`, or the store no such ABI."""
+    return _read(store, path, lambda unit: validate_file_for(store, unit, abi))
+
+
+def validate_file_for(store: Any, unit: Any, abi: str) -> list[str]:
+    """`validate_for` of a unit's visitor, read within the caller's transaction."""
+    if abi not in ABIS:
+        raise LookupError(f"no ABI {abi!r}: one of {', '.join(ABIS)}")
+    return Domains.Reading(store.singleton(abi)).run(lambda: _validate(unit))
+
+
+ABIS = {"Expressions.SystemV.AMD64": AMD64, "Expressions.Arm.AAPCS64": AAPCS64}
+"""The ABIs a unit may be validated under, each by its dialect's singleton's name, and its module."""
+
+
+def prepare_abi(store: Any, abi: str) -> Any:
+    """`store`, prepared by `Standards.prepare`, given the ABI named `abi` (`ABIS`): its schemas and its types, its
+    `install` and `define`, each in a transaction of its own. Run again, it writes nothing."""
+    for each in (ABIS[abi].install, ABIS[abi].define):
+        store.transaction(each)
+    return store
