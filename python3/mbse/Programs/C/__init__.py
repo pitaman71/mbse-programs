@@ -1,10 +1,13 @@
 """C as a language of mbse-programs, C11 to C23 with the GNU extensions 0.3 kept: its statements, declarations and their
 parts (`Statements`), as value objects refining `Programs.Framework.Statement`, whose expressions are mbse-expressions'
-`C` terms, its type names' parts `C Types`' and its directives `C Preprocessor`'s; source read into a store (`Parse`)
-and printed from it (`Print`).
+`C` terms, its type names' parts `C Types`' and its directives `C Preprocessor`'s; source read into a store (`Parse`),
+printed from it (`Print`), the names it declares resolved (`Definitions`), and checked against an edition of C (`Check`,
+over the standards `Standards` records).
 
 `INSTALLS` lists, in the order they run, the installs a store needs to hold C programs, each in a transaction of its
-own; `store()` gives a new store with each run."""
+own; `store()` gives a new store with each run. Checking an edition needs the standards as data too, which
+`Standards.prepare(store)` writes, mostly mbse-expressions' own standards and domains, so `store()` leaves it to the
+caller that checks *(agent)*, as TypeScript5's and Python3's do."""
 
 from typing import Any
 
@@ -15,7 +18,7 @@ from mbse.Expressions.C.Types import Expressions as CTypes
 from mbse.Schemas.Framework import Builders
 
 from ..Framework import Model
-from . import Parse, Print, Statements
+from . import Check, Definitions, Parse, Print, Standards, Statements
 from .Statements import install
 
 INSTALLS = (Expressions.install, CExpressions.install, CTypes.install, CPreprocessor.install, Model.install,
@@ -30,4 +33,4 @@ def store() -> Any:
     return made
 
 
-__all__ = ["INSTALLS", "Parse", "Print", "Statements", "install", "store"]
+__all__ = ["INSTALLS", "Check", "Definitions", "Parse", "Print", "Standards", "Statements", "install", "store"]
