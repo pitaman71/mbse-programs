@@ -66,95 +66,100 @@ What tree-sitter-cpp cannot parse, which the pre-pass rewrites where it found an
     where it stood, as C's does (its 12).
 13. **Digraphs**, `<: :> <% %> %: %:%:`: rewritten as the tokens they spell, as the model holds them; and **`->*`**,
     which it reads as `->` and an error: rewritten `.*`, the converter making it `->*` again.
+14. **An alias declaration as a `for` statement's init-statement** (C++23), `for (using T = int; ;)`: blanked but its
+    `;`, the converter reading it back, an `AliasDeclaration`, as the statement's `initializer`; an `if`'s, a
+    `switch`'s and a range-based `for`'s it parses.
+15. **A static lambda** (C++23), `[]() static {}`: `static` blanked, the converter giving the lambda's declarator the
+    specifier `static` where it stood; without parameters, `[] static {}`, `static` rewritten `()`, as long, so that it
+    prints `[]() static {}`, which C++23 reads the same *(agent: the model holds no lambda's specifiers without its
+    declarator)*.
+16. **A conversion function's name within an expression**, `x.operator int()`, `p->operator T *()`, and, within a
+    function's body or an initializer, `operator bool()`: made a name as long, the converter reading its type back, a
+    `conversionname`. Qualified, `&S::operator int`, it parses as it is.
+17. **GNU's extensions**, as C's `Parse` rewrites them for tree-sitter-c (its 6, 9, 11 and 14, the same pre-pass,
+    `Programs.C.Parse._gnu`): GNU attributes after a declarator, `int x __attribute__((aligned(16))) = 0;`, read back
+    into its `attributes`; a case range, `case 1 ... 3:`, its end read back into the label's `last`; a computed `goto`,
+    `goto *p;`, a `GotoStatement` whose `target` is `p`; and an asm label before what initializes a declarator, or
+    before GNU attributes, `register int r asm("r1") = 3;`, read back into its identifier's `asm`.
 
 What tree-sitter-cpp misreads, which the converter corrects:
 
-14. **An explicit instantiation definition**, `template class V<int>;`, which it reads with a missing declarator: an
+18. **An explicit instantiation definition**, `template class V<int>;`, which it reads with a missing declarator: an
     `ExplicitInstantiation` of the class.
-15. **`typeid` of a type-id**, `typeid(int)`, which it reads as a call holding an error: a `typeidexpression` whose
+19. **`typeid` of a type-id**, `typeid(int)`, which it reads as a call holding an error: a `typeidexpression` whose
     operand is the type-id, read again; and `typeid(x)`, `noexcept(x)` and `_Pragma("...")`, which it reads as calls:
     a `typeidexpression`, a `noexceptexpression` and C Preprocessor's `pragmaexpression`.
-16. **A function deleted or defaulted outside a class**, `int f() = delete;`, `S::S() = default;`, which it reads as
+20. **A function deleted or defaulted outside a class**, `int f() = delete;`, `S::S() = default;`, which it reads as
     a declarator initialized by a `delete` expression missing its operand, or by a variable named `default`: a
     `FunctionDefinition` whose body is a `DeletedBody` or a `DefaultedBody`.
-17. **An unnamed bit-field**, `int : 3;`, which it reads with a missing name: a `MemberDeclarator` without a
+21. **An unnamed bit-field**, `int : 3;`, which it reads with a missing name: a `MemberDeclarator` without a
     declarator.
-18. **Alternative tokens**, `and`, `or`, `not`, `bitand`, `not_eq` and their like, which it keeps as spelled: the
+22. **Alternative tokens**, `and`, `or`, `not`, `bitand`, `not_eq` and their like, which it keeps as spelled: the
     tokens they spell, `&&`, `||`, `!`, `&`, `!=`, as 0.3 normalized them.
-19. **Casts it reads as calls**: `int(x)`, a call of a type's keyword, a `functionalcastexpression`;
+23. **Casts it reads as calls**: `int(x)`, a call of a type's keyword, a `functionalcastexpression`;
     `static_cast<T>(x)` and its siblings, a call of a template, a `namedcastexpression`; and `T{x}`, which it reads as
     a compound literal, a `functionalcastexpression`.
-20. **`.*` and `->*`**, which it reads as a member access: a `binaryexpression`.
-21. **`NULL`**, which it reads as a null constant like `nullptr`: the macro's name, an `idexpression`; `nullptr` a
+24. **`.*` and `->*`**, which it reads as a member access: a `binaryexpression`.
+25. **`NULL`**, which it reads as a null constant like `nullptr`: the macro's name, an `idexpression`; `nullptr` a
     `constant`.
-22. **A conversion function's declarator**, `operator T *()`, which it nests within the conversion type's pointers:
+26. **A conversion function's declarator**, `operator T *()`, which it nests within the conversion type's pointers:
     a function's declarator whose name is a `conversionname` of the type and its pointers.
-23. **A declarator's trailing requires-clause and virt-specifiers**, which it reads as its function declarator's:
+27. **A declarator's trailing requires-clause and virt-specifiers**, which it reads as its function declarator's:
     the `requires` and `virt_specifiers` of the declarator or the function's definition that holds it.
-24. **The pure-specifier**, `= 0`, which it reads as initializing a member function with `0`: the member
+28. **The pure-specifier**, `= 0`, which it reads as initializing a member function with `0`: the member
     declarator's `pure`.
-25. **An attribute declaration**, `[[fallthrough]];`, which it reads as an attributed empty statement: an
+29. **An attribute declaration**, `[[fallthrough]];`, which it reads as an attributed empty statement: an
     `AttributeDeclaration`; and GNU's attributes on a null statement, `__attribute__((fallthrough));`, which it reads as
     an error and `;`, an `AttributedStatement`, as C's does (its 22).
-26. **A condition's declaration**, `if (int x = f())`, whose initializer it reads as the declaration's: its
+30. **A condition's declaration**, `if (int x = f())`, whose initializer it reads as the declaration's: its
     declarator's.
-27. **GNU's asm label**, `int f(void) asm("g");`, which it reads as a declarator of its own: the `asm` of the
+31. **GNU's asm label**, `int f(void) asm("g");`, which it reads as a declarator of its own: the `asm` of the
     identifier's declarator it follows; and GNU's `__restrict`, which it reads as Microsoft's pointer modifier, a
     cv-qualifier.
-28. **A pointer to member's declarator**, `int C::*p`, which it reads as a qualified name ending in a pointer's
+32. **A pointer to member's declarator**, `int C::*p`, which it reads as a qualified name ending in a pointer's
     declarator: a `pointerdeclarator` whose `scope` is the class.
-29. **A constraint**, the parenthesized conjunctions and disjunctions it reads as tokens within a requires-clause: a
+33. **A constraint**, the parenthesized conjunctions and disjunctions it reads as tokens within a requires-clause: a
     term, `&&` and `||` binary expressions of primary expressions.
-30. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model, and GNU's labels as values,
+34. **`defined X`**, without parentheses, read as `defined(X)`, its one form in the model, and GNU's labels as values,
     `&&l`, as C's `Parse` reads them (its 25 and 28).
+35. **A type's keyword as a macro's argument**, `va_arg(ap, int)`, which it reads as an error: a `typeid`, as C's
+    `Parse` reads it (its 24).
 
 What tree-sitter-cpp reads but C++ rejects, which the converter keeps invalid syntax (an `Error`, or an `error` term):
 
-31. **Statements at namespace scope**, `x = 1;`, `{}`: a translation unit, a namespace, a linkage specification and an
+36. **Statements at namespace scope**, `x = 1;`, `{}`: a translation unit, a namespace, a linkage specification and an
     `export` hold declarations alone (`;` alone is an `EmptyDeclaration`).
-32. **C's constructs**: `_Generic`, a compound literal of a type-id, `(struct p){1}`, C's index designators, `[0] = 1`,
+37. **C's constructs**: `_Generic`, a compound literal of a type-id, `(struct p){1}`, C's index designators, `[0] = 1`,
     an array declarator's `static`, qualifiers and `[*]`, K&R definitions, and the keywords `restrict`, `_Atomic`,
     `_Noreturn`, `_Thread_local` and `_Alignas`.
-33. **Literals C++ rejects**: an escape of no character (`'\\x'`), and an octal one with a digit 8 or 9 (`08`), which
+38. **Literals C++ rejects**: an escape of no character (`'\\x'`), and an octal one with a digit 8 or 9 (`08`), which
     it reads as two; a suffix C++'s literals have not, `1uu`, `1e`, `0x`, it reads as a user-defined literal's,
     kept as it reads them.
-34. **A conditional directive's closing or continuing line where none is open**, `#endif` alone.
-35. **Virt-specifiers where no member is declared**, `int f() override;` at namespace scope, and a function's
+39. **A conditional directive's closing or continuing line where none is open**, `#endif` alone.
+40. **Virt-specifiers where no member is declared**, `int f() override;` at namespace scope, and a function's
     definition whose declarator declares no function.
-36. **Microsoft's extensions** 0.3 did not keep: calling conventions (`__cdecl`), pointer modifiers (`__ptr32`).
-37. **`_Pragma` of what is no one string literal**, `_Pragma(x)`.
+41. **Microsoft's extensions** 0.3 did not keep: calling conventions (`__cdecl`), pointer modifiers (`__ptr32`).
+42. **`_Pragma` of what is no one string literal**, `_Pragma(x)`.
 
 What mbse-expressions' C++ dialect cannot hold, which the converter keeps invalid syntax, each a gap reported to it:
 
-38. **Structured bindings** (C++17), `auto [a, b] = p;`, `for (auto &[k, v] : m)`: no declarator of the dialect binds
+43. **Structured bindings** (C++17), `auto [a, b] = p;`, `for (auto &[k, v] : m)`: no declarator of the dialect binds
     several names.
-39. **A conditional `explicit`** (C++20), `explicit(N > 1)`: no specifier of the dialect holds its condition (`explicit`
+44. **A conditional `explicit`** (C++20), `explicit(N > 1)`: no specifier of the dialect holds its condition (`explicit`
     alone is a `declspecifier`).
-40. **`__has_include`** (C++17), `#if __has_include(<h>)`, which tree-sitter cannot parse either: no term of the
+45. **`__has_include`** (C++17), `#if __has_include(<h>)`, which tree-sitter cannot parse either: no term of the
     dialects holds a header's name.
-41. **A user-defined literal of adjacent strings**, `"a" "b"_s`: the dialect's `userdefinedliteral` holds one
+46. **A user-defined literal of adjacent strings**, `"a" "b"_s`: the dialect's `userdefinedliteral` holds one
     literal; an `error` term.
 
 What stays as tree-sitter-cpp reads it, each left with its reason:
 
-42. **An alias declaration as an init-statement** (C++23), `for (using T = int; ;)`, which it cannot parse: kept as
-    its recovery leaves it, invalid syntax *(agent: the pre-pass would have to make it a declaration tree-sitter reads
-    there and the converter an `AliasDeclaration` again, for a construct seldom written)*.
-43. **GNU's extensions it cannot parse**, which C's `Parse` pre-passes for tree-sitter-c: a case range, `case 1 ...
-    3:`, a computed `goto *p;`, an asm label before what initializes a declarator, and GNU attributes after a
-    declarator: kept as its recovery leaves them, invalid syntax *(agent: not C++, which 0.3 did not parse either)*.
-44. **Typedef names and other names**, `T * x;`, `T(x);`, `(T)*x`, **template names and other names**, `a<b>(c)`, and
+47. **Typedef names and other names**, `T * x;`, `T(x);`, `(T)*x`, **template names and other names**, `a<b>(c)`, and
     **concepts and types**, `template <Number T>`, read as a constant parameter of the type `Number`: which a text is
     depends on what `T`, `a` and `Number` name, which the declarations before it decide, outside the grammar. Read as
     tree-sitter decides.
-45. **A type as a macro's argument**, `va_arg(ap, int)`: no C++ expression, which the preprocessor, not run, would
-    expand; kept as tree-sitter's recovery leaves it, invalid syntax.
-46. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it: no
+48. **A conditional directive that splits a construct**, `#ifdef A` opening a block that `#endif` closes after it: no
     tree of either, the preprocessor not run. Kept as tree-sitter's recovery leaves it, invalid syntax.
-47. **What else it cannot parse**, found probing: a conversion function's name within an expression,
-    `x.operator int()`, and a static lambda (C++23),
-    `[]() static {}`: kept as its recovery leaves them, invalid syntax *(agent: each seldom written, and each a
-    pre-pass of its own)*.
 
 Decided here *(agent, for review)*, as C's `Parse` decides: schemas resolved through the transaction or the store;
 what is absent is absent; a literal's value what C++ reads its spelling as, a raw string's its characters between its
@@ -212,8 +217,9 @@ class _Prepared(C._Prepared):
     attributes it blanked, the items it blanked where they are listed and the `_Pragma`s among them), and C++'s: the
     module declarations it blanked, each made already, the declarations and blocks `export` introduced, the `extern` of
     an `extern template`, the explicit object parameters (`this`), a using-declaration's further declarators, a
-    bit-field's initializer, an attribute specifier's `using` namespace, and the `;` it wrote after a label ending a
-    block."""
+    bit-field's initializer, an attribute specifier's `using` namespace, the `;` it wrote after a label ending a block,
+    an alias declaration where an init-statement stands, a lambda's `static` and a conversion function's name made a
+    name."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -227,6 +233,11 @@ class _Prepared(C._Prepared):
         self.namespaces: dict[int, str] = {}  # by the `[[`: its `using` namespace
         self.empties: set[int] = set()  # the offset of a `;` written after a label ending a block
         self.typenames: set[int] = set()  # the offset of a using-declarator's name, after its `typename`
+        self.aliases: dict[int, tuple[int, int]] = {}  # by the `(` before it: an alias declaration's span, before its
+        # `;`, blanked where an init-statement stands
+        self.statics: dict[int, int] = {}  # by its lambda's `(`: the offset of a lambda's `static`
+        self.conversions: dict[int, tuple[int, int]] = {}  # by its offset: a conversion function's name made a name,
+        # and the span of its type
 
 
 def _masked(text: str) -> str:
@@ -310,6 +321,7 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
         elif broken and line.startswith("%:"):
             chars[start:start + 2] = list("# ")
     braces = C._braces(tokens)
+    labels: dict[int, int] = {}  # the index of an asm label's `)`, blanked: where the declarator before it ends
     pragmas: set[int] = set()  # the index of a `_Pragma`'s `)`, blanked
     statement = True  # whether a declaration may begin at the token
     i = 0
@@ -368,6 +380,27 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                 _heads(tokens, i - 1)):
             blank(start, end)  # a using-declarator's `typename`, `using typename T::b;`
             found.typenames.add(tokens[i][0])
+        elif w == "using" and before == "(" and word(i - 3) == "for":
+            stop = next((j for j in range(i, len(tokens)) if tokens[j][2] == ";" and _depth(tokens, i, j) == 0),
+                        len(tokens))  # an alias declaration as an init-statement (C++23), `for (using T = int; ;)`
+            if stop < len(tokens) and "=" in (t[2] for t in tokens[i:stop]):
+                found.aliases[tokens[i - 2][0]] = (start, tokens[stop - 1][1])
+                blank(start, tokens[stop - 1][1])
+                i = stop
+        elif w == "static" and _lambda_static(tokens, i - 1):
+            opening = C._opening(tokens, i - 2)  # a static lambda (C++23), `[]() static {}`; `[] static {}` given
+            if before == "]":  # its `()`
+                chars[start:end] = list("()".ljust(end - start))
+                opening = i - 1
+            else:
+                blank(start, end)
+            found.statics[tokens[opening][0]] = start
+        elif w == "operator" and (before in (".", "->") or braces[i - 1] in ("block", "init") and before != "::") and (
+                C._WORD.fullmatch(after) and after not in ("new", "delete", "co_await")):
+            stop = _conversion_type(tokens, i)  # a conversion function's name in an expression, `x.operator int()`
+            found.conversions[start] = (tokens[i][0], tokens[stop - 1][1])
+            chars[start:tokens[stop - 1][1]] = list("_" * (tokens[stop - 1][1] - start))  # a line's end within it
+            i = stop  # too, as the source's lines are counted in the text as written
         elif w == "using" and after not in ("namespace", "enum") and begins:
             stop = next((j for j in range(i, len(tokens)) if tokens[j][2] in (";", "=", "{", "}")), len(tokens))
             commas = [j for j in range(i, stop) if tokens[j][2] == "," and _depth(tokens, i, j) == 0]
@@ -418,7 +451,41 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
             found.items.append((start, start, start))
             found.pragmas[start] = (tokens[i][1], tokens[close][0])
             blank(start, tokens[close][1])
+        else:
+            C._gnu(tokens, braces, i - 1, found, labels, chars)  # GNU's extensions, as C's pre-pass rewrites them
     return "".join(chars), found
+
+
+def _lambda_static(tokens: list[tuple[int, int, str]], at: int) -> bool:
+    """Whether the `static` at `tokens[at]` is a lambda's (C++23): after its parameters, whose `(` follows its captures'
+    `]` or its template parameters' `>`, or after its captures, `[] static`, which no attribute's `]]` and no
+    subscript's `]` is."""
+    before = tokens[at - 1][2] if at > 0 else ""
+    if before not in (")", "]"):
+        return False
+    opening = C._opening(tokens, at - 1)
+    previous = tokens[opening - 1][2] if opening > 0 else ""
+    if before == ")":
+        return previous in ("]", ">")
+    following = tokens[opening + 1][2] if opening + 1 < len(tokens) else ""
+    return following != "[" and previous not in (")", "]", "[") and not (
+        C._WORD.fullmatch(previous) and previous not in ("return", "co_return", "co_yield", "throw"))
+
+
+def _conversion_type(tokens: list[tuple[int, int, str]], first: int) -> int:
+    """The index of the token after the conversion type that begins at `tokens[first]`: its words, its qualifiers' `:`s,
+    its pointers' and references' operators, and its template arguments in angle brackets."""
+    depth, j = 0, first
+    while j < len(tokens):
+        w = tokens[j][2]
+        if w == "<":
+            depth += 1
+        elif w in (">", ">>") and depth > 0:
+            depth = max(0, depth - len(w))
+        elif depth == 0 and not (C._WORD.fullmatch(w) or w in (":", "*", "&", "&&")):
+            break
+        j += 1
+    return j
 
 
 # --- Literals ---
@@ -534,6 +601,8 @@ class _Converter(C._Converter):
             return self.asm(inner[0])
         if not inner:
             return _Node("expressionstatement")
+        if self.local(inner[0]) in self.pre.gotos:  # `goto *p;`, which the pre-pass made `+p;`
+            return _Node("gotostatement", target=self.expression(self.require(inner[0], "argument")))
         return _Node("expressionstatement", expression=self.expression(inner[0]))
 
     def asserting(self, ts: _TS) -> bool:
@@ -558,12 +627,25 @@ class _Converter(C._Converter):
     # Statements C++ restates or adds
 
     def init_statement(self, ts: _TS) -> Any:
-        """An init-statement: a declaration, or a term."""
+        """An init-statement: a declaration, an alias declaration (C++23), or a term."""
         if ts.type == "declaration":
             return self.declaration(ts)
+        if ts.type == "alias_declaration":
+            return self.alias(ts)
         if ts.type == "expression_statement":
             return _Branch("expression", self.expression(self.named(ts)[0]))
         return _Branch("expression", self.expression(ts))
+
+    def aliased(self, opening: _TS) -> _Node | None:
+        """The alias declaration the pre-pass blanked where an init-statement stands after `opening`, a `(`, read
+        again (C++23); None where it blanked none."""
+        span = self.pre.aliases.get(self.local(opening))
+        if span is None:
+            return None
+        converter, root = self.reparsed("", *span, ";")
+        if root.has_error:
+            raise _Invalid("using")
+        return converter.alias(converter.named(root)[0])
 
     def conditioned(self, ts: _TS, made: _Node) -> _Node:
         """`made`, given its initializer and its condition from a condition_clause."""
@@ -605,6 +687,7 @@ class _Converter(C._Converter):
     def for_statement(self, ts: _TS) -> _Node:
         made = _Node("forstatement", body=self.statement(self.require(ts, "body")))
         initializer, condition, update = (self.field(ts, n) for n in ("initializer", "condition", "update"))
+        made.initializer = self.aliased(ts.children[1])
         if initializer is not None:
             made.initializer = self.init_statement(initializer)
         if condition is not None:
@@ -623,7 +706,8 @@ class _Converter(C._Converter):
         right = self.require(ts, "right")
         made.range = self.expression(right)
         initializer = self.field(ts, "initializer")
-        if initializer is not None:
+        made.initializer = self.aliased(ts.children[1])
+        if made.initializer is None and initializer is not None:
             made.initializer = self.init_statement(self.named(initializer)[0] if initializer.type == "init_statement"
                                                    else initializer)
         return made
@@ -786,7 +870,17 @@ class _Converter(C._Converter):
                      arguments=[self.argument(c) for c in self.named(arguments)] if arguments is not None else [])
 
     def arguments(self, ts: _TS) -> list[_Node]:
-        return [self.argument(c) for c in self.named(ts)]
+        """A call's arguments; a type's keyword among them, `va_arg(ap, int)`, which tree-sitter-cpp reads as an
+        error, a type-id, as C's `Parse` reads it."""
+        out = []
+        for c in ts.children:
+            kept = self.named(c)
+            if c.type == "ERROR" and len(kept) == 1 and kept[0].type == "primitive_type":
+                self.consumed.update(n.id for n in (c, *c.children))
+                out.append(_Node("typeid", specifiers=self.specifier(kept[0])))
+            elif c.is_named and c.type not in ("comment", "ERROR"):
+                out.append(self.argument(c))
+        return out
 
     def argument(self, ts: _TS) -> _Node:
         """An argument: an expression, or a type-id, where tree-sitter reads one (a template's, an attribute's)."""
@@ -800,6 +894,9 @@ class _Converter(C._Converter):
 
     def name(self, ts: _TS) -> _Node:
         kind = ts.type
+        span = self.pre.conversions.get(self.local(ts))
+        if span is not None:  # `x.operator int`, which the pre-pass made a name
+            return _Node("conversionname", type=self.part_type(*span))
         if kind in _NAMES or kind == "primitive_type":
             return self.identifier(ts)
         if kind in ("template_type", "template_function", "template_method"):
@@ -1061,10 +1158,10 @@ class _Converter(C._Converter):
         """A declarator, with what initializes it, its trailing `requires` (and, a member's, its virt-specifiers)."""
         self.lifted = {}
         if ts.type == "init_declarator":
-            made = _Node(kind, declarator=self.declarator(self.require(ts, "declarator")))
+            made = _Node(kind, declarator=self.declared(self.require(ts, "declarator")))
             made.initializer = self.initializer(self.require(ts, "value"), self.has(ts, "="))
         else:
-            made = _Node(kind, declarator=self.declarator(ts))
+            made = _Node(kind, declarator=self.declared(ts))
         made.requires = self.lifted.get("requires")
         if self.lifted.get("virt_specifiers"):
             if kind != "memberdeclarator":
@@ -1500,9 +1597,13 @@ class _Converter(C._Converter):
         return made
 
     def lambda_declarator(self, ts: _TS) -> _Node:
-        made = _Node("lambdadeclarator", parameters=self.parameters(self.require(ts, "parameters")), specifiers=[],
-                     attributes=[])
+        parameters = self.require(ts, "parameters")
+        made = _Node("lambdadeclarator", parameters=self.parameters(parameters), specifiers=[], attributes=[])
+        static = self.pre.statics.get(self.local(parameters))  # `static` (C++23), which the pre-pass blanked
         for c in self.named(ts):
+            if static is not None and self.local(c) > static:
+                made.specifiers.append(_Node("declspecifier", keyword="static"))
+                static = None
             if c.type == "parameter_list":
                 continue
             if c.type in ("type_qualifier", "storage_class_specifier"):
@@ -1515,6 +1616,8 @@ class _Converter(C._Converter):
                 made.requires = self.requires_clause(c)
             else:  # an attribute specifier, the last kind of part
                 made.attributes.append(self.attribute(c))
+        if static is not None:
+            made.specifiers.append(_Node("declspecifier", keyword="static"))
         return made
 
     def requires_expression(self, ts: _TS) -> _Node:
