@@ -300,12 +300,13 @@ class _Definer(C._Definer):
 
     def qualifier(self, value: Any, scope: Scope, at: Anchor) -> None:
         """A qualifier of a qualified name, which the name's text holds: its template arguments, or a decltype's
-        expression, evaluated."""
+        expression, evaluated; an identifier, the name's own, is not visited."""
         tag, record = _branch(value)
-        self.program.located(at, scope)
         if tag == "templateid":
+            self.program.located(at, scope)
             self.within(record, Objects.properties(record), scope, at)
         elif tag != "identifier":
+            self.program.located(at, scope)
             self.fields(record, scope, at, ORDINARY)
 
     def lambda_(self, record: Any, props: dict[str, Any], scope: Scope, at: Anchor, space: str) -> None:
@@ -586,11 +587,13 @@ class _Definer(C._Definer):
             self.prop(node, props, name, inner, at, ORDINARY)
         body = at.child("body", None, _rank(node, "body"))
         tag, record = _branch(props["body"])
-        self.program.located(body, inner)
         if tag == "compoundstatement":
+            self.program.located(body, inner)
             self.children(record, inner, body)
-        else:  # a function-try-block, `= default` or `= delete`
+        elif tag == "trystatement":  # a function-try-block
             self.statement(record, inner, body)
+        else:  # `= default` or `= delete`, a part
+            self.program.located(at.at("body", _rank(node, "body")), inner)
 
     def handler(self, node: Any, props: dict[str, Any], scope: Scope, at: Anchor) -> None:
         """A `catch`: its parameter a variable of a block of its own, which its body is."""
