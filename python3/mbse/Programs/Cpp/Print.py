@@ -130,8 +130,7 @@ class Printer(C.Printer):
         """`head {`, a `try`'s block, and each handler, `} catch (parameter) {`."""
         lines = self.braced(head, _statements(_held(node.body), "body"), level)
         for handler in _many(node.handlers):
-            lines = _joined(lines, self.braced(f"catch ({self.written(_held(handler.parameter))})", _statements(
-                _held(handler.body), "body"), level))
+            lines = _joined(lines, self.STATEMENTS["Handler"](self, handler, level))
         return lines
 
     # Statements
@@ -232,6 +231,8 @@ class Printer(C.Printer):
                                                                         level),
         "ExportDeclaration": lambda self, node, level: self.wrapping("export", node, level),
         "TemplateDeclaration": template, "ExplicitInstantiation": instantiation, "AccessSpecifier": access,
+        "Handler": lambda self, node, level: self.braced(f"catch ({self.written(_held(node.parameter))})", _statements(
+            _held(node.body), "body"), level),
     }
 
     SIMPLE: ClassVar[dict[str, Callable[[Printer, Any], str]]] = {
@@ -256,8 +257,8 @@ class Printer(C.Printer):
 
 
 KINDS: tuple[str, ...] = (*Printer.SIMPLE, *Printer.STATEMENTS)
-"""The kinds the printer prints, by their names below `Programs.Cpp`: every one of `Statements.KINDS` but the clause
-`Handler`, which its `try` prints, and the language's `Error`."""
+"""The kinds the printer prints, by their names below `Programs.Cpp`: every one of `Statements.KINDS`, and the
+language's `Error`."""
 
 
 # --- Entry points ---

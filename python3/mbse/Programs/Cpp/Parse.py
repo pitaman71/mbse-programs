@@ -47,8 +47,9 @@ What tree-sitter-cpp cannot parse, which the pre-pass rewrites where it found an
 
 5. **An explicit object parameter** (C++23), `void f(this S &self)`: `this` blanked, the converter making the
    parameter's `this_keyword`.
-6. **A using-declaration of several declarators** (C++17), `using std::a, std::b;`: the declarators after the first
-   blanked, the converter reading each back.
+6. **A using-declaration of several declarators** (C++17), `using std::a, std::b;`, **or a declarator `typename`
+   introduces**, `using typename T::b;`: the declarators after the first, and `typename`, blanked, the converter
+   reading each back, `typename_keyword` where it was written.
 7. **A bit-field's default member initializer** (C++20), `int x : 4 = 1;`, `int y : 2 {3};`: blanked, the converter
    reading it back into the member's declarator's `initializer`.
 8. **An attribute-using-prefix** (C++17), `[[using gnu: hot, cold]]`: `using gnu:` blanked, the converter giving the
@@ -63,7 +64,8 @@ What tree-sitter-cpp cannot parse, which the pre-pass rewrites where it found an
     as C's `Parse` does (its 15).
 12. **The null directive**, `#` alone on its line: blanked, the converter listing an `otherdirective` with no name
     where it stood, as C's does (its 12).
-13. **Digraphs**, `<: :> <% %> %: %:%:`: rewritten as the tokens they spell, as the model holds them.
+13. **Digraphs**, `<: :> <% %> %: %:%:`: rewritten as the tokens they spell, as the model holds them; and **`->*`**,
+    which it reads as `->` and an error: rewritten `.*`, the converter making it `->*` again.
 
 What tree-sitter-cpp misreads, which the converter corrects:
 
@@ -113,8 +115,8 @@ What tree-sitter-cpp reads but C++ rejects, which the converter keeps invalid sy
 32. **C's constructs**: `_Generic`, a compound literal of a type-id, `(struct p){1}`, C's index designators, `[0] = 1`,
     an array declarator's `static`, qualifiers and `[*]`, K&R definitions, and the keywords `restrict`, `_Atomic`,
     `_Noreturn`, `_Thread_local` and `_Alignas`.
-33. **Literals C++ rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C++ has not (`1uu`, `1.0ff`), an escape
-    of no character.
+33. **Literals C++ rejects**: an octal one with a digit 8 or 9 (`08`), and an escape of no character (`'\\x'`); a
+    suffix C++'s literals have not, `1uu`, a user-defined literal's, as tree-sitter reads it.
 34. **A conditional directive's closing or continuing line where none is open**, `#endif` alone.
 35. **Virt-specifiers where no member is declared**, `int f() override;` at namespace scope, and a function's
     definition whose declarator declares no function.
@@ -216,6 +218,7 @@ class _Prepared(C._Prepared):
         self.bitfields: dict[int, tuple[int, int]] = {}  # by where a bit-field's width ends: its initializer's span
         self.namespaces: dict[int, str] = {}  # by the `[[`: its `using` namespace
         self.empties: set[int] = set()  # the offset of a `;` written after a label ending a block
+        self.typenames: set[int] = set()  # the offset of a using-declarator's name, after its `typename`
 
 
 def _masked(text: str) -> str:
@@ -348,10 +351,17 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
         # What tree-sitter-cpp cannot parse
         if w in C._DIGRAPHS:
             chars[start:end] = list(C._DIGRAPHS[w])
+        elif w == "->" and after == "*" and tokens[i][0] == end:
+            chars[start:end + 1] = list(".* ")  # `->*`, which it reads as `->` and an error
+            found.keywords[start] = "->*"
         elif w == "this" and before in ("(", ",") and (C._WORD.fullmatch(after) or after == "::") and (
                 after not in ("this",)):
             blank(start, end)  # an explicit object parameter (C++23), `this S &self`
             found.this.add(tokens[i][0])
+        elif w == "typename" and before in ("using", ",") and "using" in _heads(tokens, i - 1) and "=" not in (
+                _heads(tokens, i - 1)):
+            blank(start, end)  # a using-declarator's `typename`, `using typename T::b;`
+            found.typenames.add(tokens[i][0])
         elif w == "using" and after not in ("namespace", "enum") and begins:
             stop = next((j for j in range(i, len(tokens)) if tokens[j][2] in (";", "=", "{", "}")), len(tokens))
             commas = [j for j in range(i, stop) if tokens[j][2] == "," and _depth(tokens, i, j) == 0]
@@ -1197,7 +1207,7 @@ class _Converter(C._Converter):
         if self.has(ts, "enum"):
             return _Node("usingenumdeclaration", type=target)
         made = _Node("usingdeclaration", declarators=[_Node("usingdeclarator", typename_keyword=self.has(
-            ts, "typename"), name=target)])
+            ts, "typename") or self.local(self.named(ts)[-1]) in self.pre.typenames, name=target)])
         for start, end in self.pre.usings.get(self.local(ts), []):
             converter, root = self.reparsed("using ", start, end, ";")
             if root.has_error:
@@ -1410,6 +1420,7 @@ class _Converter(C._Converter):
 
     def field_expression(self, ts: _TS) -> _Node:
         operator, member = self.text(self.require(ts, "operator")), self.require(ts, "field")
+        operator = self.pre.keywords.get(self.local(self.require(ts, "operator")), operator)  # `->*`, made `.*`
         if operator in (".*", "->*"):
             return _Node("binaryexpression", left=self.expression(self.require(ts, "argument")), operator=operator,
                          right=self.expression(member))
