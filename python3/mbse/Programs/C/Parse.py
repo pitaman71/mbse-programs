@@ -137,7 +137,8 @@ What tree-sitter-c reads but C rejects, which the converter keeps invalid syntax
 36. **A function's definition whose declarator declares no function**, `int m { return 0; }` and `int (*m)[3] {}`,
     which it reads as a function's definition: an `Error`.
 37. **GNU's asm label on a function's definition**, `int f(void) asm("g") { ... }`, which GCC takes on a declaration
-    alone: an `Error`; and an asm label of what declares no identifier, or a second one.
+    alone: an `Error`; a second asm label, `int x asm("a") asm("b");`, which it cannot read, as its recovery
+    leaves it.
 38. **`_Pragma` of what is no one string literal**, `_Pragma(x)`, `_Pragma("a" "b")`, and **`&&` of what is no
     label's name**, `&&(l)`: an `error` term within an expression, an `Error` where an item stands.
 
@@ -186,7 +187,7 @@ import bisect
 import math
 import re
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import tree_sitter_c
 from mbse.Expressions.C.Expressions.Expressions import SUFFIXES
@@ -1369,12 +1370,9 @@ class _Converter:
 
     @staticmethod
     def label(declarator: _Node | None, label: _Node) -> None:
-        """`label` given to the identifier `declarator` declares, its `asm`; `_Invalid` where it declares none (an
-        abstract declarator), or has one already."""
-        named = _identifier(declarator)
-        if named is None or named.asm is not None:
-            raise _Invalid("asm")
-        named.asm = label
+        """`label` given to the identifier `declarator` declares, its `asm`: tree-sitter-c reads an asm label only
+        after a declarator, and the pre-pass blanks one only after a declarator's name, `]` or parameters, each once."""
+        cast(_Node, _identifier(declarator)).asm = label
 
     def inner_declarator(self, ts: _TS) -> _Node:
         kind = ts.type
@@ -1459,9 +1457,7 @@ class _Converter:
                 made.declarators.append(_Node("initdeclarator", declarator=self.declared(
                     self.require(c, "declarator")), initializer=self.expression(self.require(c, "value"))))
             elif c.type == "gnu_asm_expression":  # GNU's asm label, which tree-sitter-c reads as a declarator of its
-                if not made.declarators or made.declarators[-1].initializer is not None:  # own, after the one it
-                    raise _Invalid(c.type)  # labels: before what initializes it, never after
-                self.label(made.declarators[-1].declarator, self.asm_label(c))
+                self.label(made.declarators[-1].declarator, self.asm_label(c))  # own, after the plain one it labels
             else:
                 made.declarators.append(_Node("initdeclarator", declarator=self.declared(c)))
         return made
