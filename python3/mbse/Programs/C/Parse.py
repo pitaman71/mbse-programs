@@ -160,8 +160,11 @@ Decided here *(agent, for review)*:
 - **What is absent is absent.** A property tree-sitter's tree gives no value, an empty list, or a flag that is false is
   not written.
 - **A literal's value** is what C reads its spelling as: an integer's (an int, `0` octal, as C's grammar spells it), a
-  floating literal's (a float; beyond the largest, infinity), a character's code (an int; of several characters, each
-  shifted in after the one before it, as GCC reads them), a string's characters, its escapes decoded, and C23's `true`
+  floating literal's (a float; beyond the largest, infinity), a character's code (an int, each escape its own number,
+  unbounded: `L'\\xffffffff'` is 4294967295, whether it fits its type the ABI's to say, at the call; of several
+  characters, each shifted in after the one before it, as GCC reads them), a string's characters, its escapes decoded
+  (an escape beyond Unicode's last code point taken modulo it, as a string's value is text: a gap, reported), and
+  C23's `true`
   and `false`, with its spelling, `text`, and what the spelling encodes: `prefix`, `quote`, `base`, `separators`,
   `suffix`.
 - **Positions**: each statement's, declaration's, member declaration's, directive's, comment's and error's line is
@@ -611,8 +614,8 @@ _FLOATING = re.compile(r"((?:[0-9](?:'?[0-9])*)?\.(?:[0-9](?:'?[0-9])*)?(?:[eE][
 
 
 def _unescape(body: str) -> str:
-    """A character's or a string's characters, of the text between its quotes: its escapes decoded. ValueError for an
-    escape of no character, `\\x` without digits."""
+    """A string's characters, of the text between its quotes: its escapes decoded. ValueError for an escape of no
+    character, `\\x` without digits."""
     def one(match: re.Match[str]) -> str:
         escape = match.group(1)
         if escape[0] == "x":
@@ -627,6 +630,29 @@ def _unescape(body: str) -> str:
             return ""
         return _ESCAPES.get(escape, escape)
     return _ESCAPE.sub(one, body.replace("\\\r\n", ""))
+
+
+def _units(body: str) -> list[int]:
+    """A character constant's values, of the text between its quotes: each character's code point, each escape's own
+    number, unbounded, as written (`'\\xffffffff'` is 4294967295): whether it fits the constant's type is the ABI's to
+    say, which validation applies at the call (`Check.validate_for`), not the parser *(agent)*. ValueError as
+    `_unescape`."""
+    out: list[int] = []
+    at = 0
+    body = body.replace("\\\r\n", "")
+    for match in _ESCAPE.finditer(body):
+        out += [ord(ch) for ch in body[at:match.start()]]
+        escape = match.group(1)
+        if escape[0] == "x" or (escape[0] in "uU" and len(escape) > 1):
+            if len(escape) == 1:
+                raise ValueError(escape)
+            out.append(int(escape[1:], 16))
+        elif escape[0] in "01234567":
+            out.append(int(escape, 8))
+        elif escape not in ("\n", "\r"):  # a line continued is nothing
+            out.append(ord(_ESCAPES.get(escape, escape)))
+        at = match.end()
+    return out + [ord(ch) for ch in body[at:]]
 
 
 def _number(text: str) -> _Node:
@@ -1587,14 +1613,18 @@ class _Converter:
         text = self.text(ts)
         quote = "'" if ts.type == "char_literal" else '"'
         prefix = text[:text.index(quote)]
+        body = text[len(prefix) + 1:-1]
         try:
-            value = _unescape(text[len(prefix) + 1:-1])
+            if quote == "'":
+                units = _units(body)
+            else:
+                value = _unescape(body)
         except ValueError:
             raise _Invalid(text) from None
         if quote == "'":
             code = 0
-            for ch in value:  # several characters: each shifted in after the one before it, as GCC reads them
-                code = (code << 8 | ord(ch)) if len(value) > 1 else ord(ch)
+            for unit in units:  # several characters: each shifted in after the one before it, as GCC reads them
+                code = (code << 8 | unit) if len(units) > 1 else unit
             return _Node("literal", value=_scalar(code), text=text, prefix=prefix or None, quote="'")
         return _Node("literal", value=_scalar(value), text=text, prefix=prefix or None, quote='"')
 
