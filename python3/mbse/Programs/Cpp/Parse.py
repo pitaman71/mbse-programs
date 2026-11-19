@@ -1025,9 +1025,7 @@ class _Converter(C._Converter):
             return _Node("packdeclarator", declarator=self.declarator(parts[0]) if parts else None)
         if kind == "structured_binding_declarator":  # `[a, b]` (C++17)
             return _Node("structuredbindingdeclarator", bindings=[self.identifier(c) for c in self.named(ts)])
-        if kind == "operator_cast":
-            return self.conversion(ts, None)
-        raise _Invalid(kind)
+        return self.conversion(ts, None)  # an `operator_cast`, the last kind of declarator
 
     def function_declarator(self, ts: _TS) -> _Node:
         """A function's declarator; its trailing requires-clause and virt-specifiers, the declaration's, are kept
