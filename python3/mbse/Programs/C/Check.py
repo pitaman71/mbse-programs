@@ -17,14 +17,15 @@ TypeScript5's `Check` joins them *(agent)*: a statement's, declaration's or memb
 holds it, with its index where that holds a list, from the unit's `body` (`body[2]`, `body[0].consequence`,
 `body[3].body.body[0]`, a K&R definition's `body[1].declarations[0]`); a part's that holds no statement, its statement's
 then its property (`body[0].declarators[1]`); a term's, helper's or kind's record of mbse-expressions', the place of the
-outermost one that holds it, within its statement or its part (`body[0].expression`, `body[0].declarators[0].initializer`,
-`body[2].specifiers[0]`, `body[1].declarators[0].declarator`). Statements within a term, a statement expression's
-`block`, a struct's or a union's `members` and a conditional directive's `group`, are located through the term's place,
-as `Definitions` anchors them: a struct's member declarations are `body[0].specifiers[0].members.members[1]`, a
-directive's group's statements `body[3].directive.group.body[0]`. So: `body[2]: StaticAssertDeclaration.keyword
-'static_assert' needs C23`, `body[0].specifiers[0]: bitintspecifier needs C23`. mbse-expressions' term readers stop
-where a term holds statements (`Terms.boundaries`): this module reads records itself (`Objects.properties`,
-`Terms.kind_of`), as `Definitions` does, and reads what a block, a member list or a group holds as statements.
+outermost one that holds it, within its statement or its part (`body[0].expression`,
+`body[0].declarators[0].initializer`, `body[2].specifiers[0]`, `body[1].declarators[0].declarator`). Statements
+within a term, a statement expression's `block`, a struct's or a union's `members` and a conditional directive's
+`group`, are located through the term's place, as `Definitions` anchors them: a struct's member declarations are
+`body[0].specifiers[0].members.members[1]`, a directive's group's statements `body[3].directive.group.body[0]`. So:
+`body[2]: StaticAssertDeclaration.keyword 'static_assert' needs C23`, `body[0].specifiers[0]: bitintspecifier needs
+C23`. mbse-expressions' term readers stop where a term holds statements (`Terms.boundaries`): this module reads records
+itself (`Objects.properties`, `Terms.kind_of`), as `Definitions` does, and reads what a block, a member list or a group
+holds as statements.
 
 What an edition has is read from data, as mbse-expressions records it (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided)):
 a statement, declaration or member kind is available where a standard of that edition's designation, among those
@@ -219,7 +220,8 @@ FEATURES: dict[str, Callable[[Terms.Node], list[tuple[str, str]]]] = {
         "directive") in ("warning", "embed") else [],
 }
 """The features of a term or a helper that its properties' values make, by its kind (its tag, or its helper's): each
-feature's name, and the edition it arrived in, by its common name *(agent: code until mbse-expressions records them)*."""
+feature's name, and the edition it arrived in, by its common name *(agent: code until mbse-expressions records
+them)*."""
 
 
 def _labeled(kind: str, held: dict[str, Any]) -> list[tuple[str, str]]:

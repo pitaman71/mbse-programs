@@ -1,4 +1,5 @@
-"""Definitions: the names a C translation unit declares, in the scopes and name spaces C gives them, read from the store.
+"""Definitions: the names a C translation unit declares, in the scopes and name spaces C gives them, read from the
+store.
 
 As the user decided for the port ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../docs/proposals/port/README.md#decided),
 6): entities, name resolution and the program stay code over the stored tree, computed on demand and never stored, and
@@ -53,10 +54,10 @@ an enumeration's enumerator.
 
 Every statement, declaration, member declaration and term is located in the scope it is evaluated in, as is every
 place that binds a name, but for the names that name no entity of the program, which are not visited: a member's name
-(`a.b`'s `b`, a designator's `.b`), an `asm` operand's symbolic name, a macro's parameters, and an attribute's name. What
-it does not do: resolve members (`a.b`, whose `b` depends on `a`'s type), run the preprocessor (a macro's replacement
-is text, and `#undef` is not read), tell typedef names from other names where the parser did not (`Parse`, item 31),
-or follow names into included files.
+(`a.b`'s `b`, a designator's `.b`), an `asm` operand's symbolic name, a macro's parameters, and an attribute's name.
+What it does not do: resolve members (`a.b`, whose `b` depends on `a`'s type), run the preprocessor (a macro's
+replacement is text, and `#undef` is not read), tell typedef names from other names where the parser did not (`Parse`,
+item 31), or follow names into included files.
 
 Decided by the agent where the port left it open, each *(agent)*:
 
@@ -110,7 +111,7 @@ Decided by the agent where the port left it open, each *(agent)*:
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from mbse.Expressions.Framework import Objects, Terms
 from mbse.Schemas.Framework import Plain, References
@@ -634,7 +635,7 @@ class _Definer:
         def bind(name: str, place: Anchor) -> None:
             entity = self.bind(scope, name, place, "function")
             self.program.declares(at, entity)
-            inner.owner = entity.scope = entity
+            inner.owner, entity.scope = entity, inner
 
         self.declarator(props["declarator"], scope, at.at("declarator", _rank(node, "declarator")), bind, inner)
         if "declarations" in props:  # a K&R definition's: its parameters'
@@ -676,11 +677,9 @@ class _Definer:
         for i, specifier in enumerate(_many(props.get("specifiers"))):
             tag, record = _branch(specifier)
             fields = Objects.properties(record)
-            if tag == "classspecifier" and "name" not in fields and "declarators" not in props:  # anonymous
-                self.program.located(specifiers.at(i, i), enclosing)
-                inner = self.tag(record, fields, enclosing, specifiers.at(i, i), False)
-                if inner is not None:
-                    members.transparent.append(inner)
+            if tag == "classspecifier" and "name" not in fields and "members" in fields and "declarators" not in props:
+                self.program.located(specifiers.at(i, i), enclosing)  # anonymous: its members are `members`'
+                members.transparent.append(cast(Scope, self.tag(record, fields, enclosing, specifiers.at(i, i), False)))
             else:
                 self.visit(specifier, enclosing, specifiers.at(i, i), ORDINARY)
         declarators = at.at("declarators", _rank(node, "declarators"))

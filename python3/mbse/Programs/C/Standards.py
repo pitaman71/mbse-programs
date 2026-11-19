@@ -2,9 +2,9 @@
 
 As the user decided for the port ([Porting to the stabilized mbse-schemas and mbse-expressions](../../../../../docs/proposals/port/README.md#decided),
 question 4), each language is a singleton by name, owning its statement kinds, "its standards recorded as data, as for
-C and C++"; on which: "Maybe C11, C17, C23 Cpp17, cpp20, cpp23"; and, for stage 4, "Their standards are mbse-expressions'
-C and C++ dialects': C11, C17 (C11's corrigenda, with no new syntax) and C23". This records them as mbse-expressions
-records its dialects' (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided)):
+C and C++"; and, asked how C and C++ divide into major versions: "Maybe C11, C17, C23 Cpp17, cpp20, cpp23", C17 being
+C11's corrigenda, with no new syntax. Stage 4 takes them as mbse-expressions' C dialects have them, and this records
+them as mbse-expressions records its dialects' (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided)):
 
 - `install` extends `Programs.C.Language` with the adjacency `standards`, through `Expressions.Framework.Covers`, and
   adds it to the framework's union of dialects, `Expressions.Framework.Dialect`, as the branch `programs_c`, which
@@ -64,8 +64,8 @@ EDITIONS = {"C11": ("ISO/IEC 9899:2011", 2011), "C17": ("ISO/IEC 9899:2018", 201
 """The editions of C the language covers, by common name, in order: each its designation and its revision's year."""
 
 SINCE: dict[str, str] = {"AttributeDeclaration": "C23"}
-"""The edition each statement, declaration or member kind arrived in, by its common name, where it is not C11, from which
-`define` writes the kinds each edition has."""
+"""The edition each statement, declaration or member kind arrived in, by its common name, where it is not C11, from
+which `define` writes the kinds each edition has."""
 
 EXTENSIONS = ("AsmDeclaration",)
 """The kinds in no edition: GNU's."""
@@ -116,7 +116,7 @@ def prepare(store: Any) -> Any:
     """`store`, holding `C.INSTALLS`, given the data `Check` reads: the installs of `ISO/IEC 11404` and `IEEE 754`,
     mbse-expressions' `define`s for `C`, `C Types` and `C Preprocessor`, then `install` and `define`, each in a
     transaction of its own. Run again, it writes nothing."""
-    for each in (ISOIEC11404.install, IEEE754.install, CExpressions.define, CTypes.define, CPreprocessor.define, install,
-                 define):
+    for each in (ISOIEC11404.install, IEEE754.install, CExpressions.define, CTypes.define, CPreprocessor.define,
+                 install, define):
         store.transaction(each)
     return store
