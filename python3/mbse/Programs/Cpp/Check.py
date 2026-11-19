@@ -70,11 +70,14 @@ refers to taken as bound, binding being `Definitions`'.
 **The ABI is applied last**, as for C. As the user decided, "Of course C and C++ need a ABI, but if we can model
 programs in an abi-agnostic form and apply the ABI at the last minute, that would be advantageous". A program names no
 ABI: a unit holds C++ as written, and nothing in its tree depends on a target. `validate` checks what does not depend
-on one; the checks that do are not made: a literal's type and its range, `sizeof` and `alignof`, and constant
-evaluation (an array's size, a `static_assert`'s condition, a bit-field's width, a template's constant argument). A
-later step applies an ABI at the call that needs one, as `Programs.C.Check` plans (`validate_for(store, path, abi)`).
-Until then, the problems mbse-expressions gives where a type needs an ABI ("'int' is not a type C++ defines, and its
-expression names no ABI") stand for those deferred checks, and `validate` leaves them out, as C's does.
+on one; the checks that do are not made: a literal's type and its range (`1`'s `int`, `'\\xc8'`'s `char`, whose
+signedness C++ leaves to the implementation), `sizeof` and `alignof`, and constant evaluation (an array's size, a
+`static_assert`'s condition, a bit-field's width, a template's constant argument): its terms are validated within
+mbse-expressions' `Domains.Reading(None)`, which defers each check needing an ABI rather than reporting it. The ABI is
+applied at the call that needs one, as C's (`Programs.C.Check`): `validate_for(store, path, abi)` validates within
+`Domains.Reading` of the ABI dialect's singleton named `abi` (`Expressions.SystemV.AMD64`, `Expressions.Arm.AAPCS64`,
+`ABIS`, C's, as each serves C and C++ alike), so that each literal's type and range is checked under that target, and
+`prepare_abi(store, abi)`, C's, gives a store the ABI's schemas and types, after `Standards.prepare`.
 """
 
 from __future__ import annotations
@@ -89,11 +92,12 @@ from mbse.Expressions.Cpp.Types import Expressions as CppTypes
 from mbse.Expressions.Framework import Objects, Terms
 
 from ..C import Check as C
-from ..C.Check import _Availability, _bound, _branch, _kind, _read, _terms, _unique, _walk
+from ..C.Check import ABIS, _applied, _Availability, _bound, _branch, _kind, _read, _terms, _unique, _walk, prepare_abi
 from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
-__all__ = ["check", "check_file", "validate", "validate_file", "FEATURES", "STATEMENT_FEATURES"]
+__all__ = ["check", "check_file", "validate", "validate_file", "validate_for", "validate_file_for", "prepare_abi",
+           "ABIS", "FEATURES", "STATEMENT_FEATURES"]
 
 Version = tuple[int, ...]
 Found = list[tuple[str, str]]
@@ -376,11 +380,23 @@ def _validate(unit: Any) -> list[str]:
 
 def validate(store: Any, path: str) -> list[str]:
     """The problems of the unit at `path` as a tree, in source order, each located by its place: its kinds' own rules,
-    and its terms' problems as their dialects validate them. Raises LookupError where the workspace holds no file at
-    `path`."""
+    and its terms' problems as their dialects validate them, those that need an ABI deferred. Raises LookupError where
+    the workspace holds no file at `path`."""
     return _read(store, path, validate_file)
 
 
 def validate_file(unit: Any) -> list[str]:
     """`validate` of a unit's visitor, read within the caller's transaction."""
     return Domains.Reading(None).run(lambda: _validate(unit))
+
+
+def validate_for(store: Any, path: str, abi: str) -> list[str]:
+    """`validate` of the unit at `path` with the ABI dialect named `abi` applied (`ABIS`): what `validate` defers, each
+    literal's type and range, checked under that target. The store must hold the ABI (`prepare_abi`). Raises
+    LookupError where the workspace holds no file at `path`, or the store no such ABI."""
+    return _read(store, path, lambda unit: validate_file_for(store, unit, abi))
+
+
+def validate_file_for(store: Any, unit: Any, abi: str) -> list[str]:
+    """`validate_for` of a unit's visitor, read within the caller's transaction."""
+    return _applied(store, unit, abi, _validate)

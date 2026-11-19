@@ -545,14 +545,12 @@ class's member declarations (`members`, which their `body: bool` only marked).
    (`#if` within a function's body, closed after it) is an entry in each parser's enumerated departures.
 4. **The ABI is applied last**: "Of course C and C++ need a ABI, but if we can model programs in an abi-agnostic form
    and apply the ABI at the last minute, that would be advantageous". A program names no ABI: a translation unit holds
-   C as written, and nothing in its tree depends on a target. `Check.validate` checks what does not depend on one; the
-   checks that do are not made: a literal's type and its range, `sizeof` and `_Alignof`, and constant evaluation (an
-   array's size, a `static_assert`'s condition, a bit-field's width, a `case` label's value). A later step applies an
-   ABI at the call that needs one: `validate_for(store, path, abi)` is planned, with mbse-expressions reading a term's
-   types under an ABI the caller gives, rather than one the term's holder names, and reporting a check that needs an
-   ABI as deferred rather than as a problem. Until then, the problems mbse-expressions gives where a type needs an ABI
-   ("'int' is not a type C defines, and its expression names no ABI") stand for those deferred checks, and `validate`
-   leaves them out.
+   C or C++ as written, and nothing in its tree depends on a target. `Check.validate`, C's and C++'s, checks what does
+   not depend on one, within mbse-expressions' `Domains.Reading(None)`, which defers the checks that do: a literal's
+   type and its range, `sizeof` and `_Alignof`, and constant evaluation (an array's size, a `static_assert`'s
+   condition, a bit-field's width, a `case` label's value). The ABI is applied at the call that needs one:
+   `validate_for(store, path, abi)` validates within `Domains.Reading` of the ABI the caller names, one of `ABIS`
+   (x86-64's System V ABI and AArch64's AAPCS64, which serve C and C++ alike).
 
 The stage builds, in order: mbse-expressions' open unions for the C family (both implementations, a release); then
 `Programs.C` (statements, parse, print, definitions, standards, check, a C corpus source); then `Programs.Cpp` over it;

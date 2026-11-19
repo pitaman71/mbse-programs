@@ -510,9 +510,14 @@ def validate_for(store: Any, path: str, abi: str) -> list[str]:
 
 def validate_file_for(store: Any, unit: Any, abi: str) -> list[str]:
     """`validate_for` of a unit's visitor, read within the caller's transaction."""
+    return _applied(store, unit, abi, _validate)
+
+
+def _applied(store: Any, unit: Any, abi: str, validated: Callable[[Any], list[str]]) -> list[str]:
+    """A unit's problems as `validated` reads them, within `Domains.Reading` of the ABI named `abi` (`ABIS`)."""
     if abi not in ABIS:
         raise LookupError(f"no ABI {abi!r}: one of {', '.join(ABIS)}")
-    return Domains.Reading(store.singleton(abi)).run(lambda: _validate(unit))
+    return Domains.Reading(store.singleton(abi)).run(lambda: validated(unit))
 
 
 ABIS = {"Expressions.SystemV.AMD64": AMD64, "Expressions.Arm.AAPCS64": AAPCS64}
