@@ -794,10 +794,12 @@ class _Converter:
         whole = bool(nodes) and nodes[0].parent is not None and nodes[0].parent.type == "translation_unit"
         limit = len(self.source.text) if whole or not nodes else self.source.offset(nodes[-1].end_byte)
         i = 0
+        listed = self.after(previous)  # where what the pre-pass blanked is listed up to: each item once
         while i < len(kids):
             ts = kids[i]
             i += 1
-            out += self.blanked(previous, self.local(ts))
+            out += self.blanked(max(self.after(previous), listed), self.local(ts))
+            listed = self.local(ts)
             if ts.type == "comment":
                 out.append(self.comment(ts, previous))
             elif ts.type in _SPECIFIER_NODES and i < len(kids) and kids[i].type == ";":
@@ -825,12 +827,15 @@ class _Converter:
             else:
                 continue
             previous = ts
-        return out + self.blanked(previous, limit)
+        return out + self.blanked(max(self.after(previous), listed), limit)
 
-    def blanked(self, previous: _TS | None, end: int) -> list[_Node]:
-        """The items the pre-pass blanked after `previous` and before `end`: null directives, and the `static_assert`s
-        of a struct's members, read back."""
-        start = 0 if previous is None else self.source.offset(previous.end_byte)
+    def after(self, previous: _TS | None) -> int:
+        """Where the text after `previous` begins: its start, without one."""
+        return 0 if previous is None else self.source.offset(previous.end_byte)
+
+    def blanked(self, start: int, end: int) -> list[_Node]:
+        """The items the pre-pass blanked from `start` and before `end`: null directives, and the `static_assert`s of a
+        struct's members, read back."""
         out = []
         for at, first, last in self.pre.items:
             if start <= at < end:
