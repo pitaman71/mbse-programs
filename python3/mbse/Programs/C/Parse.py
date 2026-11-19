@@ -49,9 +49,11 @@ What tree-sitter-c cannot parse, which the pre-pass rewrites:
    made a name as long, the converter making it an `atomictypespecifier` whose type it reads back.
 4. **Type inference** (C23), `auto x = 1;`, `static auto y = 2;`, which tree-sitter reads with `x` a type and no
    declarator: `auto` rewritten `int`, as long, the converter making it `auto` again.
-5. **Standard attributes after `struct`, `union` or `enum`** (C23), `struct [[deprecated]] s {}`, **and after an
+5. **Standard attributes after `struct`, `union` or `enum`** (C23), `struct [[deprecated]] s {}`, **GNU attributes
+   between its name and its body**, `struct s __attribute__((packed)) {}`, **and standard attributes after an
    enumerator's name**, `A [[deprecated]] = 1`: blanked, the converter reading them back into the specifier's or the
-   enumerator's `attributes`.
+   enumerator's `attributes` (which print after the keyword, where GNU's mean the same); **and standard attributes
+   after a pointer's `*`**, `int * [[a]] p`, read back into the pointer declarator's.
 6. **GNU attributes after a declarator** but a function's, `int x __attribute__((aligned(16))) = 0;`: blanked, the
    converter reading them back into the `attributes` of the declarator they follow (the innermost but its pointers and
    parentheses, whose attributes print where the source wrote these).
@@ -100,16 +102,16 @@ What tree-sitter-c misreads, which the converter corrects:
     GNU's obsolete designator `x: 1`, read as `.x = 1`.
 24. **An attribute declaration** (C23), `[[fallthrough]];`, which it reads as an empty statement with attributes: an
     `AttributeDeclaration`, at file scope as within a block.
-25. **`_Static_assert(x);` and `static_assert(x);` without a message** (C23) where it reads them as calls: a
-    `StaticAssertDeclaration`.
+25. **`static_assert(x, "m");` and `_Static_assert`** (C11; without a message, C23), which it reads as a call, an
+    expression statement: a `StaticAssertDeclaration`.
 
 What tree-sitter-c reads but C rejects, which the converter keeps invalid syntax (an `Error`, or an `error` term):
 
 26. **Statements at file scope**, `x = 1;`, `;`, `{}`: C's translation unit holds declarations alone.
 27. **C++'s linkage specification**, `extern "C" { ... }`, and **Microsoft's extensions** 0.3 did not keep: calling
     conventions (`__cdecl`), pointer modifiers (`__ptr32`, `__based`) and structured exceptions (`__try`).
-28. **Literals C rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C has not (`1x`, GNU's imaginary `i` once
-    tree-sitter reads one), and an escape of no character (`\\x` without digits).
+28. **Literals C rejects**: an octal one with a digit 8 or 9 (`08`), a suffix C has not (`1uu`, `1.0ff`), and an
+    escape of no character (`'\\x'`). GNU's imaginary constants (`1.0i`) tree-sitter cannot read either: an `Error`.
 29. **A conditional directive's closing or continuing line where none is open**, `#endif` alone, which it reads as an
     other directive.
 30. **A macro's use that is no C syntax**, `FOO(T) x;` (a macro's type specifier other than `typeof`), and a type
@@ -308,8 +310,8 @@ def _lex(text: str) -> tuple[list[tuple[int, int, str]], list[tuple[int, int]]]:
     return tokens, directives
 
 
-def _closing(tokens: list[tuple[int, int, str]], i: int) -> int:
-    """The index of the bracket that closes the one at `tokens[i]`, or of the last token if none does."""
+def _closing(tokens: list[tuple[int, int, str]], i: int) -> int | None:
+    """The index of the bracket that closes the one at `tokens[i]`; None if none does."""
     depth = 0
     for j in range(i, len(tokens)):
         if tokens[j][2] in ("(", "[", "{", "<:", "<%"):
@@ -318,7 +320,7 @@ def _closing(tokens: list[tuple[int, int, str]], i: int) -> int:
             depth -= 1
             if depth == 0:
                 return j
-    return len(tokens) - 1
+    return None
 
 
 def _braces(tokens: list[tuple[int, int, str]]) -> list[str]:
@@ -349,8 +351,8 @@ def _parsed_type(root: _TS, source: _Source, offset: int) -> bool:
 
 
 def _inferred(tokens: list[tuple[int, int, str]], i: int) -> bool:
-    """Whether the `auto` at `tokens[i]` begins a declaration whose type is inferred (C23): no type's keyword follows it,
-    but qualifiers and storage classes, before a name and its `=`."""
+    """Whether the `auto` at `tokens[i]` begins a declaration whose type is inferred (C23): no type's keyword follows
+    it, but qualifiers and storage classes, before a name and its `=`."""
     j = i + 1
     while j < len(tokens) and tokens[j][2] in (_CV | {"static", "constexpr", "register", "thread_local",
                                                       "_Thread_local", "extern"}):
@@ -402,10 +404,14 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
             chars[start:end] = list(_DIGRAPHS[word])
         elif word in ("_BitInt", "_Atomic") and after == "(":
             close = _closing(tokens, i + 1)
+            if close is None:  # unclosed: nothing to read back
+                continue
             named(start, tokens[close][1])
             found.names[start] = ("bitint" if word == "_BitInt" else "atomic", tokens[i + 1][1], tokens[close][0])
         elif word in _TYPEOFS and after == "(" and not _parsed_type(root, source, start):
             close = _closing(tokens, i + 1)
+            if close is None:  # unclosed: nothing to read back
+                continue
             if close > i + 2:
                 named(tokens[i + 2][0], tokens[close][0])
                 found.names[tokens[i + 2][0]] = ("typeof", tokens[i + 2][0], tokens[close][0])
@@ -415,17 +421,41 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
             j = i + 1
             while j < len(tokens) and tokens[j][2] == "[" and j + 1 < len(tokens) and tokens[j + 1][2] == "[":
                 close = _closing(tokens, j)
+                if close is None:  # unclosed: nothing to read back
+                    break
                 found.attributes.setdefault(start, []).append((tokens[j][0], tokens[close][1]))
                 blank(tokens[j][0], tokens[close][1])
                 j = close + 1
+        elif word in ("struct", "union", "enum") and _WORD.fullmatch(after) and i + 2 < len(tokens) and (
+                tokens[i + 2][2] in _ATTRIBUTES):
+            j = i + 2
+            while j < len(tokens) and tokens[j][2] in _ATTRIBUTES:
+                close = _closing(tokens, j + 1)
+                if close is None:  # unclosed: nothing to read back
+                    break
+                following = tokens[close + 1][2] if close + 1 < len(tokens) else ""
+                if following in ("{", "<%", *_ATTRIBUTES):  # before its body
+                    found.attributes.setdefault(start, []).append((tokens[j][0], tokens[close][1]))
+                    blank(tokens[j][0], tokens[close][1])
+                j = close + 1
+        elif word == "*" and after == "[" and i + 2 < len(tokens) and tokens[i + 2][2] == "[":
+            close = _closing(tokens, i + 1)  # a pointer's attributes, `* [[a]]`
+            if close is None:  # unclosed: nothing to read back
+                continue
+            found.attributes.setdefault(start, []).append((tokens[i + 1][0], tokens[close][1]))
+            blank(tokens[i + 1][0], tokens[close][1])
         elif braces[i] == "enum" and before in ("{", ",", "<%") and after == "[" and i + 2 < len(tokens) and (
                 tokens[i + 2][2] == "["):
             close = _closing(tokens, i + 1)
+            if close is None:  # unclosed: nothing to read back
+                continue
             found.attributes.setdefault(start, []).append((tokens[i + 1][0], tokens[close][1]))
             blank(tokens[i + 1][0], tokens[close][1])
         elif word in _ATTRIBUTES and after == "(" and (_WORD.fullmatch(before) or before == "]") and (
                 before not in _PRIMITIVES | _CV | {"struct", "union", "enum"}):
             close = _closing(tokens, i + 1)
+            if close is None:  # unclosed: nothing to read back
+                continue
             following = tokens[close + 1][2] if close + 1 < len(tokens) else ""
             if following in ("=", ",", ";", ":"):
                 found.after.setdefault(tokens[i - 1][1], []).append((start, tokens[close][1]))
@@ -462,6 +492,8 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                 blank(tokens[last][0], tokens[j - 1][1])
         elif word == "switch" and after == "(":
             close = _closing(tokens, i + 1)
+            if close is None:  # unclosed: nothing to read back
+                continue
             if close + 1 < len(tokens) and tokens[close + 1][2] not in ("{", "<%"):
                 respell(start, word, "while")
         elif word == "goto" and after == "*":
@@ -840,7 +872,7 @@ class _Converter:
         for comment in held[:first]:
             comment.trailing = False
         try:
-            if any(c.type == "ERROR" or c.is_missing for c in ts.children[:ts.children.index(colon)]):
+            if any(c.type == "ERROR" or c.is_missing for c in ts.children[:ts.children.index(colon) + 1]):
                 raise _Invalid(ts.type)
             if value is None:
                 label = self.new(ts, "defaultstatement", statement=statement)
@@ -1038,25 +1070,21 @@ class _Converter:
         if kind == "storage_class_specifier":
             keyword = self.pre.keywords.get(self.local(ts), spelling)
             return [_Node("declspecifier", keyword=keyword)]
-        if kind == "type_qualifier":
-            inner = self.named(ts)
-            if inner:
-                return [self.attribute(inner[0])]
-            keyword = self.pre.keywords.get(self.local(ts), spelling)
-            if keyword in ("_Complex", "_Imaginary"):
-                return [_Node("primitivetypespecifier", keyword=keyword)]
-            if keyword in _CV:
-                return [_Node("cvqualifier", keyword=keyword)]
-            return [_Node("declspecifier", keyword=keyword)]  # `_Noreturn`, `noreturn`, `inline`, `constexpr`
-        raise _Invalid(kind)
+        inner = self.named(ts)  # a type qualifier, the last kind of specifier
+        if inner:
+            return [self.attribute(inner[0])]
+        keyword = self.pre.keywords.get(self.local(ts), spelling)
+        if keyword in ("_Complex", "_Imaginary"):
+            return [_Node("primitivetypespecifier", keyword=keyword)]
+        if keyword in _CV:
+            return [_Node("cvqualifier", keyword=keyword)]
+        return [_Node("declspecifier", keyword=keyword)]  # `_Noreturn`, `noreturn`, `inline`, `constexpr`
 
     def named_specifier(self, ts: _TS, kind: str, start: int, end: int) -> _Node:
-        """What the pre-pass made a name: `_BitInt(N)`, `_Atomic(T)`, an enumeration's underlying type."""
+        """What the pre-pass made a name: `_BitInt(N)` or `_Atomic(T)`."""
         if kind == "bitint":
             return _Node("bitintspecifier", width=self.part_expression(start, end))
-        if kind == "atomic":
-            return _Node("atomictypespecifier", type=self.part_type(start, end))
-        return self.part_type(start, end)
+        return _Node("atomictypespecifier", type=self.part_type(start, end))
 
     def part_expression(self, start: int, end: int) -> _Node:
         """The expression the text between `start` and `end` writes, read again."""
@@ -1070,7 +1098,7 @@ class _Converter:
     def part_type(self, start: int, end: int) -> _Node:
         """The type name the text between `start` and `end` writes, read again."""
         converter, root = self.reparsed("typeof(", start, end, ") _;")
-        if root.has_error:
+        if root.has_error or converter.pre.names:  # no type name: an expression, which the pre-pass made a name
             raise _Invalid(self.source.text[start:end])
         declaration = converter.named(root)[0]
         return converter.type_id(converter.require(converter.require(declaration, "type"), "type"))
@@ -1142,16 +1170,18 @@ class _Converter:
                      attributes=self.blanked_attributes(self.local(ts))).of("c_types")
         if value is not None:
             made.value = self.expression(value)
-        if ts.has_error and self.unconsumed(ts):
-            return self.invalid(ts).of("c_types")
         return made
 
     def blanked_attributes(self, at: int) -> list[_Node]:
         """The standard attributes the pre-pass blanked after the keyword or the name at `at`, read again."""
         out = []
         for start, end in self.pre.attributes.get(at, []):
-            converter, root = self.reparsed("", start, end, ";")
-            out += [converter.attribute(a) for a in converter.named(converter.named(root)[0])[:-1]]
+            if self.source.text.startswith("[", start):
+                converter, root = self.reparsed("", start, end, ";")
+                out += [converter.attribute(a) for a in converter.named(converter.named(root)[0])[:-1]]
+            else:  # GNU's
+                converter, root = self.reparsed("", start, end, " int _;")
+                out.append(converter.attribute(converter.named(converter.named(root)[0])[0]))
         return out
 
     def attribute(self, ts: _TS) -> _Node:
@@ -1170,9 +1200,7 @@ class _Converter:
         if kind == "ms_declspec_modifier":
             return _Node("declspecspecifier", attributes=[_Node("attribute", name=self.text(a))
                                                           for a in self.named(ts)])
-        if kind != "alignas_qualifier":
-            raise _Invalid(kind)
-        operand = self.named(ts)[0]
+        operand = self.named(ts)[0]  # `_Alignas`, the last kind of attribute
         return _Node("alignasspecifier", keyword=self.text(ts.children[0]), operand=self.type_id(operand)
                      if operand.type == "type_descriptor" else self.expression(operand))
 
@@ -1212,12 +1240,11 @@ class _Converter:
         inner = self.field(ts, "declarator")
         held = self.declarator(inner) if inner is not None else None
         if kind in ("pointer_declarator", "abstract_pointer_declarator"):
-            made = _Node("pointerdeclarator", declarator=held, qualifiers=[], attributes=[])
+            made = _Node("pointerdeclarator", declarator=held, qualifiers=[],
+                         attributes=self.blanked_attributes(self.local(ts)))
             for c in self.named(ts):
                 if c.type == "type_qualifier":
                     made.qualifiers.append(_Node("cvqualifier", keyword=self.text(c)))
-                elif c.type in ("attribute_declaration",):
-                    made.attributes.append(self.attribute(c))
                 elif inner is None or c.id != inner.id:
                     raise _Invalid(c.type)  # Microsoft's pointer modifiers
             return made
@@ -1245,12 +1272,10 @@ class _Converter:
             if len(parts) != 1:
                 raise _Invalid(kind)  # a calling convention, `(__cdecl *f)`
             return _Node("parenthesizeddeclarator", declarator=self.declarator(parts[0]))
-        if kind == "attributed_declarator":
-            parts = self.named(ts)
-            made = self.declarator(parts[0])
-            made.attributes = (made.attributes or []) + [self.attribute(a) for a in parts[1:]]
-            return made
-        raise _Invalid(kind)
+        parts = self.named(ts)  # an attributed declarator, the last kind
+        made = self.declarator(parts[0])
+        made.attributes = (made.attributes or []) + [self.attribute(a) for a in parts[1:]]
+        return made
 
     def parameters(self, ts: _TS) -> list[_Node]:
         out: list[_Node] = []
@@ -1300,12 +1325,6 @@ class _Converter:
         made.body = self.block(self.require(ts, "body"))
         return made
 
-    def static_assert(self, ts: _TS) -> _Node:
-        message = self.field(ts, "message")
-        return _Node("staticassertdeclaration", keyword=self.text(ts.children[0]),
-                     condition=self.expression(self.require(ts, "condition")),
-                     message=self.expression(message) if message is not None else None)
-
     DECLARATIONS: dict[str, Callable[[Any, _TS], Any]] = {}
 
     # Members
@@ -1330,8 +1349,6 @@ class _Converter:
                     else:
                         made.declarators.append(_Node("memberdeclarator", declarator=self.declared(c)))
                 elif c.type == "bitfield_clause":
-                    if not made.declarators:
-                        made.declarators.append(_Node("memberdeclarator"))
                     made.declarators[-1].bitfield = self.expression(self.named(c)[0])
         made.line = self.line(ts)
         return made
@@ -1377,8 +1394,6 @@ class _Converter:
             text = self.written(argument).strip() if argument is not None else ""
             return _Node("otherdirective", directive=_directive_name(directive), text=text or None).of(
                 "c_preprocessor")
-        if kind not in ("preproc_if", "preproc_ifdef", "preproc_elif", "preproc_elifdef", "preproc_else"):
-            raise _Invalid(kind)
         made = _Node(kind.replace("preproc_", "") + "directive").of("c_preprocessor")
         head = ts.children[0]
         if kind in ("preproc_if", "preproc_elif"):
@@ -1494,8 +1509,8 @@ class _Converter:
 
     def initializer_list(self, ts: _TS) -> _Node:
         kids = [c for c in ts.children if not c.is_missing and c.type != "comment"]
-        return _Node("initializerlist", items=[self.designated(c) if c.type == "initializer_pair" else self.expression(c)
-                                               for c in self.named(ts)],
+        items = [self.designated(c) if c.type == "initializer_pair" else self.expression(c) for c in self.named(ts)]
+        return _Node("initializerlist", items=items,
                      trailing_comma=len(kids) > 2 and kids[-2].type == ",")
 
     def designated(self, ts: _TS) -> _Node:
@@ -1584,9 +1599,9 @@ _Converter.STATEMENTS.update({
 
 _Converter.DECLARATIONS.update({
     "declaration": _Converter.declaration, "type_definition": _Converter.declaration,
-    "function_definition": _Converter.function_definition, "static_assert_declaration": _Converter.static_assert,
-    **{kind: lambda self, ts: self.directive(ts, "statement") for kind in ("preproc_include", "preproc_def", "preproc_function_def", "preproc_call", "preproc_if",
-                    "preproc_ifdef")},
+    "function_definition": _Converter.function_definition,
+    **{kind: lambda self, ts: self.directive(ts, "statement") for kind in (
+        "preproc_include", "preproc_def", "preproc_function_def", "preproc_call", "preproc_if", "preproc_ifdef")},
 })
 
 
