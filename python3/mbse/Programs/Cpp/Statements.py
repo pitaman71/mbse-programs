@@ -10,7 +10,10 @@ union listing C's kinds and its own, as mbse-expressions' C++ writers derive fro
 terms, which a C++ term is not (mbse-expressions' `Cpp` is a dialect of its own, with its own copy of each kind it
 shares with C), so C's kinds are reused as mbse-expressions' C++ reuses C's: by name and by definition, each a kind
 `Programs.Cpp.<Kind>` with C's properties (`Programs.C.Statements.properties`, the table C defines its kinds by), its
-expressions C++'s terms *(agent: a schema of C's cannot hold a C++ term)*. `Programs.Cpp.Statement`, the union of its
+expressions C++'s terms. Shown that C's kinds hold C's terms, so that the schemas cannot be shared, and offered (a)
+C++ reusing C's kinds by definition, one table of properties generating both languages' schemas, as built, (b) one
+shared set of schemas over a union of C's and C++'s terms, or (c) mbse-expressions' `Cpp` dialect extending C's, the
+user decided: "(a) is fine for now." `Programs.Cpp.Statement`, the union of its
 statements, lists C's kinds and C++'s own, each tagged by its kind's name in lower case. Where C++'s grammar changes a C
 kind, the kind is restated here with C++'s properties:
 

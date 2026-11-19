@@ -532,7 +532,12 @@ class's member declarations (`members`, which their `body: bool` only marked).
    for both, as 0.3 parsed them: "1(a)".
 2. **C's statement kinds, and C++ reusing them**: `Programs.C` defines its kinds; `Programs.Cpp` defines only what C++
    adds, its union listing C's kinds and its own, as mbse-expressions' C++ writers derive from C's. Asked as (a) that,
-   or (b) two independent sets of kinds: "2(a)".
+   or (b) two independent sets of kinds: "2(a)". Shown then that C's kinds hold C's terms and C++'s terms are of a
+   dialect of their own (mbse-expressions' `Cpp`, with its own copy of each kind it shares with C), so that C's
+   schemas cannot hold C++'s terms and cannot be shared, and offered (a) C++ reusing C's kinds by definition, one
+   table of properties (`Programs.C.Statements.properties`) generating both languages' schemas, as built; (b) one
+   shared set of schemas over a union of C's and C++'s terms; or (c) mbse-expressions' `Cpp` dialect extending C's:
+   "(a) is fine for now."
 3. **A preprocessor directive between statements is a statement holding the directive term**, mbse-expressions'
    `C Preprocessor` term, and a conditional's statements a property of that term, typed by an open union mbse-programs
    extends: the crossover rule applied again. Asked as (a) that, or (b) directives as mbse-programs' own statement
