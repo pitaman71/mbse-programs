@@ -116,6 +116,14 @@ def _depth(tokens: list[tuple[int, int, str]], start: int, at: int) -> int:
     return depth
 
 
+def _heads(tokens: list[tuple[int, int, str]], at: int) -> set[str]:
+    """The words of the member or the statement `tokens[at]` is within, before it."""
+    start = at
+    while start > 0 and tokens[start - 1][2] not in (";", "{", "}"):
+        start -= 1
+    return {w for _, _, w in tokens[start:at]}
+
+
 def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
     """The text with the constructs tree-sitter-cpp cannot parse, or misreads, rewritten, and what was rewritten: what
     it misreads wherever it stands, what it cannot parse only where tree-sitter found an error."""
@@ -146,7 +154,7 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
     while i < len(tokens):
         start, end, w = tokens[i]
         before, after = word(i - 1), word(i + 1)
-        begins, statement = statement, w in (";", "{", "}")
+        begins, statement = statement or i - 1 in pragmas, w in (";", "{", "}")
         i += 1
         # What tree-sitter-cpp misreads, or cannot parse, wherever it stands: C++20's modules, `export`, `extern
         # template`, `if consteval`
@@ -199,8 +207,8 @@ def _prepare(text: str, root: _TS, source: _Source) -> tuple[str, _Prepared]:
                     stop])]
                 blank(tokens[commas[0]][0], tokens[stop - 1][1])
                 i = stop
-        elif w == ":" and braces[i - 1] == "struct" and C._WORD.fullmatch(before) and before not in _ACCESS and (
-                word(i - 2) not in ("case", "?")):
+        elif w == ":" and braces[i - 1] == "struct" and C._WORD.fullmatch(before) and before not in _ACCESS and not (
+                _heads(tokens, i - 1) & {"case", "?", "enum", "class", "struct", "union", "try"}):
             depth, j = 0, i  # a bit-field's width, and the initializer after it (C++20)
             while j < len(tokens) and not (depth == 0 and tokens[j][2] in (";", ",", "=", "{")):
                 depth += 1 if tokens[j][2] in ("(", "[") else -1 if tokens[j][2] in (")", "]") else 0
@@ -298,7 +306,7 @@ class _Converter(C._Converter):
     def blanked(self, start: int, end: int) -> list[_Node]:
         """The items the pre-pass blanked from `start` and before `end`: C's, and C++20's module declarations."""
         out = []
-        for at, first, last in self.pre.items:
+        for at, first, last in sorted(self.pre.items):
             if start <= at < end and at in self.pre.modules:
                 made = self.pre.modules[at]
                 made.line = self.origin.line(self.shift + at)

@@ -108,7 +108,9 @@ class Printer(C.Printer):
             written = self.declarator_of(d.declarator) + self.requires(d.requires) + "".join(
                 " " + v for v in _many(d.virt_specifiers)) + (" = 0" if d.pure.get() else "")
             written += self.optional(d.bitfield, " : " if written else ": ", lambda held: self.e(held, CONDITIONAL))
-            declarators.append(written + self.initialized(d.initializer))
+            initializer = self.initialized(d.initializer)  # after a bit-field's width, `{3}` spaced from it
+            declarators.append(written + (" " if _held(d.bitfield) is not None and initializer[:1] == "{" else "")
+                               + initializer)
         return self.attributes_of(node) + _declared(self.specifiers_of(node), ", ".join(declarators)) + ";"
 
     def function(self, node: Any, level: int) -> list[str]:
