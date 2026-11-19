@@ -89,7 +89,7 @@ from mbse.Expressions.Cpp.Types import Expressions as CppTypes
 from mbse.Expressions.Framework import Objects, Terms
 
 from ..C import Check as C
-from ..C.Check import _a, _Availability, _bound, _branch, _deferred, _kind, _read, _terms, _unique, _walk
+from ..C.Check import _Availability, _bound, _branch, _deferred, _kind, _read, _terms, _unique, _walk
 from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
@@ -109,6 +109,11 @@ _DIALECTS = {"Expressions.Cpp.Expressions.Term": CppExpressions.DIALECT, "Expres
 def _unit(unit: Any) -> Iterator[tuple[str, str | None, Any, str, Any]]:
     """Every record of a unit's tree, as C's `_walk` gives it, from its `body`."""
     return _walk(Objects.properties(unit).get("body"), "body", None, _HOLDERS)
+
+
+def _a(noun: str) -> str:
+    """A noun with its article, as C's (`Programs.C.Check`), but `a` before a `U` read as `you` (`a Using...`)."""
+    return f"a {noun}" if noun.startswith("Us") else C._a(noun)
 
 
 def _many(held: Any) -> tuple[Any, ...]:
