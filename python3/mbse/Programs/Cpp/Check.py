@@ -31,27 +31,21 @@ is not checked: GNU's extensions, a part or a helper, and invalid syntax, a `Pro
 `missing` term, which `validate` reports, as C's *(agent)*. A kind's problem is
 `<kind> needs <the first edition that has it>`.
 
-What a property's value makes available stays code, by the kind that holds it, as C's: a standard tags a kind, not a
-property or a value of one *(agent)*. From the 0.3 language's data (`Ccpp/Syntax.py`, `SINCE` and `FEATURES`, C++'s
-since C++17; what C++17 has, every edition has):
+What an edition changes within a kind is read from data too, as C's: the grammar clauses each statement, member, part,
+term and helper takes, of the dialect whose kind it is, the language's (`Standards.GRAMMAR_CLAUSES`: `if consteval`,
+init-statements, labels, `requires`, nested inline namespaces) and `Cpp`'s, `Cpp Types`' and `C Preprocessor`'s
+(`consteval`, `char8_t`, `<=>`, lambdas' parts, explicit object parameters, `auto(x)`, the suffix `z`, `#warning`, ...),
+each the target allows or forbids; a problem `<its name> needs <the first edition the language covers that allows
+it>`, or `<its name> is in no edition` (`#embed`, which C Preprocessor allows in C23 alone).
 
-- statements, declarations, clauses and parts, `STATEMENT_FEATURES`: `if consteval` (C++23); a range-based `for`'s
-  initializer (C++20); an alias declaration as an init-statement (C++23); a label, a `case` or a `default` without a
-  statement or before a declaration (C++23); a trailing `requires` of a function's definition, a declarator or a
-  member's declarator, and a template's `requires` (C++20); a bit-field's default member initializer (C++20); a nested
-  namespace's name `inline` (C++20); and, beyond 0.3's data, a `static` `operator()` or `operator[]` (C++23)
-  *(agent)*;
-- terms and helpers, `FEATURES`: `consteval` and `constinit` (C++20), `char8_t` (C++20), `<=>` and `operator<=>`, and
-  `operator co_await` (C++20), a lambda's template parameters (C++20) and attributes (C++23), its `requires` (C++20), a
-  pack init-capture (C++20), a constrained placeholder, `Number auto` (C++20), a type parameter's constraint (C++20), a
-  template template parameter's `requires` (C++20), an explicit object parameter (C++23), structured bindings (C++17)
-  and `explicit(condition)` (C++20); and, beyond 0.3's data, a static lambda (C++23), a subscript of several indices
-  (C++23), `auto(x)` and `auto{x}` (C++23), the literal suffixes `z` and `uz` (C++23), and C Preprocessor's `#warning`
-  (C++23), a directive's name within `otherdirective`, which its data does not record *(agent)*.
+What no grammar clause can express stays code, `UNRECORDED`, by the kind that holds it, each with its reason, as C's
+*(agent)*: a bit-field's default member initializer (C++20) and a `static` `operator()` or `operator[]` (C++23), each
+two properties' values together, and a subscript of several indices (C++23), a count of a list's elements, which
+mbse-expressions' `Cpp` leaves unrecorded. What C++17 has, every edition has: structured bindings among them.
 
-Not checked: what an edition removed (`register`, dynamic exception specifications), as `check` lists what an edition
-lacks, not what it dropped; and an abbreviated function template's `auto` parameter (C++20), which `check` cannot
-tell from a generic lambda's (C++14) without its context *(agent)*.
+Not checked: what an edition removed (`register`, dynamic exception specifications), which no grammar clause records,
+though one an edition forbids could *(agent: beyond the tables this replaces)*; and an abbreviated function template's
+`auto` parameter (C++20), which `check` cannot tell from a generic lambda's (C++14) without its context *(agent)*.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member or part: what a kind needs, a
 property (`an IfStatement needs a consequence`, `a TryStatement needs a body`), a list that is not empty (`a

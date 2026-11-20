@@ -23,10 +23,10 @@ outermost one that holds it, within its statement or its part (`body[0].expressi
 within a term, a statement expression's `block`, a struct's or a union's `members` and a conditional directive's
 `group`, are located through the term's place, as `Definitions` anchors them: a struct's member declarations are
 `body[0].specifiers[0].members.members[1]`, a directive's group's statements `body[3].directive.group.body[0]`. So:
-`body[2]: StaticAssertDeclaration.keyword 'static_assert' needs C23`, `body[0].specifiers[0]: bitintspecifier needs
-C23`. mbse-expressions' term readers stop where a term holds statements (`Terms.boundaries`): this module reads records
-itself (`Objects.properties`, `Terms.kind_of`), as `Definitions` does, and reads what a block, a member list or a group
-holds as statements.
+`body[2]: StaticAssertDeclaration.keyword 'static_assert' needs C23`, `body[0].specifiers[0]: declspecifier.keyword
+'thread_local' needs C23`. mbse-expressions' term readers stop where a term holds statements (`Terms.boundaries`): this
+module reads records itself (`Objects.properties`, `Terms.kind_of`), as `Definitions` does, and reads what a block, a
+member list or a group holds as statements.
 
 What an edition has is read from data, as mbse-expressions records it (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided)):
 a statement, declaration or member kind is available where a standard of that edition's designation, among those
@@ -40,24 +40,29 @@ a helper (GNU's asm label, C Types' `AsmLabel`, among them), and invalid syntax,
 `missing` term, which `validate` reports *(agent)*. A kind's problem is `<kind> needs <the first edition that has it>`:
 a statement's kind by its name (`AttributeDeclaration`), a term's by its tag (`constant`).
 
-What a property's value makes available stays code, by the kind that holds it: a standard tags a kind, not a property
-or a value of one *(agent)*. As the 0.3 language had them, C's (`Ccpp/Syntax.py`, `SINCE` and `FEATURES`; what arrived
-before C11, as `restrict`, `inline` and designators, and C11's own, as `_Alignas`, `_Atomic`, `_Generic`,
-`_Noreturn`, `_Static_assert` and `_Thread_local`, every edition has):
+What an edition changes within a kind is read from data too, its grammar clauses (mbse-basis [grammar clauses by
+version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md#decided)), each an edition allows or forbids: for each statement,
+member declaration, part, term and helper, the grammar clauses it takes, of the dialect whose kind it is
+(`Framework.Standards.takes`), the language's for its statements (`Standards.GRAMMAR_CLAUSES`: a label without a
+statement or before a declaration, `static_assert` spelled so and without a message, C23's helpers where a declaration
+holds them), `C`'s, `C Types`' and `C Preprocessor`'s for its terms and helpers (a literal's digit separators, C23's
+keywords, `#warning`, `#embed`, ...), and whether the target allows each (`Framework.Standards.allows`): a grammar
+clause no edition names is allowed. A grammar clause's problem is `<its name> needs <the first edition the language
+covers that allows it>` (`SimpleDeclaration.specifiers holding a bitintspecifier needs C23`), located where a kind's
+would be, or `<its name> is in no edition`, where none does.
 
-- statements, declarations and parts, `STATEMENT_FEATURES`: a label, a `case` or a `default` without a statement (C23);
-  `static_assert` spelled so, and without a message (C23); and, beyond 0.3's data, a label before a declaration (C23,
-  6.8.2), a function's definition with an unnamed parameter of its own (C23, 6.9.1), and a declaration whose type is
-  inferred, `auto` with no type specifier (C23, 6.7.10), which `Parse` writes as the keyword `auto` *(agent)*;
-- terms and helpers, `FEATURES`, which mbse-expressions does not record (a gap, reported there): C23's keywords as
-  specifiers (`thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128`), `typeof` and `typeof_unqual`,
-  `_BitInt`, `auto` as C Types' `placeholdertypespecifier`, an enumeration's underlying type, attributes in `[[ ]]`,
-  `alignas` and `alignof` spelled so, a `u8` character, `#warning` and `#embed`; and, beyond 0.3's data, a literal's
-  digit separators, a binary integer, `true` and `false`, the suffix `wb` and the decimal floating suffixes, `_Float16`
-  to `_Float128x` (C23's Annex H), and an empty initializer, `{}` (C23) *(agent)*.
+What no grammar clause can express stays code, `UNRECORDED`, by the kind that holds it, each with its reason, its
+problem worded as a grammar clause's *(agent)*: a function's definition with an unnamed parameter of its own (C23,
+6.9.1), the parameters of the declarator nearest its name and any but a lone `void`, and a declaration whose type is
+inferred, `auto` with no type specifier (C23, 6.7.10), which `Parse` writes as the keyword `auto`, each a statement
+about every element of a list, where a grammar clause says what one of them holds; and a `u8` character (C23), two
+properties' values together, which mbse-expressions' `C` leaves unrecorded. What arrived before C11, as `restrict`,
+`inline` and designators, and C11's own, as `_Alignas`, `_Atomic`, `_Generic`, `_Noreturn`, `_Static_assert` and
+`_Thread_local`, every edition has.
 
-Not checked: what C23 removed (a K&R definition, an old-style declaration of a function without a prototype), as
-`check` lists what an edition lacks, not what it dropped; and trigraphs, which `Parse` keeps as tree-sitter reads them.
+Not checked: what C23 removed (a K&R definition, an old-style declaration of a function without a prototype), which
+no grammar clause records, though one C23 forbids could *(agent: beyond the tables this replaces)*; and trigraphs, which
+`Parse` keeps as tree-sitter reads them.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member declaration or part:
 
