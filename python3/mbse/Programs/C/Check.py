@@ -60,9 +60,9 @@ properties' values together, which mbse-expressions' `C` leaves unrecorded. What
 `inline` and designators, and C11's own, as `_Alignas`, `_Atomic`, `_Generic`, `_Noreturn`, `_Static_assert` and
 `_Thread_local`, every edition has.
 
-Not checked: what C23 removed (a K&R definition, an old-style declaration of a function without a prototype), which
-no grammar clause records, though one C23 forbids could *(agent: beyond the tables this replaces)*; and trigraphs, which
-`Parse` keeps as tree-sitter reads them.
+Not checked: what C23 removed (a K&R definition, an old-style declaration of a function without a prototype), which no
+grammar clause records, though one C23 forbids could *(agent)*; and trigraphs, which `Parse` keeps as tree-sitter reads
+them.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member declaration or part:
 
@@ -341,10 +341,6 @@ class _Availability:
         return [f"{name} needs {editions[0]}" for name, editions in found if self.edition not in editions]
 
 
-def _none(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
-    return []
-
-
 def _check(available: _Availability, records: Iterator[tuple[str, str | None, Any, str, Any]],
            unrecorded: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, tuple[str, ...]]]]]) -> list[str]:
     """The problems of a unit's `records`, as `_walk` gives them, that the target lacks: each kind's, each grammar
@@ -353,7 +349,8 @@ def _check(available: _Availability, records: Iterator[tuple[str, str | None, An
     for where, root, _, tag, record in records:
         kind = _kind(record) if root is None else tag  # a statement's, a member's, an error's or a part's, or a term's
         found = available.kind(record.as_schema().name, kind) + available.grammar_clauses(record)
-        found += available.unrecorded(unrecorded.get(kind, _none)(kind, Objects.properties(record)))
+        if kind in unrecorded:
+            found += available.unrecorded(unrecorded[kind](kind, Objects.properties(record)))
         problems += [f"{where if root is None else root}: {problem}" for problem in found]
     return _unique(problems)
 

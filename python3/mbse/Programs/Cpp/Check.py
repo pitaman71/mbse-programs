@@ -44,8 +44,8 @@ two properties' values together, and a subscript of several indices (C++23), a c
 mbse-expressions' `Cpp` leaves unrecorded. What C++17 has, every edition has: structured bindings among them.
 
 Not checked: what an edition removed (`register`, dynamic exception specifications), which no grammar clause records,
-though one an edition forbids could *(agent: beyond the tables this replaces)*; and an abbreviated function template's
-`auto` parameter (C++20), which `check` cannot tell from a generic lambda's (C++14) without its context *(agent)*.
+though one an edition forbids could *(agent)*; and an abbreviated function template's `auto` parameter (C++20), which
+`check` cannot tell from a generic lambda's (C++14) without its context *(agent)*.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member or part: what a kind needs, a
 property (`an IfStatement needs a consequence`, `a TryStatement needs a body`), a list that is not empty (`a
