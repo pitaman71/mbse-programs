@@ -15,13 +15,13 @@ Each problem is located by its place in the program's value, as `Definitions` an
 Python3's `Check` joins them *(agent)*: a statement's, clause's or member's is the property of what holds it, with its
 index where that holds a list, from the program's `body` (`body[2]`, `body[0].consequent`, `body[1].handler`,
 `body[3].body.body[0]`, a class's member); a part's that holds no statement, its statement's then its property
-(`body[0].declarations[1]`, `body[4].specifiers[0]`); a term's, the place of the outermost term, helper or part of
+(`body[0].declarations[1]`, `body[4].specifiers[0]`), and a grammar clause's, its property's (`body[0].phase`); a term's, the place of the outermost term, helper or part of
 mbse-expressions' that holds it, within its statement or its part (`body[0].expression`,
 `body[0].declarations[0].init`, `body[2].returnType`). Statements within a term, a function's or an arrow's `block`
 and a class expression's `classBody`, are located through the term's place, as `Definitions` anchors them: the block
 is `body[0].declarations[0].init.block`, its statements `body[0].declarations[0].init.block.body[1]`, and a class
-expression's members `body[0].expression.classBody.body[2]`. So: `body[2]: VariableDeclaration.declarationKind 'using'
-needs TypeScript 5.2`, `body[0].expression: importexpression.options needs TypeScript 5.3`. mbse-expressions' term
+expression's members `body[0].expression.classBody.body[2]`. So: `body[2].declarationKind:
+VariableDeclaration.declarationKind 'using' needs TypeScript 5.2`, `body[0].expression: importexpression.options needs TypeScript 5.3`. mbse-expressions' term
 readers stop where a term holds statements (`Terms.boundaries`): this module reads records itself
 (`Objects.properties`, `Terms.kind_of`), as `Definitions` does, and reads what a block or a class body holds as
 statements.
@@ -35,18 +35,23 @@ marks it, a part or a helper, and invalid syntax, a `Programs.TypeScript5.Error`
 which `validate` reports *(agent)*. A kind's problem is `<kind> needs <the first version that has it>`: a statement's
 kind by its name (`AccessorProperty`), a term's by its tag (`importexpression`).
 
-What a property's value makes available stays code, by the kind that holds it: a standard tags a kind, not a property
-or a value of one *(agent)*. As the 0.3 language had them, within TypeScript 5 (`TypeScript/Syntax.py`, `FEATURES`;
-what arrived before 5.0, as `accessor`, decorators, `satisfies`, `export type *` and `const` type parameters, every
-version has):
+What a property's value makes available within a kind is data too, grammar clauses (mbse-basis [grammar clauses by
+version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)), read as mbse-expressions reads them
+(`Expressions.Framework.Standards`): those a statement, a clause, a member or a part takes of the language's own
+(`Standards`: `VariableDeclaration.declarationKind 'using'`, `ImportDeclaration.attributes`, `ImportSpecifier.imported
+as a string`, ...), located at the property that holds what it says (`body[0].declarationKind`); and those a term or
+a helper takes of its dialect's (`TypeScript5`'s `importexpression.options` and `importexpression.phase 'defer'`,
+`TypeScript Types`' `tsimporttype.options`), located as its kind's problem is. A grammar clause the target does not
+allow is `<its name> needs <the nearest version that allows it>`, the first after the target, else the last before it
+*(agent)*: `body[0].declarationKind: VariableDeclaration.declarationKind 'using' needs TypeScript 5.2`. The target's
+own entries decide, else its neighbours' flagged `before` and `after` (a version the data covers but does not represent
+in a grammar clause's entries, as a store may add TypeScript 5.10), else a grammar clause is allowed
+(`Framework.Standards.allows`); a dialect that does not cover the target has no say. The grammar clauses taken at one
+place are alternatives of one production, the place fine in a version that allows one of them, as Python3's `Check`
+reads them *(agent)*. What arrived before 5.0, as `accessor`, decorators, `satisfies`, `export type *` and `const` type
+parameters, every version has.
 
-- statements and parts, `STATEMENT_FEATURES`: `VariableDeclaration.declarationKind`'s `'using'` and `'await using'`
-  (5.2), `ImportDeclaration`'s, `ExportNamedDeclaration`'s and `ExportAllDeclaration`'s `attributes` (5.3), and
-  `ImportDeclaration.phase 'defer'` (5.9); and, beyond 0.3's data, a module's name as a string (`import { "a-b" as x }`,
-  `export { x as "a-b" }`, `export * as "a-b" from`), which TypeScript 5.6 accepts *(agent)*;
-- terms, which mbse-expressions does not record (a gap, reported there), `FEATURES`: `importexpression.options` (5.3)
-  and `importexpression.phase 'defer'` (5.9); and, beyond 0.3's data, `tsimporttype.options`, an import type's
-  attributes (5.3) *(agent)*.
+What no grammar clause can say stays code, each with its reason: nothing, of TypeScript 5's.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, clause, member or part:
 
@@ -88,7 +93,7 @@ from ..Framework.Model import WORKSPACE
 from .Standards import DIALECTS, designation
 from .Statements import KINDS, LANGUAGE
 
-__all__ = ["check", "check_file", "validate", "validate_file", "FEATURES", "STATEMENT_FEATURES"]
+__all__ = ["check", "check_file", "validate", "validate_file"]
 
 Version = tuple[int, ...]
 
@@ -158,53 +163,6 @@ def _unique(problems: list[str]) -> list[str]:
     return list(dict.fromkeys(problems))
 
 
-# --- Features ---
-
-def _import(node: Terms.Node) -> list[tuple[str, int]]:
-    found = [(f"{node.kind}.options", 3)] if node.subterms.get("options") is not None else []
-    return found + ([(f"{node.kind}.phase 'defer'", 9)] if node.attributes.get("phase") == "defer" else [])
-
-
-FEATURES: dict[str, Callable[[Terms.Node], list[tuple[str, int]]]] = {
-    "importexpression": _import, "tsimporttype": _import,
-}
-"""The features of a term or a helper that its properties' values make, by its kind (its tag, or its helper's): each
-feature's name, and the minor version of TypeScript 5 it arrived in *(agent: code until mbse-expressions records
-them)*."""
-
-
-def _attributes(kind: str, held: dict[str, Any]) -> list[tuple[str, int]]:
-    return [(f"{kind}.attributes", 3)] if "attributes" in held else []
-
-
-def _strings(*names: str) -> Callable[[str, dict[str, Any]], list[tuple[str, int]]]:
-    """The features of a module's names written as strings, by the properties that hold them."""
-    def found(kind: str, held: dict[str, Any]) -> list[tuple[str, int]]:
-        return [(f"{kind}.{name} as a string", 6) for name in names
-                if name in held and _branch(held[name])[1] == "literal"]
-    return found
-
-
-def _declaration(kind: str, held: dict[str, Any]) -> list[tuple[str, int]]:
-    word = held.get("declarationKind")
-    return [(f"{kind}.declarationKind {word!r}", 2)] if word in ("using", "await using") else []
-
-
-def _import_declaration(kind: str, held: dict[str, Any]) -> list[tuple[str, int]]:
-    return _attributes(kind, held) + ([(f"{kind}.phase 'defer'", 9)] if held.get("phase") == "defer" else [])
-
-
-STATEMENT_FEATURES: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, int]]]] = {
-    "VariableDeclaration": _declaration, "ImportDeclaration": _import_declaration,
-    "ExportNamedDeclaration": _attributes,
-    "ExportAllDeclaration": lambda kind, held: _strings("exported")(kind, held) + _attributes(kind, held),
-    "ImportSpecifier": _strings("imported"), "ExportSpecifier": _strings("local", "exported"),
-}
-"""The features of a statement, a clause, a member or a part that its properties' values make, by its kind, given its
-kind and its properties that are set: each feature's name, and the minor version of TypeScript 5 it arrived in
-*(agent: code, as a standard tags a kind, not a property)*."""
-
-
 # --- Versions ---
 
 def _version(standard: Any) -> Version:
@@ -213,7 +171,8 @@ def _version(standard: Any) -> Version:
 
 
 class _Availability:
-    """What the store's standards say: the target version, and each kind's schema's versions, by its schema's name."""
+    """What the store's standards say: the target version, each kind's schema's versions, by its schema's name, and
+    each dialect's grammar clauses and its standard of the target's name."""
 
     def __init__(self, store: Any, version: Version | str):
         language = store.singleton(LANGUAGE)
@@ -221,15 +180,20 @@ class _Availability:
         target = ExpressionStandards.find(language, tag)
         if target is None:
             raise LookupError(f"{LANGUAGE} covers no version {version!r}: run Standards.prepare on the store")
-        self.target = _version(target)
+        self.target, self.name = _version(target), str(ExpressionStandards.designation_of(target))
         self.versions: dict[str, set[Version]] = {}
+        self.grammar: dict[str, tuple[Any, Any, set[str]]] = {}
         for dialect in DIALECTS:
-            standards = ExpressionStandards.standards(store.singleton(dialect))
+            singleton = store.singleton(dialect)
+            standards = ExpressionStandards.standards(singleton)
             if not standards:
                 raise LookupError(f"{dialect} covers no version: run Standards.prepare on the store")
             for standard in standards.values():
                 for kind in ExpressionStandards.kinds(standard):
                     self.versions.setdefault(kind.name, set()).add(_version(standard))
+            kinds = {ExpressionStandards.grammar_clause(clause)["kind"].name
+                     for clause in ExpressionStandards.grammar_clauses(singleton).values()}
+            self.grammar[dialect] = (singleton, ExpressionStandards.find(singleton, self.name), kinds)
 
     def kind(self, schema: str, what: str) -> list[str]:
         """The problem of a kind, by its schema's name, that the target lacks: none where it has it, or where no
@@ -239,8 +203,28 @@ class _Availability:
             return []
         return [f"{what} needs TypeScript {'.'.join(map(str, min(versions)))}"]
 
-    def features(self, found: list[tuple[str, int]]) -> list[str]:
-        return [f"{feature} needs TypeScript 5.{minor}" for feature, minor in found if self.target < (5, minor)]
+    def nearest(self, dialect: Any, clause: Any) -> str:
+        """The version nearest the target that allows a grammar clause: the first after it, else the last before it."""
+        standards = ExpressionStandards.standards(dialect)
+        allowing = sorted((_version(standard), name) for name, standard in standards.items()
+                          if ExpressionStandards.allows(standard, clause))
+        later = [name for at, name in allowing if at > self.target]
+        return later[0] if later else allowing[-1][1]
+
+    def clauses(self, dialect: str, record: Any) -> list[tuple[str, str]]:
+        """The problems of the grammar clauses of `dialect` that a record takes and the target lacks, each with its
+        place within the record, its property's (`.phase`): those taken at one place are alternatives, the place fine
+        where the target allows one of them."""
+        singleton, target, kinds = self.grammar[dialect]
+        if record.as_schema().name not in kinds:
+            return []
+        places: dict[str, list[Any]] = {}
+        for clause in ExpressionStandards.takes(singleton, record):
+            places.setdefault(f".{ExpressionStandards.grammar_clause(clause)['property']}", []).append(clause)
+        return [(place, f"{ExpressionStandards.grammar_clause_name(clause)} needs {self.nearest(singleton, clause)}")
+                for place, taken in places.items()
+                if target is not None and not any(ExpressionStandards.allows(target, each) for each in taken)
+                for clause in taken]
 
 
 def _check(available: _Availability, program: Any) -> list[str]:
@@ -248,21 +232,20 @@ def _check(available: _Availability, program: Any) -> list[str]:
     for where, root, _, tag, record in _program(program):
         schema = record.as_schema().name
         if root is None:  # a statement, a clause, a member, an error or a part, at its place
-            kind = _kind(record)
-            found = available.kind(schema, kind)
-            found += available.features(STATEMENT_FEATURES.get(kind, lambda *_: [])(kind, Objects.properties(record)))
+            problems += [f"{where}: {problem}" for problem in available.kind(schema, _kind(record))]
+            problems += [f"{where}{place}: {problem}" for place, problem in available.clauses(LANGUAGE, record)]
         else:  # within a term, at the outermost's place
             found = available.kind(schema, tag)
-            found += available.features(FEATURES[tag](Terms.node(tag, record)) if tag in FEATURES else [])
-        problems += [f"{where if root is None else root}: {problem}" for problem in found]
+            found += [problem for dialect in DIALECTS[1:] for _, problem in available.clauses(dialect, record)]
+            problems += [f"{root}: {problem}" for problem in found]
     return _unique(problems)
 
 
 def check(store: Any, path: str, version: Version | str) -> list[str]:
     """The problems of the constructs the program at `path` uses that `version` lacks, in source order, each once and
-    located by its place: `body[2]: VariableDeclaration.declarationKind 'using' needs TypeScript 5.2`. `version` is
-    `(5, minor)` or a name the language covers a version by (`"TypeScript 5.9"`). Raises LookupError where the
-    workspace holds no file at `path`, or the language covers no such version (the store not prepared,
+    located by its place: `body[2].declarationKind: VariableDeclaration.declarationKind 'using' needs TypeScript 5.2`.
+    `version` is `(5, minor)` or a name the language covers a version by (`"TypeScript 5.9"`). Raises LookupError where
+    the workspace holds no file at `path`, or the language covers no such version (the store not prepared,
     `Standards.prepare`, among them)."""
     return _module(store, path, lambda program: check_file(store, program, version))
 

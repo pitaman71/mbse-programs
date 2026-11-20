@@ -23,19 +23,27 @@ Patterns` does (`Standards.DIALECTS`). A kind no standard lists (an extension, i
 A kind's problem is `<kind> needs <the first version that has it>`: a statement's kind by its name (`TypeAlias`), a
 term's by its tag (`namedexpr`).
 
-What a property's value makes available stays code, `FEATURES`, by the kind that holds it: a standard tags a kind, not a
-property or a value of one *(agent)*. As the 0.3 language had them (`Python/Syntax.py`, `FEATURES` and `features()`):
+What a property's value makes available within a kind is data too, grammar clauses (mbse-basis [grammar clauses by
+version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)), read as mbse-expressions reads them
+(`Expressions.Framework.Standards`): those a statement or a clause takes of the language's own (`Standards`:
+`Import.is_lazy`, `AugAssign.op '@'`, `FunctionDef.type_params`, PEP 614's decorator, ...), located at the property that
+holds what it says (`body[0].is_lazy`), or, where that property holds a list and the grammar clause a term of one of
+its kinds, at each element that is one (`body[2].decorator_list[0]`); and those a term or a helper takes of its
+dialect's (`Python3`'s `binop.op '@'`, `Python Types`' `typevar.default_value`, ...), located as its kind's problem
+is. A grammar clause the target does not allow is `<its name> needs <the nearest version that allows it>`, the first
+after the target, else the last before it *(agent)*: `body[2].decorator_list[0]: FunctionDef with a decorator holding
+any term needs Python 3.9`. The target's own entries decide, else its neighbours' flagged `before` and `after` (a
+version the data covers but does not represent in a grammar clause's entries, as a store may add Python 3.16), else a
+grammar clause is allowed (`Framework.Standards.allows`); a dialect that does not cover the target has no say.
 
-- statements: `Import.is_lazy` and `ImportFrom.is_lazy` (3.15), `AugAssign.op '@'` (3.5), `FunctionDef`'s,
-  `AsyncFunctionDef`'s and `ClassDef`'s `type_params` (3.12), and a decorator that is not a dotted name, optionally
-  called (PEP 614, 3.9);
-- terms, which mbse-expressions does not record (a gap, reported there): `binop.op '@'` (3.5), `comprehension.is_async`
-  (3.6), `formattedvalue.debug` and `arguments.posonlyargs` (3.8), `subscript with an unpacked index` (3.11),
-  `typevar`'s, `paramspec`'s and `typevartuple`'s `default_value` (3.13), and a `listcomp`, `setcomp` or
-  `generatorexp` of unpacked elements and a `dictcomp` of unpacked mappings (3.15).
+The grammar clauses a syntax node or a term takes at one place are alternatives of one production: the place is fine
+in a version that allows one of them, and otherwise each is a problem *(agent)*. So PEP 614, which removed a
+restriction: a dotted name, optionally called, takes both of a definition's decorator grammar clauses, Python 3.0 to
+3.8 allowing the one and 3.9 on the other, and is fine in each; any other term takes the second alone.
 
-Not checked: an `except` clause's types unparenthesized (3.14), which the tree does not record (`Parse` writes a
-`tuple` either way, the dialect's tuple not recording whether it was parenthesized: a gap, reported to mbse-expressions).
+What no grammar clause can say stays code, each with its reason: nothing, of Python 3's. Not checked: an `except`
+clause's types unparenthesized (3.14), which the tree does not record (`Parse` writes a `tuple` either way, the
+dialect's tuple not recording whether it was parenthesized: a gap, reported to mbse-expressions).
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement:
 
@@ -79,7 +87,7 @@ from ..Framework.Model import WORKSPACE
 from .Standards import DIALECTS, designation
 from .Statements import LANGUAGE
 
-__all__ = ["check", "validate", "FEATURES", "STATEMENT_FEATURES"]
+__all__ = ["check", "check_file", "validate", "validate_file"]
 
 Version = tuple[int, ...]
 
@@ -142,100 +150,23 @@ def _unique(problems: list[str]) -> list[str]:
 
 # --- Terms ---
 
-def _nodes(value: Any) -> Iterator[tuple[Terms.Node, str | None]]:
-    """Every term and helper within what a property holds, each as its `Terms.Node`, with its kind's schema's name for
-    a term (None for a helper), parents first: a term, or a value object holding them (an `Arguments`, a `Keyword`, an
-    `Alias`, a `WithItem`); none within a scalar."""
+def _records(value: Any) -> Iterator[tuple[str, Any]]:
+    """Every term and helper within what a property holds, and every value object holding them (an `Arguments`, a
+    `Keyword`, an `Alias`, a `WithItem`), each its tag (a helper's, its schema's name's last part in lower case) and its
+    record, parents first, in order; none within a scalar."""
+    if isinstance(value, Objects.Listed):
+        for element in value.values:
+            yield from _records(element)
+        return
     if Terms.is_term(value):
         tag, record = Terms.kind_of(value)
-        yield from _nested(Terms.node(tag, record), record.as_schema().name)
     elif Objects.is_object(value):
-        yield from _nested(Terms.node(value.as_schema().name.rsplit(".", 1)[-1].lower(), value), None)
-
-
-def _nested(node: Terms.Node, schema: str | None) -> Iterator[tuple[Terms.Node, str | None]]:
-    yield node, schema
-    for term in (*node.subterms.values(), *node.many):
-        if term is not None:
-            yield from _nodes(term)
-    for helper in node.helpers.values():
-        for each in helper if isinstance(helper, tuple) else (helper,):
-            yield from _nested(each, None)
-
-
-def _tag(term: Any) -> str:
-    return Terms.kind_of(term)[0]
-
-
-def _starred(term: Any) -> bool:
-    return term is not None and _tag(term) == "starred"
-
-
-def _unpacked_index(node: Terms.Node) -> bool:
-    index = node.subterms["slice"]
-    if _tag(index) == "tuple":
-        tag, record = Terms.kind_of(index)
-        return any(_starred(element) for element in Terms.node(tag, record).many)
-    return _starred(index)
-
-
-def _unpacked(node: Terms.Node) -> list[tuple[str, int]]:
-    return [(f"{node.kind} of unpacked elements", 15)] if _starred(node.subterms["body"]) else []
-
-
-def _default(node: Terms.Node) -> list[tuple[str, int]]:
-    return [(f"{node.kind}.default_value", 13)] if node.subterms["default_value"] is not None else []
-
-
-FEATURES: dict[str, Callable[[Terms.Node], list[tuple[str, int]]]] = {
-    "binop": lambda node: [("binop.op '@'", 5)] if node.attributes.get("op") == "@" else [],
-    "comprehension": lambda node: [("comprehension.is_async", 6)] if node.attributes.get("is_async") else [],
-    "formattedvalue": lambda node: [("formattedvalue.debug", 8)] if node.attributes.get("debug") else [],
-    "arguments": lambda node: [("arguments.posonlyargs", 8)] if node.helpers.get("posonlyargs") else [],
-    "subscript": lambda node: [("subscript with an unpacked index", 11)] if _unpacked_index(node) else [],
-    "typevar": _default, "paramspec": _default, "typevartuple": _default,
-    "listcomp": _unpacked, "setcomp": _unpacked, "generatorexp": _unpacked,
-    "dictcomp": lambda node: [("dictcomp of unpacked mappings", 15)] if node.subterms["body"] is None else [],
-}
-"""The features of a term or a helper that its properties' values make, by its kind (its tag, or its helper's): each
-feature's name, and the minor version of Python 3 it arrived in *(agent: code until mbse-expressions records them)*."""
-
-
-# --- Statements ---
-
-def _dotted(term: Any) -> bool:
-    """Whether a term is a dotted name: a name, or an attribute of one."""
-    tag, record = Terms.kind_of(term)
-    node = Terms.node(tag, record)
-    return tag == "variable" or (tag == "attribute" and _dotted(node.subterms["value"]))
-
-
-def _decorator(term: Any) -> bool:
-    """Whether a decorator is one every Python 3 has: a dotted name, optionally called (PEP 614)."""
-    tag, record = Terms.kind_of(term)
-    return _dotted(Terms.node(tag, record).subterms["func"] if tag == "call" else term)
-
-
-def _definition(kind: str, held: dict[str, Any]) -> list[tuple[str, int]]:
-    found = [(f"{kind}.type_params", 12)] if "type_params" in held else []
-    decorators = held.get("decorator_list")
-    if decorators is not None and not all(_decorator(d) for d in decorators.values):
-        found.append((f"{kind} with a decorator that is not a dotted name", 9))
-    return found
-
-
-def _lazy(kind: str, held: dict[str, Any]) -> list[tuple[str, int]]:
-    return [(f"{kind}.is_lazy", 15)] if held.get("is_lazy") else []
-
-
-STATEMENT_FEATURES: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, int]]]] = {
-    "Import": _lazy, "ImportFrom": _lazy,
-    "AugAssign": lambda kind, held: [("AugAssign.op '@'", 5)] if held.get("op") == "@" else [],
-    "FunctionDef": _definition, "AsyncFunctionDef": _definition, "ClassDef": _definition,
-}
-"""The features of a statement that its properties' values make, by its kind, given its kind and its properties that
-are set: each feature's name, and the minor version of Python 3 it arrived in *(agent: code, as a standard tags a
-kind, not a property)*."""
+        tag, record = value.as_schema().name.rsplit(".", 1)[-1].lower(), value
+    else:
+        return  # a scalar
+    yield tag, record
+    for held in Objects.properties(record).values():
+        yield from _records(held)
 
 
 # --- Versions ---
@@ -245,8 +176,31 @@ def _version(standard: Any) -> Version:
     return tuple(int(part) for part in str(ExpressionStandards.properties(standard)["revision"][1]).split("."))
 
 
+def _holds(dialect: Any, said: dict[str, Any], element: Any) -> bool:
+    """Whether a list's element is what a grammar clause, as `grammar_clause` says it, holds: a term of one of its
+    kinds that takes each of its nested grammar clauses of that kind."""
+    record = Terms.kind_of(element)[1]
+    schema = record.as_schema()
+    taken = {ExpressionStandards.grammar_clause_name(c) for c in ExpressionStandards.takes(dialect, record)}
+    return any(kind is schema for kind in said["kinds"]) and all(
+        ExpressionStandards.grammar_clause_name(nested) in taken for nested in said.get("nested", ())
+        if ExpressionStandards.grammar_clause(nested)["kind"] is schema)
+
+
+def _places(dialect: Any, record: Any, clause: Any) -> list[str]:
+    """Where within a syntax node or a term a grammar clause it takes holds what it says: its property (`.op`), or,
+    where that holds a list and the grammar clause a term of one of its kinds, each element that is one
+    (`.decorator_list[1]`)."""
+    said = ExpressionStandards.grammar_clause(clause)
+    held = Objects.properties(record).get(said["property"])
+    if "kinds" not in said or not isinstance(held, Objects.Listed):
+        return [f".{said['property']}"]
+    return [f".{said['property']}[{i}]" for i, element in enumerate(held.values) if _holds(dialect, said, element)]
+
+
 class _Availability:
-    """What the store's standards say: the target version, and each kind's schema's versions, by its schema's name."""
+    """What the store's standards say: the target version, each kind's schema's versions, by its schema's name, and
+    each dialect's grammar clauses and its standard of the target's name."""
 
     def __init__(self, store: Any, version: Version | str):
         language = store.singleton(LANGUAGE)
@@ -256,13 +210,18 @@ class _Availability:
             raise LookupError(f"{LANGUAGE} covers no version {version!r}: run Standards.prepare on the store")
         self.target, self.name = _version(target), str(ExpressionStandards.designation_of(target))
         self.versions: dict[str, set[Version]] = {}
+        self.grammar: dict[str, tuple[Any, Any, set[str]]] = {}
         for dialect in DIALECTS:
-            standards = ExpressionStandards.standards(store.singleton(dialect))
+            singleton = store.singleton(dialect)
+            standards = ExpressionStandards.standards(singleton)
             if not standards:
                 raise LookupError(f"{dialect} covers no version: run Standards.prepare on the store")
             for standard in standards.values():
                 for kind in ExpressionStandards.kinds(standard):
                     self.versions.setdefault(kind.name, set()).add(_version(standard))
+            kinds = {ExpressionStandards.grammar_clause(clause)["kind"].name
+                     for clause in ExpressionStandards.grammar_clauses(singleton).values()}
+            self.grammar[dialect] = (singleton, ExpressionStandards.find(singleton, self.name), kinds)
 
     def kind(self, schema: str, what: str) -> list[str]:
         """The problem of a kind, by its schema's name, that the target lacks: none where it has it, or where no
@@ -272,21 +231,40 @@ class _Availability:
             return []
         return [f"{what} needs Python {'.'.join(map(str, min(versions)))}"]
 
-    def features(self, found: list[tuple[str, int]]) -> list[str]:
-        return [f"{feature} needs Python 3.{minor}" for feature, minor in found if self.target < (3, minor)]
+    def nearest(self, dialect: Any, clause: Any) -> str:
+        """The version nearest the target that allows a grammar clause: the first after it, else the last before it."""
+        standards = ExpressionStandards.standards(dialect)
+        allowing = sorted((_version(standard), name) for name, standard in standards.items()
+                          if ExpressionStandards.allows(standard, clause))
+        later = [name for at, name in allowing if at > self.target]
+        return later[0] if later else allowing[-1][1]
+
+    def clauses(self, dialect: str, record: Any) -> list[tuple[str, str]]:
+        """The problems of the grammar clauses of `dialect` that a syntax node or a term takes and the target lacks,
+        each with its place within it (`_places`): those taken at one place are alternatives, the place fine where
+        the target allows one of them."""
+        singleton, target, kinds = self.grammar[dialect]
+        if record.as_schema().name not in kinds:
+            return []
+        places: dict[str, list[Any]] = {}
+        for clause in ExpressionStandards.takes(singleton, record):
+            for place in _places(singleton, record, clause):
+                places.setdefault(place, []).append(clause)
+        return [(place, f"{ExpressionStandards.grammar_clause_name(clause)} needs {self.nearest(singleton, clause)}")
+                for place, taken in places.items()
+                if target is not None and not any(ExpressionStandards.allows(target, each) for each in taken)
+                for clause in taken]
 
 
 def _check(available: _Availability, module: Any) -> list[str]:
     problems: list[str] = []
     for where, node, _ in _statements(module):
-        kind = _kind(node)
-        own = available.kind(node.as_schema().name, kind)
-        own += available.features(STATEMENT_FEATURES.get(kind, lambda *_: [])(kind, Objects.properties(node)))
-        problems += [f"{where}: {problem}" for problem in own]
+        problems += [f"{where}: {problem}" for problem in available.kind(node.as_schema().name, _kind(node))]
+        problems += [f"{where}{place}: {problem}" for place, problem in available.clauses(LANGUAGE, node)]
         for at, held in _properties(node):
-            for term, schema in _nodes(held):
-                found = [] if schema is None else available.kind(schema, term.kind)
-                found += available.features(FEATURES.get(term.kind, lambda _: [])(term))
+            for tag, record in _records(held):
+                found = available.kind(record.as_schema().name, tag)
+                found += [problem for dialect in DIALECTS[1:] for _, problem in available.clauses(dialect, record)]
                 problems += [f"{where}{at}: {problem}" for problem in found]
     return _unique(problems)
 
