@@ -1,16 +1,16 @@
 {
   "mbse-basis": {
     "repository": "git@github.com:pitaman71/mbse-basis.git",
-    "commit": "50ceb8fa9d8d7691550d8dd091b8093761a653b0"
+    "commit": "84ab394cc630277874969249bc4980720c0ac73b"
   },
   "mbse-expressions": {
     "repository": "git@github.com:pitaman71/mbse-expressions.git",
-    "version": "0.12.7",
-    "commit": "f6b0a329ea9311b50363cffff9850d259f2101fe"
+    "commit": "a72bfa2726b730c698617d6d07bb92f2cd2d2878",
+    "version": "0.15.0"
   },
   "mbse-schemas": {
     "repository": "git@github.com:pitaman71/mbse-schemas.git",
-    "version": "0.28.0",
-    "commit": "cf9dc15a428924642f3897157ec25cbe6c9072ca"
+    "commit": "211a7701339b4317dd1b6a80dfd4a1e2d9d4589f",
+    "version": "0.34.0"
   }
 }
