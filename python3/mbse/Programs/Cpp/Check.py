@@ -31,27 +31,21 @@ is not checked: GNU's extensions, a part or a helper, and invalid syntax, a `Pro
 `missing` term, which `validate` reports, as C's *(agent)*. A kind's problem is
 `<kind> needs <the first edition that has it>`.
 
-What a property's value makes available stays code, by the kind that holds it, as C's: a standard tags a kind, not a
-property or a value of one *(agent)*. From the 0.3 language's data (`Ccpp/Syntax.py`, `SINCE` and `FEATURES`, C++'s
-since C++17; what C++17 has, every edition has):
+What an edition changes within a kind is read from data too, as C's: the grammar clauses each statement, member, part,
+term and helper takes, of the dialect whose kind it is, the language's (`Standards.GRAMMAR_CLAUSES`: `if consteval`,
+init-statements, labels, `requires`, nested inline namespaces) and `Cpp`'s, `Cpp Types`' and `C Preprocessor`'s
+(`consteval`, `char8_t`, `<=>`, lambdas' parts, explicit object parameters, `auto(x)`, the suffix `z`, `#warning`, ...),
+each the target allows or forbids; a problem `<its name> needs <the first edition the language covers that allows
+it>`, or `<its name> is in no edition` (`#embed`, which C Preprocessor allows in C23 alone).
 
-- statements, declarations, clauses and parts, `STATEMENT_FEATURES`: `if consteval` (C++23); a range-based `for`'s
-  initializer (C++20); an alias declaration as an init-statement (C++23); a label, a `case` or a `default` without a
-  statement or before a declaration (C++23); a trailing `requires` of a function's definition, a declarator or a
-  member's declarator, and a template's `requires` (C++20); a bit-field's default member initializer (C++20); a nested
-  namespace's name `inline` (C++20); and, beyond 0.3's data, a `static` `operator()` or `operator[]` (C++23)
-  *(agent)*;
-- terms and helpers, `FEATURES`: `consteval` and `constinit` (C++20), `char8_t` (C++20), `<=>` and `operator<=>`, and
-  `operator co_await` (C++20), a lambda's template parameters (C++20) and attributes (C++23), its `requires` (C++20), a
-  pack init-capture (C++20), a constrained placeholder, `Number auto` (C++20), a type parameter's constraint (C++20), a
-  template template parameter's `requires` (C++20), an explicit object parameter (C++23), structured bindings (C++17)
-  and `explicit(condition)` (C++20); and, beyond 0.3's data, a static lambda (C++23), a subscript of several indices
-  (C++23), `auto(x)` and `auto{x}` (C++23), the literal suffixes `z` and `uz` (C++23), and C Preprocessor's `#warning`
-  (C++23), a directive's name within `otherdirective`, which its data does not record *(agent)*.
+What no grammar clause can express stays code, `UNRECORDED`, by the kind that holds it, each with its reason, as C's
+*(agent)*: a bit-field's default member initializer (C++20) and a `static` `operator()` or `operator[]` (C++23), each
+two properties' values together, and a subscript of several indices (C++23), a count of a list's elements, which
+mbse-expressions' `Cpp` leaves unrecorded. What C++17 has, every edition has: structured bindings among them.
 
-Not checked: what an edition removed (`register`, dynamic exception specifications), as `check` lists what an edition
-lacks, not what it dropped; and an abbreviated function template's `auto` parameter (C++20), which `check` cannot
-tell from a generic lambda's (C++14) without its context *(agent)*.
+Not checked: what an edition removed (`register`, dynamic exception specifications), which no grammar clause records,
+though one an edition forbids could *(agent)*; and an abbreviated function template's `auto` parameter (C++20), which
+`check` cannot tell from a generic lambda's (C++14) without its context *(agent)*.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member or part: what a kind needs, a
 property (`an IfStatement needs a consequence`, `a TryStatement needs a body`), a list that is not empty (`a
@@ -92,15 +86,15 @@ from mbse.Expressions.Cpp.Types import Expressions as CppTypes
 from mbse.Expressions.Framework import Objects, Terms
 
 from ..C import Check as C
-from ..C.Check import ABIS, _applied, _Availability, _bound, _branch, _kind, _read, _terms, _unique, _walk, prepare_abi
+from ..C.Check import ABIS, _applied, _Availability, _bound, _branch, _check, _kind, _read, _terms, _walk, prepare_abi
 from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
 __all__ = ["check", "check_file", "validate", "validate_file", "validate_for", "validate_file_for", "prepare_abi",
-           "ABIS", "FEATURES", "STATEMENT_FEATURES"]
+           "ABIS", "UNRECORDED"]
 
 Version = tuple[int, ...]
-Found = list[tuple[str, str]]
+Found = list[tuple[str, tuple[str, ...]]]
 
 _HOLDERS = frozenset(f"{LANGUAGE}.{kind}" for kind in (*KINDS, "Error", "MemberList", "Group", "MemberGroup"))
 """The schemas that have a statement's place: statements, declarations, clauses, members, invalid syntax and the parts
@@ -130,88 +124,23 @@ def _record(value: Any) -> tuple[str, dict[str, Any]]:
     return tag, Objects.properties(record)
 
 
-# --- Features ---
+# --- What no grammar clause can express ---
 
-def _word(name: str, words: dict[str, str]) -> Callable[[str, dict[str, Any]], Found]:
-    """The features of a kind's property `name`, a word: each word's, and the edition it arrived in."""
-    def found(tag: str, held: dict[str, Any]) -> Found:
-        word = held.get(name)
-        return [(f"{tag}.{name} {word!r}", words[word])] if word in words else []
-    return found
-
-
-def _set(name: str, edition: str) -> Callable[[str, dict[str, Any]], Found]:
-    """The feature of a kind's property `name`, set and not empty, which arrived in `edition`."""
-    def found(tag: str, held: dict[str, Any]) -> Found:
-        value = held.get(name)
-        empty = value is None or isinstance(value, Objects.Listed) and not value.values
-        return [] if empty else [(f"{tag}.{name}", edition)]
-    return found
-
-
-def _lambda_declarator(tag: str, held: dict[str, Any]) -> Found:
-    words = [_record(s)[1].get("keyword") for s in _many(held.get("specifiers"))]
-    return _set("requires", "C++20")(tag, held) + ([(f"{tag} static", "C++23")] if "static" in words else [])
-
-
-def _literal(tag: str, held: dict[str, Any]) -> Found:
-    suffix = str(held.get("suffix") or "").lower()
-    return [(f"{tag}.suffix {held['suffix']!r}", "C++23")] if suffix in ("z", "uz", "zu") else []
-
-
-FEATURES: dict[str, Callable[[str, dict[str, Any]], Found]] = {
-    "declspecifier": _word("keyword", {"consteval": "C++20", "constinit": "C++20"}),
-    "primitivetypespecifier": _word("keyword", {"char8_t": "C++20"}),
-    "binaryexpression": _word("operator", {"<=>": "C++20"}),
-    "operatorname": _word("operator", {"<=>": "C++20", "co_await": "C++20"}),
-    "lambdaexpression": lambda tag, held: _set("template_parameters", "C++20")(tag, held) + _set(
-        "attributes", "C++23")(tag, held),
-    "lambdadeclarator": _lambda_declarator,
-    "initcapture": lambda tag, held: [(f"{tag}.pack", "C++20")] if held.get("pack") else [],
-    "placeholdertypespecifier": _set("constraint", "C++20"),
-    "typeparameter": _set("constraint", "C++20"),
-    "templatetemplateparameter": _set("requires", "C++20"),
-    "parameterdeclaration": lambda tag, held: [(f"{tag}.this_keyword", "C++23")] if held.get("this_keyword") else [],
-    "subscriptexpression": lambda tag, held: [(f"{tag} of several indices", "C++23")] if len(
-        _many(held.get("indices"))) > 1 else [],
-    "functionalcastexpression": lambda tag, held: [(f"{tag} of auto", "C++23")] if _record(held["type"])[0] == (
-        "placeholdertypespecifier") else [],
-    "literal": _literal,
-    "explicitspecifier": _set("condition", "C++20"),
-    "structuredbindingdeclarator": lambda tag, held: [(tag, "C++17")],
-    "otherdirective": lambda tag, held: [("#warning", "C++23")] if held.get("directive") == "warning" else [],
-}
-"""The features of a term or a helper that its properties' values make, by its kind (its tag, or its helper's), given
-its tag and its properties that are set: each feature's name, and the edition it arrived in, by its common name *(agent:
-code, as a standard tags a kind, not a property's value)*."""
-
-
-def _alias(kind: str, held: dict[str, Any]) -> Found:
-    """An alias declaration as an init-statement (C++23)."""
-    initializer = held.get("initializer")
-    return [(f"{kind} with an alias declaration as its init-statement", "C++23")] if initializer is not None and (
-        _record(initializer)[0] == "aliasdeclaration") else []
-
-
-def _labeled(kind: str, held: dict[str, Any]) -> Found:
-    """A label's features: without a statement, or before a declaration (C++23)."""
-    if "statement" not in held:
-        return [(f"{kind} without a statement", "C++23")]
-    return [(f"{kind} before a declaration", "C++23")] if _record(held["statement"])[0] in (
-        "simpledeclaration", "staticassertdeclaration", "aliasdeclaration", "attributedeclaration") else []
-
-
-def _requires(kind: str, held: dict[str, Any]) -> Found:
-    return [(f"{kind}.requires", "C++20")] if "requires" in held else []
+def _initialized(kind: str, held: dict[str, Any]) -> Found:
+    """A bit-field's default member initializer (C++20): two properties together, its `bitfield` and its
+    `initializer`, where a grammar clause says what one property holds (an initializer alone is C++11's)."""
+    return [(f"{kind} with a bit-field's initializer", ("C++20", "C++23"))] if "bitfield" in held and (
+        "initializer" in held) else []
 
 
 def _operator(kind: str, held: dict[str, Any]) -> Found:
-    """A `static` `operator()` or `operator[]` (C++23)."""
+    """A `static` `operator()` or `operator[]` (C++23): two properties together, a specifier `static` and the name its
+    declarator declares, where a grammar clause says what one property holds."""
     words = [_record(s)[1].get("keyword") for s in _many(held.get("specifiers"))]
     declarators = [held["declarator"]] if "declarator" in held else [
         Objects.properties(d).get("declarator") for d in _many(held.get("declarators"))]
     operators = [_named(d) for d in declarators if d is not None]
-    return [(f"{kind} static {operator}", "C++23") for operator in operators if "static" in words and operator in (
+    return [(f"{kind} static {operator}", ("C++23",)) for operator in operators if "static" in words and operator in (
         "operator()", "operator[]")]
 
 
@@ -224,41 +153,20 @@ def _named(declarator: Any) -> str | None:
     return _named(held["declarator"]) if "declarator" in held else None
 
 
-STATEMENT_FEATURES: dict[str, Callable[[str, dict[str, Any]], Found]] = {
-    "IfStatement": lambda kind, held: ([(f"{kind}.consteval", "C++23")] if held.get("consteval") else []) + _alias(
-        kind, held),
-    "SwitchStatement": _alias, "ForStatement": _alias,
-    "RangeForStatement": lambda kind, held: _alias(kind, held) or ([(f"{kind}.initializer", "C++20")] if (
-        "initializer" in held) else []),
-    "LabeledStatement": _labeled, "CaseStatement": _labeled, "DefaultStatement": _labeled,
-    "FunctionDefinition": lambda kind, held: _requires(kind, held) + _operator(kind, held),
-    "MemberDeclaration": _operator, "InitDeclarator": _requires, "TemplateDeclaration": _requires,
-    "MemberDeclarator": lambda kind, held: _requires(kind, held) + ([(f"{kind} with a bit-field's initializer", "C++20")]
-                                                                     if "bitfield" in held and "initializer" in held
-                                                                     else []),
-    "NamespaceDefinition": lambda kind, held: [(f"{kind} with an inline nested name", "C++20")] if any(
-        Objects.properties(n).get("inline") for n in _many(held.get("names"))) else [],
+def _indices(kind: str, held: dict[str, Any]) -> Found:
+    """A subscript of several indices (C++23): a count of a list's elements, which a grammar clause, saying what one
+    element holds, cannot, as mbse-expressions' `Cpp` leaves it unrecorded."""
+    return [(f"{kind} of several indices", ("C++23",))] if len(_many(held.get("indices"))) > 1 else []
+
+
+UNRECORDED: dict[str, Callable[[str, dict[str, Any]], Found]] = {
+    "MemberDeclarator": _initialized, "FunctionDefinition": _operator, "MemberDeclaration": _operator,
+    "subscriptexpression": _indices,
 }
-"""The features of a statement, a member or a part that its properties' values make, by its kind, given its kind and its
-properties that are set: each feature's name, and the edition it arrived in *(agent: code, as a standard tags a kind,
-not a property)*."""
-
-
-# --- Editions ---
-
-def _check(available: _Availability, unit: Any) -> list[str]:
-    problems: list[str] = []
-    for where, root, _, tag, record in _unit(unit):
-        schema, held = record.as_schema().name, Objects.properties(record)
-        if root is None:  # a statement, a member, an error or a part, at its place
-            kind = _kind(record)
-            found = available.kind(schema, kind)
-            found += available.features(STATEMENT_FEATURES.get(kind, lambda *_: [])(kind, held))
-        else:  # within a term or a helper, at the outermost's place
-            found = available.kind(schema, tag)
-            found += available.features(FEATURES.get(tag, lambda *_: [])(tag, held))
-        problems += [f"{where if root is None else root}: {problem}" for problem in found]
-    return _unique(problems)
+"""What no grammar clause can express, which stays code, each with its reason, as C's (`Programs.C.Check.UNRECORDED`):
+the language features of a statement, a member or a part, by its kind's name, and of a term, by its tag, given that and
+its properties that are set: each language feature's name, and the editions that allow it, by their common names
+*(agent)*."""
 
 
 def check(store: Any, path: str, version: Version | str) -> list[str]:
@@ -274,7 +182,7 @@ def check_file(store: Any, unit: Any, version: Version | str) -> list[str]:
     """`check` of a unit's visitor, a `Programs.Cpp.TranslationUnit` of `store`, read within the caller's
     transaction."""
     edition = f"C++{version[0]}" if isinstance(version, tuple) and len(version) == 1 else str(version)
-    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), unit)
+    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), _unit(unit), UNRECORDED)
 
 
 # --- Validity ---
