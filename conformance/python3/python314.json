@@ -4664,5 +4664,4700 @@
         }
       }
     }
-  ]
+  ],
+  "scope": "0",
+  "journal": {
+    "id": "python314.py#0",
+    "symbols": {
+      "o0": {
+        "reference": {
+          "path": {
+            "singleton": "Programs.Framework.TheWorkspace",
+            "next": {
+              "target": {}
+            }
+          }
+        }
+      },
+      "o1": {
+        "schema": {
+          "path": {
+            "singleton": ".",
+            "next": {
+              "entry": {
+                "i": "schemas",
+                "o": "",
+                "properties": {
+                  "name": "Programs"
+                },
+                "next": {
+                  "entry": {
+                    "i": "schemas",
+                    "o": "",
+                    "properties": {
+                      "name": "Python3"
+                    },
+                    "next": {
+                      "entry": {
+                        "i": "schemas",
+                        "o": "",
+                        "properties": {
+                          "name": "Module"
+                        },
+                        "next": {
+                          "target": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "changes": [
+      {
+        "entry": {
+          "insert": {
+            "holder": {
+              "symbol": "o0"
+            },
+            "adjacency": "files",
+            "links": {
+              "file": {
+                "symbol": "o1"
+              }
+            },
+            "properties": {
+              "path": "python314.py"
+            }
+          }
+        }
+      },
+      {
+        "property": {
+          "set": {
+            "holder": "o1",
+            "name": "body",
+            "value": [
+              {
+                "comment": {
+                  "line": 1,
+                  "text": "!/usr/bin/env python3"
+                }
+              },
+              {
+                "expr": {
+                  "line": 2,
+                  "value": {
+                    "literal": {
+                      "value": {
+                        "str": "The Python 3.14 conformance source: every kind, and the details each keeps, once or more."
+                      },
+                      "text": "\"\"\"The Python 3.14 conformance source: every kind, and the details each keeps, once or more.\"\"\"",
+                      "quote": "\"\"\""
+                    }
+                  }
+                }
+              },
+              {
+                "comment": {
+                  "line": 3,
+                  "text": " A comment of its own"
+                }
+              },
+              {
+                "importfrom": {
+                  "line": 4,
+                  "module": "__future__",
+                  "names": [
+                    {
+                      "name": "annotations"
+                    }
+                  ]
+                }
+              },
+              {
+                "import": {
+                  "line": 6,
+                  "names": [
+                    {
+                      "name": "os.path",
+                      "asname": "osp"
+                    },
+                    {
+                      "name": "sys"
+                    }
+                  ]
+                }
+              },
+              {
+                "comment": {
+                  "line": 6,
+                  "text": " a trailing comment",
+                  "trailing": true
+                }
+              },
+              {
+                "importfrom": {
+                  "line": 7,
+                  "level": 1,
+                  "names": [
+                    {
+                      "name": "sibling"
+                    }
+                  ]
+                }
+              },
+              {
+                "importfrom": {
+                  "line": 8,
+                  "level": 2,
+                  "module": "package.module",
+                  "names": [
+                    {
+                      "name": "first",
+                      "asname": "one"
+                    },
+                    {
+                      "name": "second"
+                    }
+                  ]
+                }
+              },
+              {
+                "importfrom": {
+                  "line": 9,
+                  "module": "collections.abc",
+                  "names": [
+                    {
+                      "name": "*"
+                    }
+                  ]
+                }
+              },
+              {
+                "typealias": {
+                  "line": 11,
+                  "name": {
+                    "variable": {
+                      "name": "Pair"
+                    }
+                  },
+                  "type_params": [
+                    {
+                      "typevar": {
+                        "name": "A"
+                      }
+                    },
+                    {
+                      "typevar": {
+                        "name": "B",
+                        "default_value": {
+                          "variable": {
+                            "name": "int"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "value": {
+                    "subscript": {
+                      "value": {
+                        "variable": {
+                          "name": "tuple"
+                        }
+                      },
+                      "slice": {
+                        "tuple": {
+                          "elts": [
+                            {
+                              "variable": {
+                                "name": "A"
+                              }
+                            },
+                            {
+                              "variable": {
+                                "name": "B"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "typealias": {
+                  "line": 12,
+                  "name": {
+                    "variable": {
+                      "name": "Callback"
+                    }
+                  },
+                  "type_params": [
+                    {
+                      "paramspec": {
+                        "name": "P"
+                      }
+                    },
+                    {
+                      "typevartuple": {
+                        "name": "Ts"
+                      }
+                    }
+                  ],
+                  "value": {
+                    "subscript": {
+                      "value": {
+                        "variable": {
+                          "name": "Callable"
+                        }
+                      },
+                      "slice": {
+                        "tuple": {
+                          "elts": [
+                            {
+                              "variable": {
+                                "name": "P"
+                              }
+                            },
+                            {
+                              "subscript": {
+                                "value": {
+                                  "variable": {
+                                    "name": "tuple"
+                                  }
+                                },
+                                "slice": {
+                                  "starred": {
+                                    "value": {
+                                      "variable": {
+                                        "name": "Ts"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "assign": {
+                  "line": 14,
+                  "targets": [
+                    {
+                      "variable": {
+                        "name": "NUMBERS"
+                      }
+                    }
+                  ],
+                  "value": {
+                    "list": {
+                      "elements": [
+                        {
+                          "python3": {
+                            "literal": {
+                              "value": {
+                                "int": 0
+                              },
+                              "text": "0",
+                              "base": 10
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "literal": {
+                              "value": {
+                                "int": 1000
+                              },
+                              "text": "1_000",
+                              "base": 10,
+                              "separators": true
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "literal": {
+                              "value": {
+                                "int": 255
+                              },
+                              "text": "0x_FF",
+                              "base": 16,
+                              "separators": true
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "literal": {
+                              "value": {
+                                "int": 15
+                              },
+                              "text": "0o17",
+                              "base": 8
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "literal": {
+                              "value": {
+                                "int": 10
+                              },
+                              "text": "0b1010",
+                              "base": 2
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "literal": {
+                              "value": {
+                                "float": 0.0015
+                              },
+                              "text": "1.5e-3"
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "constant": {
+                              "complex": {
+                                "real": 0.0,
+                                "imag": 2.0
+                              },
+                              "text": "2j"
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "constant": {
+                              "complex": {
+                                "real": 0.0,
+                                "imag": 3.0
+                              },
+                              "text": "3.0J"
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "literal": {
+                              "value": {
+                                "float": 0.5
+                              },
+                              "text": ".5"
+                            }
+                          }
+                        },
+                        {
+                          "python3": {
+                            "literal": {
+                              "value": {
+                                "float": 5.0
+                              },
+                              "text": "5."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "assign": {
+                  "line": 15,
+                  "targets": [
+                    {
+                      "variable": {
+                        "name": "TEXTS"
+                      }
+                    }
+                  ],
+                  "value": {
+                    "tuple": {
+                      "elts": [
+                        {
+                          "literal": {
+                            "value": {
+                              "str": "single"
+                            },
+                            "text": "'single'",
+                            "quote": "'"
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "str": "double"
+                            },
+                            "text": "\"double\"",
+                            "quote": "\""
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "str": "triple"
+                            },
+                            "text": "'''triple'''",
+                            "quote": "'''"
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "str": "triple\ndouble"
+                            },
+                            "text": "\"\"\"triple\ndouble\"\"\"",
+                            "quote": "\"\"\""
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "bytes": "Ynl0ZXM="
+                            },
+                            "text": "b'bytes'",
+                            "prefix": "b",
+                            "quote": "'"
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "bytes": "XGQr"
+                            },
+                            "text": "rb'\\d+'",
+                            "prefix": "rb",
+                            "quote": "'"
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "str": "raw"
+                            },
+                            "text": "R\"raw\"",
+                            "prefix": "R",
+                            "quote": "\""
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "str": "unicode"
+                            },
+                            "text": "u'unicode'",
+                            "prefix": "u",
+                            "quote": "'"
+                          }
+                        },
+                        {
+                          "concatenatedstring": {
+                            "values": [
+                              {
+                                "literal": {
+                                  "value": {
+                                    "str": "a"
+                                  },
+                                  "text": "'a'",
+                                  "quote": "'"
+                                }
+                              },
+                              {
+                                "literal": {
+                                  "value": {
+                                    "str": "b"
+                                  },
+                                  "text": "\"b\"",
+                                  "quote": "\""
+                                }
+                              },
+                              {
+                                "joinedstr": {
+                                  "prefix": "f",
+                                  "quote": "'",
+                                  "values": [
+                                    {
+                                      "stringtext": {
+                                        "spelling": "c"
+                                      }
+                                    },
+                                    {
+                                      "formattedvalue": {
+                                        "value": {
+                                          "subscript": {
+                                            "value": {
+                                              "variable": {
+                                                "name": "NUMBERS"
+                                              }
+                                            },
+                                            "slice": {
+                                              "literal": {
+                                                "value": {
+                                                  "int": 0
+                                                },
+                                                "text": "0",
+                                                "base": 10
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "text": "NUMBERS[0]"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "assign": {
+                  "line": 17,
+                  "targets": [
+                    {
+                      "variable": {
+                        "name": "SPECIAL"
+                      }
+                    }
+                  ],
+                  "value": {
+                    "tuple": {
+                      "elts": [
+                        {
+                          "constant": {
+                            "singleton": "None",
+                            "text": "None"
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "bool": true
+                            },
+                            "text": "True"
+                          }
+                        },
+                        {
+                          "literal": {
+                            "value": {
+                              "bool": false
+                            },
+                            "text": "False"
+                          }
+                        },
+                        {
+                          "constant": {
+                            "singleton": "...",
+                            "text": "..."
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "assign": {
+                  "line": 18,
+                  "targets": [
+                    {
+                      "variable": {
+                        "name": "EMPTY"
+                      }
+                    }
+                  ],
+                  "value": {
+                    "tuple": {
+                      "elts": [
+                        {
+                          "tuple": {
+                            "elts": []
+                          }
+                        },
+                        {
+                          "list": {
+                            "elements": []
+                          }
+                        },
+                        {
+                          "dict": {
+                            "items": []
+                          }
+                        },
+                        {
+                          "call": {
+                            "func": {
+                              "variable": {
+                                "name": "set"
+                              }
+                            },
+                            "args": []
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "assign": {
+                  "line": 19,
+                  "targets": [
+                    {
+                      "variable": {
+                        "name": "ONE"
+                      }
+                    }
+                  ],
+                  "value": {
+                    "tuple": {
+                      "elts": [
+                        {
+                          "literal": {
+                            "value": {
+                              "int": 1
+                            },
+                            "text": "1",
+                            "base": 10
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "classdef": {
+                  "line": 25,
+                  "decorator_list": [
+                    {
+                      "variable": {
+                        "name": "decorator"
+                      }
+                    },
+                    {
+                      "call": {
+                        "func": {
+                          "attribute": {
+                            "value": {
+                              "variable": {
+                                "name": "decorator"
+                              }
+                            },
+                            "attr": "attribute"
+                          }
+                        },
+                        "args": [
+                          {
+                            "variable": {
+                              "name": "argument"
+                            }
+                          }
+                        ],
+                        "keywords": [
+                          {
+                            "arg": "keyword",
+                            "value": {
+                              "literal": {
+                                "value": {
+                                  "int": 1
+                                },
+                                "text": "1",
+                                "base": 10
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "parenthesized": {
+                        "value": {
+                          "lambda": {
+                            "body": {
+                              "variable": {
+                                "name": "f"
+                              }
+                            },
+                            "args": {
+                              "args": [
+                                {
+                                  "arg": "f"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "name": "Shape",
+                  "type_params": [
+                    {
+                      "typevar": {
+                        "name": "T",
+                        "bound": {
+                          "tuple": {
+                            "elts": [
+                              {
+                                "variable": {
+                                  "name": "int"
+                                }
+                              },
+                              {
+                                "variable": {
+                                  "name": "float"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "typevartuple": {
+                        "name": "Shapes"
+                      }
+                    }
+                  ],
+                  "bases": [
+                    {
+                      "variable": {
+                        "name": "Base"
+                      }
+                    }
+                  ],
+                  "keywords": [
+                    {
+                      "arg": "metaclass",
+                      "value": {
+                        "variable": {
+                          "name": "Meta"
+                        }
+                      }
+                    },
+                    {
+                      "value": {
+                        "variable": {
+                          "name": "options"
+                        }
+                      }
+                    }
+                  ],
+                  "body": [
+                    {
+                      "expr": {
+                        "line": 26,
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "str": "A docstring."
+                            },
+                            "text": "\"\"\"A docstring.\"\"\"",
+                            "quote": "\"\"\""
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "annassign": {
+                        "line": 28,
+                        "target": {
+                          "variable": {
+                            "name": "sides"
+                          }
+                        },
+                        "annotation": {
+                          "variable": {
+                            "name": "int"
+                          }
+                        },
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 0
+                            },
+                            "text": "0",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "annassign": {
+                        "line": 29,
+                        "target": {
+                          "variable": {
+                            "name": "name"
+                          }
+                        },
+                        "annotation": {
+                          "variable": {
+                            "name": "str"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "functiondef": {
+                        "line": 31,
+                        "name": "__init__",
+                        "args": {
+                          "posonlyargs": [
+                            {
+                              "arg": "self"
+                            },
+                            {
+                              "arg": "sides",
+                              "annotation": {
+                                "variable": {
+                                  "name": "int"
+                                }
+                              }
+                            }
+                          ],
+                          "args": [
+                            {
+                              "arg": "name",
+                              "annotation": {
+                                "variable": {
+                                  "name": "str"
+                                }
+                              },
+                              "default_value": {
+                                "literal": {
+                                  "value": {
+                                    "str": "shape"
+                                  },
+                                  "text": "\"shape\"",
+                                  "quote": "\""
+                                }
+                              }
+                            }
+                          ],
+                          "vararg": {
+                            "arg": "args",
+                            "annotation": {
+                              "starred": {
+                                "value": {
+                                  "variable": {
+                                    "name": "Shapes"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "kwonlyargs": [
+                            {
+                              "arg": "scale",
+                              "annotation": {
+                                "variable": {
+                                  "name": "T"
+                                }
+                              },
+                              "default_value": {
+                                "literal": {
+                                  "value": {
+                                    "int": 1
+                                  },
+                                  "text": "1",
+                                  "base": 10
+                                }
+                              }
+                            }
+                          ],
+                          "kwarg": {
+                            "arg": "kwargs"
+                          }
+                        },
+                        "returns": {
+                          "constant": {
+                            "singleton": "None",
+                            "text": "None"
+                          }
+                        },
+                        "body": [
+                          {
+                            "assign": {
+                              "line": 32,
+                              "targets": [
+                                {
+                                  "tuple": {
+                                    "elts": [
+                                      {
+                                        "attribute": {
+                                          "value": {
+                                            "variable": {
+                                              "name": "self"
+                                            }
+                                          },
+                                          "attr": "sides"
+                                        }
+                                      },
+                                      {
+                                        "attribute": {
+                                          "value": {
+                                            "variable": {
+                                              "name": "self"
+                                            }
+                                          },
+                                          "attr": "name"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ],
+                              "value": {
+                                "tuple": {
+                                  "elts": [
+                                    {
+                                      "variable": {
+                                        "name": "sides"
+                                      }
+                                    },
+                                    {
+                                      "variable": {
+                                        "name": "name"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "expr": {
+                              "line": 33,
+                              "value": {
+                                "call": {
+                                  "func": {
+                                    "attribute": {
+                                      "value": {
+                                        "call": {
+                                          "func": {
+                                            "variable": {
+                                              "name": "super"
+                                            }
+                                          },
+                                          "args": []
+                                        }
+                                      },
+                                      "attr": "__init__"
+                                    }
+                                  },
+                                  "args": [
+                                    {
+                                      "starred": {
+                                        "value": {
+                                          "variable": {
+                                            "name": "args"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "keywords": [
+                                    {
+                                      "value": {
+                                        "variable": {
+                                          "name": "kwargs"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "functiondef": {
+                        "line": 36,
+                        "decorator_list": [
+                          {
+                            "variable": {
+                              "name": "property"
+                            }
+                          }
+                        ],
+                        "name": "area",
+                        "args": {
+                          "args": [
+                            {
+                              "arg": "self"
+                            }
+                          ]
+                        },
+                        "returns": {
+                          "variable": {
+                            "name": "float"
+                          }
+                        },
+                        "body": [
+                          {
+                            "return": {
+                              "line": 37,
+                              "value": {
+                                "binop": {
+                                  "left": {
+                                    "binop": {
+                                      "left": {
+                                        "attribute": {
+                                          "value": {
+                                            "variable": {
+                                              "name": "self"
+                                            }
+                                          },
+                                          "attr": "sides"
+                                        }
+                                      },
+                                      "op": "**",
+                                      "right": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 2
+                                          },
+                                          "text": "2",
+                                          "base": 10
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "op": "*",
+                                  "right": {
+                                    "unaryop": {
+                                      "op": "-",
+                                      "operand": {
+                                        "binop": {
+                                          "left": {
+                                            "attribute": {
+                                              "value": {
+                                                "variable": {
+                                                  "name": "self"
+                                                }
+                                              },
+                                              "attr": "scale"
+                                            }
+                                          },
+                                          "op": "**",
+                                          "right": {
+                                            "literal": {
+                                              "value": {
+                                                "float": 0.5
+                                              },
+                                              "text": "0.5"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "asyncfunctiondef": {
+                        "line": 39,
+                        "name": "fetch",
+                        "args": {
+                          "args": [
+                            {
+                              "arg": "self"
+                            }
+                          ],
+                          "kwonlyargs": [
+                            {
+                              "arg": "retries",
+                              "default_value": {
+                                "literal": {
+                                  "value": {
+                                    "int": 3
+                                  },
+                                  "text": "3",
+                                  "base": 10
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "body": [
+                          {
+                            "asyncwith": {
+                              "line": 40,
+                              "items": [
+                                {
+                                  "context_expr": {
+                                    "call": {
+                                      "func": {
+                                        "variable": {
+                                          "name": "session"
+                                        }
+                                      },
+                                      "args": []
+                                    }
+                                  },
+                                  "optional_vars": {
+                                    "variable": {
+                                      "name": "s"
+                                    }
+                                  }
+                                },
+                                {
+                                  "context_expr": {
+                                    "variable": {
+                                      "name": "lock"
+                                    }
+                                  }
+                                }
+                              ],
+                              "body": [
+                                {
+                                  "asyncfor": {
+                                    "line": 41,
+                                    "target": {
+                                      "variable": {
+                                        "name": "item"
+                                      }
+                                    },
+                                    "iter": {
+                                      "call": {
+                                        "func": {
+                                          "attribute": {
+                                            "value": {
+                                              "variable": {
+                                                "name": "s"
+                                              }
+                                            },
+                                            "attr": "stream"
+                                          }
+                                        },
+                                        "args": []
+                                      }
+                                    },
+                                    "body": [
+                                      {
+                                        "expr": {
+                                          "line": 42,
+                                          "value": {
+                                            "await": {
+                                              "value": {
+                                                "variable": {
+                                                  "name": "item"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "return": {
+                              "line": 43,
+                              "value": {
+                                "listcomp": {
+                                  "body": {
+                                    "variable": {
+                                      "name": "x"
+                                    }
+                                  },
+                                  "generators": [
+                                    {
+                                      "is_async": true,
+                                      "target": {
+                                        "variable": {
+                                          "name": "x"
+                                        }
+                                      },
+                                      "iter": {
+                                        "call": {
+                                          "func": {
+                                            "attribute": {
+                                              "value": {
+                                                "variable": {
+                                                  "name": "self"
+                                                }
+                                              },
+                                              "attr": "stream"
+                                            }
+                                          },
+                                          "args": []
+                                        }
+                                      },
+                                      "ifs": [
+                                        {
+                                          "await": {
+                                            "value": {
+                                              "variable": {
+                                                "name": "x"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "functiondef": {
+                        "line": 45,
+                        "name": "generate",
+                        "args": {
+                          "args": [
+                            {
+                              "arg": "self"
+                            }
+                          ]
+                        },
+                        "body": [
+                          {
+                            "expr": {
+                              "line": 46,
+                              "value": {
+                                "yield": {}
+                              }
+                            }
+                          },
+                          {
+                            "expr": {
+                              "line": 47,
+                              "value": {
+                                "yield": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "self"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "expr": {
+                              "line": 48,
+                              "value": {
+                                "yieldfrom": {
+                                  "value": {
+                                    "call": {
+                                      "func": {
+                                        "variable": {
+                                          "name": "range"
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "literal": {
+                                            "value": {
+                                              "int": 10
+                                            },
+                                            "text": "10",
+                                            "base": 10
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "assign": {
+                              "line": 49,
+                              "targets": [
+                                {
+                                  "variable": {
+                                    "name": "received"
+                                  }
+                                }
+                              ],
+                              "value": {
+                                "yield": {
+                                  "value": {
+                                    "tuple": {
+                                      "elts": [
+                                        {
+                                          "literal": {
+                                            "value": {
+                                              "int": 1
+                                            },
+                                            "text": "1",
+                                            "base": 10
+                                          }
+                                        },
+                                        {
+                                          "literal": {
+                                            "value": {
+                                              "int": 2
+                                            },
+                                            "text": "2",
+                                            "base": 10
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "return": {
+                              "line": 50,
+                              "value": {
+                                "variable": {
+                                  "name": "received"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "functiondef": {
+                  "line": 53,
+                  "name": "operators",
+                  "args": {
+                    "args": [
+                      {
+                        "arg": "a"
+                      },
+                      {
+                        "arg": "b"
+                      },
+                      {
+                        "arg": "c"
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "assign": {
+                        "line": 54,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "result"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "binop": {
+                            "left": {
+                              "binop": {
+                                "left": {
+                                  "variable": {
+                                    "name": "a"
+                                  }
+                                },
+                                "op": "+",
+                                "right": {
+                                  "variable": {
+                                    "name": "b"
+                                  }
+                                }
+                              }
+                            },
+                            "op": "-",
+                            "right": {
+                              "binop": {
+                                "left": {
+                                  "binop": {
+                                    "left": {
+                                      "binop": {
+                                        "left": {
+                                          "binop": {
+                                            "left": {
+                                              "binop": {
+                                                "left": {
+                                                  "variable": {
+                                                    "name": "c"
+                                                  }
+                                                },
+                                                "op": "*",
+                                                "right": {
+                                                  "variable": {
+                                                    "name": "a"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "op": "/",
+                                            "right": {
+                                              "variable": {
+                                                "name": "b"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "op": "//",
+                                        "right": {
+                                          "variable": {
+                                            "name": "c"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "op": "%",
+                                    "right": {
+                                      "variable": {
+                                        "name": "a"
+                                      }
+                                    }
+                                  }
+                                },
+                                "op": "@",
+                                "right": {
+                                  "binop": {
+                                    "left": {
+                                      "variable": {
+                                        "name": "b"
+                                      }
+                                    },
+                                    "op": "**",
+                                    "right": {
+                                      "variable": {
+                                        "name": "c"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 55,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "result"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "binop": {
+                            "left": {
+                              "binop": {
+                                "left": {
+                                  "binop": {
+                                    "left": {
+                                      "binop": {
+                                        "left": {
+                                          "binop": {
+                                            "left": {
+                                              "variable": {
+                                                "name": "a"
+                                              }
+                                            },
+                                            "op": "<<",
+                                            "right": {
+                                              "variable": {
+                                                "name": "b"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "op": ">>",
+                                        "right": {
+                                          "variable": {
+                                            "name": "c"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "op": "&",
+                                    "right": {
+                                      "variable": {
+                                        "name": "a"
+                                      }
+                                    }
+                                  }
+                                },
+                                "op": "^",
+                                "right": {
+                                  "variable": {
+                                    "name": "b"
+                                  }
+                                }
+                              }
+                            },
+                            "op": "|",
+                            "right": {
+                              "variable": {
+                                "name": "c"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 56,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "result"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "binop": {
+                            "left": {
+                              "binop": {
+                                "left": {
+                                  "unaryop": {
+                                    "op": "~",
+                                    "operand": {
+                                      "variable": {
+                                        "name": "a"
+                                      }
+                                    }
+                                  }
+                                },
+                                "op": "+",
+                                "right": {
+                                  "unaryop": {
+                                    "op": "+",
+                                    "operand": {
+                                      "variable": {
+                                        "name": "b"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "op": "-",
+                            "right": {
+                              "unaryop": {
+                                "op": "-",
+                                "operand": {
+                                  "variable": {
+                                    "name": "c"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 57,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "result"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "boolop": {
+                            "op": "or",
+                            "values": [
+                              {
+                                "boolop": {
+                                  "op": "and",
+                                  "values": [
+                                    {
+                                      "unaryop": {
+                                        "op": "not",
+                                        "operand": {
+                                          "variable": {
+                                            "name": "a"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "variable": {
+                                        "name": "b"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "variable": {
+                                  "name": "c"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 58,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "result"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "compare": {
+                            "left": {
+                              "variable": {
+                                "name": "a"
+                              }
+                            },
+                            "comparisons": [
+                              {
+                                "op": "<",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "b"
+                                  }
+                                }
+                              },
+                              {
+                                "op": "<=",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "c"
+                                  }
+                                }
+                              },
+                              {
+                                "op": ">",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "a"
+                                  }
+                                }
+                              },
+                              {
+                                "op": ">=",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "b"
+                                  }
+                                }
+                              },
+                              {
+                                "op": "==",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "c"
+                                  }
+                                }
+                              },
+                              {
+                                "op": "!=",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "a"
+                                  }
+                                }
+                              },
+                              {
+                                "op": "is",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "b"
+                                  }
+                                }
+                              },
+                              {
+                                "op": "is not",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "c"
+                                  }
+                                }
+                              },
+                              {
+                                "op": "in",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "a"
+                                  }
+                                }
+                              },
+                              {
+                                "op": "not in",
+                                "comparator": {
+                                  "variable": {
+                                    "name": "b"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 59,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "result"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "ifexp": {
+                            "body": {
+                              "variable": {
+                                "name": "a"
+                              }
+                            },
+                            "test": {
+                              "variable": {
+                                "name": "b"
+                              }
+                            },
+                            "orelse": {
+                              "ifexp": {
+                                "body": {
+                                  "variable": {
+                                    "name": "c"
+                                  }
+                                },
+                                "test": {
+                                  "variable": {
+                                    "name": "a"
+                                  }
+                                },
+                                "orelse": {
+                                  "variable": {
+                                    "name": "b"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 60,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "result"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "tuple": {
+                            "elts": [
+                              {
+                                "binop": {
+                                  "left": {
+                                    "parenthesized": {
+                                      "value": {
+                                        "binop": {
+                                          "left": {
+                                            "variable": {
+                                              "name": "a"
+                                            }
+                                          },
+                                          "op": "+",
+                                          "right": {
+                                            "variable": {
+                                              "name": "b"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "op": "*",
+                                  "right": {
+                                    "variable": {
+                                      "name": "c"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "binop": {
+                                  "left": {
+                                    "variable": {
+                                      "name": "a"
+                                    }
+                                  },
+                                  "op": "-",
+                                  "right": {
+                                    "parenthesized": {
+                                      "value": {
+                                        "binop": {
+                                          "left": {
+                                            "variable": {
+                                              "name": "b"
+                                            }
+                                          },
+                                          "op": "-",
+                                          "right": {
+                                            "variable": {
+                                              "name": "c"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "binop": {
+                                  "left": {
+                                    "parenthesized": {
+                                      "value": {
+                                        "binop": {
+                                          "left": {
+                                            "variable": {
+                                              "name": "a"
+                                            }
+                                          },
+                                          "op": "**",
+                                          "right": {
+                                            "variable": {
+                                              "name": "b"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "op": "**",
+                                  "right": {
+                                    "variable": {
+                                      "name": "c"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "binop": {
+                                  "left": {
+                                    "parenthesized": {
+                                      "value": {
+                                        "unaryop": {
+                                          "op": "-",
+                                          "operand": {
+                                            "variable": {
+                                              "name": "a"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "op": "**",
+                                  "right": {
+                                    "variable": {
+                                      "name": "b"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "parenthesized": {
+                                  "value": {
+                                    "namedexpr": {
+                                      "value": {
+                                        "variable": {
+                                          "name": "a"
+                                        }
+                                      },
+                                      "target": {
+                                        "variable": {
+                                          "name": "await_"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 61,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "+",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 1
+                            },
+                            "text": "1",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 62,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "-",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 1
+                            },
+                            "text": "1",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 63,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "*",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 2
+                            },
+                            "text": "2",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 64,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "@",
+                        "value": {
+                          "variable": {
+                            "name": "m"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 65,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "/",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 2
+                            },
+                            "text": "2",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 66,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "//",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 2
+                            },
+                            "text": "2",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 67,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "%",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 2
+                            },
+                            "text": "2",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 68,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "**",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 2
+                            },
+                            "text": "2",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 69,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "<<",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 1
+                            },
+                            "text": "1",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 70,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": ">>",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 1
+                            },
+                            "text": "1",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 71,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "&",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 1
+                            },
+                            "text": "1",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 72,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "^",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 1
+                            },
+                            "text": "1",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "augassign": {
+                        "line": 73,
+                        "target": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        },
+                        "op": "|",
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 1
+                            },
+                            "text": "1",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "return": {
+                        "line": 74,
+                        "value": {
+                          "variable": {
+                            "name": "result"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "functiondef": {
+                  "line": 77,
+                  "name": "containers",
+                  "args": {
+                    "args": [
+                      {
+                        "arg": "items"
+                      },
+                      {
+                        "arg": "key"
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "assign": {
+                        "line": 78,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "pairs"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "dict": {
+                            "items": [
+                              {
+                                "key": {
+                                  "variable": {
+                                    "name": "key"
+                                  }
+                                },
+                                "value": {
+                                  "variable": {
+                                    "name": "value"
+                                  }
+                                }
+                              },
+                              {
+                                "value": {
+                                  "variable": {
+                                    "name": "items"
+                                  }
+                                }
+                              },
+                              {
+                                "key": {
+                                  "literal": {
+                                    "value": {
+                                      "str": "k"
+                                    },
+                                    "text": "'k'",
+                                    "quote": "'"
+                                  }
+                                },
+                                "value": {
+                                  "literal": {
+                                    "value": {
+                                      "int": 1
+                                    },
+                                    "text": "1",
+                                    "base": 10
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 79,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "unique"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "set": {
+                            "elts": [
+                              {
+                                "literal": {
+                                  "value": {
+                                    "int": 1
+                                  },
+                                  "text": "1",
+                                  "base": 10
+                                }
+                              },
+                              {
+                                "literal": {
+                                  "value": {
+                                    "int": 2
+                                  },
+                                  "text": "2",
+                                  "base": 10
+                                }
+                              },
+                              {
+                                "starred": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "items"
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 80,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "listed"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "list": {
+                            "elements": [
+                              {
+                                "python3": {
+                                  "literal": {
+                                    "value": {
+                                      "int": 1
+                                    },
+                                    "text": "1",
+                                    "base": 10
+                                  }
+                                }
+                              },
+                              {
+                                "python3": {
+                                  "starred": {
+                                    "value": {
+                                      "variable": {
+                                        "name": "items"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "python3": {
+                                  "literal": {
+                                    "value": {
+                                      "int": 2
+                                    },
+                                    "text": "2",
+                                    "base": 10
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 81,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "squares"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "listcomp": {
+                            "body": {
+                              "binop": {
+                                "left": {
+                                  "variable": {
+                                    "name": "x"
+                                  }
+                                },
+                                "op": "*",
+                                "right": {
+                                  "variable": {
+                                    "name": "x"
+                                  }
+                                }
+                              }
+                            },
+                            "generators": [
+                              {
+                                "target": {
+                                  "variable": {
+                                    "name": "x"
+                                  }
+                                },
+                                "iter": {
+                                  "variable": {
+                                    "name": "items"
+                                  }
+                                },
+                                "ifs": [
+                                  {
+                                    "variable": {
+                                      "name": "x"
+                                    }
+                                  },
+                                  {
+                                    "unaryop": {
+                                      "op": "not",
+                                      "operand": {
+                                        "compare": {
+                                          "left": {
+                                            "variable": {
+                                              "name": "x"
+                                            }
+                                          },
+                                          "comparisons": [
+                                            {
+                                              "op": "<",
+                                              "comparator": {
+                                                "literal": {
+                                                  "value": {
+                                                    "int": 0
+                                                  },
+                                                  "text": "0",
+                                                  "base": 10
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 82,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "table"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "dictcomp": {
+                            "body": {
+                              "variable": {
+                                "name": "v"
+                              }
+                            },
+                            "key": {
+                              "variable": {
+                                "name": "k"
+                              }
+                            },
+                            "generators": [
+                              {
+                                "target": {
+                                  "tuple": {
+                                    "elts": [
+                                      {
+                                        "variable": {
+                                          "name": "k"
+                                        }
+                                      },
+                                      {
+                                        "variable": {
+                                          "name": "v"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                },
+                                "iter": {
+                                  "call": {
+                                    "func": {
+                                      "attribute": {
+                                        "value": {
+                                          "variable": {
+                                            "name": "items"
+                                          }
+                                        },
+                                        "attr": "items"
+                                      }
+                                    },
+                                    "args": []
+                                  }
+                                },
+                                "ifs": []
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 83,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "distinct"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "setcomp": {
+                            "body": {
+                              "variable": {
+                                "name": "x"
+                              }
+                            },
+                            "generators": [
+                              {
+                                "target": {
+                                  "variable": {
+                                    "name": "row"
+                                  }
+                                },
+                                "iter": {
+                                  "variable": {
+                                    "name": "items"
+                                  }
+                                },
+                                "ifs": []
+                              },
+                              {
+                                "target": {
+                                  "variable": {
+                                    "name": "x"
+                                  }
+                                },
+                                "iter": {
+                                  "variable": {
+                                    "name": "row"
+                                  }
+                                },
+                                "ifs": []
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 84,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "lazy"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "generatorexp": {
+                            "body": {
+                              "variable": {
+                                "name": "x"
+                              }
+                            },
+                            "generators": [
+                              {
+                                "target": {
+                                  "variable": {
+                                    "name": "x"
+                                  }
+                                },
+                                "iter": {
+                                  "variable": {
+                                    "name": "items"
+                                  }
+                                },
+                                "ifs": []
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 85,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "total"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "call": {
+                            "func": {
+                              "variable": {
+                                "name": "sum"
+                              }
+                            },
+                            "args": [
+                              {
+                                "generatorexp": {
+                                  "body": {
+                                    "variable": {
+                                      "name": "x"
+                                    }
+                                  },
+                                  "generators": [
+                                    {
+                                      "target": {
+                                        "variable": {
+                                          "name": "x"
+                                        }
+                                      },
+                                      "iter": {
+                                        "variable": {
+                                          "name": "items"
+                                        }
+                                      },
+                                      "ifs": []
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 86,
+                        "targets": [
+                          {
+                            "tuple": {
+                              "elts": [
+                                {
+                                  "variable": {
+                                    "name": "head"
+                                  }
+                                },
+                                {
+                                  "starred": {
+                                    "value": {
+                                      "variable": {
+                                        "name": "tail"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "value": {
+                          "variable": {
+                            "name": "items"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 87,
+                        "targets": [
+                          {
+                            "list": {
+                              "elements": [
+                                {
+                                  "python3": {
+                                    "variable": {
+                                      "name": "first"
+                                    }
+                                  }
+                                },
+                                {
+                                  "python3": {
+                                    "variable": {
+                                      "name": "second"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "value": {
+                          "variable": {
+                            "name": "items"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 88,
+                        "targets": [
+                          {
+                            "tuple": {
+                              "elts": [
+                                {
+                                  "variable": {
+                                    "name": "one"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "value": {
+                          "variable": {
+                            "name": "items"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "delete": {
+                        "line": 89,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "head"
+                            }
+                          },
+                          {
+                            "subscript": {
+                              "value": {
+                                "variable": {
+                                  "name": "tail"
+                                }
+                              },
+                              "slice": {
+                                "literal": {
+                                  "value": {
+                                    "int": 0
+                                  },
+                                  "text": "0",
+                                  "base": 10
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "attribute": {
+                              "value": {
+                                "variable": {
+                                  "name": "items"
+                                }
+                              },
+                              "attr": "attribute"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "return": {
+                        "line": 90,
+                        "value": {
+                          "tuple": {
+                            "elts": [
+                              {
+                                "subscript": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "items"
+                                    }
+                                  },
+                                  "slice": {
+                                    "literal": {
+                                      "value": {
+                                        "int": 0
+                                      },
+                                      "text": "0",
+                                      "base": 10
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "subscript": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "items"
+                                    }
+                                  },
+                                  "slice": {
+                                    "slice": {
+                                      "lower": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 1
+                                          },
+                                          "text": "1",
+                                          "base": 10
+                                        }
+                                      },
+                                      "upper": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 2
+                                          },
+                                          "text": "2",
+                                          "base": 10
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "subscript": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "items"
+                                    }
+                                  },
+                                  "slice": {
+                                    "slice": {
+                                      "step": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 2
+                                          },
+                                          "text": "2",
+                                          "base": 10
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "subscript": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "items"
+                                    }
+                                  },
+                                  "slice": {
+                                    "tuple": {
+                                      "elts": [
+                                        {
+                                          "slice": {
+                                            "lower": {
+                                              "variable": {
+                                                "name": "a"
+                                              }
+                                            },
+                                            "upper": {
+                                              "variable": {
+                                                "name": "b"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "variable": {
+                                            "name": "c"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "subscript": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "items"
+                                    }
+                                  },
+                                  "slice": {
+                                    "constant": {
+                                      "singleton": "...",
+                                      "text": "..."
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "subscript": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "items"
+                                    }
+                                  },
+                                  "slice": {
+                                    "starred": {
+                                      "value": {
+                                        "variable": {
+                                          "name": "key"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "functiondef": {
+                  "line": 93,
+                  "name": "strings",
+                  "args": {
+                    "args": [
+                      {
+                        "arg": "value"
+                      },
+                      {
+                        "arg": "width"
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "assign": {
+                        "line": 94,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "text"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "joinedstr": {
+                            "prefix": "f",
+                            "quote": "'",
+                            "values": [
+                              {
+                                "formattedvalue": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value",
+                                  "conversion": "r",
+                                  "format_spec": {
+                                    "values": [
+                                      {
+                                        "stringtext": {
+                                          "spelling": ">"
+                                        }
+                                      },
+                                      {
+                                        "formattedvalue": {
+                                          "value": {
+                                            "variable": {
+                                              "name": "width"
+                                            }
+                                          },
+                                          "text": "width"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "stringtext": {
+                                  "spelling": " "
+                                }
+                              },
+                              {
+                                "formattedvalue": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value = ",
+                                  "debug": true
+                                }
+                              },
+                              {
+                                "stringtext": {
+                                  "spelling": " "
+                                }
+                              },
+                              {
+                                "formattedvalue": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value",
+                                  "format_spec": {
+                                    "values": [
+                                      {
+                                        "stringtext": {
+                                          "spelling": "=10"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "stringtext": {
+                                  "spelling": " {{escaped}} "
+                                }
+                              },
+                              {
+                                "formattedvalue": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value",
+                                  "conversion": "s"
+                                }
+                              },
+                              {
+                                "stringtext": {
+                                  "spelling": " "
+                                }
+                              },
+                              {
+                                "formattedvalue": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value",
+                                  "conversion": "a",
+                                  "format_spec": {
+                                    "values": [
+                                      {
+                                        "formattedvalue": {
+                                          "value": {
+                                            "variable": {
+                                              "name": "width"
+                                            }
+                                          },
+                                          "text": "width"
+                                        }
+                                      },
+                                      {
+                                        "stringtext": {
+                                          "spelling": "."
+                                        }
+                                      },
+                                      {
+                                        "formattedvalue": {
+                                          "value": {
+                                            "variable": {
+                                              "name": "width"
+                                            }
+                                          },
+                                          "text": "width"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 95,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "template"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "templatestr": {
+                            "prefix": "t",
+                            "quote": "'",
+                            "values": [
+                              {
+                                "interpolation": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value"
+                                }
+                              },
+                              {
+                                "stringtext": {
+                                  "spelling": " and "
+                                }
+                              },
+                              {
+                                "interpolation": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value",
+                                  "conversion": "r",
+                                  "format_spec": {
+                                    "values": [
+                                      {
+                                        "stringtext": {
+                                          "spelling": ">"
+                                        }
+                                      },
+                                      {
+                                        "formattedvalue": {
+                                          "value": {
+                                            "variable": {
+                                              "name": "width"
+                                            }
+                                          },
+                                          "text": "width"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 96,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "nested"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "joinedstr": {
+                            "prefix": "f",
+                            "quote": "\"",
+                            "values": [
+                              {
+                                "formattedvalue": {
+                                  "value": {
+                                    "joinedstr": {
+                                      "prefix": "f",
+                                      "quote": "'",
+                                      "values": [
+                                        {
+                                          "formattedvalue": {
+                                            "value": {
+                                              "variable": {
+                                                "name": "value"
+                                              }
+                                            },
+                                            "text": "value"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "text": "f'{value}'"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 97,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "raw"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "joinedstr": {
+                            "prefix": "rf",
+                            "quote": "'",
+                            "values": [
+                              {
+                                "stringtext": {
+                                  "spelling": "\\d"
+                                }
+                              },
+                              {
+                                "formattedvalue": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 98,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "multiline"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "joinedstr": {
+                            "prefix": "f",
+                            "quote": "\"\"\"",
+                            "values": [
+                              {
+                                "stringtext": {
+                                  "spelling": "\n    "
+                                }
+                              },
+                              {
+                                "formattedvalue": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "value"
+                                    }
+                                  },
+                                  "text": "value"
+                                }
+                              },
+                              {
+                                "stringtext": {
+                                  "spelling": "\n    "
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "return": {
+                        "line": 101,
+                        "value": {
+                          "tuple": {
+                            "elts": [
+                              {
+                                "variable": {
+                                  "name": "text"
+                                }
+                              },
+                              {
+                                "variable": {
+                                  "name": "template"
+                                }
+                              },
+                              {
+                                "variable": {
+                                  "name": "nested"
+                                }
+                              },
+                              {
+                                "variable": {
+                                  "name": "raw"
+                                }
+                              },
+                              {
+                                "variable": {
+                                  "name": "multiline"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "functiondef": {
+                  "line": 104,
+                  "name": "statements",
+                  "args": {
+                    "args": [
+                      {
+                        "arg": "path"
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "global": {
+                        "line": 105,
+                        "names": [
+                          "NUMBERS"
+                        ]
+                      }
+                    },
+                    {
+                      "assign": {
+                        "line": 106,
+                        "targets": [
+                          {
+                            "variable": {
+                              "name": "counter"
+                            }
+                          }
+                        ],
+                        "value": {
+                          "literal": {
+                            "value": {
+                              "int": 0
+                            },
+                            "text": "0",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "functiondef": {
+                        "line": 108,
+                        "name": "inner",
+                        "args": {},
+                        "body": [
+                          {
+                            "nonlocal": {
+                              "line": 109,
+                              "names": [
+                                "counter"
+                              ]
+                            }
+                          },
+                          {
+                            "assign": {
+                              "line": 110,
+                              "targets": [
+                                {
+                                  "variable": {
+                                    "name": "counter"
+                                  }
+                                }
+                              ],
+                              "value": {
+                                "binop": {
+                                  "left": {
+                                    "variable": {
+                                      "name": "counter"
+                                    }
+                                  },
+                                  "op": "+",
+                                  "right": {
+                                    "literal": {
+                                      "value": {
+                                        "int": 1
+                                      },
+                                      "text": "1",
+                                      "base": 10
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "assert": {
+                        "line": 112,
+                        "test": {
+                          "variable": {
+                            "name": "path"
+                          }
+                        },
+                        "msg": {
+                          "literal": {
+                            "value": {
+                              "str": "a message"
+                            },
+                            "text": "\"a message\"",
+                            "quote": "\""
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "assert": {
+                        "line": 113,
+                        "test": {
+                          "variable": {
+                            "name": "path"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "pass": {
+                        "line": 114
+                      }
+                    },
+                    {
+                      "if": {
+                        "line": 115,
+                        "test": {
+                          "compare": {
+                            "left": {
+                              "parenthesized": {
+                                "value": {
+                                  "namedexpr": {
+                                    "value": {
+                                      "call": {
+                                        "func": {
+                                          "variable": {
+                                            "name": "len"
+                                          }
+                                        },
+                                        "args": [
+                                          {
+                                            "variable": {
+                                              "name": "path"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "target": {
+                                      "variable": {
+                                        "name": "size"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "comparisons": [
+                              {
+                                "op": ">",
+                                "comparator": {
+                                  "literal": {
+                                    "value": {
+                                      "int": 10
+                                    },
+                                    "text": "10",
+                                    "base": 10
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "body": [
+                          {
+                            "pass": {
+                              "line": 116
+                            }
+                          }
+                        ],
+                        "orelse": [
+                          {
+                            "if": {
+                              "line": 117,
+                              "test": {
+                                "compare": {
+                                  "left": {
+                                    "variable": {
+                                      "name": "size"
+                                    }
+                                  },
+                                  "comparisons": [
+                                    {
+                                      "op": ">",
+                                      "comparator": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 5
+                                          },
+                                          "text": "5",
+                                          "base": 10
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 118
+                                  }
+                                }
+                              ],
+                              "orelse": [
+                                {
+                                  "pass": {
+                                    "line": 120
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "while": {
+                        "line": 121,
+                        "test": {
+                          "compare": {
+                            "left": {
+                              "variable": {
+                                "name": "counter"
+                              }
+                            },
+                            "comparisons": [
+                              {
+                                "op": "<",
+                                "comparator": {
+                                  "literal": {
+                                    "value": {
+                                      "int": 10
+                                    },
+                                    "text": "10",
+                                    "base": 10
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "body": [
+                          {
+                            "augassign": {
+                              "line": 122,
+                              "target": {
+                                "variable": {
+                                  "name": "counter"
+                                }
+                              },
+                              "op": "+",
+                              "value": {
+                                "literal": {
+                                  "value": {
+                                    "int": 1
+                                  },
+                                  "text": "1",
+                                  "base": 10
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "if": {
+                              "line": 123,
+                              "test": {
+                                "compare": {
+                                  "left": {
+                                    "variable": {
+                                      "name": "counter"
+                                    }
+                                  },
+                                  "comparisons": [
+                                    {
+                                      "op": "==",
+                                      "comparator": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 5
+                                          },
+                                          "text": "5",
+                                          "base": 10
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "body": [
+                                {
+                                  "continue": {
+                                    "line": 124
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "break": {
+                              "line": 125
+                            }
+                          }
+                        ],
+                        "orelse": [
+                          {
+                            "pass": {
+                              "line": 127
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "for": {
+                        "line": 128,
+                        "target": {
+                          "tuple": {
+                            "elts": [
+                              {
+                                "variable": {
+                                  "name": "index"
+                                }
+                              },
+                              {
+                                "variable": {
+                                  "name": "value"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "iter": {
+                          "call": {
+                            "func": {
+                              "variable": {
+                                "name": "enumerate"
+                              }
+                            },
+                            "args": [
+                              {
+                                "variable": {
+                                  "name": "path"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "body": [
+                          {
+                            "pass": {
+                              "line": 129
+                            }
+                          }
+                        ],
+                        "orelse": [
+                          {
+                            "pass": {
+                              "line": 131
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "with": {
+                        "line": 132,
+                        "items": [
+                          {
+                            "context_expr": {
+                              "call": {
+                                "func": {
+                                  "variable": {
+                                    "name": "open"
+                                  }
+                                },
+                                "args": [
+                                  {
+                                    "variable": {
+                                      "name": "path"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "optional_vars": {
+                              "variable": {
+                                "name": "handle"
+                              }
+                            }
+                          },
+                          {
+                            "context_expr": {
+                              "call": {
+                                "func": {
+                                  "variable": {
+                                    "name": "open"
+                                  }
+                                },
+                                "args": [
+                                  {
+                                    "variable": {
+                                      "name": "path"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "optional_vars": {
+                              "tuple": {
+                                "elts": [
+                                  {
+                                    "variable": {
+                                      "name": "a"
+                                    }
+                                  },
+                                  {
+                                    "variable": {
+                                      "name": "b"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ],
+                        "body": [
+                          {
+                            "pass": {
+                              "line": 133
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "try": {
+                        "line": 134,
+                        "body": [
+                          {
+                            "raise": {
+                              "line": 135,
+                              "exc": {
+                                "call": {
+                                  "func": {
+                                    "variable": {
+                                      "name": "ValueError"
+                                    }
+                                  },
+                                  "args": [
+                                    {
+                                      "literal": {
+                                        "value": {
+                                          "str": "bad"
+                                        },
+                                        "text": "\"bad\"",
+                                        "quote": "\""
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "cause": {
+                                "constant": {
+                                  "singleton": "None",
+                                  "text": "None"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "handlers": [
+                          {
+                            "excepthandler": {
+                              "line": 136,
+                              "type": {
+                                "tuple": {
+                                  "elts": [
+                                    {
+                                      "variable": {
+                                        "name": "ValueError"
+                                      }
+                                    },
+                                    {
+                                      "variable": {
+                                        "name": "TypeError"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "name": "error",
+                              "body": [
+                                {
+                                  "raise": {
+                                    "line": 137
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "excepthandler": {
+                              "line": 138,
+                              "type": {
+                                "variable": {
+                                  "name": "OSError"
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 139
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "excepthandler": {
+                              "line": 140,
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 141
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "orelse": [
+                          {
+                            "pass": {
+                              "line": 143
+                            }
+                          }
+                        ],
+                        "finalbody": [
+                          {
+                            "pass": {
+                              "line": 145
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "trystar": {
+                        "line": 146,
+                        "body": [
+                          {
+                            "pass": {
+                              "line": 147
+                            }
+                          }
+                        ],
+                        "handlers": [
+                          {
+                            "excepthandler": {
+                              "line": 148,
+                              "type": {
+                                "variable": {
+                                  "name": "ValueError"
+                                }
+                              },
+                              "name": "group",
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 149
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "try": {
+                        "line": 150,
+                        "body": [
+                          {
+                            "pass": {
+                              "line": 151
+                            }
+                          }
+                        ],
+                        "handlers": [
+                          {
+                            "excepthandler": {
+                              "line": 152,
+                              "type": {
+                                "tuple": {
+                                  "elts": [
+                                    {
+                                      "variable": {
+                                        "name": "ValueError"
+                                      }
+                                    },
+                                    {
+                                      "variable": {
+                                        "name": "TypeError"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 153
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "try": {
+                        "line": 154,
+                        "body": [
+                          {
+                            "pass": {
+                              "line": 155
+                            }
+                          }
+                        ],
+                        "finalbody": [
+                          {
+                            "pass": {
+                              "line": 157
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "return": {
+                        "line": 158,
+                        "value": {
+                          "tuple": {
+                            "elts": [
+                              {
+                                "lambda": {
+                                  "body": {
+                                    "literal": {
+                                      "value": {
+                                        "int": 0
+                                      },
+                                      "text": "0",
+                                      "base": 10
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "lambda": {
+                                  "body": {
+                                    "variable": {
+                                      "name": "x"
+                                    }
+                                  },
+                                  "args": {
+                                    "posonlyargs": [
+                                      {
+                                        "arg": "x"
+                                      }
+                                    ],
+                                    "args": [
+                                      {
+                                        "arg": "y",
+                                        "default_value": {
+                                          "literal": {
+                                            "value": {
+                                              "int": 1
+                                            },
+                                            "text": "1",
+                                            "base": 10
+                                          }
+                                        }
+                                      }
+                                    ],
+                                    "vararg": {
+                                      "arg": "z"
+                                    },
+                                    "kwonlyargs": [
+                                      {
+                                        "arg": "w"
+                                      }
+                                    ],
+                                    "kwarg": {
+                                      "arg": "v"
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "functiondef": {
+                  "line": 161,
+                  "name": "patterns",
+                  "args": {
+                    "args": [
+                      {
+                        "arg": "command"
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "match": {
+                        "line": 162,
+                        "subject": {
+                          "variable": {
+                            "name": "command"
+                          }
+                        },
+                        "cases": [
+                          {
+                            "matchcase": {
+                              "line": 163,
+                              "pattern": {
+                                "matchor": {
+                                  "patterns": [
+                                    {
+                                      "matchvalue": {
+                                        "value": {
+                                          "literal": {
+                                            "value": {
+                                              "int": 0
+                                            },
+                                            "text": "0",
+                                            "base": 10
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "matchvalue": {
+                                        "value": {
+                                          "unaryop": {
+                                            "op": "-",
+                                            "operand": {
+                                              "literal": {
+                                                "value": {
+                                                  "int": 1
+                                                },
+                                                "text": "1",
+                                                "base": 10
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "matchvalue": {
+                                        "value": {
+                                          "literal": {
+                                            "value": {
+                                              "float": 1.5
+                                            },
+                                            "text": "1.5"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "matchvalue": {
+                                        "value": {
+                                          "binop": {
+                                            "left": {
+                                              "unaryop": {
+                                                "op": "-",
+                                                "operand": {
+                                                  "literal": {
+                                                    "value": {
+                                                      "int": 2
+                                                    },
+                                                    "text": "2",
+                                                    "base": 10
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "op": "+",
+                                            "right": {
+                                              "constant": {
+                                                "complex": {
+                                                  "real": 0.0,
+                                                  "imag": 3.0
+                                                },
+                                                "text": "3j"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "matchvalue": {
+                                        "value": {
+                                          "literal": {
+                                            "value": {
+                                              "str": "text"
+                                            },
+                                            "text": "\"text\"",
+                                            "quote": "\""
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "matchvalue": {
+                                        "value": {
+                                          "literal": {
+                                            "value": {
+                                              "bytes": "Ynl0ZXM="
+                                            },
+                                            "text": "b\"bytes\"",
+                                            "prefix": "b",
+                                            "quote": "\""
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "matchsingleton": {
+                                        "value": "None"
+                                      }
+                                    },
+                                    {
+                                      "matchsingleton": {
+                                        "value": "True"
+                                      }
+                                    },
+                                    {
+                                      "matchsingleton": {
+                                        "value": "False"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 164
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 165,
+                              "pattern": {
+                                "matchor": {
+                                  "patterns": [
+                                    {
+                                      "matchsequence": {
+                                        "delimiters": "[]",
+                                        "patterns": [
+                                          {
+                                            "matchas": {
+                                              "name": "first"
+                                            }
+                                          },
+                                          {
+                                            "matchstar": {
+                                              "name": "rest"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "matchsequence": {
+                                        "delimiters": "()",
+                                        "patterns": [
+                                          {
+                                            "matchas": {
+                                              "name": "first"
+                                            }
+                                          },
+                                          {
+                                            "matchstar": {}
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "matchsequence": {
+                                        "delimiters": "[]"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 166
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 167,
+                              "pattern": {
+                                "matchmapping": {
+                                  "keys": [
+                                    {
+                                      "literal": {
+                                        "value": {
+                                          "str": "key"
+                                        },
+                                        "text": "\"key\"",
+                                        "quote": "\""
+                                      }
+                                    },
+                                    {
+                                      "literal": {
+                                        "value": {
+                                          "int": 1
+                                        },
+                                        "text": "1",
+                                        "base": 10
+                                      }
+                                    }
+                                  ],
+                                  "patterns": [
+                                    {
+                                      "matchas": {
+                                        "name": "value"
+                                      }
+                                    },
+                                    {
+                                      "matchas": {}
+                                    }
+                                  ],
+                                  "rest": "others"
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 168
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 169,
+                              "pattern": {
+                                "matchor": {
+                                  "patterns": [
+                                    {
+                                      "matchclass": {
+                                        "cls": {
+                                          "variable": {
+                                            "name": "Point"
+                                          }
+                                        },
+                                        "kwd_attrs": [
+                                          "x",
+                                          "y"
+                                        ],
+                                        "kwd_patterns": [
+                                          {
+                                            "matchvalue": {
+                                              "value": {
+                                                "literal": {
+                                                  "value": {
+                                                    "int": 0
+                                                  },
+                                                  "text": "0",
+                                                  "base": 10
+                                                }
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "matchas": {
+                                              "name": "yy"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "matchclass": {
+                                        "cls": {
+                                          "variable": {
+                                            "name": "Point"
+                                          }
+                                        },
+                                        "patterns": [
+                                          {
+                                            "matchvalue": {
+                                              "value": {
+                                                "literal": {
+                                                  "value": {
+                                                    "int": 1
+                                                  },
+                                                  "text": "1",
+                                                  "base": 10
+                                                }
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "matchvalue": {
+                                              "value": {
+                                                "literal": {
+                                                  "value": {
+                                                    "int": 2
+                                                  },
+                                                  "text": "2",
+                                                  "base": 10
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "matchclass": {
+                                        "cls": {
+                                          "variable": {
+                                            "name": "Point"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 170
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 171,
+                              "pattern": {
+                                "matchsequence": {
+                                  "delimiters": "[]",
+                                  "patterns": [
+                                    {
+                                      "matchas": {
+                                        "pattern": {
+                                          "matchclass": {
+                                            "cls": {
+                                              "variable": {
+                                                "name": "Point"
+                                              }
+                                            },
+                                            "kwd_attrs": [
+                                              "x"
+                                            ],
+                                            "kwd_patterns": [
+                                              {
+                                                "matchvalue": {
+                                                  "value": {
+                                                    "literal": {
+                                                      "value": {
+                                                        "int": 0
+                                                      },
+                                                      "text": "0",
+                                                      "base": 10
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "name": "origin"
+                                      }
+                                    },
+                                    {
+                                      "matchstar": {}
+                                    }
+                                  ]
+                                }
+                              },
+                              "guard": {
+                                "variable": {
+                                  "name": "origin"
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 172
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 173,
+                              "pattern": {
+                                "matchas": {
+                                  "pattern": {
+                                    "matchor": {
+                                      "patterns": [
+                                        {
+                                          "matchvalue": {
+                                            "value": {
+                                              "literal": {
+                                                "value": {
+                                                  "int": 1
+                                                },
+                                                "text": "1",
+                                                "base": 10
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "matchvalue": {
+                                            "value": {
+                                              "literal": {
+                                                "value": {
+                                                  "int": 2
+                                                },
+                                                "text": "2",
+                                                "base": 10
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "name": "small"
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 174
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 175,
+                              "pattern": {
+                                "matchvalue": {
+                                  "value": {
+                                    "attribute": {
+                                      "value": {
+                                        "variable": {
+                                          "name": "constants"
+                                        }
+                                      },
+                                      "attr": "RED"
+                                    }
+                                  }
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 176
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 177,
+                              "pattern": {
+                                "matchsequence": {
+                                  "patterns": [
+                                    {
+                                      "matchas": {
+                                        "name": "first"
+                                      }
+                                    },
+                                    {
+                                      "matchas": {
+                                        "name": "second"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 178
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 179,
+                              "pattern": {
+                                "matchas": {
+                                  "name": "name"
+                                }
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 180
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "matchcase": {
+                              "line": 181,
+                              "pattern": {
+                                "matchas": {}
+                              },
+                              "body": [
+                                {
+                                  "pass": {
+                                    "line": 182
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "comment": {
+                  "line": 185,
+                  "text": " A comment before the end"
+                }
+              },
+              {
+                "expr": {
+                  "line": 186,
+                  "value": {
+                    "call": {
+                      "func": {
+                        "variable": {
+                          "name": "print"
+                        }
+                      },
+                      "args": [
+                        {
+                          "variable": {
+                            "name": "Shape"
+                          }
+                        },
+                        {
+                          "variable": {
+                            "name": "operators"
+                          }
+                        },
+                        {
+                          "variable": {
+                            "name": "containers"
+                          }
+                        },
+                        {
+                          "variable": {
+                            "name": "strings"
+                          }
+                        },
+                        {
+                          "variable": {
+                            "name": "statements"
+                          }
+                        },
+                        {
+                          "variable": {
+                            "name": "patterns"
+                          }
+                        }
+                      ],
+                      "keywords": [
+                        {
+                          "arg": "sep",
+                          "value": {
+                            "literal": {
+                              "value": {
+                                "str": "\n"
+                              },
+                              "text": "\"\\n\"",
+                              "quote": "\""
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "comment": {
+                  "line": 186,
+                  "text": " the end",
+                  "trailing": true
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
 }

@@ -602,5 +602,638 @@
         }
       }
     }
-  ]
+  ],
+  "scope": "0",
+  "journal": {
+    "id": "typescript59-jsx.tsx#0",
+    "symbols": {
+      "o0": {
+        "reference": {
+          "path": {
+            "singleton": "Programs.Framework.TheWorkspace",
+            "next": {
+              "target": {}
+            }
+          }
+        }
+      },
+      "o1": {
+        "schema": {
+          "path": {
+            "singleton": ".",
+            "next": {
+              "entry": {
+                "i": "schemas",
+                "o": "",
+                "properties": {
+                  "name": "Programs"
+                },
+                "next": {
+                  "entry": {
+                    "i": "schemas",
+                    "o": "",
+                    "properties": {
+                      "name": "TypeScript5"
+                    },
+                    "next": {
+                      "entry": {
+                        "i": "schemas",
+                        "o": "",
+                        "properties": {
+                          "name": "Program"
+                        },
+                        "next": {
+                          "target": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "changes": [
+      {
+        "entry": {
+          "insert": {
+            "holder": {
+              "symbol": "o0"
+            },
+            "adjacency": "files",
+            "links": {
+              "file": {
+                "symbol": "o1"
+              }
+            },
+            "properties": {
+              "path": "typescript59-jsx.tsx"
+            }
+          }
+        }
+      },
+      {
+        "property": {
+          "set": {
+            "holder": "o1",
+            "name": "body",
+            "value": [
+              {
+                "comment": {
+                  "line": 1,
+                  "text": " The conformance source for TypeScript 5.9 with JSX: JSX's kinds."
+                }
+              },
+              {
+                "importdeclaration": {
+                  "line": 2,
+                  "importKind": "value",
+                  "specifiers": [
+                    {
+                      "importnamespacespecifier": {
+                        "local": {
+                          "name": "React"
+                        }
+                      }
+                    }
+                  ],
+                  "source": {
+                    "value": {
+                      "str": "react"
+                    },
+                    "text": "\"react\"",
+                    "quote": "\""
+                  }
+                }
+              },
+              {
+                "variabledeclaration": {
+                  "line": 4,
+                  "declarationKind": "const",
+                  "declarations": [
+                    {
+                      "id": {
+                        "identifier": {
+                          "name": "generic"
+                        }
+                      },
+                      "init": {
+                        "arrowfunctionexpression": {
+                          "body": {
+                            "identifier": {
+                              "name": "value"
+                            }
+                          },
+                          "typeParameters": {
+                            "params": [
+                              {
+                                "name": {
+                                  "name": "T"
+                                }
+                              }
+                            ]
+                          },
+                          "params": [
+                            {
+                              "identifier": {
+                                "name": "value",
+                                "typeAnnotation": {
+                                  "typeAnnotation": {
+                                    "tstypereference": {
+                                      "typeName": {
+                                        "identifier": {
+                                          "name": "T"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "variabledeclaration": {
+                  "line": 5,
+                  "declarationKind": "const",
+                  "declarations": [
+                    {
+                      "id": {
+                        "identifier": {
+                          "name": "element"
+                        }
+                      },
+                      "init": {
+                        "parenthesizedexpression": {
+                          "expression": {
+                            "jsxelement": {
+                              "openingElement": {
+                                "name": {
+                                  "jsxidentifier": {
+                                    "name": "div"
+                                  }
+                                },
+                                "attributes": [
+                                  {
+                                    "jsxattribute": {
+                                      "name": {
+                                        "jsxidentifier": {
+                                          "name": "className"
+                                        }
+                                      },
+                                      "value": {
+                                        "literal": {
+                                          "value": {
+                                            "str": "a"
+                                          },
+                                          "text": "\"a\"",
+                                          "quote": "\""
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "jsxattribute": {
+                                      "name": {
+                                        "jsxidentifier": {
+                                          "name": "data-id"
+                                        }
+                                      },
+                                      "value": {
+                                        "jsxexpressioncontainer": {
+                                          "expression": {
+                                            "literal": {
+                                              "value": {
+                                                "float": 1.0
+                                              },
+                                              "text": "1",
+                                              "base": 10
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "jsxspreadattribute": {
+                                      "argument": {
+                                        "objectexpression": {
+                                          "properties": [
+                                            {
+                                              "property": {
+                                                "propertyKind": "init",
+                                                "key": {
+                                                  "identifier": {
+                                                    "name": "hidden"
+                                                  }
+                                                },
+                                                "value": {
+                                                  "literal": {
+                                                    "value": {
+                                                      "bool": true
+                                                    },
+                                                    "text": "true"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              "children": [
+                                {
+                                  "jsxtext": {
+                                    "raw": "\n        text &amp; more\n        "
+                                  }
+                                },
+                                {
+                                  "jsxexpressioncontainer": {
+                                    "expression": {
+                                      "jsxemptyexpression": {}
+                                    }
+                                  }
+                                },
+                                {
+                                  "jsxtext": {
+                                    "raw": "\n        "
+                                  }
+                                },
+                                {
+                                  "jsxexpressioncontainer": {
+                                    "expression": {
+                                      "callexpression": {
+                                        "callee": {
+                                          "identifier": {
+                                            "name": "generic"
+                                          }
+                                        },
+                                        "arguments": [
+                                          {
+                                            "literal": {
+                                              "value": {
+                                                "str": "child"
+                                              },
+                                              "text": "\"child\"",
+                                              "quote": "\""
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "jsxtext": {
+                                    "raw": "\n        "
+                                  }
+                                },
+                                {
+                                  "jsxspreadchild": {
+                                    "expression": {
+                                      "arrayexpression": {
+                                        "elements": [
+                                          {
+                                            "typescript5": {
+                                              "jsxelement": {
+                                                "openingElement": {
+                                                  "name": {
+                                                    "jsxidentifier": {
+                                                      "name": "span"
+                                                    }
+                                                  },
+                                                  "attributes": [
+                                                    {
+                                                      "jsxattribute": {
+                                                        "name": {
+                                                          "jsxidentifier": {
+                                                            "name": "key"
+                                                          }
+                                                        },
+                                                        "value": {
+                                                          "literal": {
+                                                            "value": {
+                                                              "str": "1"
+                                                            },
+                                                            "text": "\"1\"",
+                                                            "quote": "\""
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  ],
+                                                  "selfClosing": true
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "jsxtext": {
+                                    "raw": "\n        "
+                                  }
+                                },
+                                {
+                                  "jsxelement": {
+                                    "openingElement": {
+                                      "name": {
+                                        "jsxnamespacedname": {
+                                          "namespace": {
+                                            "name": "svg"
+                                          },
+                                          "name": {
+                                            "name": "path"
+                                          }
+                                        }
+                                      },
+                                      "attributes": [
+                                        {
+                                          "jsxattribute": {
+                                            "name": {
+                                              "jsxidentifier": {
+                                                "name": "d"
+                                              }
+                                            },
+                                            "value": {
+                                              "literal": {
+                                                "value": {
+                                                  "str": "M0"
+                                                },
+                                                "text": "\"M0\"",
+                                                "quote": "\""
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "selfClosing": true
+                                    }
+                                  }
+                                },
+                                {
+                                  "jsxtext": {
+                                    "raw": "\n        "
+                                  }
+                                },
+                                {
+                                  "jsxelement": {
+                                    "openingElement": {
+                                      "name": {
+                                        "jsxmemberexpression": {
+                                          "object": {
+                                            "jsxidentifier": {
+                                              "name": "React"
+                                            }
+                                          },
+                                          "property": {
+                                            "name": "Fragment"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "children": [
+                                      {
+                                        "jsxtext": {
+                                          "raw": "\n            "
+                                        }
+                                      },
+                                      {
+                                        "jsxfragment": {
+                                          "openingFragment": {},
+                                          "children": [
+                                            {
+                                              "jsxtext": {
+                                                "raw": "fragment"
+                                              }
+                                            }
+                                          ],
+                                          "closingFragment": {}
+                                        }
+                                      },
+                                      {
+                                        "jsxtext": {
+                                          "raw": "\n        "
+                                        }
+                                      }
+                                    ],
+                                    "closingElement": {
+                                      "name": {
+                                        "jsxmemberexpression": {
+                                          "object": {
+                                            "jsxidentifier": {
+                                              "name": "React"
+                                            }
+                                          },
+                                          "property": {
+                                            "name": "Fragment"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "jsxtext": {
+                                    "raw": "\n        "
+                                  }
+                                },
+                                {
+                                  "jsxelement": {
+                                    "openingElement": {
+                                      "name": {
+                                        "jsxidentifier": {
+                                          "name": "Component"
+                                        }
+                                      },
+                                      "typeArguments": {
+                                        "params": [
+                                          {
+                                            "tsstringkeyword": {}
+                                          }
+                                        ]
+                                      },
+                                      "attributes": [
+                                        {
+                                          "jsxattribute": {
+                                            "name": {
+                                              "jsxidentifier": {
+                                                "name": "prop"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "selfClosing": true
+                                    }
+                                  }
+                                },
+                                {
+                                  "jsxtext": {
+                                    "raw": "\n    "
+                                  }
+                                }
+                              ],
+                              "closingElement": {
+                                "name": {
+                                  "jsxidentifier": {
+                                    "name": "div"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "functiondeclaration": {
+                  "line": 18,
+                  "id": {
+                    "name": "Component"
+                  },
+                  "typeParameters": {
+                    "params": [
+                      {
+                        "name": {
+                          "name": "T"
+                        }
+                      }
+                    ]
+                  },
+                  "params": [
+                    {
+                      "identifier": {
+                        "name": "props",
+                        "typeAnnotation": {
+                          "typeAnnotation": {
+                            "tstypeliteral": {
+                              "members": [
+                                {
+                                  "tspropertysignature": {
+                                    "key": {
+                                      "identifier": {
+                                        "name": "prop"
+                                      }
+                                    },
+                                    "typeAnnotation": {
+                                      "typeAnnotation": {
+                                        "tsbooleankeyword": {}
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "body": {
+                    "line": 18,
+                    "body": [
+                      {
+                        "returnstatement": {
+                          "line": 19,
+                          "argument": {
+                            "jsxelement": {
+                              "openingElement": {
+                                "name": {
+                                  "jsxidentifier": {
+                                    "name": "p"
+                                  }
+                                }
+                              },
+                              "children": [
+                                {
+                                  "jsxexpressioncontainer": {
+                                    "expression": {
+                                      "conditionalexpression": {
+                                        "test": {
+                                          "memberexpression": {
+                                            "object": {
+                                              "identifier": {
+                                                "name": "props"
+                                              }
+                                            },
+                                            "property": {
+                                              "identifier": {
+                                                "name": "prop"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "consequent": {
+                                          "literal": {
+                                            "value": {
+                                              "str": "yes"
+                                            },
+                                            "text": "\"yes\"",
+                                            "quote": "\""
+                                          }
+                                        },
+                                        "alternate": {
+                                          "literal": {
+                                            "value": {
+                                              "str": "no"
+                                            },
+                                            "text": "\"no\"",
+                                            "quote": "\""
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ],
+                              "closingElement": {
+                                "name": {
+                                  "jsxidentifier": {
+                                    "name": "p"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "exportdefaultdeclaration": {
+                  "line": 21,
+                  "declaration": {
+                    "expression": {
+                      "identifier": {
+                        "name": "element"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
 }
