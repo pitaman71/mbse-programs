@@ -540,7 +540,7 @@ dev = [
 
 [[package]]
 name = "mbse-schemas"
-version = "0.30.1"
+version = "0.33.0"
 source = { editable = "../../mbse-schemas/python3" }
 
 [package.optional-dependencies]

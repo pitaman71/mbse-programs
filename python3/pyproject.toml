@@ -12,7 +12,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mbse-expressions>=0.13.0,<0.14",
-    "mbse-schemas>=0.30.1,<0.31",
+    "mbse-schemas>=0.33.0,<0.34",
     "tree-sitter>=0.25",
     "tree-sitter-cpp==0.23.4",
     "tree-sitter-python==0.25.0",
@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-yaml = ["mbse-schemas[yaml]>=0.30.1,<0.31"]
+yaml = ["mbse-schemas[yaml]>=0.33.0,<0.34"]
 
 [tool.setuptools.package-data]
 "mbse.Programs" = ["skill/*.md", "skill/references/*.md"]

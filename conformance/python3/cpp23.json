@@ -1,0 +1,1818 @@
+{
+  "binds": {
+    "ws": {
+      "path": {
+        "singleton": "Programs.Framework.TheWorkspace",
+        "next": {
+          "target": {}
+        }
+      }
+    },
+    "unit": {
+      "path": {
+        "singleton": "Programs.Framework.TheWorkspace",
+        "next": {
+          "entry": {
+            "i": "files",
+            "o": "workspace",
+            "properties": {
+              "path": "cpp23.cpp"
+            },
+            "next": {
+              "target": {}
+            }
+          }
+        }
+      }
+    }
+  },
+  "assigns": [
+    {
+      "object": {
+        "path": {
+          "singleton": "Programs.Framework.TheWorkspace",
+          "next": {
+            "entry": {
+              "i": "files",
+              "o": "workspace",
+              "properties": {
+                "path": "cpp23.cpp"
+              },
+              "next": {
+                "target": {}
+              }
+            }
+          }
+        }
+      },
+      "properties": {
+        "body": {
+          "Programs.Cpp.Body": [
+            {
+              "comment": {
+                "line": 1,
+                "text": " The C++23 conformance source: what C++23 adds to C++20, and every kind of Programs.Cpp the C++20 source lacks."
+              }
+            },
+            {
+              "globalmodulefragment": {
+                "line": 2
+              }
+            },
+            {
+              "directive": {
+                "line": 3,
+                "directive": {
+                  "otherdirective": {}
+                }
+              }
+            },
+            {
+              "directive": {
+                "line": 4,
+                "directive": {
+                  "pragmaexpression": {
+                    "operand": {
+                      "cpp": {
+                        "literal": {
+                          "value": {
+                            "str": "once"
+                          },
+                          "text": "\"once\"",
+                          "quote": "\""
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "moduledeclaration": {
+                "line": 5,
+                "export": true,
+                "name": "shapes"
+              }
+            },
+            {
+              "importdeclaration": {
+                "line": 6,
+                "export": true,
+                "name": "std"
+              }
+            },
+            {
+              "exportdeclaration": {
+                "line": 8,
+                "body": [
+                  {
+                    "templatedeclaration": {
+                      "line": 8,
+                      "parameters": [
+                        {
+                          "typeparameter": {
+                            "key": "typename",
+                            "name": {
+                              "spelling": "T"
+                            }
+                          }
+                        }
+                      ],
+                      "declaration": {
+                        "functiondefinition": {
+                          "line": 9,
+                          "specifiers": [
+                            {
+                              "namedtypespecifier": {
+                                "name": {
+                                  "identifier": {
+                                    "spelling": "T"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "declarator": {
+                            "functiondeclarator": {
+                              "declarator": {
+                                "iddeclarator": {
+                                  "name": {
+                                    "identifier": {
+                                      "spelling": "twice"
+                                    }
+                                  }
+                                }
+                              },
+                              "parameters": [
+                                {
+                                  "parameterdeclaration": {
+                                    "specifiers": [
+                                      {
+                                        "namedtypespecifier": {
+                                          "name": {
+                                            "identifier": {
+                                              "spelling": "T"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ],
+                                    "declarator": {
+                                      "iddeclarator": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "value"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "body": {
+                            "compoundstatement": {
+                              "line": 9,
+                              "body": [
+                                {
+                                  "returnstatement": {
+                                    "line": 9,
+                                    "value": {
+                                      "binaryexpression": {
+                                        "left": {
+                                          "idexpression": {
+                                            "name": {
+                                              "identifier": {
+                                                "spelling": "value"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "operator": "+",
+                                        "right": {
+                                          "idexpression": {
+                                            "name": {
+                                              "identifier": {
+                                                "spelling": "value"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "usingdeclaration": {
+                "line": 11,
+                "declarators": [
+                  {
+                    "name": {
+                      "qualifiedname": {
+                        "qualifiers": [
+                          {
+                            "identifier": {
+                              "spelling": "std"
+                            }
+                          }
+                        ],
+                        "name": {
+                          "identifier": {
+                            "spelling": "size_t"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "name": {
+                      "qualifiedname": {
+                        "qualifiers": [
+                          {
+                            "identifier": {
+                              "spelling": "std"
+                            }
+                          }
+                        ],
+                        "name": {
+                          "identifier": {
+                            "spelling": "ptrdiff_t"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "emptydeclaration": {
+                "line": 12
+              }
+            },
+            {
+              "simpledeclaration": {
+                "line": 14,
+                "specifiers": [
+                  {
+                    "classspecifier": {
+                      "key": "struct",
+                      "name": {
+                        "identifier": {
+                          "spelling": "Packed"
+                        }
+                      },
+                      "body": true,
+                      "members": {
+                        "memberlist": {
+                          "members": [
+                            {
+                              "memberdeclaration": {
+                                "line": 15,
+                                "specifiers": [
+                                  {
+                                    "primitivetypespecifier": {
+                                      "keyword": "unsigned"
+                                    }
+                                  }
+                                ],
+                                "declarators": [
+                                  {
+                                    "declarator": {
+                                      "iddeclarator": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "flags"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "bitfield": {
+                                      "literal": {
+                                        "value": {
+                                          "int": 4
+                                        },
+                                        "text": "4",
+                                        "base": 10
+                                      }
+                                    },
+                                    "initializer": {
+                                      "equalinitializer": {
+                                        "value": {
+                                          "literal": {
+                                            "value": {
+                                              "int": 1
+                                            },
+                                            "text": "1",
+                                            "base": 10
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "memberdeclaration": {
+                                "line": 16,
+                                "specifiers": [
+                                  {
+                                    "primitivetypespecifier": {
+                                      "keyword": "unsigned"
+                                    }
+                                  }
+                                ],
+                                "declarators": [
+                                  {
+                                    "declarator": {
+                                      "iddeclarator": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "mode"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "bitfield": {
+                                      "literal": {
+                                        "value": {
+                                          "int": 2
+                                        },
+                                        "text": "2",
+                                        "base": 10
+                                      }
+                                    },
+                                    "initializer": {
+                                      "initializerlist": {
+                                        "items": [
+                                          {
+                                            "literal": {
+                                              "value": {
+                                                "int": 3
+                                              },
+                                              "text": "3",
+                                              "base": 10
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "memberdeclaration": {
+                                "line": 17,
+                                "specifiers": [
+                                  {
+                                    "primitivetypespecifier": {
+                                      "keyword": "int"
+                                    }
+                                  }
+                                ],
+                                "declarators": [
+                                  {
+                                    "declarator": {
+                                      "iddeclarator": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "plain"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "initializer": {
+                                      "initializerlist": {
+                                        "items": [
+                                          {
+                                            "literal": {
+                                              "value": {
+                                                "int": 2
+                                              },
+                                              "text": "2",
+                                              "base": 10
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "memberdeclaration": {
+                                "line": 18,
+                                "specifiers": [
+                                  {
+                                    "primitivetypespecifier": {
+                                      "keyword": "int"
+                                    }
+                                  }
+                                ],
+                                "declarators": [
+                                  {
+                                    "bitfield": {
+                                      "literal": {
+                                        "value": {
+                                          "int": 0
+                                        },
+                                        "text": "0",
+                                        "base": 8
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "directive": {
+                                "line": 19,
+                                "directive": {
+                                  "ifdefdirective": {
+                                    "name": {
+                                      "spelling": "WIDE"
+                                    },
+                                    "group": {
+                                      "cpp_membergroup": {
+                                        "members": [
+                                          {
+                                            "memberdeclaration": {
+                                              "line": 20,
+                                              "specifiers": [
+                                                {
+                                                  "primitivetypespecifier": {
+                                                    "keyword": "long"
+                                                  }
+                                                }
+                                              ],
+                                              "declarators": [
+                                                {
+                                                  "declarator": {
+                                                    "iddeclarator": {
+                                                      "name": {
+                                                        "identifier": {
+                                                          "spelling": "wide"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "alternative": {
+                                      "elifdefdirective": {
+                                        "name": {
+                                          "spelling": "NARROW"
+                                        },
+                                        "group": {
+                                          "cpp_membergroup": {
+                                            "members": [
+                                              {
+                                                "memberdeclaration": {
+                                                  "line": 22,
+                                                  "specifiers": [
+                                                    {
+                                                      "primitivetypespecifier": {
+                                                        "keyword": "short"
+                                                      }
+                                                    }
+                                                  ],
+                                                  "declarators": [
+                                                    {
+                                                      "declarator": {
+                                                        "iddeclarator": {
+                                                          "name": {
+                                                            "identifier": {
+                                                              "spelling": "narrow"
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "functiondefinition": {
+                                "line": 24,
+                                "specifiers": [
+                                  {
+                                    "declspecifier": {
+                                      "keyword": "static"
+                                    }
+                                  },
+                                  {
+                                    "primitivetypespecifier": {
+                                      "keyword": "int"
+                                    }
+                                  }
+                                ],
+                                "declarator": {
+                                  "functiondeclarator": {
+                                    "declarator": {
+                                      "iddeclarator": {
+                                        "name": {
+                                          "operatorname": {
+                                            "operator": "()"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "parameters": [
+                                      {
+                                        "parameterdeclaration": {
+                                          "specifiers": [
+                                            {
+                                              "primitivetypespecifier": {
+                                                "keyword": "int"
+                                              }
+                                            }
+                                          ],
+                                          "declarator": {
+                                            "iddeclarator": {
+                                              "name": {
+                                                "identifier": {
+                                                  "spelling": "x"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                },
+                                "body": {
+                                  "compoundstatement": {
+                                    "line": 24,
+                                    "body": [
+                                      {
+                                        "returnstatement": {
+                                          "line": 24,
+                                          "value": {
+                                            "idexpression": {
+                                              "name": {
+                                                "identifier": {
+                                                  "spelling": "x"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "memberdeclaration": {
+                                "line": 25,
+                                "specifiers": [
+                                  {
+                                    "primitivetypespecifier": {
+                                      "keyword": "void"
+                                    }
+                                  }
+                                ],
+                                "declarators": [
+                                  {
+                                    "declarator": {
+                                      "functiondeclarator": {
+                                        "declarator": {
+                                          "iddeclarator": {
+                                            "name": {
+                                              "identifier": {
+                                                "spelling": "bind"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "parameters": [
+                                          {
+                                            "parameterdeclaration": {
+                                              "this_keyword": true,
+                                              "specifiers": [
+                                                {
+                                                  "namedtypespecifier": {
+                                                    "name": {
+                                                      "identifier": {
+                                                        "spelling": "Packed"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "declarator": {
+                                                "referencedeclarator": {
+                                                  "declarator": {
+                                                    "iddeclarator": {
+                                                      "name": {
+                                                        "identifier": {
+                                                          "spelling": "self"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "parameterdeclaration": {
+                                              "specifiers": [
+                                                {
+                                                  "primitivetypespecifier": {
+                                                    "keyword": "int"
+                                                  }
+                                                }
+                                              ],
+                                              "declarator": {
+                                                "iddeclarator": {
+                                                  "name": {
+                                                    "identifier": {
+                                                      "spelling": "value"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "memberdeclaration": {
+                                "line": 26,
+                                "specifiers": [
+                                  {
+                                    "placeholdertypespecifier": {}
+                                  }
+                                ],
+                                "declarators": [
+                                  {
+                                    "declarator": {
+                                      "functiondeclarator": {
+                                        "declarator": {
+                                          "iddeclarator": {
+                                            "name": {
+                                              "identifier": {
+                                                "spelling": "cast"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "parameters": [
+                                          {
+                                            "parameterdeclaration": {
+                                              "this_keyword": true,
+                                              "specifiers": [
+                                                {
+                                                  "placeholdertypespecifier": {}
+                                                }
+                                              ],
+                                              "declarator": {
+                                                "referencedeclarator": {
+                                                  "rvalue": true,
+                                                  "declarator": {
+                                                    "iddeclarator": {
+                                                      "name": {
+                                                        "identifier": {
+                                                          "spelling": "self"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "trailing_return": {
+                                          "typeid": {
+                                            "specifiers": [
+                                              {
+                                                "primitivetypespecifier": {
+                                                  "keyword": "int"
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "memberdeclaration": {
+                                "line": 27,
+                                "attributes": [
+                                  {
+                                    "standardattributespecifier": {
+                                      "attributes": [
+                                        {
+                                          "name": "nodiscard"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ],
+                                "specifiers": [
+                                  {
+                                    "primitivetypespecifier": {
+                                      "keyword": "int"
+                                    }
+                                  }
+                                ],
+                                "declarators": [
+                                  {
+                                    "declarator": {
+                                      "functiondeclarator": {
+                                        "declarator": {
+                                          "iddeclarator": {
+                                            "name": {
+                                              "identifier": {
+                                                "spelling": "value"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "qualifiers": [
+                                          {
+                                            "keyword": "const"
+                                          }
+                                        ],
+                                        "ref_qualifier": "&",
+                                        "exception": {
+                                          "noexceptspecifier": {}
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "functiondefinition": {
+                                "line": 28,
+                                "declarator": {
+                                  "functiondeclarator": {
+                                    "declarator": {
+                                      "iddeclarator": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "Packed"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "initializers": [
+                                  {
+                                    "member": {
+                                      "identifier": {
+                                        "spelling": "plain"
+                                      }
+                                    },
+                                    "initializer": {
+                                      "parenthesizedinitializer": {
+                                        "arguments": [
+                                          {
+                                            "literal": {
+                                              "value": {
+                                                "int": 1
+                                              },
+                                              "text": "1",
+                                              "base": 10
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ],
+                                "body": {
+                                  "trystatement": {
+                                    "line": 28,
+                                    "body": {
+                                      "line": 28
+                                    },
+                                    "handlers": [
+                                      {
+                                        "line": 29,
+                                        "parameter": {
+                                          "ellipsisparameter": {}
+                                        },
+                                        "body": {
+                                          "line": 29
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "simpledeclaration": {
+                "line": 33,
+                "attributes": [
+                  {
+                    "standardattributespecifier": {
+                      "using_namespace": "gnu",
+                      "attributes": [
+                        {
+                          "name": "hot"
+                        },
+                        {
+                          "name": "cold"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "specifiers": [
+                  {
+                    "primitivetypespecifier": {
+                      "keyword": "void"
+                    }
+                  }
+                ],
+                "declarators": [
+                  {
+                    "declarator": {
+                      "functiondeclarator": {
+                        "declarator": {
+                          "iddeclarator": {
+                            "name": {
+                              "identifier": {
+                                "spelling": "annotated"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "simpledeclaration": {
+                "line": 34,
+                "specifiers": [
+                  {
+                    "enumspecifier": {
+                      "key": "enum",
+                      "name": {
+                        "identifier": {
+                          "spelling": "Level"
+                        }
+                      },
+                      "body": true,
+                      "enumerators": [
+                        {
+                          "enumerator": {
+                            "name": {
+                              "spelling": "Low"
+                            },
+                            "attributes": [
+                              {
+                                "standardattributespecifier": {
+                                  "attributes": [
+                                    {
+                                      "name": "deprecated"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "value": {
+                              "literal": {
+                                "value": {
+                                  "int": 1
+                                },
+                                "text": "1",
+                                "base": 10
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "enumerator": {
+                            "name": {
+                              "spelling": "High"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "functiondefinition": {
+                "line": 36,
+                "specifiers": [
+                  {
+                    "declspecifier": {
+                      "keyword": "constexpr"
+                    }
+                  },
+                  {
+                    "primitivetypespecifier": {
+                      "keyword": "int"
+                    }
+                  }
+                ],
+                "declarator": {
+                  "functiondeclarator": {
+                    "declarator": {
+                      "iddeclarator": {
+                        "name": {
+                          "identifier": {
+                            "spelling": "choose"
+                          }
+                        }
+                      }
+                    },
+                    "parameters": [
+                      {
+                        "parameterdeclaration": {
+                          "specifiers": [
+                            {
+                              "primitivetypespecifier": {
+                                "keyword": "int"
+                              }
+                            }
+                          ],
+                          "declarator": {
+                            "iddeclarator": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "x"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "body": {
+                  "compoundstatement": {
+                    "line": 36,
+                    "body": [
+                      {
+                        "ifstatement": {
+                          "line": 37,
+                          "consteval": true,
+                          "consequence": {
+                            "compoundstatement": {
+                              "line": 37,
+                              "body": [
+                                {
+                                  "returnstatement": {
+                                    "line": 38,
+                                    "value": {
+                                      "idexpression": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "x"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "alternative": {
+                            "ifstatement": {
+                              "line": 39,
+                              "consteval": true,
+                              "negated": true,
+                              "consequence": {
+                                "compoundstatement": {
+                                  "line": 39,
+                                  "body": [
+                                    {
+                                      "returnstatement": {
+                                        "line": 40,
+                                        "value": {
+                                          "unaryexpression": {
+                                            "operator": "-",
+                                            "operand": {
+                                              "idexpression": {
+                                                "name": {
+                                                  "identifier": {
+                                                    "spelling": "x"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "attributedeclaration": {
+                          "line": 42,
+                          "attributes": [
+                            {
+                              "standardattributespecifier": {
+                                "attributes": [
+                                  {
+                                    "name": "assume",
+                                    "arguments": [
+                                      {
+                                        "binaryexpression": {
+                                          "left": {
+                                            "idexpression": {
+                                              "name": {
+                                                "identifier": {
+                                                  "spelling": "x"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "operator": ">",
+                                          "right": {
+                                            "literal": {
+                                              "value": {
+                                                "int": 0
+                                              },
+                                              "text": "0",
+                                              "base": 8
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "simpledeclaration": {
+                          "line": 43,
+                          "specifiers": [
+                            {
+                              "placeholdertypespecifier": {}
+                            }
+                          ],
+                          "declarators": [
+                            {
+                              "declarator": {
+                                "iddeclarator": {
+                                  "name": {
+                                    "identifier": {
+                                      "spelling": "copy"
+                                    }
+                                  }
+                                }
+                              },
+                              "initializer": {
+                                "equalinitializer": {
+                                  "value": {
+                                    "binaryexpression": {
+                                      "left": {
+                                        "functionalcastexpression": {
+                                          "type": {
+                                            "placeholdertypespecifier": {}
+                                          },
+                                          "initializer": {
+                                            "parenthesizedinitializer": {
+                                              "arguments": [
+                                                {
+                                                  "idexpression": {
+                                                    "name": {
+                                                      "identifier": {
+                                                        "spelling": "x"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "operator": "+",
+                                      "right": {
+                                        "functionalcastexpression": {
+                                          "type": {
+                                            "placeholdertypespecifier": {}
+                                          },
+                                          "initializer": {
+                                            "initializerlist": {
+                                              "items": [
+                                                {
+                                                  "idexpression": {
+                                                    "name": {
+                                                      "identifier": {
+                                                        "spelling": "x"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "simpledeclaration": {
+                          "line": 44,
+                          "specifiers": [
+                            {
+                              "placeholdertypespecifier": {}
+                            }
+                          ],
+                          "declarators": [
+                            {
+                              "declarator": {
+                                "iddeclarator": {
+                                  "name": {
+                                    "identifier": {
+                                      "spelling": "size"
+                                    }
+                                  }
+                                }
+                              },
+                              "initializer": {
+                                "equalinitializer": {
+                                  "value": {
+                                    "binaryexpression": {
+                                      "left": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 3
+                                          },
+                                          "text": "3uz",
+                                          "base": 10,
+                                          "suffix": "uz"
+                                        }
+                                      },
+                                      "operator": "+",
+                                      "right": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 4
+                                          },
+                                          "text": "4z",
+                                          "base": 10,
+                                          "suffix": "z"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "simpledeclaration": {
+                          "line": 45,
+                          "specifiers": [
+                            {
+                              "placeholdertypespecifier": {}
+                            }
+                          ],
+                          "declarators": [
+                            {
+                              "declarator": {
+                                "iddeclarator": {
+                                  "name": {
+                                    "identifier": {
+                                      "spelling": "cell"
+                                    }
+                                  }
+                                }
+                              },
+                              "initializer": {
+                                "equalinitializer": {
+                                  "value": {
+                                    "subscriptexpression": {
+                                      "object": {
+                                        "idexpression": {
+                                          "name": {
+                                            "identifier": {
+                                              "spelling": "grid"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "indices": [
+                                        {
+                                          "literal": {
+                                            "value": {
+                                              "int": 1
+                                            },
+                                            "text": "1",
+                                            "base": 10
+                                          }
+                                        },
+                                        {
+                                          "literal": {
+                                            "value": {
+                                              "int": 2
+                                            },
+                                            "text": "2",
+                                            "base": 10
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "rangeforstatement": {
+                          "line": 46,
+                          "initializer": {
+                            "simpledeclaration": {
+                              "specifiers": [
+                                {
+                                  "primitivetypespecifier": {
+                                    "keyword": "int"
+                                  }
+                                }
+                              ],
+                              "declarators": [
+                                {
+                                  "declarator": {
+                                    "iddeclarator": {
+                                      "name": {
+                                        "identifier": {
+                                          "spelling": "i"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "initializer": {
+                                    "equalinitializer": {
+                                      "value": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 0
+                                          },
+                                          "text": "0",
+                                          "base": 8
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "declaration": {
+                            "specifiers": [
+                              {
+                                "placeholdertypespecifier": {}
+                              }
+                            ],
+                            "declarators": [
+                              {
+                                "declarator": {
+                                  "iddeclarator": {
+                                    "name": {
+                                      "identifier": {
+                                        "spelling": "v"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "range": {
+                            "idexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "values"
+                                }
+                              }
+                            }
+                          },
+                          "body": {
+                            "compoundstatement": {
+                              "line": 46,
+                              "body": [
+                                {
+                                  "expressionstatement": {
+                                    "line": 47,
+                                    "expression": {
+                                      "callexpression": {
+                                        "function": {
+                                          "idexpression": {
+                                            "name": {
+                                              "identifier": {
+                                                "spelling": "use"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "arguments": [
+                                          {
+                                            "idexpression": {
+                                              "name": {
+                                                "identifier": {
+                                                  "spelling": "v"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "labeledstatement": {
+                          "line": 49,
+                          "label": {
+                            "spelling": "done"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "explicitinstantiation": {
+                "line": 52,
+                "extern": true,
+                "declaration": {
+                  "specifiers": [
+                    {
+                      "classspecifier": {
+                        "key": "class",
+                        "name": {
+                          "templateid": {
+                            "name": {
+                              "identifier": {
+                                "spelling": "Packed"
+                              }
+                            },
+                            "arguments": [
+                              {
+                                "typeid": {
+                                  "specifiers": [
+                                    {
+                                      "primitivetypespecifier": {
+                                        "keyword": "int"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "explicitinstantiation": {
+                "line": 53,
+                "declaration": {
+                  "specifiers": [
+                    {
+                      "classspecifier": {
+                        "key": "class",
+                        "name": {
+                          "templateid": {
+                            "name": {
+                              "identifier": {
+                                "spelling": "Packed"
+                              }
+                            },
+                            "arguments": [
+                              {
+                                "typeid": {
+                                  "specifiers": [
+                                    {
+                                      "primitivetypespecifier": {
+                                        "keyword": "long"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "simpledeclaration": {
+                "line": 54,
+                "specifiers": [
+                  {
+                    "primitivetypespecifier": {
+                      "keyword": "int"
+                    }
+                  }
+                ],
+                "declarators": [
+                  {
+                    "declarator": {
+                      "iddeclarator": {
+                        "name": {
+                          "identifier": {
+                            "spelling": "name"
+                          }
+                        }
+                      }
+                    },
+                    "initializer": {
+                      "equalinitializer": {
+                        "value": {
+                          "binaryexpression": {
+                            "left": {
+                              "callexpression": {
+                                "function": {
+                                  "memberexpression": {
+                                    "object": {
+                                      "typeidexpression": {
+                                        "operand": {
+                                          "typeid": {
+                                            "specifiers": [
+                                              {
+                                                "primitivetypespecifier": {
+                                                  "keyword": "int"
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "operator": ".",
+                                    "member": {
+                                      "identifier": {
+                                        "spelling": "hash_code"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "operator": "+",
+                            "right": {
+                              "callexpression": {
+                                "function": {
+                                  "memberexpression": {
+                                    "object": {
+                                      "typeidexpression": {
+                                        "operand": {
+                                          "idexpression": {
+                                            "name": {
+                                              "identifier": {
+                                                "spelling": "name"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "operator": ".",
+                                    "member": {
+                                      "identifier": {
+                                        "spelling": "hash_code"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "simpledeclaration": {
+                "line": 55,
+                "specifiers": [
+                  {
+                    "primitivetypespecifier": {
+                      "keyword": "bool"
+                    }
+                  }
+                ],
+                "declarators": [
+                  {
+                    "declarator": {
+                      "iddeclarator": {
+                        "name": {
+                          "identifier": {
+                            "spelling": "logic"
+                          }
+                        }
+                      }
+                    },
+                    "initializer": {
+                      "equalinitializer": {
+                        "value": {
+                          "binaryexpression": {
+                            "left": {
+                              "binaryexpression": {
+                                "left": {
+                                  "idexpression": {
+                                    "name": {
+                                      "identifier": {
+                                        "spelling": "a"
+                                      }
+                                    }
+                                  }
+                                },
+                                "operator": "&&",
+                                "right": {
+                                  "unaryexpression": {
+                                    "operator": "!",
+                                    "operand": {
+                                      "idexpression": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "b"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "operator": "||",
+                            "right": {
+                              "idexpression": {
+                                "name": {
+                                  "identifier": {
+                                    "spelling": "c"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "simpledeclaration": {
+                "line": 56,
+                "specifiers": [
+                  {
+                    "primitivetypespecifier": {
+                      "keyword": "int"
+                    }
+                  }
+                ],
+                "declarators": [
+                  {
+                    "declarator": {
+                      "arraydeclarator": {
+                        "declarator": {
+                          "iddeclarator": {
+                            "name": {
+                              "identifier": {
+                                "spelling": "digraphs"
+                              }
+                            }
+                          }
+                        },
+                        "size": {
+                          "literal": {
+                            "value": {
+                              "int": 2
+                            },
+                            "text": "2",
+                            "base": 10
+                          }
+                        }
+                      }
+                    },
+                    "initializer": {
+                      "equalinitializer": {
+                        "value": {
+                          "initializerlist": {
+                            "items": [
+                              {
+                                "literal": {
+                                  "value": {
+                                    "int": 1
+                                  },
+                                  "text": "1",
+                                  "base": 10
+                                }
+                              },
+                              {
+                                "literal": {
+                                  "value": {
+                                    "int": 2
+                                  },
+                                  "text": "2",
+                                  "base": 10
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "templatedeclaration": {
+                "line": 57,
+                "parameters": [
+                  {
+                    "typeparameter": {
+                      "key": "class",
+                      "name": {
+                        "spelling": "T"
+                      }
+                    }
+                  }
+                ],
+                "declaration": {
+                  "simpledeclaration": {
+                    "line": 58,
+                    "declarators": [
+                      {
+                        "declarator": {
+                          "functiondeclarator": {
+                            "declarator": {
+                              "iddeclarator": {
+                                "name": {
+                                  "identifier": {
+                                    "spelling": "Packed"
+                                  }
+                                }
+                              }
+                            },
+                            "parameters": [
+                              {
+                                "parameterdeclaration": {
+                                  "specifiers": [
+                                    {
+                                      "namedtypespecifier": {
+                                        "name": {
+                                          "identifier": {
+                                            "spelling": "T"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "trailing_return": {
+                              "typeid": {
+                                "specifiers": [
+                                  {
+                                    "namedtypespecifier": {
+                                      "name": {
+                                        "templateid": {
+                                          "name": {
+                                            "identifier": {
+                                              "spelling": "Packed"
+                                            }
+                                          },
+                                          "arguments": [
+                                            {
+                                              "typeid": {
+                                                "specifiers": [
+                                                  {
+                                                    "namedtypespecifier": {
+                                                      "name": {
+                                                        "identifier": {
+                                                          "spelling": "T"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "privatemodulefragment": {
+                "line": 59
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

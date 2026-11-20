@@ -31,13 +31,14 @@ holds as statements.
 What an edition has is read from data, as mbse-expressions records it (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided)):
 a statement, declaration or member kind is available where a standard of that edition's designation, among those
 `Programs.C` covers, lists its schema (`Standards`); a term's kind, where one of those of `C`, `C Types` or `C
-Preprocessor` does (`Standards.DIALECTS`): C23's attribute declarations, `nullptr` (a `constant`) and `#elifdef`; and
-`_Pragma("...")`, C Preprocessor's `pragmaexpression`, which every edition has. A kind no standard lists is not
-checked: GNU's extensions (`asm`, a statement expression, `__extension__`, a label as a value, `&&l`, C's
-`labeladdressexpression`), outside every edition, as mbse-expressions' `C` marks them, a part or a helper (GNU's asm
-label, C Types' `AsmLabel`, among them), and invalid syntax, a `Programs.C.Error` and an `error` or `missing` term,
-which `validate` reports *(agent)*. A kind's problem is `<kind> needs <the first edition that
-has it>`: a statement's kind by its name (`AttributeDeclaration`), a term's by its tag (`constant`).
+Preprocessor` does (`Standards.DIALECTS`), of that designation, a dialect's editions of another language (C
+Preprocessor's C++ editions) not read: C23's attribute declarations, `nullptr` (a `constant`), `#elifdef` and
+`__has_include` (`hasincludeexpression`); and `_Pragma("...")`, C Preprocessor's `pragmaexpression`, which every edition
+has. A kind no standard lists is not checked: GNU's extensions (`asm`, a statement expression, `__extension__`, a label
+as a value, `&&l`, C's `labeladdressexpression`), outside every edition, as mbse-expressions' `C` marks them, a part or
+a helper (GNU's asm label, C Types' `AsmLabel`, among them), and invalid syntax, a `Programs.C.Error` and an `error` or
+`missing` term, which `validate` reports *(agent)*. A kind's problem is `<kind> needs <the first edition that has it>`:
+a statement's kind by its name (`AttributeDeclaration`), a term's by its tag (`constant`).
 
 What a property's value makes available stays code, by the kind that holds it: a standard tags a kind, not a property
 or a value of one *(agent)*. As the 0.3 language had them, C's (`Ccpp/Syntax.py`, `SINCE` and `FEATURES`; what arrived
@@ -66,7 +67,7 @@ Not checked: what C23 removed (a K&R definition, an old-style declaration of a f
   MemberDeclarator needs a declarator or a bitfield`); and, beyond 0.3's, `a SimpleDeclaration needs a specifier`, as
   for a member declaration and a function's definition: C99 removed the implicit `int`, and a function's definition's
   declarator declaring a function (`int m { ... }`), which the schemas hold where a unit is built, and which `Parse`
-  keeps as invalid syntax where tree-sitter reads one (its departure 36) *(agent)*; a kind's word one
+  keeps as invalid syntax where tree-sitter reads one (its departure 37) *(agent)*; a kind's word one
   of its choices (`StaticAssertDeclaration.keyword cannot be 'assert'`); and the dangling `else`, an `if` without one
   ending the consequence of an `if` with one;
 - invalid syntax, as the user decided that a parse keeps it and validation reports it: each `Programs.C.Error`,
@@ -85,12 +86,11 @@ abi-agnostic form and apply the ABI at the last minute, that would be advantageo
 holds C as written, and nothing in its tree depends on a target. `validate` checks what does not depend on one; the
 checks that do are not made: a literal's type and its range (`1`'s `int`, `L'w'`'s `wchar_t`, which C leaves to the
 implementation), `sizeof` and `_Alignof`, and constant evaluation (an array's size, a `static_assert`'s condition, a
-bit-field's width, a `case` label's value). A later step applies an ABI at the call that needs one: `validate_for(store,
-path, abi)` is planned, mbse-expressions reading a term's types under an ABI the caller gives, rather than one the
-term's holder names, and reporting a check that needs an ABI as deferred rather than as a problem (gaps of
-mbse-expressions', reported). Until then, the problems mbse-expressions gives where a type needs an ABI, "'int' is not a
-type C defines, and its expression names no ABI", stand for those deferred checks, and `validate` leaves them out
-(`_deferred`), as CPRS-01 does *(agent)*.
+bit-field's width, a `case` label's value): its terms are validated within mbse-expressions' `Domains.Reading(None)`,
+which defers each check needing an ABI rather than reporting it. The ABI is applied at the call that needs one:
+`validate_for(store, path, abi)` validates within `Domains.Reading` of the ABI dialect's singleton named `abi`
+(`Expressions.SystemV.AMD64`, `Expressions.Arm.AAPCS64`, `ABIS`), so that each literal's type and range is checked under
+that target, and `prepare_abi(store, abi)` gives a store the ABI's schemas and types, after `Standards.prepare`.
 
 Dropped, as the model now holds them: a property's type and a child's category, and where a statement or a member
 declaration may stand (a struct's members hold only member declarations, a block no member declaration), which the
@@ -105,6 +105,8 @@ from typing import Any
 from mbse.Expressions.C.Expressions import Domains, Expressions as CExpressions, Kinds
 from mbse.Expressions.C.Preprocessor import Expressions as CPreprocessor
 from mbse.Expressions.C.Types import Expressions as CTypes
+from mbse.Expressions.Arm import AAPCS64
+from mbse.Expressions.SystemV import AMD64
 from mbse.Expressions.Framework import Objects, Standards as ExpressionStandards, Terms
 from mbse.Schemas.Framework import Schemas as SchemaKinds
 
@@ -112,7 +114,8 @@ from ..Framework.Model import WORKSPACE
 from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
-__all__ = ["check", "check_file", "validate", "validate_file", "FEATURES", "STATEMENT_FEATURES"]
+__all__ = ["check", "check_file", "validate", "validate_file", "validate_for", "validate_file_for", "prepare_abi",
+           "ABIS", "FEATURES", "STATEMENT_FEATURES"]
 
 Version = tuple[int, ...]
 
@@ -124,11 +127,6 @@ _EXPRESSIONS = "Expressions."
 _DIALECTS = {"Expressions.C.Expressions.Term": CExpressions.DIALECT, "Expressions.C.Types.Term": CTypes.DIALECT,
              "Expressions.C.Preprocessor.Term": CPreprocessor.DIALECT}
 """The dialect that validates a term, by the union that holds it."""
-_NO_ABI = "and its expression names no ABI"
-"""How mbse-expressions words a type it cannot read without an ABI (`int`): a check deferred until one is applied, as a
-unit names none."""
-
-
 # --- Reading ---
 
 def _branch(value: Any) -> tuple[Any, str, Any]:
@@ -142,31 +140,34 @@ def _branch(value: Any) -> tuple[Any, str, Any]:
     return value, value.as_schema().name.rsplit(".", 1)[-1].lower(), value
 
 
-def _walk(value: Any, where: str, root: str | None) -> Iterator[tuple[str, str | None, Any, str, Any]]:
+def _walk(value: Any, where: str, root: str | None, holders: frozenset[str]) -> Iterator[
+        tuple[str, str | None, Any, str, Any]]:
     """Every record within what a property holds, parents first, in source order: each its place, the place of the
     outermost term, helper or kind's record of mbse-expressions' holding it (None for a statement, a member
     declaration, an error, a part holding statements or a part), the term or record itself, its tag and its record. A
-    statement within a term, where its block, its member list or its group holds one, is one of them, at its place."""
+    statement within a term, where its block, its member list or its group holds one, is one of them, at its place.
+    `holders` are the schemas that have a statement's place, the language's *(agent: a parameter, so that
+    `Programs.Cpp.Check` reuses it over C++'s)*."""
     if isinstance(value, Objects.Listed):
         for i, element in enumerate(value.values):
-            yield from _walk(element, f"{where}[{i}]", root)
+            yield from _walk(element, f"{where}[{i}]", root, holders)
         return
     if not hasattr(value, "as_schema"):
         return  # a scalar
     value, tag, record = _branch(value)
     name = record.as_schema().name
-    if name in _STATEMENTS:
+    if name in holders:
         root = None
     elif root is None and name.startswith(_EXPRESSIONS):
         root = where
     yield where, root, value, tag, record
     for prop, held in Objects.properties(record).items():
-        yield from _walk(held, f"{where}.{prop}", root)
+        yield from _walk(held, f"{where}.{prop}", root, holders)
 
 
 def _unit(unit: Any) -> Iterator[tuple[str, str | None, Any, str, Any]]:
     """Every record of a unit's tree, as `_walk` gives it, from its `body`."""
-    return _walk(Objects.properties(unit).get("body"), "body", None)
+    return _walk(Objects.properties(unit).get("body"), "body", None, _STATEMENTS)
 
 
 def _read(store: Any, path: str, read: Callable[[Any], list[str]]) -> list[str]:
@@ -321,24 +322,28 @@ def _year(standard: Any) -> int:
 
 class _Availability:
     """What the store's standards say: the target edition's year, each kind's schema's editions' years, by its schema's
-    name, and each edition's year and common name."""
+    name, among the editions the language covers by designation (a dialect's other editions, C Preprocessor's C++
+    editions in C's, not read), and each edition's year and common name. `language` is the singleton covering the editions, `edition` the
+    target's common name or designation, and `dialects` the singletons whose standards list kinds *(agent: parameters,
+    so that `Programs.Cpp.Check` reuses it)*."""
 
-    def __init__(self, store: Any, version: Version | str):
-        language = store.singleton(LANGUAGE)
-        tag = f"C{version[0]}" if isinstance(version, tuple) and len(version) == 1 else str(version)
-        target = ExpressionStandards.find(language, tag)
+    def __init__(self, store: Any, language: str, edition: str, dialects: tuple[str, ...]):
+        target = ExpressionStandards.find(store.singleton(language), edition)
         if target is None:
-            raise LookupError(f"{LANGUAGE} covers no edition {version!r}: run Standards.prepare on the store")
+            raise LookupError(f"{language} covers no edition {edition!r}: run Standards.prepare on the store")
         self.target = _year(target)
+        covered = ExpressionStandards.standards(store.singleton(language))
         self.years = {ExpressionStandards.properties(s)["names"][0]: _year(s)  # type: ignore[index]
-                      for s in ExpressionStandards.standards(language).values()}
+                      for s in covered.values()}
         self.names = {year: name for name, year in self.years.items()}
         self.versions: dict[str, set[int]] = {}
-        for dialect in DIALECTS:
+        for dialect in dialects:
             standards = ExpressionStandards.standards(store.singleton(dialect))
             if not standards:
                 raise LookupError(f"{dialect} covers no edition: run Standards.prepare on the store")
-            for standard in standards.values():
+            for designation, standard in standards.items():
+                if designation not in covered:  # another language's, as C Preprocessor's C++ editions are C's
+                    continue
                 for kind in ExpressionStandards.kinds(standard):
                     self.versions.setdefault(kind.name, set()).add(_year(standard))
 
@@ -380,7 +385,8 @@ def check(store: Any, path: str, version: Version | str) -> list[str]:
 
 def check_file(store: Any, unit: Any, version: Version | str) -> list[str]:
     """`check` of a unit's visitor, a `Programs.C.TranslationUnit` of `store`, read within the caller's transaction."""
-    return _check(_Availability(store, version), unit)
+    edition = f"C{version[0]}" if isinstance(version, tuple) and len(version) == 1 else str(version)
+    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), unit)
 
 
 # --- Validity ---
@@ -443,17 +449,17 @@ def _rules(kind: str, held: dict[str, Any]) -> list[str]:
     return problems
 
 
-def _terms(held: Any) -> Iterator[Any]:
+def _terms(held: Any, holders: frozenset[str]) -> Iterator[Any]:
     """The terms a value holds: itself, or a list's, or a value object's, in order, none within a term or a part holding
-    statements."""
+    statements, one of `holders`."""
     if isinstance(held, Objects.Listed):
         for element in held.values:
-            yield from _terms(element)
+            yield from _terms(element, holders)
     elif Terms.is_term(held):
         yield held
-    elif Objects.is_object(held) and _branch(held)[2].as_schema().name not in _STATEMENTS:
+    elif Objects.is_object(held) and _branch(held)[2].as_schema().name not in holders:
         for value in Objects.properties(held).values():
-            yield from _terms(value)
+            yield from _terms(value, holders)
 
 
 def _bound(term: Any) -> set[str]:
@@ -461,15 +467,9 @@ def _bound(term: Any) -> set[str]:
     return {name for t in Terms.walk(term) if isinstance(name := Terms.name_of(t), str)}
 
 
-def _deferred(problems: list[str]) -> list[str]:
-    """Problems but the checks deferred until an ABI is applied: those of a type C leaves to the implementation, which
-    only an ABI defines, and a unit names none."""
-    return [problem for problem in problems if not problem.endswith(_NO_ABI)]
-
-
 def _validated(term: Any) -> list[str]:
     """A term's problems, as the dialect whose union holds it validates it."""
-    return _deferred(_DIALECTS[term.as_schema().name].validate(term, _bound(term)))
+    return _DIALECTS[term.as_schema().name].validate(term, _bound(term))
 
 
 def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
@@ -477,8 +477,8 @@ def _term_problems(value: Any, tag: str, record: Any) -> list[str]:
     its dialect validates it; a helper's, its own checks, and its terms' as their dialect validates them."""
     if Terms.is_term(value):
         return _validated(value)
-    own = _deferred(Kinds.problems(Terms.node(tag, record), Domains.Types(record, "C.Expressions")))
-    return own + [problem for term in _terms(record) for problem in _validated(term)]
+    own = Kinds.problems(Terms.node(tag, record), Domains.Types(record, "C.Expressions"))
+    return own + [problem for term in _terms(record, _STATEMENTS) for problem in _validated(term)]
 
 
 def _validate(unit: Any) -> list[str]:
@@ -496,11 +496,42 @@ def _validate(unit: Any) -> list[str]:
 
 def validate(store: Any, path: str) -> list[str]:
     """The problems of the unit at `path` as a tree, in source order, each located by its place: its kinds' own rules,
-    and its terms' problems as their dialects validate them. Raises LookupError where the workspace holds no file at
-    `path`."""
+    and its terms' problems as their dialects validate them, those that need an ABI deferred. Raises LookupError where
+    the workspace holds no file at `path`."""
     return _read(store, path, validate_file)
 
 
 def validate_file(unit: Any) -> list[str]:
     """`validate` of a unit's visitor, read within the caller's transaction."""
-    return _validate(unit)
+    return Domains.Reading(None).run(lambda: _validate(unit))
+
+
+def validate_for(store: Any, path: str, abi: str) -> list[str]:
+    """`validate` of the unit at `path` with the ABI dialect named `abi` applied (`ABIS`): what `validate` defers, each
+    literal's type and range, checked under that target. The store must hold the ABI (`prepare_abi`). Raises
+    LookupError where the workspace holds no file at `path`, or the store no such ABI."""
+    return _read(store, path, lambda unit: validate_file_for(store, unit, abi))
+
+
+def validate_file_for(store: Any, unit: Any, abi: str) -> list[str]:
+    """`validate_for` of a unit's visitor, read within the caller's transaction."""
+    return _applied(store, unit, abi, _validate)
+
+
+def _applied(store: Any, unit: Any, abi: str, validated: Callable[[Any], list[str]]) -> list[str]:
+    """A unit's problems as `validated` reads them, within `Domains.Reading` of the ABI named `abi` (`ABIS`)."""
+    if abi not in ABIS:
+        raise LookupError(f"no ABI {abi!r}: one of {', '.join(ABIS)}")
+    return Domains.Reading(store.singleton(abi)).run(lambda: validated(unit))
+
+
+ABIS = {"Expressions.SystemV.AMD64": AMD64, "Expressions.Arm.AAPCS64": AAPCS64}
+"""The ABIs a unit may be validated under, each by its dialect's singleton's name, and its module."""
+
+
+def prepare_abi(store: Any, abi: str) -> Any:
+    """`store`, prepared by `Standards.prepare`, given the ABI named `abi` (`ABIS`): its schemas and its types, its
+    `install` and `define`, each in a transaction of its own. Run again, it writes nothing."""
+    for each in (ABIS[abi].install, ABIS[abi].define):
+        store.transaction(each)
+    return store
