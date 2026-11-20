@@ -233,7 +233,8 @@ class _Availability:
 
     def nearest(self, dialect: Any, clause: Any) -> str:
         """The version nearest the target that allows a grammar clause: the first after it, else the last before it."""
-        allowing = sorted((_version(standard), name) for name, standard in ExpressionStandards.standards(dialect).items()
+        standards = ExpressionStandards.standards(dialect)
+        allowing = sorted((_version(standard), name) for name, standard in standards.items()
                           if ExpressionStandards.allows(standard, clause))
         later = [name for at, name in allowing if at > self.target]
         return later[0] if later else allowing[-1][1]

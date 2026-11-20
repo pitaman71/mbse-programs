@@ -69,7 +69,8 @@ from mbse.Expressions.TypeScript.Types import Expressions as TypeScriptTypes
 
 from .Statements import KINDS, LANGUAGE, PARTS
 
-__all__ = ["install", "define", "prepare", "ONLY", "GRAMMAR_CLAUSES", "MINORS", "VERSIONS", "DIALECTS", "designation"]
+__all__ = ["install", "define", "prepare", "ONLY", "GRAMMAR_CLAUSES", "MINORS", "VERSIONS", "DIALECTS",
+           "designation"]
 
 MINORS = range(10)
 """The minor versions of TypeScript 5 the language covers: 5.0 to 5.9."""
