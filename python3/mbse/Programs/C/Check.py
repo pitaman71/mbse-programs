@@ -115,7 +115,7 @@ from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
 __all__ = ["check", "check_file", "validate", "validate_file", "validate_for", "validate_file_for", "prepare_abi",
-           "ABIS", "FEATURES", "STATEMENT_FEATURES"]
+           "ABIS", "UNRECORDED"]
 
 Version = tuple[int, ...]
 
@@ -191,69 +191,13 @@ def _unique(problems: list[str]) -> list[str]:
     return list(dict.fromkeys(problems))
 
 
-# --- Features ---
+# --- What no grammar clause can express ---
 
-def _keyword(words: dict[str, str]) -> Callable[[Terms.Node], list[tuple[str, str]]]:
-    """The features of a kind's keyword: each word's, and the edition it arrived in."""
-    def found(node: Terms.Node) -> list[tuple[str, str]]:
-        word = node.attributes.get("keyword")
-        return [(f"{node.kind}.keyword {word!r}", words[word])] if word in words else []
-    return found
-
-
-def _arrived(edition: str) -> Callable[[Terms.Node], list[tuple[str, str]]]:
-    """A helper's own feature: the kind itself, which arrived in `edition`."""
-    return lambda node: [(node.kind, edition)]
-
-
-_DECIMAL = ("df", "dd", "dl")
-
-
-def _literal(node: Terms.Node) -> list[tuple[str, str]]:
-    held = node.attributes
-    found = [("literal with digit separators", "C23")] if held.get("separators") else []
-    found += [("literal.base 2", "C23")] if held.get("base") == 2 else []
-    suffix = str(held.get("suffix", "")).lower()
-    found += [(f"literal.suffix {held['suffix']!r}", "C23")] if "wb" in suffix or suffix in _DECIMAL else []
-    found += [("literal.prefix 'u8' of a character", "C23")] if held.get("prefix") == "u8" and held.get(
+def _literal(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
+    """A `u8` character (C23): two properties' values together, its `prefix` and its `quote`, where a grammar clause
+    says what one property holds, as mbse-expressions' `C` leaves it unrecorded."""
+    return [(f"{kind}.prefix 'u8' of a character", ("C23",))] if held.get("prefix") == "u8" and held.get(
         "quote") == "'" else []
-    return found + ([(f"literal {held['text']!r}", "C23")] if held.get("text") in ("true", "false") else [])
-
-
-_FLOATS = ("_Float16", "_Float32", "_Float64", "_Float128", "_Float32x", "_Float64x", "_Float128x")
-
-FEATURES: dict[str, Callable[[Terms.Node], list[tuple[str, str]]]] = {
-    "literal": _literal,
-    "initializerlist": lambda node: [("initializerlist without items", "C23")] if not node.many else [],
-    "alignofexpression": _keyword({"alignof": "C23"}),
-    "declspecifier": _keyword({"thread_local": "C23", "constexpr": "C23"}),
-    "primitivetypespecifier": _keyword({"bool": "C23", "_Decimal32": "C23", "_Decimal64": "C23", "_Decimal128": "C23",
-                                        **{word: "C23" for word in _FLOATS}}),
-    "typeofspecifier": _keyword({"typeof": "C23", "typeof_unqual": "C23"}),
-    "bitintspecifier": _arrived("C23"), "placeholdertypespecifier": _arrived("C23"),
-    "standardattributespecifier": _arrived("C23"),
-    "enumspecifier": lambda node: [("enumspecifier.base", "C23")] if node.subterms.get("base") is not None else [],
-    "alignasspecifier": _keyword({"alignas": "C23"}),
-    "otherdirective": lambda node: [(f"#{node.attributes['directive']}", "C23")] if node.attributes.get(
-        "directive") in ("warning", "embed") else [],
-}
-"""The features of a term or a helper that its properties' values make, by its kind (its tag, or its helper's): each
-feature's name, and the edition it arrived in, by its common name *(agent: code until mbse-expressions records
-them)*."""
-
-
-def _labeled(kind: str, held: dict[str, Any]) -> list[tuple[str, str]]:
-    """A label's features: without a statement, or before a declaration (C23)."""
-    if "statement" not in held:
-        return [(f"{kind} without a statement", "C23")]
-    labeled = _kind(_branch(held["statement"])[2])
-    return [(f"{kind} before a declaration", "C23")] if labeled in (
-        "SimpleDeclaration", "StaticAssertDeclaration", "AttributeDeclaration") else []
-
-
-def _assertion(kind: str, held: dict[str, Any]) -> list[tuple[str, str]]:
-    found = [(f"{kind}.keyword 'static_assert'", "C23")] if held.get("keyword") == "static_assert" else []
-    return found + ([(f"{kind} without a message", "C23")] if "message" not in held else [])
 
 
 _UNTYPED = ("declspecifier", "cvqualifier", "standardattributespecifier", "alignasspecifier", "gnuattributespecifier",
@@ -261,12 +205,13 @@ _UNTYPED = ("declspecifier", "cvqualifier", "standardattributespecifier", "align
 """The specifiers that name no type: storage classes, function specifiers and qualifiers, and attributes."""
 
 
-def _inferred(kind: str, held: dict[str, Any]) -> list[tuple[str, str]]:
-    """A declaration's type inferred (C23, 6.7.10): `auto` and no type specifier."""
+def _inferred(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
+    """A declaration's type inferred (C23, 6.7.10): `auto` and no type specifier, which says what every element of its
+    `specifiers` is, where a grammar clause says what one of them holds (`auto int x;` is C11's)."""
     specifiers = [_branch(specifier) for specifier in (held["specifiers"].values if "specifiers" in held else ())]
     words = [Objects.properties(record).get("keyword") for _, _, record in specifiers]
     inferred = "auto" in words and all(tag in _UNTYPED for _, tag, _ in specifiers)
-    return [(f"{kind} with an inferred type", "C23")] if inferred else []
+    return [(f"{kind} with an inferred type", ("C23",))] if inferred else []
 
 
 def _unnamed(parameter: Any) -> bool:
@@ -296,21 +241,23 @@ def _binder(declarator: Any) -> tuple[str, dict[str, Any]]:
     return tag, fields
 
 
-def _definition(kind: str, held: dict[str, Any]) -> list[tuple[str, str]]:
-    """A function's definition's features: a parameter of its own unnamed (C23), not one of the type it returns."""
+def _definition(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
+    """A function's definition with a parameter of its own unnamed (C23, 6.9.1): the parameters of the declarator
+    nearest its name, not those of the type it returns, and any but a lone `void`, which a grammar clause, saying what
+    a property holds at any depth and never what it does not, cannot tell apart."""
     tag, fields = _binder(held["declarator"])
     parameters = fields["parameters"].values if "parameters" in fields else ()
     unnamed = tag == "functiondeclarator" and any(map(_unnamed, parameters))
-    return [(f"{kind} with an unnamed parameter", "C23")] if unnamed else []
+    return [(f"{kind} with an unnamed parameter", ("C23",))] if unnamed else []
 
 
-STATEMENT_FEATURES: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, str]]]] = {
-    "LabeledStatement": _labeled, "CaseStatement": _labeled, "DefaultStatement": _labeled,
-    "StaticAssertDeclaration": _assertion, "FunctionDefinition": _definition, "SimpleDeclaration": _inferred,
+UNRECORDED: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, tuple[str, ...]]]]] = {
+    "FunctionDefinition": _definition, "SimpleDeclaration": _inferred, "literal": _literal,
 }
-"""The features of a statement, a member declaration or a part that its properties' values make, by its kind, given its
-kind and its properties that are set: each feature's name, and the edition it arrived in, by its common name *(agent:
-code, as a standard tags a kind, not a property)*."""
+"""What no grammar clause can express, which stays code, each with its reason: the language features of a statement,
+a member declaration or a part, by its kind's name, and of a term or a helper, by its tag, given that and its
+properties that are set: each language feature's name, and the editions that allow it, by their common names
+*(agent)*."""
 
 
 # --- Editions ---
@@ -321,24 +268,31 @@ def _year(standard: Any) -> int:
 
 
 class _Availability:
-    """What the store's standards say: the target edition's year, each kind's schema's editions' years, by its schema's
+    """What the store's standards say of the target edition: each kind's schema's editions' years, by its schema's
     name, among the editions the language covers by designation (a dialect's other editions, C Preprocessor's C++
-    editions in C's, not read), and each edition's year and common name. `language` is the singleton covering the editions, `edition` the
-    target's common name or designation, and `dialects` the singletons whose standards list kinds *(agent: parameters,
-    so that `Programs.Cpp.Check` reuses it)*."""
+    editions in C's, not read); and each grammar clause the target forbids, by its kind's schema's name, with its
+    dialect and its problem. `language` is the singleton covering the editions, `edition` the target's common name or
+    designation, and `dialects` the singletons whose standards list kinds and whose grammar clauses `check` reads
+    *(agent: parameters, so that `Programs.Cpp.Check` reuses it)*.
+
+    A grammar clause is read against its dialect's edition of the target's designation, or, where its dialect does not
+    represent it, against the target itself, which no entry names, guessed from its flagged neighbours by revision
+    (`Framework.Standards.allows`) *(agent)*."""
 
     def __init__(self, store: Any, language: str, edition: str, dialects: tuple[str, ...]):
         target = ExpressionStandards.find(store.singleton(language), edition)
         if target is None:
             raise LookupError(f"{language} covers no edition {edition!r}: run Standards.prepare on the store")
         self.target = _year(target)
-        covered = ExpressionStandards.standards(store.singleton(language))
-        self.years = {ExpressionStandards.properties(s)["names"][0]: _year(s)  # type: ignore[index]
-                      for s in covered.values()}
+        self.covered = covered = ExpressionStandards.standards(store.singleton(language))
+        self.edition = ExpressionStandards.tags(target)[-1]
+        self.years = {ExpressionStandards.tags(s)[-1]: _year(s) for s in covered.values()}
         self.names = {year: name for name, year in self.years.items()}
         self.versions: dict[str, set[int]] = {}
+        self.clauses: dict[str, dict[str, tuple[Any, dict[str, str]]]] = {}
         for dialect in dialects:
-            standards = ExpressionStandards.standards(store.singleton(dialect))
+            singleton = store.singleton(dialect)
+            standards = ExpressionStandards.standards(singleton)
             if not standards:
                 raise LookupError(f"{dialect} covers no edition: run Standards.prepare on the store")
             for designation, standard in standards.items():
@@ -346,6 +300,19 @@ class _Availability:
                     continue
                 for kind in ExpressionStandards.kinds(standard):
                     self.versions.setdefault(kind.name, set()).add(_year(standard))
+            self._forbidden(dialect, singleton, {designation: standards.get(designation, own)
+                                                 for designation, own in covered.items()})
+
+    def _forbidden(self, dialect: str, singleton: Any, editions: dict[str, Any]) -> None:
+        """Each grammar clause of a dialect that the target forbids, by its kind's schema's name, with its problem,
+        read against `editions`, the dialect's own of each designation the language covers, or the language's."""
+        for name, clause in ExpressionStandards.grammar_clauses(singleton).items():
+            allowing = [ExpressionStandards.tags(own)[-1] for designation, own in self.covered.items()
+                        if ExpressionStandards.allows(editions[designation], clause)]
+            if self.edition not in allowing:
+                kind = ExpressionStandards.grammar_clause(clause)["kind"].name
+                problems = self.clauses.setdefault(kind, {}).setdefault(dialect, (singleton, {}))[1]
+                problems[name] = f"{name} needs {allowing[0]}" if allowing else f"{name} is in no edition"
 
     def kind(self, schema: str, what: str) -> list[str]:
         """The problem of a kind, by its schema's name, that the target lacks: none where it has it, or where no
@@ -355,21 +322,33 @@ class _Availability:
             return []
         return [f"{what} needs {self.names[min(versions)]}"]
 
-    def features(self, found: list[tuple[str, str]]) -> list[str]:
-        return [f"{feature} needs {edition}" for feature, edition in found if self.target < self.years[edition]]
+    def grammar_clauses(self, record: Any) -> list[str]:
+        """The problems of the grammar clauses a record takes that the target forbids, in its dialect's order: `<its
+        name> needs <the first edition the language covers that allows it>`, or, where none does, `<its name> is in no
+        edition`."""
+        return [problems[name] for singleton, problems in self.clauses.get(record.as_schema().name, {}).values()
+                for clause in ExpressionStandards.takes(singleton, record)
+                if (name := str(ExpressionStandards.grammar_clause_name(clause))) in problems]
+
+    def unrecorded(self, found: list[tuple[str, tuple[str, ...]]]) -> list[str]:
+        """The problems of the language features that stay code that the target lacks: `<its name> needs <the first
+        edition that allows it>`."""
+        return [f"{name} needs {editions[0]}" for name, editions in found if self.edition not in editions]
 
 
-def _check(available: _Availability, unit: Any) -> list[str]:
+def _none(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
+    return []
+
+
+def _check(available: _Availability, records: Iterator[tuple[str, str | None, Any, str, Any]],
+           unrecorded: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, tuple[str, ...]]]]]) -> list[str]:
+    """The problems of a unit's `records`, as `_walk` gives them, that the target lacks: each kind's, each grammar
+    clause's its records take, and what `unrecorded` finds, by kind *(agent: `Programs.Cpp.Check` reuses it)*."""
     problems: list[str] = []
-    for where, root, _, tag, record in _unit(unit):
-        schema = record.as_schema().name
-        if root is None:  # a statement, a member declaration, an error or a part, at its place
-            kind = _kind(record)
-            found = available.kind(schema, kind)
-            found += available.features(STATEMENT_FEATURES.get(kind, lambda *_: [])(kind, Objects.properties(record)))
-        else:  # within a term or a helper, at the outermost's place
-            found = available.kind(schema, tag)
-            found += available.features(FEATURES[tag](Terms.node(tag, record)) if tag in FEATURES else [])
+    for where, root, _, tag, record in records:
+        kind = _kind(record) if root is None else tag  # a statement's, a member's, an error's or a part's, or a term's
+        found = available.kind(record.as_schema().name, kind) + available.grammar_clauses(record)
+        found += available.unrecorded(unrecorded.get(kind, _none)(kind, Objects.properties(record)))
         problems += [f"{where if root is None else root}: {problem}" for problem in found]
     return _unique(problems)
 
@@ -386,7 +365,7 @@ def check(store: Any, path: str, version: Version | str) -> list[str]:
 def check_file(store: Any, unit: Any, version: Version | str) -> list[str]:
     """`check` of a unit's visitor, a `Programs.C.TranslationUnit` of `store`, read within the caller's transaction."""
     edition = f"C{version[0]}" if isinstance(version, tuple) and len(version) == 1 else str(version)
-    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), unit)
+    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), _unit(unit), UNRECORDED)
 
 
 # --- Validity ---
