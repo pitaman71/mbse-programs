@@ -53,8 +53,8 @@ would be, or `<its name> is in no edition`, where none does.
 
 What no grammar clause can express stays code, `UNRECORDED`, by the kind that holds it, each with its reason, its
 problem worded as a grammar clause's *(agent)*: a function's definition with an unnamed parameter of its own (C23,
-6.9.1), the parameters of the declarator nearest its name and any but a lone `void`, and a declaration whose type is
-inferred, `auto` with no type specifier (C23, 6.7.10), which `Parse` writes as the keyword `auto`, each a statement
+6.9.1), the parameters of the declarator nearest its name and any but a lone `void`, and a declaration whose C's type
+is inferred, `auto` with no type specifier (C23, 6.7.10), which `Parse` writes as the keyword `auto`, each a statement
 about every element of a list, where a grammar clause says what one of them holds; and a `u8` character (C23), two
 properties' values together, which mbse-expressions' `C` leaves unrecorded. What arrived before C11, as `restrict`,
 `inline` and designators, and C11's own, as `_Alignas`, `_Atomic`, `_Generic`, `_Noreturn`, `_Static_assert` and
@@ -211,8 +211,8 @@ _UNTYPED = ("declspecifier", "cvqualifier", "standardattributespecifier", "align
 
 
 def _inferred(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
-    """A declaration's type inferred (C23, 6.7.10): `auto` and no type specifier, which says what every element of its
-    `specifiers` is, where a grammar clause says what one of them holds (`auto int x;` is C11's)."""
+    """C's type of a declaration inferred (C23, 6.7.10): `auto` and no type specifier, which says what every element of
+    its `specifiers` is, where a grammar clause says what one of them holds (`auto int x;` is C11's)."""
     specifiers = [_branch(specifier) for specifier in (held["specifiers"].values if "specifiers" in held else ())]
     words = [Objects.properties(record).get("keyword") for _, _, record in specifiers]
     inferred = "auto" in words and all(tag in _UNTYPED for _, tag, _ in specifiers)

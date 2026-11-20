@@ -69,7 +69,7 @@ Decided by the agent, each *(agent)*:
   C lists it among the common extensions only (ISO/IEC 9899, J.5.10). So `Check` does not check it, as an extension
   outside every edition.
 - **What no grammar clause can express stays code**, `Check.UNRECORDED`, each with its reason: a function's definition
-  with an unnamed parameter, and a declaration whose type is inferred, which each say what every element of a list
+  with an unnamed parameter, and a declaration whose C's type is inferred, which each say what every element of a list
   holds, or what it does not.
 """
 
