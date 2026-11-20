@@ -11,7 +11,7 @@ keywords = ["ast", "abstract syntax tree", "c++", "c", "python", "typescript", "
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mbse-expressions>=0.14.0,<0.15",
+    "mbse-expressions>=0.15.0,<0.16",
     "mbse-schemas>=0.34.0,<0.35",
     "tree-sitter>=0.25",
     "tree-sitter-cpp==0.23.4",
