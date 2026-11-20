@@ -31,9 +31,10 @@ clause, where `allows(standard, clause)` says so.
 The grammar clauses, each named as `Check` reports it, as the 0.3 language had them within TypeScript 5
 (`TypeScript/Syntax.py`, `FEATURES`): `VariableDeclaration.declarationKind`'s `'using'` and `'await using'` (5.2),
 `ImportDeclaration`'s, `ExportNamedDeclaration`'s and `ExportAllDeclaration`'s `attributes` (5.3), and
-`ImportDeclaration.phase 'defer'` (5.9); and, beyond 0.3's data, a module's name as a string, `ImportSpecifier.imported`,
-`ExportSpecifier.local` and `.exported` and `ExportAllDeclaration.exported` holding a `literal` (`import { "a-b" as x
-}`, `export { x as "a-b" }`, `export * as "a-b" from`), which TypeScript 5.6 accepts *(agent)*.
+`ImportDeclaration.phase 'defer'` (5.9); and, beyond 0.3's data, a module's name as a string,
+`ImportSpecifier.imported`, `ExportSpecifier.local` and `.exported` and `ExportAllDeclaration.exported` holding a
+`literal` (`import { "a-b" as x }`, `export { x as "a-b" }`, `export * as "a-b" from`), which TypeScript 5.6 accepts
+*(agent)*.
 
 Decided by the agent, each *(agent)*:
 
@@ -97,8 +98,8 @@ kind by its tag in `TypeScript5` (`literal`)."""
 
 DIALECTS = (LANGUAGE, "Expressions.TypeScript.TypeScript5", "Expressions.TypeScript.Types",
             "Expressions.TypeScript.Patterns")
-"""The singletons whose standards say which kinds and grammar clauses a TypeScript 5 program may hold: the language's own, for its
-statements, then mbse-expressions' dialects, for the terms its statements hold."""
+"""The singletons whose standards say which kinds and grammar clauses a TypeScript 5 program may hold: the language's
+own, for its statements, then mbse-expressions' dialects, for the terms its statements hold."""
 
 
 def designation(minor: int) -> str:
