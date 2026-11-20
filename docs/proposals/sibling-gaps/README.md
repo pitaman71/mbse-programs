@@ -41,17 +41,35 @@ CPython `ast` without them.
 6. **No public walk of a term by property names.** `Terms._labelled` is private and drops indices; `Definitions` walks
    through `Objects.properties`.
    - Proposed: a public walk giving each subterm with its path of property names and indices.
-7. **A standard tags a kind, not a property or a value.** `HasStandard` links an object schema alone, so availability
-   that depends on a property's value stays code in `Check` (`binop.op '@'` 3.5, `comprehension.is_async` 3.6,
-   `formattedvalue.debug` and `arguments.posonlyargs` 3.8, an unpacked subscript index 3.11, a type parameter's default
-   3.13, unpacked comprehensions 3.15; and, of mbse-programs' own, `Import.is_lazy` 3.15 and `type_params` 3.12).
-   - Proposed: a way to tag a property, or a value of one, with the standards that have it
-     ([CAP-268: standards as tagged data](../../../../mbse-basis/docs/capabilities/CAP-268.md)).
+7. **A standard tags a kind, not a property or a value.** Met by mbse-expressions 0.15.0's grammar clauses (mbse-basis
+   [grammar clauses by version](../../../../mbse-basis/proposals/GRAMMAR-CLAUSES.md), stage 1): Python3's and
+   TypeScript5's `Check` read them, their terms' from mbse-expressions' dialects and their statements' from each
+   language's own (`Standards.GRAMMAR_CLAUSES`), and their code tables, `FEATURES` and `STATEMENT_FEATURES`, are gone.
 8. **No writers for invalid syntax.** `Expressions.Python.Python3` writes each of its kinds (`name`, `call`, ...) but
    not the framework's `error` and `missing`, which every dialect's `Term` holds, so `Parse`, the first parser to keep
    them, writes them on the union's branch itself (`P.Writer(lambda u: u.error(...))`), and `Python Types` and
    `Python Patterns` terms through its `_term`.
    - Proposed: `error(text, *terms)` and `missing(kind)` writers in the framework, which every dialect's writers reuse.
+
+13. **`takes` does not say which element of a list takes a grammar clause.** `Framework.Standards.takes` reads a
+    property that holds a list as a whole ("a container where one of its elements does"), so a caller locating a
+    grammar clause at an element, as Python3's `Check` locates PEP 614's decorator (`body[2].decorator_list[0]`), finds
+    the element again: a term of one of the grammar clause's kinds (`grammar_clause`) that takes each of its nested
+    grammar clauses of that kind (`takes` of the element). Reading a definition's two decorator grammar clauses as
+    alternatives needs it too: per decorator, not per list.
+    - Proposed: `takes` giving, with each grammar clause, where within the term it holds, its property and, for a list,
+      each element's index.
+14. **`grammar_clauses_spec` writes on the frame symbol `dialect`.** Its specs begin
+    `_.dialect.grammar_clauses(...)`, so a define that binds its owner by another name (mbse-programs' languages bound
+    theirs as `language`) renames it to `dialect`.
+    - Proposed: the owner's symbol a parameter of the writer, or documented as the writer's.
+15. **A version the data does not represent cannot be guessed without being stored.** `allows(standard, clause)`
+    guesses from neighbours given a stored `Standard`, so `Check`, which writes nothing, raises LookupError for Python
+    3.16; the suites store a Python 3.16 and a TypeScript 5.10 (P3CHK-09, TS5CHK-10), each language's and dialect's,
+    to show the `after` flags at work. And a kind's membership has no guess: a version stored without the kinds it has
+    lacks every kind, so they store the newest's.
+    - Proposed: `allows` of a revision (`("version", "3.16")`) as well as of a stored edition, and the same guess for a
+      kind's membership.
 
 ## mbse-schemas
 
