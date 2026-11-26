@@ -14,11 +14,13 @@ version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)):
   relations link. Run after `Programs.TypeScript5`'s install, in a transaction of its own; run again, it writes nothing.
 - `define` writes the singleton `Programs.TypeScript5` covering TypeScript 5.0 to 5.9, each by its published name
   (`TypeScript 5.9`), an `Expressions.Framework.Standard` with its body (`com.microsoft`) and its version, and holding
-  the statement, clause and member kinds it has (`Expressions.Framework.HasStandard`), by membership (`ONLY`); and
-  owning its grammar clauses by name (`GRAMMAR_CLAUSES`), each allowed or forbidden by each version, written by
-  mbse-expressions' writer (`Framework.Standards.grammar_clauses_spec`). Run after `install`, in a transaction of its
-  own; run again, it writes nothing. Its frame binds the language (`dialect`, as that writer names it), each version
-  by its name spelled as an identifier (`TypeScript_5_9`) and each grammar clause by its index (`grammar_clause_0`).
+  the statement, clause and member kinds it has (`Expressions.Framework.HasStandard`), by membership (`ONLY`), 5.0
+  flagged `before` and 5.9 `after` (`Framework.Standards.editions_spec`), so that TypeScript 5.10, which the data does
+  not represent, is guessed to have what 5.9 has; and owning its grammar clauses by name (`GRAMMAR_CLAUSES`), each
+  allowed or forbidden by each version, written by mbse-expressions' writer (`Framework.Standards.grammar_clauses_spec`).
+  Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the language
+  (`dialect`, the symbol it gives the writer), each version by its name spelled as an identifier (`TypeScript_5_9`) and
+  each grammar clause by its index (`grammar_clause_0`).
 - `prepare(store)` runs, each in a transaction of its own, mbse-expressions' `define`s for `TypeScript5`, `TypeScript
   Types` and `TypeScript Patterns` (which record the expression, type and pattern kinds each version has, and their
   terms' grammar clauses, and which `TypeScript5.store()` does not run), then `install` and `define`; it gives the
@@ -34,7 +36,9 @@ The grammar clauses, each named as `Check` reports it, as the 0.3 language had t
 `ImportDeclaration.phase 'defer'` (5.9); and, beyond 0.3's data, a module's name as a string,
 `ImportSpecifier.imported`, `ExportSpecifier.local` and `.exported` and `ExportAllDeclaration.exported` holding a
 `literal` (`import { "a-b" as x }`, `export { x as "a-b" }`, `export * as "a-b" from`), which TypeScript 5.6 accepts
-*(agent)*.
+*(agent)*. TypeScript 5.0 to 5.9 removed nothing a statement holds: import assertions, `assert { ... }`, which
+`--module nodenext` refuses from 5.8, are a compiler option's, and the tree holds attributes without their keyword, as
+`Parse` reads them *(agent)*.
 
 Decided by the agent, each *(agent)*:
 

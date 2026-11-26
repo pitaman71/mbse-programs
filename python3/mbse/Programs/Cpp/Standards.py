@@ -15,12 +15,13 @@ takes them as mbse-expressions' C++ dialects have them, ISO/IEC 14882:2017, 2020
   14882:2024`), an `Expressions.Framework.Standard` with its bodies (`org.iso`, `ch.iec`), its number (`14882`), its
   revision's year and its common name (`C++23`), as mbse-expressions' `Cpp` and `Cpp Types` write theirs, and holding
   the statement, declaration, clause and member kinds it has, C's among them by name (`Programs.Cpp.IfStatement`), by
-  membership: each in every edition but those `ONLY` lists, in its editions alone. And it writes the language's
-  grammar clauses by name (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition, through mbse-expressions'
-  writer (`Framework.Standards.grammar_clauses_spec`). Run after `install`, in a transaction of its own; run again, it
-  writes nothing. Its frame binds the language (`dialect`, as the writer names it), each edition by its common name
-  spelled as an identifier (`Cpp23`), as mbse-expressions' frames do, and each grammar clause by its index
-  (`grammar_clause_0`).
+  membership: each in every edition but those `ONLY` lists, in its editions alone, C++17 flagged `before` and C++23
+  `after` (`Framework.Standards.editions_spec`), so that C++26, which the data does not represent, is guessed to have
+  what C++23 has. And it writes the language's grammar clauses by name (`GRAMMAR_CLAUSES`), each allowed or forbidden
+  by each edition, through mbse-expressions' writer (`Framework.Standards.grammar_clauses_spec`). Run after `install`,
+  in a transaction of its own; run again, it writes nothing. Its frame binds the language (`dialect`, the symbol it
+  gives the writer), each edition by its common name spelled as an identifier (`Cpp23`), as mbse-expressions' frames
+  do, and each grammar clause by its index (`grammar_clause_0`).
 - `prepare(store)` runs, each in a transaction of its own, the installs mbse-expressions' `Cpp` defines its domains
   with (`ISO/IEC 11404` and `IEEE 754`), mbse-expressions' `define`s for `Cpp`, `Cpp Types` and `C Preprocessor`
   (whose C++ editions record the directive kinds each has), then `install` and `define`; it gives the store back.
@@ -36,7 +37,17 @@ it. The language's own are its statements' (`GRAMMAR_CLAUSES`), from the 0.3 lan
 - a label, a `case` or a `default` without a statement, or before a declaration (C++23, [stmt.label]);
 - a trailing `requires` of a function's definition, a declarator or a member's declarator, and a template's `requires`
   (C++20);
-- a nested namespace's name `inline`, a namespace's `names` holding a name whose `inline` is set, nested (C++20).
+- a nested namespace's name `inline`, a namespace's `names` holding a name whose `inline` is set, nested (C++20);
+- a bit-field's default member initializer, a member's declarator's `initializer` where it `requires` its `bitfield`
+  (C++20, [class.mem]);
+- a `static` `operator()` or `operator[]` (C++23, [over.call], [over.sub]): a function's definition's or a member
+  declaration's `specifiers` holding a `declspecifier` `static`, where it `requires` its declarator to reach, through
+  the declarators that hold one, nested, an `iddeclarator` whose name is that operator's.
+
+What C++ removed within the editions it covers is its dialects' data: `register` among a declaration's specifiers
+(C++17), a `declspecifier` of mbse-expressions' `Cpp`, which the declarations hold, and dynamic exception
+specifications (C++17's `throw(int)`, C++20's `throw()`), recorded there, C++14 guessed to allow them. Nothing a
+statement holds of its own was removed by C++17, C++20 or C++23 *(agent)*.
 
 The terms' are mbse-expressions' dialects' own, which `Check` reads beside these: C++'s (`consteval`, `constinit`,
 `char8_t`, `<=>`, lambdas' template parameters, attributes, `requires` and `static`, pack init-captures, constrained
@@ -64,9 +75,9 @@ Decided by the agent, each *(agent)*, as `Programs.C.Standards` decides for C:
   designations beside C's, each with the kinds it has (`elifdefdirective`, `#elifdef` and `#elifndef`, C++23's;
   `hasincludeexpression` C++17's) and the grammar clauses each allows, and `Check` reads its standards of C++'s
   designations alone (`DIALECTS`).
-- **What no grammar clause can express stays code**, `Check.UNRECORDED`, each with its reason: a bit-field's default
-  member initializer and a `static` `operator()` or `operator[]`, each two properties' values together, and a
-  subscript of several indices, a count of a list's elements, as mbse-expressions' `Cpp` leaves it unrecorded.
+- **Nested and required grammar clauses are the language's**, though their kinds are C++'s helpers (`iddeclarator`,
+  `declspecifier`), as C's are; no edition names them, so each allows them.
+- **What no grammar clause can express** would stay code, in `Check`: nothing does, of C++'s statements.
 """
 
 from __future__ import annotations
@@ -110,6 +121,36 @@ _INITIALIZED = ("IfStatement", "SwitchStatement", "ForStatement", "RangeForState
 """The statements that hold an init-statement."""
 _PARTS = ("InitDeclarator", "MemberDeclarator", "NamespaceName")
 """The parts a grammar clause is about, beside the kinds."""
+_HELPERS = ("DeclSpecifier", "OperatorName", "IdDeclarator", "PackDeclarator", "PointerDeclarator", "ReferenceDeclarator",
+            "ArrayDeclarator", "FunctionDeclarator", "ParenthesizedDeclarator")
+"""The helpers of C++'s a grammar clause is about, by their schemas' names, keyed lowercased (`declspecifier`)."""
+_DECLARATORS = ("packdeclarator", "pointerdeclarator", "referencedeclarator", "arraydeclarator", "functiondeclarator",
+                "parenthesizeddeclarator")
+"""The declarators that hold a declarator."""
+
+
+def _static(operator: str) -> tuple[FS.GrammarClause, ...]:
+    """A `static` `operator()` or `operator[]` (C++23, [over.call], [over.sub]): a function's definition or a member
+    declaration with a specifier `static`, whose declarator reaches, through those that hold it, the operator's name."""
+    reaching = (f"iddeclarator of operator{operator}",
+                *(f"{declarator} reaching operator{operator}" for declarator in _DECLARATORS))
+    declarators = (*_DECLARATORS, "iddeclarator")
+    return (
+        *(FS.requires(FS.kinds_of(f"{kind} static operator{operator}", kind, "specifiers", ("declspecifier",),
+                                  ("declspecifier.keyword 'static'",), _CPP23), (f"{kind}.{name} reaching operator{operator}",))
+          for kind, name in (("FunctionDefinition", "declarator"), ("MemberDeclaration", "declarators"))),
+        FS.kinds_of(f"FunctionDefinition.declarator reaching operator{operator}", "FunctionDefinition", "declarator",
+                    declarators, reaching, None),  # required: no edition names it, nor those below
+        FS.kinds_of(f"MemberDeclaration.declarators reaching operator{operator}", "MemberDeclaration", "declarators",
+                    ("MemberDeclarator",), (f"MemberDeclarator.declarator reaching operator{operator}",), None),
+        FS.kinds_of(f"MemberDeclarator.declarator reaching operator{operator}", "MemberDeclarator", "declarator",
+                    declarators, reaching, None),
+        *(FS.kinds_of(name, declarator, "declarator", declarators, reaching, None)
+          for name, declarator in zip(reaching[1:], _DECLARATORS)),
+        FS.kinds_of(reaching[0], "iddeclarator", "name", ("operatorname",), (f"operatorname.operator '{operator}'",), None),
+        FS.values(f"operatorname.operator '{operator}'", "operatorname", "operator", (operator,), None),
+    )
+
 
 GRAMMAR_CLAUSES = (
     FS.values("IfStatement.consteval", "IfStatement", "consteval", (True,), _CPP23),
@@ -123,6 +164,14 @@ GRAMMAR_CLAUSES = (
     FS.kinds_of("NamespaceDefinition with an inline nested name", "NamespaceDefinition", "names", ("NamespaceName",),
                 ("NamespaceName.inline",), _CPP20),
     FS.values("NamespaceName.inline", "NamespaceName", "inline", (True,), None),  # nested
+    # a bit-field's default member initializer (C++20, [class.mem]): its `bitfield` and its `initializer` together (an
+    # initializer alone is C++11's)
+    FS.requires(FS.present("MemberDeclarator with a bit-field's initializer", "MemberDeclarator", "initializer", _CPP20),
+                ("MemberDeclarator.bitfield",)),
+    FS.present("MemberDeclarator.bitfield", "MemberDeclarator", "bitfield", None),  # required: no edition names it
+    *_static("()"),
+    *_static("[]"),
+    FS.values("declspecifier.keyword 'static'", "declspecifier", "keyword", ("static",), None),  # nested
 )
 """The language's grammar clauses, its statements', each with the editions that allow it, by their frame symbols, every
 other forbidding it, or none naming it where it is only nested, named as `Check` names the language feature."""
@@ -157,7 +206,8 @@ def define(txn: Any) -> Any:
     nothing."""
     Language, Standard = txn.Programs.Cpp.Language, txn.Expressions.Framework.Standard
     every = {kind: getattr(txn.Programs.Cpp, kind).as_schema() for kind in KINDS if kind not in EXTENSIONS}
-    schemas = {**every, **{part: getattr(txn.Programs.Cpp, part).as_schema() for part in _PARTS}}
+    schemas = {**every, **{part: getattr(txn.Programs.Cpp, part).as_schema() for part in _PARTS},
+               **{helper.lower(): getattr(txn.Expressions.Cpp.Expressions, helper).as_schema() for helper in _HELPERS}}
     editions = [[_symbol(name) for name in EDITIONS]]
     clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, schemas, editions)
 

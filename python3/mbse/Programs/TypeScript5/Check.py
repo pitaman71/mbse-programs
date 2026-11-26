@@ -43,10 +43,10 @@ as a string`, ...), located at the property that holds what it says (`body[0].de
 a helper takes of its dialect's (`TypeScript5`'s `importexpression.options` and `importexpression.phase 'defer'`,
 `TypeScript Types`' `tsimporttype.options`), located as its kind's problem is. A grammar clause the target does not
 allow is `<its name> needs <the nearest version that allows it>`, the first after the target, else the last before it
-*(agent)*: `body[0].declarationKind: VariableDeclaration.declarationKind 'using' needs TypeScript 5.2`. The target's
-own entries decide, else its neighbours' flagged `before` and `after` (a version the data covers but does not represent
-in a grammar clause's entries, as a store may add TypeScript 5.10), else a grammar clause is allowed
-(`Framework.Standards.allows`); a dialect that does not cover the target has no say. The grammar clauses taken at one
+*(agent)*: `body[0].declarationKind: VariableDeclaration.declarationKind 'using' needs TypeScript 5.2`. Each dialect's
+version of the target's designation decides, by its own entries, else its neighbours' flagged `before` and `after`;
+where a dialect does not represent the target, its neighbours' flagged entries guess, as for one no dialect represents
+(`Framework.Standards.edition_allows`); else a grammar clause is allowed. The grammar clauses taken at one
 place are alternatives of one production, the place fine in a version that allows one of them, as Python3's `Check`
 reads them *(agent)*. What arrived before 5.0, as `accessor`, decorators, `satisfies`, `export type *` and `const` type
 parameters, every version has.

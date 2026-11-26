@@ -33,19 +33,19 @@ is not checked: GNU's extensions, a part or a helper, and invalid syntax, a `Pro
 
 What an edition changes within a kind is read from data too, as C's: the grammar clauses each statement, member, part,
 term and helper takes, of the dialect whose kind it is, the language's (`Standards.GRAMMAR_CLAUSES`: `if consteval`,
-init-statements, labels, `requires`, nested inline namespaces) and `Cpp`'s, `Cpp Types`' and `C Preprocessor`'s
-(`consteval`, `char8_t`, `<=>`, lambdas' parts, explicit object parameters, `auto(x)`, the suffix `z`, `#warning`, ...),
-each the target allows or forbids; a problem `<its name> needs <the first edition the language covers that allows
-it>`, or `<its name> is in no edition` (`#embed`, which C Preprocessor allows in C23 alone).
+init-statements, labels, `requires`, nested inline namespaces, a bit-field's initializer, a `static` `operator()` or
+`operator[]`) and `Cpp`'s, `Cpp Types`' and `C Preprocessor`'s (`consteval`, `char8_t`, `<=>`, lambdas' parts, explicit
+object parameters, `auto(x)`, the suffix `z`, several indices, `#warning`, ...), each the target allows or forbids, as
+C's reads them (`Framework.Standards.edition_allows`); a problem `<its name> needs <the edition nearest the target
+that allows it>`, or `<its name> is in no edition` (`#embed`, which C Preprocessor allows in C23 alone).
 
-What no grammar clause can express stays code, `UNRECORDED`, by the kind that holds it, each with its reason, as C's
-*(agent)*: a bit-field's default member initializer (C++20) and a `static` `operator()` or `operator[]` (C++23), each
-two properties' values together, and a subscript of several indices (C++23), a count of a list's elements, which
-mbse-expressions' `Cpp` leaves unrecorded. What C++17 has, every edition has: structured bindings among them.
+What C++ removed is its dialects' data, which `check` reads as any: `register` among a declaration's specifiers, which
+C++17 removed (`declspecifier.keyword 'register' is in no edition`), and dynamic exception specifications, `throw(int)`
+removed by C++17 and `throw()` by C++20 (`throwspecifier without types needs C++17`). What no grammar clause can express
+would stay code: nothing does, of C++'s. What C++17 has, every edition has: structured bindings among them.
 
-Not checked: what an edition removed (`register`, dynamic exception specifications), which no grammar clause records,
-though one an edition forbids could *(agent)*; and an abbreviated function template's `auto` parameter (C++20), which
-`check` cannot tell from a generic lambda's (C++14) without its context *(agent)*.
+Not checked: an abbreviated function template's `auto` parameter (C++20), which `check` cannot tell from a generic
+lambda's (C++14) without its context *(agent)*.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member or part: what a kind needs, a
 property (`an IfStatement needs a consequence`, `a TryStatement needs a body`), a list that is not empty (`a
@@ -76,7 +76,7 @@ applied at the call that needs one, as C's (`Programs.C.Check`): `validate_for(s
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from typing import Any
 
 from mbse.Expressions.C.Expressions import Domains, Kinds
@@ -91,10 +91,9 @@ from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
 __all__ = ["check", "check_file", "validate", "validate_file", "validate_for", "validate_file_for", "prepare_abi",
-           "ABIS", "UNRECORDED"]
+           "ABIS"]
 
 Version = tuple[int, ...]
-Found = list[tuple[str, tuple[str, ...]]]
 
 _HOLDERS = frozenset(f"{LANGUAGE}.{kind}" for kind in (*KINDS, "Error", "MemberList", "Group", "MemberGroup"))
 """The schemas that have a statement's place: statements, declarations, clauses, members, invalid syntax and the parts
@@ -114,61 +113,6 @@ def _a(noun: str) -> str:
     return f"a {noun}" if noun.startswith("Us") else C._a(noun)
 
 
-def _many(held: Any) -> tuple[Any, ...]:
-    return () if held is None else held.values
-
-
-def _record(value: Any) -> tuple[str, dict[str, Any]]:
-    """What a property holds, through unions: its tag and its properties."""
-    _, tag, record = _branch(value)
-    return tag, Objects.properties(record)
-
-
-# --- What no grammar clause can express ---
-
-def _initialized(kind: str, held: dict[str, Any]) -> Found:
-    """A bit-field's default member initializer (C++20): two properties together, its `bitfield` and its
-    `initializer`, where a grammar clause says what one property holds (an initializer alone is C++11's)."""
-    return [(f"{kind} with a bit-field's initializer", ("C++20", "C++23"))] if "bitfield" in held and (
-        "initializer" in held) else []
-
-
-def _operator(kind: str, held: dict[str, Any]) -> Found:
-    """A `static` `operator()` or `operator[]` (C++23): two properties together, a specifier `static` and the name its
-    declarator declares, where a grammar clause says what one property holds."""
-    words = [_record(s)[1].get("keyword") for s in _many(held.get("specifiers"))]
-    declarators = [held["declarator"]] if "declarator" in held else [
-        Objects.properties(d).get("declarator") for d in _many(held.get("declarators"))]
-    operators = [_named(d) for d in declarators if d is not None]
-    return [(f"{kind} static {operator}", ("C++23",)) for operator in operators if "static" in words and operator in (
-        "operator()", "operator[]")]
-
-
-def _named(declarator: Any) -> str | None:
-    """The operator's name a declarator declares (`operator()`); None for any other."""
-    tag, held = _record(declarator)
-    if tag == "iddeclarator":
-        name, fields = _record(held["name"])
-        return f"operator{fields['operator']}" if name == "operatorname" else None
-    return _named(held["declarator"]) if "declarator" in held else None
-
-
-def _indices(kind: str, held: dict[str, Any]) -> Found:
-    """A subscript of several indices (C++23): a count of a list's elements, which a grammar clause, saying what one
-    element holds, cannot, as mbse-expressions' `Cpp` leaves it unrecorded."""
-    return [(f"{kind} of several indices", ("C++23",))] if len(_many(held.get("indices"))) > 1 else []
-
-
-UNRECORDED: dict[str, Callable[[str, dict[str, Any]], Found]] = {
-    "MemberDeclarator": _initialized, "FunctionDefinition": _operator, "MemberDeclaration": _operator,
-    "subscriptexpression": _indices,
-}
-"""What no grammar clause can express, which stays code, each with its reason, as C's (`Programs.C.Check.UNRECORDED`):
-the language features of a statement, a member or a part, by its kind's name, and of a term, by its tag, given that and
-its properties that are set: each language feature's name, and the editions that allow it, by their common names
-*(agent)*."""
-
-
 def check(store: Any, path: str, version: Version | str) -> list[str]:
     """The problems of the constructs the unit at `path` uses that `version` lacks, in source order, each once and
     located by its place: `body[0]: ConceptDefinition needs C++20`. `version` is `(17,)`, `(20,)` or `(23,)`, or the
@@ -182,7 +126,7 @@ def check_file(store: Any, unit: Any, version: Version | str) -> list[str]:
     """`check` of a unit's visitor, a `Programs.Cpp.TranslationUnit` of `store`, read within the caller's
     transaction."""
     edition = f"C++{version[0]}" if isinstance(version, tuple) and len(version) == 1 else str(version)
-    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), _unit(unit), UNRECORDED)
+    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), _unit(unit))
 
 
 # --- Validity ---

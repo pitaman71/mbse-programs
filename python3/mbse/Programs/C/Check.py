@@ -45,24 +45,22 @@ version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md#decided)), each an edition
 member declaration, part, term and helper, the grammar clauses it takes, of the dialect whose kind it is
 (`Framework.Standards.takes`), the language's for its statements (`Standards.GRAMMAR_CLAUSES`: a label without a
 statement or before a declaration, `static_assert` spelled so and without a message, C23's helpers where a declaration
-holds them), `C`'s, `C Types`' and `C Preprocessor`'s for its terms and helpers (a literal's digit separators, C23's
-keywords, `#warning`, `#embed`, ...), and whether the target allows each (`Framework.Standards.allows`): a grammar
-clause no edition names is allowed. A grammar clause's problem is `<its name> needs <the first edition the language
-covers that allows it>` (`SimpleDeclaration.specifiers holding a bitintspecifier needs C23`), located where a kind's
-would be, or `<its name> is in no edition`, where none does.
+holds them, an inferred type, an unnamed parameter of a function's definition, and a K&R definition, which C23
+removed), `C`'s, `C Types`' and `C Preprocessor`'s for its terms and helpers (a literal's digit separators, a `u8`
+character, C23's keywords, `#warning`, `#embed`, ...), and whether the target allows each, by each dialect's edition of
+the target's designation, or, where a dialect does not represent it, as its neighbours' flagged entries guess
+(`Framework.Standards.edition_allows`): a grammar clause no edition names is allowed. A grammar clause's problem is
+`<its name> needs <the edition nearest the target that allows it>`, the first after it, else the last before it, as
+Python3's `Check` names one *(agent)* (`SimpleDeclaration.specifiers holding a bitintspecifier needs C23`,
+`FunctionDefinition with a declaration list needs C17`), located where a kind's would be, or `<its name> is in no
+edition`, where none does.
 
-What no grammar clause can express stays code, `UNRECORDED`, by the kind that holds it, each with its reason, its
-problem worded as a grammar clause's *(agent)*: a function's definition with an unnamed parameter of its own (C23,
-6.9.1), the parameters of the declarator nearest its name and any but a lone `void`, and a declaration whose C's type
-is inferred, `auto` with no type specifier (C23, 6.7.10), which `Parse` writes as the keyword `auto`, each a statement
-about every element of a list, where a grammar clause says what one of them holds; and a `u8` character (C23), two
-properties' values together, which mbse-expressions' `C` leaves unrecorded. What arrived before C11, as `restrict`,
+What no grammar clause can express would stay code: nothing does, of C's. What arrived before C11, as `restrict`,
 `inline` and designators, and C11's own, as `_Alignas`, `_Atomic`, `_Generic`, `_Noreturn`, `_Static_assert` and
 `_Thread_local`, every edition has.
 
-Not checked: what C23 removed (a K&R definition, an old-style declaration of a function without a prototype), which no
-grammar clause records, though one C23 forbids could *(agent)*; and trigraphs, which `Parse` keeps as tree-sitter reads
-them.
+Not checked: trigraphs, which C23 removed, and which `Parse` keeps as tree-sitter reads them; and a function's
+declaration without a prototype (`int f();`), which C23 reads as one with no parameters, no syntax removed.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member declaration or part:
 
@@ -120,7 +118,7 @@ from .Standards import DIALECTS
 from .Statements import KINDS, LANGUAGE
 
 __all__ = ["check", "check_file", "validate", "validate_file", "validate_for", "validate_file_for", "prepare_abi",
-           "ABIS", "UNRECORDED"]
+           "ABIS"]
 
 Version = tuple[int, ...]
 
@@ -196,38 +194,7 @@ def _unique(problems: list[str]) -> list[str]:
     return list(dict.fromkeys(problems))
 
 
-# --- What no grammar clause can express ---
-
-def _literal(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
-    """A `u8` character (C23): two properties' values together, its `prefix` and its `quote`, where a grammar clause
-    says what one property holds, as mbse-expressions' `C` leaves it unrecorded."""
-    return [(f"{kind}.prefix 'u8' of a character", ("C23",))] if held.get("prefix") == "u8" and held.get(
-        "quote") == "'" else []
-
-
-_UNTYPED = ("declspecifier", "cvqualifier", "standardattributespecifier", "alignasspecifier", "gnuattributespecifier",
-            "declspecspecifier")
-"""The specifiers that name no type: storage classes, function specifiers and qualifiers, and attributes."""
-
-
-def _inferred(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
-    """C's type of a declaration inferred (C23, 6.7.10): `auto` and no type specifier, which says what every element of
-    its `specifiers` is, where a grammar clause says what one of them holds (`auto int x;` is C11's)."""
-    specifiers = [_branch(specifier) for specifier in (held["specifiers"].values if "specifiers" in held else ())]
-    words = [Objects.properties(record).get("keyword") for _, _, record in specifiers]
-    inferred = "auto" in words and all(tag in _UNTYPED for _, tag, _ in specifiers)
-    return [(f"{kind} with an inferred type", ("C23",))] if inferred else []
-
-
-def _unnamed(parameter: Any) -> bool:
-    """Whether a parameter of a function's definition is unnamed: an ellipsis and a lone `void` are none."""
-    _, tag, record = _branch(parameter)
-    held = Objects.properties(record)
-    if tag != "parameterdeclaration" or "declarator" in held:
-        return False
-    keywords = [Objects.properties(_branch(s)[2]).get("keyword") for s in held["specifiers"].values]
-    return keywords != ["void"]
-
+# --- Declarators ---
 
 def _named(declarator: Any) -> bool:
     """Whether a declarator is, within its parentheses, the identifier it declares."""
@@ -246,25 +213,6 @@ def _binder(declarator: Any) -> tuple[str, dict[str, Any]]:
     return tag, fields
 
 
-def _definition(kind: str, held: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
-    """A function's definition with a parameter of its own unnamed (C23, 6.9.1): the parameters of the declarator
-    nearest its name, not those of the type it returns, and any but a lone `void`, which a grammar clause, saying what
-    a property holds at any depth and never what it does not, cannot tell apart."""
-    tag, fields = _binder(held["declarator"])
-    parameters = fields["parameters"].values if "parameters" in fields else ()
-    unnamed = tag == "functiondeclarator" and any(map(_unnamed, parameters))
-    return [(f"{kind} with an unnamed parameter", ("C23",))] if unnamed else []
-
-
-UNRECORDED: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, tuple[str, ...]]]]] = {
-    "FunctionDefinition": _definition, "SimpleDeclaration": _inferred, "literal": _literal,
-}
-"""What no grammar clause can express, which stays code, each with its reason: the language features of a statement,
-a member declaration or a part, by its kind's name, and of a term or a helper, by its tag, given that and its
-properties that are set: each language feature's name, and the editions that allow it, by their common names
-*(agent)*."""
-
-
 # --- Editions ---
 
 def _year(standard: Any) -> int:
@@ -281,8 +229,7 @@ class _Availability:
     *(agent: parameters, so that `Programs.Cpp.Check` reuses it)*.
 
     A grammar clause is read against its dialect's edition of the target's designation, or, where its dialect does not
-    represent it, against the target itself, which no entry names, guessed from its flagged neighbours by revision
-    (`Framework.Standards.allows`) *(agent)*."""
+    represent it, guessed from the dialect's flagged neighbours by revision (`Framework.Standards.edition_allows`)."""
 
     def __init__(self, store: Any, language: str, edition: str, dialects: tuple[str, ...]):
         target = ExpressionStandards.find(store.singleton(language), edition)
@@ -313,10 +260,11 @@ class _Availability:
         of that designation, or, where the dialect does not represent it, as its neighbours' flagged entries guess
         (`Framework.Standards.edition_allows`). A problem names the edition nearest the target that allows it, the
         first after it, else the last before it, as Python3's `Check` does *(agent)*."""
+        editions = [(designation, _year(own), ExpressionStandards.tags(own)[-1])
+                    for designation, own in self.covered.items()]
         for name, clause in ExpressionStandards.grammar_clauses(singleton).items():
-            allowing = [(_year(own), ExpressionStandards.tags(own)[-1]) for designation, own in self.covered.items()
-                        if ExpressionStandards.edition_allows(singleton, designation, ExpressionStandards.properties(
-                            own)["revision"], clause)]  # type: ignore[arg-type]
+            allowing = [(year, edition) for designation, year, edition in editions
+                        if ExpressionStandards.edition_allows(singleton, designation, ("year", year), clause)]
             if self.edition not in (edition for _, edition in allowing):
                 kind = ExpressionStandards.grammar_clause(clause)["kind"].name
                 problems = self.clauses.setdefault(kind, {}).setdefault(dialect, (singleton, {}))[1]
@@ -340,22 +288,15 @@ class _Availability:
                 for clause, _ in ExpressionStandards.takes(singleton, record)
                 if (name := str(ExpressionStandards.grammar_clause_name(clause))) in problems]
 
-    def unrecorded(self, found: list[tuple[str, tuple[str, ...]]]) -> list[str]:
-        """The problems of the language features that stay code that the target lacks: `<its name> needs <the first
-        edition that allows it>`."""
-        return [f"{name} needs {editions[0]}" for name, editions in found if self.edition not in editions]
 
 
-def _check(available: _Availability, records: Iterator[tuple[str, str | None, Any, str, Any]],
-           unrecorded: dict[str, Callable[[str, dict[str, Any]], list[tuple[str, tuple[str, ...]]]]]) -> list[str]:
-    """The problems of a unit's `records`, as `_walk` gives them, that the target lacks: each kind's, each grammar
-    clause's its records take, and what `unrecorded` finds, by kind *(agent: `Programs.Cpp.Check` reuses it)*."""
+def _check(available: _Availability, records: Iterator[tuple[str, str | None, Any, str, Any]]) -> list[str]:
+    """The problems of a unit's `records`, as `_walk` gives them, that the target lacks: each kind's, and each grammar
+    clause's its records take *(agent: `Programs.Cpp.Check` reuses it)*."""
     problems: list[str] = []
     for where, root, _, tag, record in records:
         kind = _kind(record) if root is None else tag  # a statement's, a member's, an error's or a part's, or a term's
         found = available.kind(record.as_schema().name, kind) + available.grammar_clauses(record)
-        if kind in unrecorded:
-            found += available.unrecorded(unrecorded[kind](kind, Objects.properties(record)))
         problems += [f"{where if root is None else root}: {problem}" for problem in found]
     return _unique(problems)
 
@@ -372,7 +313,7 @@ def check(store: Any, path: str, version: Version | str) -> list[str]:
 def check_file(store: Any, unit: Any, version: Version | str) -> list[str]:
     """`check` of a unit's visitor, a `Programs.C.TranslationUnit` of `store`, read within the caller's transaction."""
     edition = f"C{version[0]}" if isinstance(version, tuple) and len(version) == 1 else str(version)
-    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), _unit(unit), UNRECORDED)
+    return _check(_Availability(store, LANGUAGE, edition, DIALECTS), _unit(unit))
 
 
 # --- Validity ---

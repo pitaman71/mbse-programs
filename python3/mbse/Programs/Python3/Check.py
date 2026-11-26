@@ -26,24 +26,30 @@ term's by its tag (`namedexpr`).
 What a property's value makes available within a kind is data too, grammar clauses (mbse-basis [grammar clauses by
 version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)), read as mbse-expressions reads them
 (`Expressions.Framework.Standards`): those a statement or a clause takes of the language's own (`Standards`:
-`Import.is_lazy`, `AugAssign.op '@'`, `FunctionDef.type_params`, PEP 614's decorator, ...), located at the property that
-holds what it says (`body[0].is_lazy`), or, where that property holds a list and the grammar clause a term of one of
-its kinds, at each element that is one (`body[2].decorator_list[0]`); and those a term or a helper takes of its
-dialect's (`Python3`'s `binop.op '@'`, `Python Types`' `typevar.default_value`, ...), located as its kind's problem
-is. A grammar clause the target does not allow is `<its name> needs <the nearest version that allows it>`, the first
-after the target, else the last before it *(agent)*: `body[2].decorator_list[0]: FunctionDef with a decorator holding
-any term needs Python 3.9`. The target's own entries decide, else its neighbours' flagged `before` and `after` (a
-version the data covers but does not represent in a grammar clause's entries, as a store may add Python 3.16), else a
-grammar clause is allowed (`Framework.Standards.allows`); a dialect that does not cover the target has no say.
+`Import.is_lazy`, `AugAssign.op '@'`, `FunctionDef.type_params`, PEP 614's decorator, the names `async` and `await`,
+...), located at the property that holds what it says (`body[0].is_lazy`), or, where that property holds a list and
+the grammar clause says what an element holds, at each element that took it, as `Framework.Standards.takes` gives them
+(`body[2].decorator_list[0]`, `body[1].names[0]`); those an alias takes, the language's too, and those a term or a
+helper takes of its dialect's (`Python3`'s `binop.op '@'`, `Python Types`' `typevar.default_value`, ...), located as
+its kind's problem is. A grammar clause the target does not allow is `<its name> needs <the nearest version that allows
+it>`, the first after the target, else the last before it *(agent)*: `body[2].decorator_list[0]: FunctionDef with a
+decorator holding any term needs Python 3.9`, `body[0].name: FunctionDef.name 'async' or 'await' needs Python 3.6`.
+Each dialect's version of the target's designation decides, by its own entries, else its neighbours' flagged `before`
+and `after`; where a dialect does not represent the target (`Python Patterns`, Python 3.0 to 3.9), its neighbours'
+flagged entries guess, as for one no dialect represents (`Framework.Standards.edition_allows`); else a grammar clause
+is allowed.
 
 The grammar clauses a syntax node or a term takes at one place are alternatives of one production: the place is fine
 in a version that allows one of them, and otherwise each is a problem *(agent)*. So PEP 614, which removed a
 restriction: a dotted name, optionally called, takes both of a definition's decorator grammar clauses, Python 3.0 to
 3.8 allowing the one and 3.9 on the other, and is fine in each; any other term takes the second alone.
 
-What no grammar clause can say stays code, each with its reason: nothing, of Python 3's. Not checked: an `except`
-clause's types unparenthesized (3.14), which the tree does not record (`Parse` writes a `tuple` either way, the
-dialect's tuple not recording whether it was parenthesized: a gap, reported to mbse-expressions).
+What no grammar clause can say would stay code: nothing, of Python 3's. Not checked: an `except` clause's types
+unparenthesized (3.14), which the tree does not record (`Parse` writes a `tuple` either way, the dialect's tuple not
+recording whether it was parenthesized: a gap, reported to mbse-expressions); a dotted name one of whose parts is
+`async` or `await` (`import a.async`, 3.0 to 3.6), a string the language's grammar clauses cannot see into
+(`Standards`); and those names where a term declares them, a parameter's, a keyword argument's or an attribute's,
+which mbse-expressions' `Python3` does not record (a gap, reported to mbse-expressions).
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement:
 

@@ -16,11 +16,13 @@ annotation which is hacky anyway"):
   link. Run after `Programs.Python3`'s install, in a transaction of its own; run again, it writes nothing.
 - `define` writes the singleton `Programs.Python3` covering Python 3.0 to 3.15, each by its published name
   (`Python 3.12`), an `Expressions.Framework.Standard` with its body (`org.python`) and its version, and holding the
-  statement and clause kinds it has (`Expressions.Framework.HasStandard`), by membership (`ONLY`); and owning its
-  grammar clauses by name (`GRAMMAR_CLAUSES`), each allowed or forbidden by each version, written by mbse-expressions'
-  writer (`Framework.Standards.grammar_clauses_spec`). Run after `install`, in a transaction of its own; run again, it
-  writes nothing. Its frame binds the language (`dialect`, as that writer names it), each version by its name spelled
-  as an identifier (`Python_3_12`) and each grammar clause by its index (`grammar_clause_0`).
+  statement and clause kinds it has (`Expressions.Framework.HasStandard`), by membership (`ONLY`), 3.0 flagged `before`
+  and 3.15 `after` (`Framework.Standards.editions_spec`), so that Python 3.16, which the data does not represent, is
+  guessed to have what 3.15 has; and owning its grammar clauses by name (`GRAMMAR_CLAUSES`), each allowed or forbidden
+  by each version, written by mbse-expressions' writer (`Framework.Standards.grammar_clauses_spec`). Run after
+  `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the language (`dialect`, the
+  symbol it gives the writer), each version by its name spelled as an identifier (`Python_3_12`) and each grammar
+  clause by its index (`grammar_clause_0`).
 - `prepare(store)` runs, each in a transaction of its own, mbse-expressions' `define`s for `Python3`, `Python Types`
   and `Python Patterns` (which record the expression, type and pattern kinds each version has, and their terms'
   grammar clauses, and which `Python3.store()` does not run), then `install` and `define`; it gives the store back.
@@ -40,6 +42,13 @@ on; the first holds a `variable`, or an `attribute` or a `call` taking the neste
 of a dotted name`, which no version names. `Check` reads the two as alternatives of one production: a decorator is
 fine in a version that allows either one it takes *(agent)*.
 
+And what Python 3.7 removed: the names `async` and `await`, which it reserved, where a statement declares them, a
+definition's or an `except` clause's `name`, `global`'s and `nonlocal`'s `names` and an alias' `asname`
+(`FunctionDef.name 'async' or 'await'`), allowed by 3.0 to 3.6, as mbse-expressions' `Python3` records them where a
+term refers to them (`variable.name 'async' or 'await'`). An alias' `name` and a from-import's `module`, dotted names,
+are not: a grammar clause says what a property's value is, not what a part of it is *(agent)*. Python 3.0 to 3.15
+removed nothing else a statement holds; Python 2's `print` and `exec` statements were never Python 3's.
+
 Decided by the agent, each *(agent)*:
 
 - **The language owns its own standards and grammar clauses**, as each of mbse-expressions' dialects owns its own
@@ -56,6 +65,7 @@ Decided by the agent, each *(agent)*:
   value objects (`Alias`, `WithItem`) and named containers are parts of the statements that hold them.
 - **A decorator holding any term** holds a term of any of `Python3`'s kinds but its extensions and invalid syntax
   (`ANY`).
+- **An alias' grammar clauses are the language's**, `Programs.Python3.Alias` a part of the imports that hold it.
 """
 
 from __future__ import annotations

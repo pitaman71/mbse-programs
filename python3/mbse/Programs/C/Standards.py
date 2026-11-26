@@ -15,11 +15,13 @@ them as mbse-expressions records its dialects' (mbse-basis [CAP-268: standards a
   an `Expressions.Framework.Standard` with its bodies (`org.iso`, `ch.iec`), its number (`9899`), its revision's year
   and its common name (`C23`), as mbse-expressions' `C`, `C Types` and `C Preprocessor` write theirs, and holding the
   statement, declaration and member kinds it has (`Expressions.Framework.HasStandard`), by membership: each in every
-  edition but those `ONLY` lists, in its editions alone. And it writes the language's grammar clauses by name
-  (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition, through mbse-expressions' writer
-  (`Framework.Standards.grammar_clauses_spec`). Run after `install`, in a transaction of its own; run again, it writes
-  nothing. Its frame binds the language (`dialect`, as the writer names it), each edition by its common name (`C23`)
-  and each grammar clause by its index (`grammar_clause_0`).
+  edition but those `ONLY` lists, in its editions alone, C11 flagged `before` and C23 `after`
+  (`Framework.Standards.editions_spec`), so that an edition the data does not represent, C2y, is guessed to have
+  what its nearest neighbour has. And it writes the language's grammar clauses by name (`GRAMMAR_CLAUSES`), each
+  allowed or forbidden by each edition, through mbse-expressions' writer (`Framework.Standards.grammar_clauses_spec`).
+  Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the language
+  (`dialect`, the symbol it gives the writer), each edition by its common name (`C23`) and each grammar clause by its
+  index (`grammar_clause_0`).
 - `prepare(store)` runs, each in a transaction of its own, the installs mbse-expressions' `C` defines its domains with
   (`ISO/IEC 11404` and `IEEE 754`, which `C.INSTALLS` does not hold), mbse-expressions' `define`s for `C`, `C Types`
   and `C Preprocessor` (which record the expression, type and directive kinds each edition has and their grammar
@@ -32,7 +34,7 @@ What an edition changes within a kind is a grammar clause, an alternative within
 user decided (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md#decided), "No
 minimum versions": "PEP 614 removing a restriction is still a conditional clause just with an opposite sense of version
 progression"): an edition allows it or forbids it, and none has a minimum edition. The language's own are its
-statements', C23's each (`GRAMMAR_CLAUSES`):
+statements' (`GRAMMAR_CLAUSES`), C23's:
 
 - a label, a `case` or a `default` without a statement, its `statement` absent (C23, 6.8.2), and before a declaration,
   its `statement` holding a declaration, a static assertion or an attribute declaration;
@@ -42,7 +44,21 @@ statements', C23's each (`GRAMMAR_CLAUSES`):
   in `[[ ]]` where one of them or an attributed statement holds them in its `attributes` (an attribute declaration is
   C23's alone), each
   named as C Types names the same where its type name or its parameter holds them
-  (`SimpleDeclaration.specifiers holding a bitintspecifier`).
+  (`SimpleDeclaration.specifiers holding a bitintspecifier`);
+- a declaration whose C's type is inferred (6.7.10), `auto` and no type specifier, which `Parse` writes as the
+  keyword `auto`: `every` one of its `specifiers` naming no type, a grammar clause that `requires` one of them a
+  `declspecifier` whose keyword is `auto` (`auto int x;` is C11's);
+- a function's definition with an unnamed parameter of its own (6.9.1): its `declarator` reaching, through the
+  declarators that hold one, nested, the function's declarator nearest the name it declares, not that of the type a
+  function returns, one whose `parameters` hold a parameter without a declarator and not a lone `void`, two nested
+  grammar clauses that are alternatives, read as "any" (mbse-basis [PRI-020: no constraint, any
+  configuration](mbse:mbse-basis/docs/principles/PRI-020.md#decided): "The "open universe" design philosophy is
+  interpreted by unions as "any"."): `none` of its specifiers `void`, or `at_least` two of them.
+
+And one that C23 removed, allowed by C11 and C17 and forbidden by C23 (mbse-basis [grammar clauses by
+version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3", 3: "yes"): a K&R definition, its
+parameters declared in a declaration list (6.9.1), its `declarations` set, which C2y is guessed to forbid and C99 to
+allow, by the flags its oldest and newest editions' entries carry.
 
 The terms' are mbse-expressions' dialects' own, which `Check` reads beside these: C's (a literal's digit separators, a
 binary integer, its suffixes, `true` and `false`, an empty initializer, `alignof`), C Types' (C23's keywords, `typeof`,
@@ -68,9 +84,12 @@ Decided by the agent, each *(agent)*:
 - **GNU's `asm` is in no edition** (`EXTENSIONS`), as mbse-expressions' `C` leaves GNU's statement expressions in none:
   C lists it among the common extensions only (ISO/IEC 9899, J.5.10). So `Check` does not check it, as an extension
   outside every edition.
-- **What no grammar clause can express stays code**, `Check.UNRECORDED`, each with its reason: a function's definition
-  with an unnamed parameter, and a declaration whose C's type is inferred, which each say what every element of a list
-  holds, or what it does not.
+- **Nested and required grammar clauses are the language's**, though their kinds are C Types' helpers
+  (`functiondeclarator`, `declspecifier`): a grammar clause is owned by the dialect whose grammar has the alternative,
+  as Python3's decorators' are. No edition names them, so each allows them, and only those that edition names decide.
+- **What no grammar clause can express** would stay code, in `Check`: nothing does, of C's statements. Not recorded:
+  trigraphs, which C23 removed, a lexical matter that `Parse` reads as tree-sitter does; and a function's declaration
+  without a prototype (`int f();`), which C23 kept and gave a prototype, no syntax removed.
 """
 
 from __future__ import annotations
@@ -113,6 +132,21 @@ _ATTRIBUTED = (*_SPECIFIED, "AttributedStatement")
 """The kinds that hold attribute specifiers, C Types' helpers, but an attribute declaration, C23's alone."""
 _HELPERS = ("BitIntSpecifier", "PlaceholderTypeSpecifier", "StandardAttributeSpecifier")
 """The helpers of C Types that arrived in C23, which a grammar clause holds."""
+_UNTYPED = ("declspecifier", "cvqualifier", "standardattributespecifier", "alignasspecifier", "gnuattributespecifier",
+            "declspecspecifier")
+"""The specifiers that name no C type: storage classes, function specifiers and qualifiers, and attributes."""
+_DECLARATORS = ("functiondeclarator", "pointerdeclarator", "arraydeclarator", "parenthesizeddeclarator")
+"""The declarators that hold a declarator."""
+_NAMED = ("iddeclarator", "parenthesizeddeclarator")
+"""The declarators that may be, within their parentheses, the name they declare."""
+_REACHING = ("functiondeclarator of a name with an unnamed parameter",
+             *(f"{declarator} reaching an unnamed parameter" for declarator in _DECLARATORS))
+"""The nested grammar clauses of a declarator that reaches, through those that hold it, the function's declarator
+nearest the name it declares, one with an unnamed parameter: not that of the type a function returns."""
+_UNNAMED = ("parameterdeclaration unnamed, not void", "parameterdeclaration unnamed, of several specifiers")
+"""The nested grammar clauses of a parameter unnamed, alternatives: of no specifier `void`, or of several specifiers,
+so any but a lone `void`."""
+_PARAMETER = "parameterdeclaration"
 
 GRAMMAR_CLAUSES = (
     *(FS.absent(f"{label} without a statement", label, "statement", _C23) for label in _LABELS),
@@ -124,6 +158,33 @@ GRAMMAR_CLAUSES = (
       for holder in _SPECIFIED for helper in _HELPERS),
     *(FS.kinds_of(f"{holder}.attributes holding a standardattributespecifier", holder, "attributes",
                   ("standardattributespecifier",), (), _C23) for holder in _ATTRIBUTED),
+    # C's type inferred (6.7.10): `auto`, and every specifier naming no type (`auto int x;` is C11's)
+    FS.requires(FS.every(FS.kinds_of("SimpleDeclaration with an inferred type", "SimpleDeclaration", "specifiers",
+                                     _UNTYPED, (), _C23)), ("SimpleDeclaration.specifiers holding auto",)),
+    FS.kinds_of("SimpleDeclaration.specifiers holding auto", "SimpleDeclaration", "specifiers", ("declspecifier",),
+                ("declspecifier.keyword 'auto'",), None),  # required: no edition names it
+    FS.values("declspecifier.keyword 'auto'", "declspecifier", "keyword", ("auto",), None),  # nested
+    # a function's definition with an unnamed parameter of its own (6.9.1): the parameters of the declarator nearest
+    # its name, through those that hold it, unnamed and any but a lone `void`
+    FS.kinds_of("FunctionDefinition with an unnamed parameter", "FunctionDefinition", "declarator", _DECLARATORS,
+                _REACHING, _C23),
+    FS.requires(FS.kinds_of(_REACHING[0], "functiondeclarator", "declarator", _NAMED,
+                            ("parenthesizeddeclarator of a name",), None),
+                ("functiondeclarator.parameters holding an unnamed parameter",)),
+    *(FS.kinds_of(name, declarator, "declarator", _DECLARATORS, _REACHING, None)
+      for name, declarator in zip(_REACHING[1:], _DECLARATORS)),
+    FS.kinds_of("parenthesizeddeclarator of a name", "parenthesizeddeclarator", "declarator", _NAMED,
+                ("parenthesizeddeclarator of a name",), None),
+    FS.kinds_of("functiondeclarator.parameters holding an unnamed parameter", "functiondeclarator", "parameters",
+                (_PARAMETER,), _UNNAMED, None),
+    FS.requires(FS.absent(_UNNAMED[0], _PARAMETER, "declarator", None), ("parameterdeclaration without void",)),
+    FS.none(FS.kinds_of("parameterdeclaration without void", _PARAMETER, "specifiers", ("primitivetypespecifier",),
+                        ("primitivetypespecifier.keyword 'void'",), None)),
+    FS.values("primitivetypespecifier.keyword 'void'", "primitivetypespecifier", "keyword", ("void",), None),
+    FS.requires(FS.absent(_UNNAMED[1], _PARAMETER, "declarator", None), ("parameterdeclaration of several specifiers",)),
+    FS.at_least(2, FS.present("parameterdeclaration of several specifiers", _PARAMETER, "specifiers", None)),
+    # removed: C23 a K&R definition, its parameters declared in a declaration list (6.9.1)
+    FS.present("FunctionDefinition with a declaration list", "FunctionDefinition", "declarations", ("C11", "C17")),
 )
 """The language's grammar clauses, its statements', each with the editions that allow it, by their frame symbols, every
 other forbidding it, named as `Check` names the language feature."""
@@ -152,7 +213,10 @@ def define(txn: Any) -> Any:
     (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing."""
     Language, Standard = txn.Programs.C.Language, txn.Expressions.Framework.Standard
     every = {kind: getattr(txn.Programs.C, kind).as_schema() for kind in KINDS if kind not in EXTENSIONS}
-    schemas = {**every, **{helper.lower(): getattr(txn.Expressions.C.Types, helper).as_schema() for helper in _HELPERS}}
+    schemas = {**every, **{helper.lower(): getattr(txn.Expressions.C.Types, helper).as_schema() for helper in (
+        *_HELPERS, "DeclSpecifier", "CvQualifier", "AlignasSpecifier", "GnuAttributeSpecifier", "DeclspecSpecifier",
+        "PrimitiveTypeSpecifier", "IdDeclarator", "FunctionDeclarator", "PointerDeclarator", "ArrayDeclarator",
+        "ParenthesizedDeclarator", "ParameterDeclaration")}}
     editions = [list(EDITIONS)]
     clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, schemas, editions)
 
