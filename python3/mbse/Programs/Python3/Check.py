@@ -176,26 +176,10 @@ def _version(standard: Any) -> Version:
     return tuple(int(part) for part in str(ExpressionStandards.properties(standard)["revision"][1]).split("."))
 
 
-def _holds(dialect: Any, said: dict[str, Any], element: Any) -> bool:
-    """Whether a list's element is what a grammar clause, as `grammar_clause` says it, holds: a term of one of its
-    kinds that takes each of its nested grammar clauses of that kind."""
-    record = Terms.kind_of(element)[1]
-    schema = record.as_schema()
-    taken = {ExpressionStandards.grammar_clause_name(c) for c in ExpressionStandards.takes(dialect, record)}
-    return any(kind is schema for kind in said["kinds"]) and all(
-        ExpressionStandards.grammar_clause_name(nested) in taken for nested in said.get("nested", ())
-        if ExpressionStandards.grammar_clause(nested)["kind"] is schema)
-
-
-def _places(dialect: Any, record: Any, clause: Any) -> list[str]:
-    """Where within a syntax node or a term a grammar clause it takes holds what it says: its property (`.op`), or,
-    where that holds a list and the grammar clause a term of one of its kinds, each element that is one
-    (`.decorator_list[1]`)."""
-    said = ExpressionStandards.grammar_clause(clause)
-    held = Objects.properties(record).get(said["property"])
-    if "kinds" not in said or not isinstance(held, Objects.Listed):
-        return [f".{said['property']}"]
-    return [f".{said['property']}[{i}]" for i, element in enumerate(held.values) if _holds(dialect, said, element)]
+def _places(prop: str, indices: tuple[int, ...] | None) -> list[str]:
+    """Where within a syntax node or a term a grammar clause it takes holds what it says, as `takes` gives the elements
+    that took it: its property (`.op`), or each element that did (`.decorator_list[1]`)."""
+    return [f".{prop}"] if indices is None else [f".{prop}[{i}]" for i in indices]
 
 
 class _Availability:
@@ -209,8 +193,9 @@ class _Availability:
         if target is None:
             raise LookupError(f"{LANGUAGE} covers no version {version!r}: run Standards.prepare on the store")
         self.target, self.name = _version(target), str(ExpressionStandards.designation_of(target))
+        self.revision = ExpressionStandards.properties(target)["revision"]
         self.versions: dict[str, set[Version]] = {}
-        self.grammar: dict[str, tuple[Any, Any, set[str]]] = {}
+        self.grammar: dict[str, tuple[Any, set[str]]] = {}
         for dialect in DIALECTS:
             singleton = store.singleton(dialect)
             standards = ExpressionStandards.standards(singleton)
@@ -221,7 +206,7 @@ class _Availability:
                     self.versions.setdefault(kind.name, set()).add(_version(standard))
             kinds = {ExpressionStandards.grammar_clause(clause)["kind"].name
                      for clause in ExpressionStandards.grammar_clauses(singleton).values()}
-            self.grammar[dialect] = (singleton, ExpressionStandards.find(singleton, self.name), kinds)
+            self.grammar[dialect] = (singleton, kinds)
 
     def kind(self, schema: str, what: str) -> list[str]:
         """The problem of a kind, by its schema's name, that the target lacks: none where it has it, or where no
@@ -243,17 +228,22 @@ class _Availability:
         """The problems of the grammar clauses of `dialect` that a syntax node or a term takes and the target lacks,
         each with its place within it (`_places`): those taken at one place are alternatives, the place fine where
         the target allows one of them."""
-        singleton, target, kinds = self.grammar[dialect]
+        singleton, kinds = self.grammar[dialect]
         if record.as_schema().name not in kinds:
             return []
         places: dict[str, list[Any]] = {}
-        for clause in ExpressionStandards.takes(singleton, record):
-            for place in _places(singleton, record, clause):
+        for clause, indices in ExpressionStandards.takes(singleton, record):
+            for place in _places(ExpressionStandards.grammar_clause(clause)["property"], indices):
                 places.setdefault(place, []).append(clause)
         return [(place, f"{ExpressionStandards.grammar_clause_name(clause)} needs {self.nearest(singleton, clause)}")
-                for place, taken in places.items()
-                if target is not None and not any(ExpressionStandards.allows(target, each) for each in taken)
+                for place, taken in places.items() if not any(self.allows(singleton, each) for each in taken)
                 for clause in taken]
+
+    def allows(self, dialect: Any, clause: Any) -> bool:
+        """Whether the target allows a grammar clause of a dialect: by the dialect's own version of its designation,
+        or, where the dialect does not represent it, as its neighbours' flagged entries guess
+        (`Framework.Standards.edition_allows`)."""
+        return ExpressionStandards.edition_allows(dialect, self.name, self.revision, clause)
 
 
 def _check(available: _Availability, module: Any) -> list[str]:
@@ -264,7 +254,7 @@ def _check(available: _Availability, module: Any) -> list[str]:
         for at, held in _properties(node):
             for tag, record in _records(held):
                 found = available.kind(record.as_schema().name, tag)
-                found += [problem for dialect in DIALECTS[1:] for _, problem in available.clauses(dialect, record)]
+                found += [problem for dialect in DIALECTS for _, problem in available.clauses(dialect, record)]
                 problems += [f"{where}{at}: {problem}" for problem in found]
     return _unique(problems)
 

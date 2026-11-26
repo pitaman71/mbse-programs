@@ -91,6 +91,10 @@ ANY = tuple(tag for tag in PythonExpressions.DIALECT.kinds()
 
 _DEFINITIONS = ("FunctionDef", "AsyncFunctionDef", "ClassDef")
 _DOTTED = ("variable", "attribute")
+_RESERVED = ("async", "await")
+_NAMED = (*((kind, "name") for kind in (*_DEFINITIONS, "ExceptHandler")), ("Global", "names"), ("Nonlocal", "names"),
+          ("Alias", "asname"))
+"""The names a statement or an alias declares, each by its kind and its property, an identifier or identifiers."""
 
 GRAMMAR_CLAUSES = (
     *(FS.values(f"{kind}.is_lazy", kind, "is_lazy", (True,), VERSIONS[15:]) for kind in ("Import", "ImportFrom")),
@@ -105,6 +109,8 @@ GRAMMAR_CLAUSES = (
     # nested: no version names them
     FS.kinds_of("attribute of a dotted name", "attribute", "value", _DOTTED, ("attribute of a dotted name",), None),
     FS.kinds_of("call of a dotted name", "call", "func", _DOTTED, ("attribute of a dotted name",), None),
+    # removed: the names `async` and `await`, which Python 3.7 reserved
+    *(FS.values(f"{kind}.{name} 'async' or 'await'", kind, name, _RESERVED, VERSIONS[:7]) for kind, name in _NAMED),
 )
 """Its statements' grammar clauses, each with the versions that allow it, every other forbidding it, named as `Check`
 reports them: what a property's value makes available within a statement kind, keyed by its kind's name, a nested
@@ -145,7 +151,9 @@ def define(txn: Any) -> Any:
     Language, Standard = txn.Programs.Python3.Language, txn.Expressions.Framework.Standard
     every = {kind: getattr(txn.Programs.Python3, kind).as_schema() for kind in KINDS}
     terms = {branch.name: branch.schema for branch in txn.Expressions.Python.Python3.Term.as_schema().branches}
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {**every, **terms}, [VERSIONS])
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES,
+                                             {**every, "Alias": txn.Programs.Python3.Alias.as_schema(), **terms},
+                                             [VERSIONS])
 
     def version(minor: int) -> Callable[[Any], Any]:
         kinds = [schema for kind, schema in every.items() if VERSIONS[minor] in ONLY.get(kind, VERSIONS)]
@@ -158,6 +166,8 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({designation(minor): lambda e, minor=minor: e.standard(
                 getattr(_, VERSIONS[minor])) for minor in MINORS}),
             *(version(minor) for minor in MINORS),
+            # its oldest version flagged `before`, its newest `after`
+            *FS.editions_spec([VERSIONS]),
             # its statements' grammar clauses, each allowed or forbidden by each version
             *specs,
         ])]))])

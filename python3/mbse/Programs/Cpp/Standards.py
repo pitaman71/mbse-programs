@@ -158,7 +158,8 @@ def define(txn: Any) -> Any:
     Language, Standard = txn.Programs.Cpp.Language, txn.Expressions.Framework.Standard
     every = {kind: getattr(txn.Programs.Cpp, kind).as_schema() for kind in KINDS if kind not in EXTENSIONS}
     schemas = {**every, **{part: getattr(txn.Programs.Cpp, part).as_schema() for part in _PARTS}}
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [[_symbol(name) for name in EDITIONS]])
+    editions = [[_symbol(name) for name in EDITIONS]]
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, schemas, editions)
 
     def edition(name: str) -> Callable[[Any], Any]:
         kinds = [schema for kind, schema in every.items() if name in ONLY.get(kind, (name,))]
@@ -171,6 +172,8 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({designation: lambda e, name=name: e.standard(getattr(_, _symbol(name)))
                                            for name, (designation, _year) in EDITIONS.items()}),
             *(edition(name) for name in EDITIONS),
+            # its oldest edition flagged `before`, its newest `after`
+            *FS.editions_spec(editions),
             *specs,
         ])]))])
 

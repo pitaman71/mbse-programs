@@ -305,19 +305,24 @@ class _Availability:
                     continue
                 for kind in ExpressionStandards.kinds(standard):
                     self.versions.setdefault(kind.name, set()).add(_year(standard))
-            self._forbidden(dialect, singleton, {designation: standards.get(designation, own)
-                                                 for designation, own in covered.items()})
+            self._forbidden(dialect, singleton)
 
-    def _forbidden(self, dialect: str, singleton: Any, editions: dict[str, Any]) -> None:
+    def _forbidden(self, dialect: str, singleton: Any) -> None:
         """Each grammar clause of a dialect that the target forbids, by its kind's schema's name, with its problem,
-        read against `editions`, the dialect's own of each designation the language covers, or the language's."""
+        read for each edition the language covers, by its designation and its revision: by the dialect's own edition
+        of that designation, or, where the dialect does not represent it, as its neighbours' flagged entries guess
+        (`Framework.Standards.edition_allows`). A problem names the edition nearest the target that allows it, the
+        first after it, else the last before it, as Python3's `Check` does *(agent)*."""
         for name, clause in ExpressionStandards.grammar_clauses(singleton).items():
-            allowing = [ExpressionStandards.tags(own)[-1] for designation, own in self.covered.items()
-                        if ExpressionStandards.allows(editions[designation], clause)]
-            if self.edition not in allowing:
+            allowing = [(_year(own), ExpressionStandards.tags(own)[-1]) for designation, own in self.covered.items()
+                        if ExpressionStandards.edition_allows(singleton, designation, ExpressionStandards.properties(
+                            own)["revision"], clause)]  # type: ignore[arg-type]
+            if self.edition not in (edition for _, edition in allowing):
                 kind = ExpressionStandards.grammar_clause(clause)["kind"].name
                 problems = self.clauses.setdefault(kind, {}).setdefault(dialect, (singleton, {}))[1]
-                problems[name] = f"{name} needs {allowing[0]}" if allowing else f"{name} is in no edition"
+                later = [edition for year, edition in allowing if year > self.target]
+                nearest = later[0] if later else allowing[-1][1] if allowing else None
+                problems[name] = f"{name} is in no edition" if nearest is None else f"{name} needs {nearest}"
 
     def kind(self, schema: str, what: str) -> list[str]:
         """The problem of a kind, by its schema's name, that the target lacks: none where it has it, or where no
@@ -332,7 +337,7 @@ class _Availability:
         name> needs <the first edition the language covers that allows it>`, or, where none does, `<its name> is in no
         edition`."""
         return [problems[name] for singleton, problems in self.clauses.get(record.as_schema().name, {}).values()
-                for clause in ExpressionStandards.takes(singleton, record)
+                for clause, _ in ExpressionStandards.takes(singleton, record)
                 if (name := str(ExpressionStandards.grammar_clause_name(clause))) in problems]
 
     def unrecorded(self, found: list[tuple[str, tuple[str, ...]]]) -> list[str]:

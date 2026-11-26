@@ -134,7 +134,7 @@ def define(txn: Any) -> Any:
     every = {kind: getattr(txn.Programs.TypeScript5, kind).as_schema() for kind in KINDS}
     parts = {kind: getattr(txn.Programs.TypeScript5, kind).as_schema() for kind in PARTS}
     terms = {branch.name: branch.schema for branch in txn.Expressions.TypeScript.TypeScript5.Term.as_schema().branches}
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {**every, **parts, **terms}, [VERSIONS])
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, {**every, **parts, **terms}, [VERSIONS])
 
     def version(minor: int) -> Callable[[Any], Any]:
         kinds = [schema for kind, schema in every.items() if VERSIONS[minor] in ONLY.get(kind, VERSIONS)]
@@ -147,6 +147,8 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({designation(minor): lambda e, minor=minor: e.standard(
                 getattr(_, VERSIONS[minor])) for minor in MINORS}),
             *(version(minor) for minor in MINORS),
+            # its oldest version flagged `before`, its newest `after`
+            *FS.editions_spec([VERSIONS]),
             # its statements' and parts' grammar clauses, each allowed or forbidden by each version
             *specs,
         ])]))])
