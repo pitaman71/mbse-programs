@@ -59,8 +59,10 @@ What no grammar clause can express would stay code: nothing does, of C's. What a
 `inline` and designators, and C11's own, as `_Alignas`, `_Atomic`, `_Generic`, `_Noreturn`, `_Static_assert` and
 `_Thread_local`, every edition has.
 
-Not checked: trigraphs, which C23 removed, and which `Parse` keeps as tree-sitter reads them; and a function's
-declaration without a prototype (`int f();`), which C23 reads as one with no parameters, no syntax removed.
+Not checked: trigraphs, which C23 removed, and which `Parse` keeps as tree-sitter reads them; a function's declaration
+without a prototype (`int f();`), which C23 reads as one with no parameters, no syntax removed; and a parameter of a
+definition unnamed by an abstract declarator (`int f(int (*)(void))`), which C23 allows too and the code before the
+grammar clauses did not check either, a parameter without a declarator being one without a name *(agent)*.
 
 `validate`'s rules, each the 0.3 rule where one stands, located at the statement, member declaration or part:
 
