@@ -51,25 +51,25 @@ CPython `ast` without them.
    `Python Patterns` terms through its `_term`.
    - Proposed: `error(text, *terms)` and `missing(kind)` writers in the framework, which every dialect's writers reuse.
 
-13. **`takes` does not say which element of a list takes a grammar clause.** `Framework.Standards.takes` reads a
-    property that holds a list as a whole ("a container where one of its elements does"), so a caller locating a
-    grammar clause at an element, as Python3's `Check` locates PEP 614's decorator (`body[2].decorator_list[0]`), finds
-    the element again: a term of one of the grammar clause's kinds (`grammar_clause`) that takes each of its nested
-    grammar clauses of that kind (`takes` of the element). Reading a definition's two decorator grammar clauses as
-    alternatives needs it too: per decorator, not per list.
-    - Proposed: `takes` giving, with each grammar clause, where within the term it holds, its property and, for a list,
-      each element's index.
-14. **`grammar_clauses_spec` writes on the frame symbol `dialect`.** Its specs begin
-    `_.dialect.grammar_clauses(...)`, so a define that binds its owner by another name (mbse-programs' languages bound
-    theirs as `language`) renames it to `dialect`.
-    - Proposed: the owner's symbol a parameter of the writer, or documented as the writer's.
-15. **A version the data does not represent cannot be guessed without being stored.** `allows(standard, clause)`
-    guesses from neighbours given a stored `Standard`, so `Check`, which writes nothing, raises LookupError for Python
-    3.16; the suites store a Python 3.16 and a TypeScript 5.10 (P3CHK-09, TS5CHK-10), each language's and dialect's,
-    to show the `after` flags at work. And a kind's membership has no guess: a version stored without the kinds it has
-    lacks every kind, so they store the newest's.
-    - Proposed: `allows` of a revision (`("version", "3.16")`) as well as of a stored edition, and the same guess for a
-      kind's membership.
+13. **`takes` does not say which element of a list takes a grammar clause.** Met by mbse-expressions 0.16.0 (mbse-basis
+    [grammar clauses by version](../../../../mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3", 4):
+    `takes` gives each grammar clause taken with the indices of the elements that took it, which Python3's `Check`
+    locates it at (`body[2].decorator_list[0]`, `body[1].names[0]`), finding nothing again itself.
+14. **`grammar_clauses_spec` writes on the frame symbol `dialect`.** Met by mbse-expressions 0.16.0: the writer takes the
+    owner's symbol, which each language's `define` passes.
+15. **A version the data does not represent cannot be guessed without being stored.** Met by mbse-expressions 0.16.0
+    (stage 3, 1): `edition_allows` and `edition_has` answer for an edition given by its designation and its revision,
+    stored or not, from its neighbours' flagged entries, each language's oldest and newest editions flagged
+    (`editions_spec`); the suites ask them of Python 3.16, TypeScript 5.10, C2y and C++26 (P3CHK-10, TS5CHK-11,
+    CCHK-11, XCHK-11), and each `Check` asks a dialect that does not represent its target so. `check` still takes the
+    editions its language covers.
+16. **Python3 records the names `async` and `await` only where a variable refers to one.**
+    `Expressions.Python.Python3`'s `variable.name 'async' or 'await'` (allowed by Python 3.0 to 3.6) is the one record
+    of what Python 3.7 reserved among its terms, so a parameter, a keyword argument or an attribute named `async`
+    (`def f(async)`, `f(async=1)`, `x.async`), which 3.7 refuses too, is not found; the language records the names its
+    statements declare (`Programs.Python3.Standards`).
+    - Proposed: grammar clauses of the same names on the helpers and kinds that hold a name (a parameter's, a keyword
+      argument's, an attribute's).
 
 ## mbse-schemas
 
