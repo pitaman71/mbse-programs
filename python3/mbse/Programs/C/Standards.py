@@ -181,7 +181,8 @@ GRAMMAR_CLAUSES = (
     FS.none(FS.kinds_of("parameterdeclaration without void", _PARAMETER, "specifiers", ("primitivetypespecifier",),
                         ("primitivetypespecifier.keyword 'void'",), None)),
     FS.values("primitivetypespecifier.keyword 'void'", "primitivetypespecifier", "keyword", ("void",), None),
-    FS.requires(FS.absent(_UNNAMED[1], _PARAMETER, "declarator", None), ("parameterdeclaration of several specifiers",)),
+    FS.requires(FS.absent(_UNNAMED[1], _PARAMETER, "declarator", None),
+                ("parameterdeclaration of several specifiers",)),
     FS.at_least(2, FS.present("parameterdeclaration of several specifiers", _PARAMETER, "specifiers", None)),
     # removed: C23 a K&R definition, its parameters declared in a declaration list (6.9.1)
     FS.present("FunctionDefinition with a declaration list", "FunctionDefinition", "declarations", ("C11", "C17")),

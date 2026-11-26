@@ -121,8 +121,8 @@ _INITIALIZED = ("IfStatement", "SwitchStatement", "ForStatement", "RangeForState
 """The statements that hold an init-statement."""
 _PARTS = ("InitDeclarator", "MemberDeclarator", "NamespaceName")
 """The parts a grammar clause is about, beside the kinds."""
-_HELPERS = ("DeclSpecifier", "OperatorName", "IdDeclarator", "PackDeclarator", "PointerDeclarator", "ReferenceDeclarator",
-            "ArrayDeclarator", "FunctionDeclarator", "ParenthesizedDeclarator")
+_HELPERS = ("DeclSpecifier", "OperatorName", "IdDeclarator", "PackDeclarator", "PointerDeclarator",
+            "ReferenceDeclarator", "ArrayDeclarator", "FunctionDeclarator", "ParenthesizedDeclarator")
 """The helpers of C++'s a grammar clause is about, by their schemas' names, keyed lowercased (`declspecifier`)."""
 _DECLARATORS = ("packdeclarator", "pointerdeclarator", "referencedeclarator", "arraydeclarator", "functiondeclarator",
                 "parenthesizeddeclarator")
@@ -137,7 +137,8 @@ def _static(operator: str) -> tuple[FS.GrammarClause, ...]:
     declarators = (*_DECLARATORS, "iddeclarator")
     return (
         *(FS.requires(FS.kinds_of(f"{kind} static operator{operator}", kind, "specifiers", ("declspecifier",),
-                                  ("declspecifier.keyword 'static'",), _CPP23), (f"{kind}.{name} reaching operator{operator}",))
+                                  ("declspecifier.keyword 'static'",), _CPP23),
+                      (f"{kind}.{name} reaching operator{operator}",))
           for kind, name in (("FunctionDefinition", "declarator"), ("MemberDeclaration", "declarators"))),
         FS.kinds_of(f"FunctionDefinition.declarator reaching operator{operator}", "FunctionDefinition", "declarator",
                     declarators, reaching, None),  # required: no edition names it, nor those below
@@ -147,7 +148,8 @@ def _static(operator: str) -> tuple[FS.GrammarClause, ...]:
                     declarators, reaching, None),
         *(FS.kinds_of(name, declarator, "declarator", declarators, reaching, None)
           for name, declarator in zip(reaching[1:], _DECLARATORS)),
-        FS.kinds_of(reaching[0], "iddeclarator", "name", ("operatorname",), (f"operatorname.operator '{operator}'",), None),
+        FS.kinds_of(reaching[0], "iddeclarator", "name", ("operatorname",), (f"operatorname.operator '{operator}'",),
+                    None),
         FS.values(f"operatorname.operator '{operator}'", "operatorname", "operator", (operator,), None),
     )
 
@@ -166,8 +168,8 @@ GRAMMAR_CLAUSES = (
     FS.values("NamespaceName.inline", "NamespaceName", "inline", (True,), None),  # nested
     # a bit-field's default member initializer (C++20, [class.mem]): its `bitfield` and its `initializer` together (an
     # initializer alone is C++11's)
-    FS.requires(FS.present("MemberDeclarator with a bit-field's initializer", "MemberDeclarator", "initializer", _CPP20),
-                ("MemberDeclarator.bitfield",)),
+    FS.requires(FS.present("MemberDeclarator with a bit-field's initializer", "MemberDeclarator", "initializer",
+                           _CPP20), ("MemberDeclarator.bitfield",)),
     FS.present("MemberDeclarator.bitfield", "MemberDeclarator", "bitfield", None),  # required: no edition names it
     *_static("()"),
     *_static("[]"),

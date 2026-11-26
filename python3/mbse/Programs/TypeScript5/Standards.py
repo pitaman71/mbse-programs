@@ -17,10 +17,10 @@ version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)):
   the statement, clause and member kinds it has (`Expressions.Framework.HasStandard`), by membership (`ONLY`), 5.0
   flagged `before` and 5.9 `after` (`Framework.Standards.editions_spec`), so that TypeScript 5.10, which the data does
   not represent, is guessed to have what 5.9 has; and owning its grammar clauses by name (`GRAMMAR_CLAUSES`), each
-  allowed or forbidden by each version, written by mbse-expressions' writer (`Framework.Standards.grammar_clauses_spec`).
-  Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the language
-  (`dialect`, the symbol it gives the writer), each version by its name spelled as an identifier (`TypeScript_5_9`) and
-  each grammar clause by its index (`grammar_clause_0`).
+  allowed or forbidden by each version, written by mbse-expressions' writer
+  (`Framework.Standards.grammar_clauses_spec`). Run after `install`, in a transaction of its own; run again, it writes
+  nothing. Its frame binds the language (`dialect`, the symbol it gives the writer), each version by its name spelled
+  as an identifier (`TypeScript_5_9`) and each grammar clause by its index (`grammar_clause_0`).
 - `prepare(store)` runs, each in a transaction of its own, mbse-expressions' `define`s for `TypeScript5`, `TypeScript
   Types` and `TypeScript Patterns` (which record the expression, type and pattern kinds each version has, and their
   terms' grammar clauses, and which `TypeScript5.store()` does not run), then `install` and `define`; it gives the
